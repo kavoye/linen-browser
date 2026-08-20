@@ -166,6 +166,77 @@ struct VoiceInputModelTests {
         #expect(transcriber.finishCount == 1)
     }
 
+    /// The mic button holds nothing down, so a pause in speech is the only
+    /// signal left that the request is finished.
+    @Test func silenceAfterTheMicButtonSubmitsOnItsOwn() async throws {
+        let audio = FakeAudioInput()
+        let transcriber = FakeTranscriber()
+        let model = VoiceInputModel(
+            audio: audio,
+            transcriber: transcriber,
+            silenceTail: .milliseconds(60)
+        )
+        var submitted: [String] = []
+        model.onUtterance = { text, trace in
+            submitted.append(text)
+            trace.end()
+        }
+
+        try await model.prepare()
+        model.begin(endsOnSilence: true)
+        transcriber.yield("open my email")
+        #expect(await waitUntil { model.transcript == "open my email" })
+
+        #expect(await waitUntil { model.phase == .idle })
+        #expect(submitted == ["open my email"])
+        #expect(transcriber.finishCount == 1)
+    }
+
+    /// More speech pushes the deadline back. A pause mid-sentence must not cut
+    /// the request in half.
+    @Test func speakingAgainPostponesTheSilenceCutoff() async throws {
+        let audio = FakeAudioInput()
+        let transcriber = FakeTranscriber()
+        // Four gaps of 600ms against a 1s deadline: 2.4s in total, so the
+        // session outlives the tail only if every word pushed it back.
+        let model = VoiceInputModel(
+            audio: audio,
+            transcriber: transcriber,
+            silenceTail: .seconds(1)
+        )
+
+        try await model.prepare()
+        model.begin(endsOnSilence: true)
+        for word in ["open", "open my", "open my email", "open my email now"] {
+            transcriber.yield(word)
+            #expect(await waitUntil { model.transcript == word })
+            try? await Task.sleep(for: .milliseconds(600))
+            #expect(model.phase == .listening)
+        }
+        model.cancel()
+    }
+
+    /// Holding the talk key keeps its own ending. A long pause mid-sentence
+    /// must not send while the key is still down.
+    @Test func holdToTalkIgnoresSilence() async throws {
+        let audio = FakeAudioInput()
+        let transcriber = FakeTranscriber()
+        let model = VoiceInputModel(
+            audio: audio,
+            transcriber: transcriber,
+            silenceTail: .milliseconds(40)
+        )
+
+        try await model.prepare()
+        model.begin()
+        transcriber.yield("still thinking")
+        #expect(await waitUntil { model.transcript == "still thinking" })
+        try? await Task.sleep(for: .milliseconds(140))
+
+        #expect(model.phase == .listening)
+        model.cancel()
+    }
+
     @Test func cancellationDuringFinalizationSuppressesTheUtterance() async throws {
         let audio = FakeAudioInput()
         let transcriber = FakeTranscriber()

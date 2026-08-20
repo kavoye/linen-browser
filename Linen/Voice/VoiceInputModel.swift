@@ -35,11 +35,14 @@ final class VoiceInputModel {
     @ObservationIgnored private let audio: any AudioInputCapturing
     @ObservationIgnored private let transcriber: any TranscriberEngine
     @ObservationIgnored private let releaseTail: Duration
+    @ObservationIgnored private let silenceTail: Duration
     @ObservationIgnored private var sessionTask: Task<Void, Never>?
     @ObservationIgnored private var releaseTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var isFinalizingSession = false
     @ObservationIgnored private var beginAfterFinalization = false
+    @ObservationIgnored private var endsOnSilence = false
+    @ObservationIgnored private var deferredEndsOnSilence = false
 
     @ObservationIgnored var onWillBegin: (() -> Void)?
     @ObservationIgnored var onFailure: ((Failure) -> Void)?
@@ -48,11 +51,13 @@ final class VoiceInputModel {
     init(
         audio: any AudioInputCapturing = AudioCaptureService(),
         transcriber: any TranscriberEngine = AppleTranscriberEngine(),
-        releaseTail: Duration = .milliseconds(450)
+        releaseTail: Duration = .milliseconds(450),
+        silenceTail: Duration = .seconds(4)
     ) {
         self.audio = audio
         self.transcriber = transcriber
         self.releaseTail = releaseTail
+        self.silenceTail = silenceTail
     }
 
     var pipelineState: PipelineState {
@@ -71,11 +76,12 @@ final class VoiceInputModel {
         isReady = true
     }
 
-    func begin() {
+    func begin(endsOnSilence: Bool = false) {
         releaseTask?.cancel()
         releaseTask = nil
         if isFinalizingSession, phase == .idle {
             beginAfterFinalization = true
+            deferredEndsOnSilence = endsOnSilence
             return
         }
         guard phase != .listening else { return }
@@ -89,6 +95,7 @@ final class VoiceInputModel {
         generation &+= 1
         let sessionGeneration = generation
         transcript = ""
+        self.endsOnSilence = endsOnSilence
         phase = .listening
 
         do {
@@ -101,7 +108,11 @@ final class VoiceInputModel {
                               !Task.isCancelled,
                               generation == sessionGeneration
                         else { return }
+                        let spoke = update.text != transcript
                         transcript = update.text
+                        if spoke {
+                            waitForSilence()
+                        }
                     }
                 } catch {
                     guard let self,
@@ -111,6 +122,7 @@ final class VoiceInputModel {
                     audio.stop()
                     sessionTask = nil
                     transcript = ""
+                    self.endsOnSilence = false
                     phase = .idle
                     onFailure?(.transcription)
                     Pipeline.log.error("Transcription stream failed: \(error, privacy: .public)")
@@ -118,9 +130,17 @@ final class VoiceInputModel {
             }
         } catch {
             transcript = ""
+            self.endsOnSilence = false
             phase = .idle
             onFailure?(.capture(error.localizedDescription))
+            return
         }
+        waitForSilence()
+    }
+
+    private func waitForSilence() {
+        guard endsOnSilence else { return }
+        scheduleFinish(after: silenceTail)
     }
 
     func scheduleFinish(after delay: Duration? = nil) {
@@ -157,6 +177,7 @@ final class VoiceInputModel {
             return
         }
         sessionTask = nil
+        endsOnSilence = false
         trace.mark("finalTranscript")
 
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -179,6 +200,7 @@ final class VoiceInputModel {
         releaseTask?.cancel()
         releaseTask = nil
         beginAfterFinalization = false
+        endsOnSilence = false
         let wasFinishing = phase == .finishing
         let wasListening = phase == .listening
         let wasActive = phase != .idle || sessionTask != nil
@@ -211,6 +233,6 @@ final class VoiceInputModel {
     private func resumeDeferredBeginIfNeeded() {
         guard beginAfterFinalization, phase == .idle else { return }
         beginAfterFinalization = false
-        begin()
+        begin(endsOnSilence: deferredEndsOnSilence)
     }
 }

@@ -545,7 +545,7 @@ final class AppCoordinator {
         if voiceInput.phase == .listening {
             Task { await voiceInput.finish() }
         } else if microphoneIsReady() {
-            voiceInput.begin()
+            voiceInput.begin(endsOnSilence: true)
         }
     }
 
