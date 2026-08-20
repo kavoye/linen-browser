@@ -37,7 +37,7 @@ final class InspectorLayout {
     private(set) var width: CGFloat
     private(set) var dragWidth: CGFloat?
 
-    private(set) var seenFailureCount = 0
+    private(set) var seenFailures: [UUID: Int] = [:]
 
     private var dragOrigin: CGFloat?
 
@@ -83,13 +83,14 @@ final class InspectorLayout {
         persistWidth()
     }
 
-    func reviewFailures(_ count: Int) {
-        guard isVisible else { return }
-        seenFailureCount = max(seenFailureCount, count)
+    func reviewFailures(_ count: Int, inSpace spaceID: UUID?) {
+        guard isVisible, let spaceID else { return }
+        seenFailures[spaceID] = max(seenFailures[spaceID] ?? 0, count)
     }
 
-    func needsAttention(failureCount: Int) -> Bool {
-        !isVisible && failureCount > seenFailureCount
+    func needsAttention(failureCount: Int, inSpace spaceID: UUID?) -> Bool {
+        guard !isVisible, let spaceID else { return false }
+        return failureCount > (seenFailures[spaceID] ?? 0)
     }
 
     // MARK: - Drag
@@ -139,6 +140,49 @@ enum AgentActivityDot {
     }
 }
 
+struct AgentActivityToggle: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+
+    private var layout: InspectorLayout {
+        coordinator.agentInspector
+    }
+
+    private var dot: AgentActivityDot.State? {
+        let spaceID = browser.activeSpaceID
+        return AgentActivityDot.state(
+            isWorking: browser.activeTab?.isAgentWorking == true,
+            needsAttention: layout.needsAttention(
+                failureCount: spaceID.map { coordinator.conversationLog.failureCount(forTab: $0) } ?? 0,
+                inSpace: spaceID
+            )
+        )
+    }
+
+    var body: some View {
+        if !layout.isVisible {
+            ToolbarButton(
+                symbol: "sidebar.right",
+                enabled: true,
+                help: String(localized: "Show Agent Activity (⌥⌘A)")
+            ) {
+                layout.toggle()
+            }
+            .overlay(alignment: .topTrailing) {
+                if let dot {
+                    AgentStateMarker(
+                        isRunning: true,
+                        tint: dot == .attention ? Theme.warning : Theme.accent
+                    )
+                    .frame(width: 12, height: 12)
+                    .offset(x: -3, y: 3)
+                    .allowsHitTesting(false)
+                }
+            }
+        }
+    }
+}
+
 struct AgentInspector: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
@@ -162,6 +206,11 @@ struct AgentInspector: View {
     private var traces: [ConversationLog.TaskTrace] {
         guard let activeSpaceID else { return [] }
         return coordinator.conversationLog.traces(forTab: activeSpaceID)
+    }
+
+    private var failureCount: Int {
+        guard let activeSpaceID else { return 0 }
+        return coordinator.conversationLog.failureCount(forTab: activeSpaceID)
     }
 
     private var usage: ConversationLog.Usage {
@@ -204,18 +253,23 @@ struct AgentInspector: View {
         .padding(.top, topPadding)
         .padding(.bottom, 12)
         .onChange(of: layout.isVisible, initial: true) { _, _ in
-            layout.reviewFailures(coordinator.conversationLog.failureCount)
+            layout.reviewFailures(failureCount, inSpace: activeSpaceID)
         }
-        .onChange(of: coordinator.conversationLog.failureCount) { _, count in
-            layout.reviewFailures(count)
+        .onChange(of: activeSpaceID) { _, _ in
+            layout.reviewFailures(failureCount, inSpace: activeSpaceID)
+        }
+        .onChange(of: failureCount) { _, count in
+            layout.reviewFailures(count, inSpace: activeSpaceID)
         }
         .background {
-            ZStack(alignment: .leading) {
+            ZStack {
                 VisualEffectView(material: .sidebar)
                 Theme.sidebarTint.opacity(0.55)
                 WindowDragArea()
-                InspectorDivider(layout: layout, containerWidth: containerWidth)
             }
+        }
+        .overlay(alignment: .leading) {
+            InspectorDivider(layout: layout, containerWidth: containerWidth)
         }
     }
 }

@@ -41,9 +41,6 @@ struct AskSurface: View {
         var showsSiteControls: Bool {
             self == .toolbar
         }
-        var showsActivityChip: Bool {
-            self == .startPage
-        }
         var showsKeyHints: Bool {
             self == .startPage
         }
@@ -62,20 +59,13 @@ struct AskSurface: View {
     }
 
     @State private var model: AskSurfaceModel
-    @Binding private var isInspectorOpen: Bool
 
-    init(
-        placement: Placement,
-        browser: BrowserModel,
-        coordinator: AppCoordinator,
-        isInspectorOpen: Binding<Bool>
-    ) {
+    init(placement: Placement, browser: BrowserModel, coordinator: AppCoordinator) {
         _model = State(initialValue: AskSurfaceModel(
             placement: placement,
             browser: browser,
             coordinator: coordinator
         ))
-        _isInspectorOpen = isInspectorOpen
     }
 
     var body: some View {
@@ -95,11 +85,9 @@ struct AskSurface: View {
                 model: model,
                 sections: sections,
                 restingContent: restingContent,
-                activity: activity,
                 placeholder: model.placeholder,
                 accessibilityValue: model.accessibilityValue,
-                security: model.security,
-                isInspectorOpen: $isInspectorOpen
+                security: model.security
             )
             .contentShape(Rectangle())
             .contextMenu {

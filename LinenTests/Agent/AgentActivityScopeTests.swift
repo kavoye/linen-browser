@@ -105,25 +105,57 @@ struct AgentActivityScopeTests {
 
         log.completeTask(log.beginTask("fine", tabID: tab), response: "done")
         log.cancelTask(log.beginTask("stopped", tabID: tab))
-        #expect(log.failureCount == 0)
+        #expect(log.failureCount(forTab: tab) == 0)
 
         log.failTask(log.beginTask("doomed", tabID: tab), reason: "Network died.")
-        #expect(log.failureCount == 1)
+        #expect(log.failureCount(forTab: tab) == 1)
+    }
+
+    /// The dot points at a column the click will fill. A failure on another tab
+    /// used to travel with it and open an empty column.
+    @Test func aFailureOnOneTabLeavesTheOtherTabsDotAlone() {
+        let log = ConversationLog(database: .temporary())
+        let tabA = UUID()
+        let tabB = UUID()
+
+        log.failTask(log.beginTask("doomed", tabID: tabA), reason: "Network died.")
+
+        #expect(log.failureCount(forTab: tabA) == 1)
+        #expect(log.failureCount(forTab: tabB) == 0)
+
+        let layout = scratchLayout()
+        #expect(layout.needsAttention(failureCount: log.failureCount(forTab: tabA), inSpace: tabA))
+        #expect(!layout.needsAttention(failureCount: log.failureCount(forTab: tabB), inSpace: tabB))
     }
 
     @Test func anUnseenFailureTurnsTheDotOrangeUntilTheColumnOpens() {
         let layout = scratchLayout()
+        let space = UUID()
 
-        #expect(!layout.needsAttention(failureCount: 0))
-        #expect(layout.needsAttention(failureCount: 1))
+        #expect(!layout.needsAttention(failureCount: 0, inSpace: space))
+        #expect(layout.needsAttention(failureCount: 1, inSpace: space))
         #expect(AgentActivityDot.state(isWorking: false, needsAttention: true) == .attention)
 
         layout.show()
-        layout.reviewFailures(1)
+        layout.reviewFailures(1, inSpace: space)
         layout.close()
-        #expect(!layout.needsAttention(failureCount: 1))
+        #expect(!layout.needsAttention(failureCount: 1, inSpace: space))
 
         #expect(AgentActivityDot.state(isWorking: true, needsAttention: false) == .working)
+    }
+
+    /// Reviewing one space says nothing about the next one.
+    @Test func reviewingOneSpaceLeavesAnotherUnseen() {
+        let layout = scratchLayout()
+        let seen = UUID()
+        let unseen = UUID()
+
+        layout.show()
+        layout.reviewFailures(1, inSpace: seen)
+        layout.close()
+
+        #expect(!layout.needsAttention(failureCount: 1, inSpace: seen))
+        #expect(layout.needsAttention(failureCount: 1, inSpace: unseen))
     }
 
     @Test func attentionOutranksTheWorkingPulse() {
@@ -133,20 +165,22 @@ struct AgentActivityScopeTests {
 
     @Test func aFailureWhileTheColumnIsOpenLeavesNoStaleOrange() {
         let layout = scratchLayout()
+        let space = UUID()
 
         layout.show()
-        layout.reviewFailures(1)
+        layout.reviewFailures(1, inSpace: space)
         layout.close()
 
-        #expect(!layout.needsAttention(failureCount: 1))
-        #expect(layout.needsAttention(failureCount: 2))
+        #expect(!layout.needsAttention(failureCount: 1, inSpace: space))
+        #expect(layout.needsAttention(failureCount: 2, inSpace: space))
     }
 
     @Test func reviewingWhileClosedChangesNothing() {
         let layout = scratchLayout()
+        let space = UUID()
 
-        layout.reviewFailures(3)
-        #expect(layout.needsAttention(failureCount: 3))
+        layout.reviewFailures(3, inSpace: space)
+        #expect(layout.needsAttention(failureCount: 3, inSpace: space))
     }
 
     // MARK: - The footer disclaimer

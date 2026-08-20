@@ -154,7 +154,6 @@ final class ConversationLog {
 
     private(set) var traces: [TaskTrace] = []
     private(set) var usageByTab: [UUID: Usage] = [:]
-    private(set) var failureCount = 0
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var discardedTabIDs = RecentIDs()
     @ObservationIgnored private var dirtyTraceIDs: Set<UUID> = []
@@ -263,7 +262,6 @@ final class ConversationLog {
         traces[index].response = reason
         traces[index].state = .failed
         traces[index].finishedAt = Date()
-        failureCount += 1
         scheduleSave(trace: taskID)
         saveNow()
     }
@@ -312,6 +310,10 @@ final class ConversationLog {
 
     func traces(forTab tabID: UUID) -> [TaskTrace] {
         traces.filter { $0.tabID == tabID }
+    }
+
+    func failureCount(forTab tabID: UUID) -> Int {
+        traces.count { $0.tabID == tabID && $0.state == .failed }
     }
 
     func latestTrace(forTab tabID: UUID) -> TaskTrace? {

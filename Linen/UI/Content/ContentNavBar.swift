@@ -122,14 +122,7 @@ struct ContentNavBar: View {
     }
 
     private var addressSurface: some View {
-        @Bindable var inspector = coordinator.agentInspector
-
-        return AskSurface(
-            placement: .toolbar,
-            browser: browser,
-            coordinator: coordinator,
-            isInspectorOpen: $inspector.isVisible
-        )
+        AskSurface(placement: .toolbar, browser: browser, coordinator: coordinator)
     }
 
     private var reloadHelp: LocalizedStringResource {
@@ -205,27 +198,7 @@ struct ContentNavBar: View {
                 availableWidth: extensionBudget
             )
 
-            if !coordinator.agentInspector.isVisible {
-                ToolbarButton(symbol: "sidebar.right", enabled: true, help: String(localized: "Show Agent Activity (⌥⌘A)")) {
-                    coordinator.agentInspector.toggle()
-                }
-                .overlay(alignment: .topTrailing) {
-                    if let dot = AgentActivityDot.state(
-                        isWorking: browser.activeTab?.isAgentWorking == true,
-                        needsAttention: coordinator.agentInspector.needsAttention(
-                            failureCount: coordinator.conversationLog.failureCount
-                        )
-                    ) {
-                        AgentStateMarker(
-                            isRunning: true,
-                            tint: dot == .attention ? Theme.warning : Theme.accent
-                        )
-                        .frame(width: 12, height: 12)
-                        .offset(x: -3, y: 3)
-                        .allowsHitTesting(false)
-                    }
-                }
-            }
+            AgentActivityToggle(browser: browser, coordinator: coordinator)
         }
     }
 }

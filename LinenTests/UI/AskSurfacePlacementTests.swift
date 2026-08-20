@@ -89,8 +89,6 @@ struct AskSurfacePlacementTests {
     @Test func onlyTheStartPageHasRoomForHintsAndActivity() {
         #expect(startPage.showsKeyHints)
         #expect(!toolbar.showsKeyHints)
-        #expect(startPage.showsActivityChip)
-        #expect(!toolbar.showsActivityChip)
     }
 
     @Test func onlyTheToolbarFieldLetsTheGlassThrough() {

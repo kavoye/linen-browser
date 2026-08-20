@@ -107,8 +107,6 @@ private struct StartPageHero: View {
     }
 
     var body: some View {
-        @Bindable var inspector = coordinator.agentInspector
-
         VStack(spacing: 0) {
             LiveWaveform(isListening: coordinator.state == .listening)
                 .padding(.bottom, 16)
@@ -117,12 +115,7 @@ private struct StartPageHero: View {
                 .font(.system(size: 26, weight: .semibold))
                 .padding(.bottom, 18)
 
-            AskSurface(
-                placement: .startPage,
-                browser: browser,
-                coordinator: coordinator,
-                isInspectorOpen: $inspector.isVisible
-            )
+            AskSurface(placement: .startPage, browser: browser, coordinator: coordinator)
             .frame(maxWidth: 520)
             .padding(.bottom, 14)
             .zIndex(1)

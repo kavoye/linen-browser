@@ -19,11 +19,9 @@ struct AskSurfaceRow: View {
     let model: AskSurfaceModel
     let sections: [OmniboxSection]
     let restingContent: AskRestingContent?
-    let activity: AskSurfaceActivity
     let placeholder: String
     let accessibilityValue: String
     let security: PageSecurity
-    @Binding var isInspectorOpen: Bool
 
     private static let centredAddressInset: CGFloat = 78
 
@@ -99,16 +97,6 @@ struct AskSurfaceRow: View {
                         onCommandReturn: { model.askWhateverIsTyped() }
                     )
                     .fixedSize()
-                }
-
-                if placement.showsActivityChip, activity.count > 0 {
-                    AskActivityChip(
-                        count: activity.count,
-                        isRunning: activity.isRunning,
-                        isOpen: isInspectorOpen
-                    ) {
-                        isInspectorOpen.toggle()
-                    }
                 }
             }
             .frame(height: placement.rowHeight)

@@ -29,6 +29,8 @@ struct ContentArea: View {
         browser.activeTab?.isShowingStartPage == true
     }
 
+    private static let barTrailingPadding: CGFloat = 10
+
     var body: some View {
         ZStack(alignment: .top) {
             page
@@ -39,6 +41,10 @@ struct ContentArea: View {
                     .frame(height: Theme.topBarHeight)
                     .background { WindowDragArea() }
                     .overlay(alignment: .leading) { bareBarControls }
+                    .overlay(alignment: .trailing) {
+                        AgentActivityToggle(browser: browser, coordinator: coordinator)
+                            .padding(.trailing, Self.barTrailingPadding)
+                    }
                     .zIndex(10)
             } else {
                 ContentNavBar(browser: browser, coordinator: coordinator)

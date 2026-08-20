@@ -568,9 +568,6 @@
     "Advanced" : {
       "comment" : "Name of the Advanced page in the Settings sidebar and the heading at the top of that page."
     },
-    "Agent Activity" : {
-      "comment" : "Accessibility label for the compact button that opens the assistant's live activity panel. Sentence case."
-    },
     "agent speech" : {
       "comment" : "Detail line under the Enable/Disable Voice command in the ⌘K palette; it names what the command affects — the assistant reading its replies aloud. Lowercase caption fragment; capitalise if your language capitalises nouns."
     },
