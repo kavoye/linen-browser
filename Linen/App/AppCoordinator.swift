@@ -541,6 +541,11 @@ final class AppCoordinator {
         sidebar.toggleVisible()
     }
 
+    func stopAgent() {
+        agentTurns.cancel()
+        speech.stopSpeaking()
+    }
+
     func toggleMicListening() {
         if voiceInput.phase == .listening {
             Task { await voiceInput.finish() }

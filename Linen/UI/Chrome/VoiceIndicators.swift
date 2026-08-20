@@ -10,9 +10,27 @@ struct MicButton: View {
 
     @State private var hovering = false
 
+    private var isAgentTurn: Bool {
+        VoiceGlyph.showsAgentTurn(
+            state: coordinator.state,
+            isSpeakingReply: coordinator.agentReply.isStreaming
+        )
+    }
+
+    private var help: LocalizedStringResource {
+        if isAgentTurn {
+            return "Stop"
+        }
+        return coordinator.state == .listening ? "Stop and Run" : "Click to Talk"
+    }
+
     var body: some View {
         Button {
-            coordinator.toggleMicListening()
+            if isAgentTurn {
+                coordinator.stopAgent()
+            } else {
+                coordinator.toggleMicListening()
+            }
         } label: {
             VoiceGlyph(
                 state: coordinator.state,
@@ -26,7 +44,7 @@ struct MicButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
-        .help(coordinator.state == .listening ? "Stop and Run" : "Click to Talk")
+        .help(Text(help))
     }
 }
 
@@ -117,7 +135,7 @@ struct VoiceGlyph: View {
 
     @ViewBuilder
     private var glyph: some View {
-        if isAgentTurn {
+        if isAgentTurn, !isHighlighted {
             ComposingOrb(size: orbSize)
         } else {
             Image(systemName: symbol)
@@ -128,12 +146,19 @@ struct VoiceGlyph: View {
     }
 
     private var symbol: String {
+        if isAgentTurn {
+            return "stop.fill"
+        }
         guard state == .listening else { return "mic" }
         return isHighlighted ? "stop.fill" : "mic.fill"
     }
 
-    private var isAgentTurn: Bool {
+    static func showsAgentTurn(state: PipelineState, isSpeakingReply: Bool) -> Bool {
         state == .executing || (state == .idle && isSpeakingReply)
+    }
+
+    private var isAgentTurn: Bool {
+        Self.showsAgentTurn(state: state, isSpeakingReply: isSpeakingReply)
     }
 
     private var color: Color {

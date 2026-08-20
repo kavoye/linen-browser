@@ -264,8 +264,7 @@ extension AppCoordinator {
         let closedInspector = agentInspector.close()
         if state == .listening || state == .executing {
             voiceInput.cancel()
-            agentTurns.cancel()
-            speech.stopSpeaking()
+            stopAgent()
             return true
         }
         if isAgentSpeaking {
