@@ -128,15 +128,25 @@ the Sparkle private key. The Sparkle key is the most important of the three: it
 decides what every installed copy of Linen updates to. Set up all three
 controls below before you make the repository public.
 
-**1. The release environment.** The workflow job declares
-`environment: release`, and the secrets live in that environment. A job that
-waits for a reviewer cannot read the secrets until the reviewer approves it.
+**1. The release environment.** The workflow jobs declare
+`environment: release`, and the secrets live in that environment. Only a job
+that runs from an approved ref can read them.
 
 1. Open Settings › Environments. Add an environment. Name it `release`.
-2. Select Required reviewers. Add yourself. Save the rule.
-3. Select Deployment branches and tags. Select Selected branches and tags.
-4. Add the tag pattern `v*`.
-5. Add the seven secrets from the next section as environment secrets.
+2. Find Deployment branches and tags. Select Selected branches and tags.
+3. Select Add deployment branch or tag rule. Set the ref type to Tag. Enter
+   the pattern `v*`.
+4. Select Add deployment branch or tag rule again. Set the ref type to
+   **Branch**. Enter `main`.
+5. Make sure the list reads "1 branch and 1 tag allowed". A release comes from
+   the tag. A preview build comes from the branch, because `workflow_run` runs
+   from `main` and not from a tag. With no branch in the list, each preview
+   build fails when it asks for the certificate.
+6. Add the seven secrets from the next section as environment secrets.
+
+Do not add a required reviewer. A reviewer stops the release until you come
+back and approve it, and stops each preview build the same way. The tag ruleset
+below controls who can start a release.
 
 **2. A tag ruleset.** This stops the tag from being made at all.
 
@@ -184,34 +194,40 @@ The team ID is not a secret. The workflow already contains it.
 
 ## Each release
 
-The release does not run the tests. CI tests each push to `main`, and the tag
-must point at a commit on `main`. Make sure the CI run for that commit passed,
-then push the tag:
+The release does not run the tests. CI tests each push to `main`, and the
+workflow reads the result. Push the tag:
 
 ```bash
 git tag v1.1 && git push origin v1.1
 ```
 
-The workflow starts, then waits. Approve it in the run page, or in the mail
-that GitHub sends you. The workflow then does these steps:
+Push the tag as soon as the commit is on `main`. You do not have to wait for CI
+first: the `gate` job waits for you. Nothing else is necessary. The workflow
+does these steps:
 
 1. It makes sure the tag is on `main`.
-2. It makes an archive.
-3. It signs the app with the Developer ID certificate and the profile.
-4. It sends the app to Apple for notarization.
-5. It staples the notarization ticket to the app.
-6. It makes a zip file.
-7. It makes a disk image. The image contains the app and a link to the
+2. It waits for the CI run on that commit. It stops if the run fails.
+3. It makes an archive.
+4. It signs the app with the Developer ID certificate and the profile.
+5. It sends the app to Apple for notarization.
+6. It staples the notarization ticket to the app.
+7. It makes a zip file.
+8. It makes a disk image. The image contains the app and a link to the
    Applications folder.
-8. It signs the disk image.
-9. It sends the disk image to Apple for notarization.
-10. It staples the notarization ticket to the disk image.
-11. It signs the app for Sparkle.
-12. It makes `appcast.xml`.
-13. It publishes the GitHub release with the three assets.
+9. It signs the disk image.
+10. It sends the disk image to Apple for notarization.
+11. It staples the notarization ticket to the disk image.
+12. It signs the app for Sparkle.
+13. It makes `appcast.xml`.
+14. It publishes the GitHub release with the three assets.
 
-The workflow takes 20 to 40 minutes after you approve it. The Apple notary
-service uses most of this time, and the workflow waits for it two times.
+The workflow takes 20 to 40 minutes, plus the time that CI still needs. The
+Apple notary service uses most of this time, and the workflow waits for it two
+times.
+
+If CI fails on that commit, the `gate` job stops the release. No signing key is
+used. Correct the code, push it, then make the next tag. Do not move a tag that
+you already pushed.
 
 Important information:
 
@@ -225,10 +241,13 @@ Important information:
   decision. Linen asks one time only. The disk image is what makes the correct
   installation obvious, so keep the link to the Applications folder in it.
 - **The tag sets the version.** `MARKETING_VERSION` comes from the tag without
-  the `v` character. `CURRENT_PROJECT_VERSION` comes from the number of the
-  workflow run. Thus the `CFBundleVersion` value that Sparkle compares always
-  increases. Do not change a version by hand in the Xcode project. The values in
-  the Xcode project apply only to local builds.
+  the `v` character. `CURRENT_PROJECT_VERSION` comes from `git rev-list --count
+  HEAD`, the number of commits. Thus the `CFBundleVersion` value that Sparkle
+  compares always increases, in both channels. Do not use the number of the
+  workflow run: that counter restarts if the workflow file is replaced, and a
+  build number that goes down stops every installed copy from updating. Do not
+  change a version by hand in the Xcode project. The values in the Xcode project
+  apply only to local builds.
 - **The release body supplies the “What’s New” sheet.** The workflow makes the
   body from two parts. `CHANGELOG.md` is optional: make it only when a release
   needs notes of its own. If it contains a `## 1.1` section, that section comes
@@ -338,14 +357,87 @@ Mac:
 10. Staple the ticket to the disk image with `staple`.
 11. Attach the disk image, the zip file **and** `appcast.xml` to the release.
 
+## Preview builds
+
+Linen has two update channels. A release is the default. A preview build comes
+from the newest commit on `main`, before a release.
+
+To use preview builds, open Settings › About. Set **Update channel** to
+**Preview**. Sparkle reads the other feed at the next check. A restart is not
+necessary.
+
+### What the workflow does
+
+`.github/workflows/tip.yml` starts each time CI passes on `main`. You do not
+start it, and you do not tag anything. The workflow does these steps:
+
+1. It reads the version. The version is the last `v` tag, then the number of
+   commits after that tag. Example: `0.1.2 (4)`.
+2. It stops if that count is zero. The commit is the release itself, and the
+   release already carries the same build.
+3. It makes an archive. It signs the app and sends it to Apple for
+   notarization.
+4. It makes a zip file. It does not make a disk image.
+5. It signs the app for Sparkle. It makes `appcast-tip.xml`.
+6. It moves the `tip` tag to that commit.
+7. It updates the `tip` pre-release with the two files.
+8. It deletes each zip file that is not one of the five most recent.
+
+The workflow takes 20 to 30 minutes. Ten commits in ten minutes make one build.
+A new run cancels the run before it, and the last commit is what builds.
+
+### Where each feed is
+
+| Channel | Tag | Pre-release | Feed asset |
+| --- | --- | --- | --- |
+| Release | `v0.1.2`, a new tag each time | No | `appcast.xml` |
+| Preview | `tip`, one tag that moves | **Yes** | `appcast-tip.xml` |
+
+`Linen/Updates/UpdateFeed.swift` contains both URLs. The release feed is
+`releases/latest/download/appcast.xml`. The preview feed is
+`releases/download/tip/appcast-tip.xml`. The second URL is a permalink because
+the tag name never changes.
+
+### Rules that you must keep
+
+- **The `tip` release must stay a pre-release.** GitHub makes the most recent
+  release that is not a pre-release the “latest” release, and
+  `releases/latest/download/` reads that release. A `tip` release that is not a
+  pre-release takes the release feed URL. The workflow sets the flag on each
+  run.
+- **The two feed files must keep different names.** This is what makes the
+  error above safe. With different names, the release feed gives a 404, each
+  update check fails, and you can correct it. With the same name, each user
+  moves to the preview channel. Sparkle does not install an older version, so
+  you cannot correct that.
+- **The build number must always increase.** Both workflows use `git rev-list
+  --count HEAD`. A release is always at or after the previews before it, so its
+  number is never lower.
+- **The `tip` tag is not a version tag.** The workflow reads the last version
+  with `git describe --match 'v[0-9]*.[0-9]*'`. Without the pattern, `git
+  describe` finds `tip`, and the count becomes zero at each build.
+- **A preview build uses the signing keys.** The certificate, the notarization
+  key and the Sparkle key are used at each green commit on `main`, not only at
+  each release.
+
+### Going back to releases
+
+Set Update channel to Release. Linen reads the release feed again. Sparkle does not
+install an older version, so the app stays on the preview build until a release
+has a higher build number. To go back immediately, download the disk image from
+the releases page and replace the app.
+
 ## Update behavior
 
 - Sparkle checks for an update at launch, and then every four hours. If a
   background check fails, the app shows nothing.
+- The feed that Sparkle reads depends on the Update channel setting. A change
+  to the setting starts a check immediately.
 - If Sparkle finds an update, the banner shows in two locations: above the
   settings page, and in the sidebar below the media player.
-- **Download** starts the download. **Install and Relaunch** completes the
-  installation. The app downloads nothing before the user selects **Download**.
+- **Install** does all of it: it downloads the update, installs it, and starts
+  Linen again. Linen does not ask a second time. The app downloads nothing
+  before the user selects **Install**.
 - If the user dismisses the banner, the app defers the update. It does not skip
   the update. A downloaded update continues at the next launch.
 - Linen › Check for Updates… starts a check immediately. The same banner shows

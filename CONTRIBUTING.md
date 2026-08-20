@@ -129,6 +129,38 @@ its own preference domain. It cannot change the real installation’s history,
 cookies, tabs or settings. Delete `$TMPDIR/linen-stage` to reset it, or set
 `LINEN_STAGE_HOME` to keep more than one staged session.
 
+## Write commit messages
+
+Linen uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+Start the subject with a type, then a colon and a summary. Write the summary in
+the imperative mood. Start it with a lower-case letter. Do not put a period at
+the end. Keep the subject to 72 characters or less.
+
+Use one of these types:
+
+- `feat`: a new capability a person can use.
+- `fix`: a correction to behavior.
+- `perf`: a change that makes existing behavior faster.
+- `refactor`: a change that keeps behavior the same.
+- `test`: a change to tests only.
+- `docs`: a change to documentation only.
+- `build`: a change to the Xcode project or to a package dependency.
+- `ci`: a change to a workflow in `.github/workflows`.
+- `chore`: a change that no other type describes.
+
+Add a scope in parentheses when the change belongs to one area, for example
+`fix(sidebar): keep the selection after a drag`. Put an exclamation mark after
+the type for a change that breaks an existing setup, for example `feat!:`.
+
+Give the reason for the change in the body:
+
+```
+ci: stop re-running tests in the release workflow
+
+CI tests every push to main, and a tag must point at a commit on main, so
+the release job ran the same suite a second time.
+```
+
 ## Pull request checklist
 
 - The app builds without new warnings.
@@ -137,6 +169,7 @@ cookies, tabs or settings. Delete `$TMPDIR/linen-stage` to reset it, or set
 - User-facing strings remain localizable.
 - The change uses existing visual and interaction patterns.
 - Comments explain constraints, not syntax or product comparisons.
+- Each commit message follows Conventional Commits.
 
 ## License of your contribution
 
