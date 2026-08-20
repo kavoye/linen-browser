@@ -120,6 +120,10 @@ private struct TabPreviewCard: View {
     private static let width: CGFloat = 252
     private static let imageHeight: CGFloat = 150
 
+    private var isAsleep: Bool {
+        TabIcon.isAsleep(tab.reclaimState)
+    }
+
     private var host: String {
         URL(string: tab.urlString)?.host() ?? ""
     }
@@ -137,6 +141,7 @@ private struct TabPreviewCard: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: Self.width, height: Self.imageHeight, alignment: .top)
                     .clipped()
+                    .saturation(isAsleep ? 0 : 1)
             }
 
             VStack(alignment: .leading, spacing: 3) {
