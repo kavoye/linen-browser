@@ -26,7 +26,7 @@ nonisolated struct Profile: Identifiable, Codable, Hashable, Sendable {
             id: originalID,
             name: String(localized: "Personal"),
             symbol: "person",
-            color: .blue
+            color: .gray
         )
     }
 
