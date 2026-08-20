@@ -48,8 +48,18 @@ struct OmniboxList: View {
     var containerRadius: CGFloat = Theme.Radius.panel
     let onSelect: (Int) -> Void
     let onRun: (Int) -> Void
+    var onRunAlternate: ((Int) -> Void)?
 
     @State private var pointerAnchor: CGPoint?
+
+    private func tapped(_ index: Int) {
+        let modifiers = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if modifiers.contains(.command), let onRunAlternate {
+            onRunAlternate(index)
+        } else {
+            onRun(index)
+        }
+    }
 
     private func hovered(_ index: Int) {
         let pointer = NSEvent.mouseLocation
@@ -76,7 +86,7 @@ struct OmniboxList: View {
                             cornerRadius: Theme.Radius.nested(in: containerRadius, inset: density.padding)
                         )
                         .contentShape(Rectangle())
-                        .onTapGesture { onRun(index) }
+                        .onTapGesture { tapped(index) }
                         .onHover { if $0 { hovered(index) } }
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(Text(verbatim: item.title))

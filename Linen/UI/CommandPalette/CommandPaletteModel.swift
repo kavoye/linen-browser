@@ -59,6 +59,12 @@ enum CommandPaletteShortcutPolicy {
             .compactMap { UnicodeScalar($0).map(String.init) }
     )
 
+    static let returnKeys: Set<String> = ["\r", "\u{3}"]
+
+    static func opensInNewTab(modifiers: NSEvent.ModifierFlags, key: String) -> Bool {
+        modifiers.intersection(.deviceIndependentFlagsMask) == .shift && returnKeys.contains(key)
+    }
+
     static func shouldDismiss(modifiers: NSEvent.ModifierFlags, key: String) -> Bool {
         let modifiers = modifiers.intersection(.deviceIndependentFlagsMask)
         let editingKeys: Set<String> = ["a", "c", "v", "x", "z"]
@@ -66,8 +72,9 @@ enum CommandPaletteShortcutPolicy {
         let isTextEditing = modifiers == .command && editingKeys.contains(normalizedKey)
         let isPaletteShortcut = modifiers == .command && normalizedKey == "k"
         let isListNavigation = arrowKeys.contains(key)
+        let isRun = returnKeys.contains(key)
         let isCommand = !modifiers.isDisjoint(with: [.command, .control, .option])
-        return isCommand && !isTextEditing && !isPaletteShortcut && !isListNavigation
+        return isCommand && !isTextEditing && !isPaletteShortcut && !isListNavigation && !isRun
     }
 }
 
@@ -158,9 +165,13 @@ enum CommandPaletteProjection {
 
         var slots = [
             CommandPaletteBudget.Slot(
-                Omnibox.topSection(query: needle, open: actions.openCurrent),
+                Omnibox.topSection(
+                    query: needle,
+                    openInNewTab: actions.openNew,
+                    open: actions.openCurrent
+                ),
                 floor: 1,
-                quota: 1
+                quota: 2
             ),
         ]
         if promoted {
@@ -185,7 +196,13 @@ enum CommandPaletteProjection {
             slots.append(CommandPaletteBudget.Slot(matched, floor: 1, quota: 3))
         }
         slots.append(CommandPaletteBudget.Slot(
-            Omnibox.phrasesSection(query: needle, phrases: phrases, limit: 3, open: actions.openCurrent),
+            Omnibox.phrasesSection(
+                query: needle,
+                phrases: phrases,
+                limit: 3,
+                openInNewTab: actions.openNew,
+                open: actions.openCurrent
+            ),
             floor: 2,
             quota: 3
         ))
@@ -202,7 +219,7 @@ enum CommandPaletteProjection {
             id: "ask",
             title: String(localized: "Ask \(agentName)"),
             items: [
-                OmniboxItem(id: "ask-agent", kind: .ask, title: prompt) {
+                OmniboxItem(id: "ask-agent", kind: .ask, title: prompt, shortcut: "⌘↩") {
                     ask(prompt)
                 },
             ]
@@ -329,6 +346,14 @@ final class CommandPaletteModel {
         run(at: interaction.selection)
     }
 
+    func submitInNewTab() {
+        runAlternate(at: interaction.selection)
+    }
+
+    func askWhateverIsTyped() {
+        ask(interaction.query)
+    }
+
     func run(at index: Int) {
         let items = sections.flattened
         guard items.indices.contains(index) else {
@@ -336,6 +361,16 @@ final class CommandPaletteModel {
             return
         }
         items[index].run()
+    }
+
+    func runAlternate(at index: Int) {
+        let items = sections.flattened
+        guard items.indices.contains(index) else {
+            dismiss()
+            return
+        }
+        let item = items[index]
+        (item.alternate ?? item.run)()
     }
 
     var mentionedTabs: [BrowserTab] {

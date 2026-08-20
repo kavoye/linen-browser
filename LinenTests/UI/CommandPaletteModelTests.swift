@@ -111,8 +111,9 @@ struct CommandPaletteModelTests {
             )
 
             #expect(sections.map(\.id) == ["top", "ask", "tabs", "history", "suggestions"])
-            #expect(sections.first { $0.id == "top" }?.items.count == 1)
-            #expect(sections.first { $0.id == "tabs" }?.items.count == 4)
+            // The top hit and the same hit in a new tab.
+            #expect(sections.first { $0.id == "top" }?.items.count == 2)
+            #expect(sections.first { $0.id == "tabs" }?.items.count == 3)
             #expect(sections.first { $0.id == "history" }?.items.count == 3)
             #expect(sections.first { $0.id == "suggestions" }?.items.count == 3)
             #expect(sections.flattened.count == CommandPaletteBudget.typing)
@@ -328,6 +329,26 @@ struct CommandPaletteModelTests {
         #expect(CommandPaletteProjection.suggestionQuery(for: "  > weather ").isEmpty)
         #expect(CommandPaletteProjection.commandQuery(in: ">") == "")
         #expect(CommandPaletteProjection.commandQuery(in: "a > b") == nil)
+    }
+
+    /// ⌘↩ asks the assistant, the way it does in the address field, and the
+    /// field claims it. Dismissing would take the key before it got there.
+    @Test func commandReturnStaysWithThePalette() {
+        for key in CommandPaletteShortcutPolicy.returnKeys {
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: key))
+            #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: .command, key: key))
+        }
+    }
+
+    /// ⇧↩ is the second destination, so ⌘↩ can stay on the assistant.
+    @Test func shiftReturnRunsTheRowInANewTab() {
+        for key in CommandPaletteShortcutPolicy.returnKeys {
+            #expect(CommandPaletteShortcutPolicy.opensInNewTab(modifiers: .shift, key: key))
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .shift, key: key))
+        }
+        #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: .shift, key: "a"))
+        #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: [], key: "\r"))
+        #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: [.shift, .command], key: "\r"))
     }
 
     private func fixtureContext() -> CommandPaletteContext {

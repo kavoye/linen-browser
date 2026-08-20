@@ -2271,6 +2271,9 @@
     "Open website" : {
       "comment" : "Detail line under the top row of the address bar results when what was typed is an address; pressing Return loads it. Verb phrase in sentence case."
     },
+    "Open website in a new tab" : {
+      "comment" : "Detail line under the second row of the ⌘K palette results when what was typed is an address; ⇧Return, or a Command-click, loads it beside the current page instead of in it. Verb phrase in sentence case."
+    },
     "Open Websites" : {
       "comment" : "Tool name in assistant settings: opening a web address."
     },
@@ -2854,6 +2857,9 @@
     },
     "Search with %@" : {
       "comment" : "Detail line under the top row of the address bar results when what was typed is a query. %@ is the chosen search engine's name (DuckDuckGo, Google…) — never translated."
+    },
+    "Search with %@ in a new tab" : {
+      "comment" : "Detail line under the second row of the ⌘K palette results when what was typed is a query; ⇧Return, or a Command-click, runs the search beside the current page instead of in it. %@ is the chosen search engine's name (DuckDuckGo, Google…) — never translated."
     },
     "Search, “@” to ask, or paste a link" : {
       "comment" : "Placeholder in the address/ask field at the top of the window and on the start page. The “@” is literal: typing it at the start of the line addresses the assistant instead of searching, so the character must stay, stay leading, and stay in quotes. Sentence case."

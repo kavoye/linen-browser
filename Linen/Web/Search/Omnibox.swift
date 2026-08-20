@@ -7,6 +7,7 @@ struct OmniboxItem: Identifiable {
     enum Kind {
         case go
         case search
+        case newTab
         case phrase
         case history
         case tab
@@ -21,6 +22,9 @@ struct OmniboxItem: Identifiable {
     let symbol: String
     let iconHost: String?
     let shortcut: String
+    /// What a command-click, or ⌘↩, runs instead. Nil means the row has one
+    /// outcome and both gestures reach it.
+    let alternate: (() -> Void)?
     let run: () -> Void
 
     init(
@@ -31,6 +35,7 @@ struct OmniboxItem: Identifiable {
         symbol: String? = nil,
         iconHost: String? = nil,
         shortcut: String = "",
+        alternate: (() -> Void)? = nil,
         run: @escaping () -> Void
     ) {
         self.id = id
@@ -40,6 +45,7 @@ struct OmniboxItem: Identifiable {
         self.symbol = symbol ?? kind.defaultSymbol
         self.iconHost = iconHost
         self.shortcut = shortcut
+        self.alternate = alternate
         self.run = run
     }
 }
@@ -49,6 +55,8 @@ extension OmniboxItem.Kind {
         switch self {
         case .go:
             "arrow.up.right"
+        case .newTab:
+            "plus.rectangle.on.rectangle"
         case .search, .phrase:
             "magnifyingglass"
         case .history:
@@ -66,7 +74,7 @@ extension OmniboxItem.Kind {
         switch self {
         case .history, .tab:
             true
-        case .go, .search, .phrase, .ask, .action:
+        case .go, .search, .newTab, .phrase, .ask, .action:
             false
         }
     }
@@ -131,38 +139,78 @@ enum Omnibox {
         return query.contains("://") ? URL(string: query) : URL(string: "https://\(query)")
     }
 
-    static func searchItem(for query: String, open: @escaping (URL) -> Void) -> OmniboxItem? {
+    static func destination(for query: String) -> URL? {
+        location(for: query) ?? (isAgentOnly ? nil : SearchURLBuilder.searchURL(for: query))
+    }
+
+    static func searchItem(
+        for query: String,
+        openInNewTab: ((URL) -> Void)? = nil,
+        open: @escaping (URL) -> Void
+    ) -> OmniboxItem? {
         if let location = location(for: query) {
-            return OmniboxItem(id: "omnibox-go", kind: .go, title: query, detail: String(localized: "Open website")) {
+            return OmniboxItem(
+                id: "omnibox-go",
+                kind: .go,
+                title: query,
+                detail: String(localized: "Open website"),
+                alternate: openInNewTab.map { openNew in { openNew(location) } }
+            ) {
                 open(location)
             }
         }
         guard !isAgentOnly else { return nil }
+        let search = SearchURLBuilder.searchURL(for: query)
         return OmniboxItem(
             id: "omnibox-search",
             kind: .search,
             title: query,
-            detail: String(localized: "Search with \(engineName)")
+            detail: String(localized: "Search with \(engineName)"),
+            alternate: openInNewTab.map { openNew in { openNew(search) } }
         ) {
-            open(SearchURLBuilder.searchURL(for: query))
+            open(search)
         }
     }
 
-    static func topSection(query: String, open: @escaping (URL) -> Void) -> OmniboxSection? {
+    static func newTabItem(for query: String, open: @escaping (URL) -> Void) -> OmniboxItem? {
+        guard let destination = destination(for: query) else { return nil }
+        let detail: LocalizedStringResource = location(for: query) == nil
+            ? "Search with \(engineName) in a new tab"
+            : "Open website in a new tab"
+        return OmniboxItem(
+            id: "omnibox-new-tab",
+            kind: .newTab,
+            title: query,
+            detail: String(localized: detail),
+            shortcut: "⇧↩"
+        ) {
+            open(destination)
+        }
+    }
+
+    static func topSection(
+        query: String,
+        openInNewTab: ((URL) -> Void)? = nil,
+        open: @escaping (URL) -> Void
+    ) -> OmniboxSection? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty, let row = searchItem(for: query, open: open) else { return nil }
-        return OmniboxSection(id: "top", title: "", items: [row])
+        guard !query.isEmpty,
+              let row = searchItem(for: query, openInNewTab: openInNewTab, open: open)
+        else { return nil }
+        let items = [row, openInNewTab.flatMap { newTabItem(for: query, open: $0) }].compactMap { $0 }
+        return OmniboxSection(id: "top", title: "", items: items)
     }
 
     static func phrasesSection(
         query: String,
         phrases: [String],
         limit: Int,
+        openInNewTab: ((URL) -> Void)? = nil,
         open: @escaping (URL) -> Void
     ) -> OmniboxSection? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, !isAgentOnly, limit > 0 else { return nil }
-        let items = phraseItems(phrases.prefix(limit), open: open)
+        let items = phraseItems(phrases.prefix(limit), openInNewTab: openInNewTab, open: open)
         guard !items.isEmpty else { return nil }
         return OmniboxSection(id: "suggestions", title: String(localized: "\(engineName) Suggestions"), items: items)
     }
@@ -250,12 +298,19 @@ enum Omnibox {
 
     private static func phraseItems(
         _ phrases: some Sequence<String>,
+        openInNewTab: ((URL) -> Void)? = nil,
         open: @escaping (URL) -> Void
     ) -> [OmniboxItem] {
         guard !isAgentOnly else { return [] }
         return phrases.map { phrase in
-            OmniboxItem(id: "omnibox-phrase-\(phrase)", kind: .phrase, title: phrase) {
-                open(SearchURLBuilder.searchURL(for: phrase))
+            let search = SearchURLBuilder.searchURL(for: phrase)
+            return OmniboxItem(
+                id: "omnibox-phrase-\(phrase)",
+                kind: .phrase,
+                title: phrase,
+                alternate: openInNewTab.map { openNew in { openNew(search) } }
+            ) {
+                open(search)
             }
         }
     }

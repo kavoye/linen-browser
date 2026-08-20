@@ -75,6 +75,7 @@ struct CommandPaletteResultsView: View {
     let maxHeight: CGFloat
     let onSelect: (Int) -> Void
     let onRun: (Int) -> Void
+    let onRunAlternate: (Int) -> Void
 
     var body: some View {
         if !sections.isEmpty {
@@ -92,7 +93,8 @@ struct CommandPaletteResultsView: View {
                             selection: selection,
                             insetsVertically: false,
                             onSelect: onSelect,
-                            onRun: onRun
+                            onRun: onRun,
+                            onRunAlternate: onRunAlternate
                         )
                     }
                     .contentMargins(.vertical, OmniboxList.Density.regular.padding, for: .scrollContent)

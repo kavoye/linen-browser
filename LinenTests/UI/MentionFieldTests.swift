@@ -139,14 +139,62 @@ struct MentionFieldTests {
         #expect(MentionFieldRendering.mentionIDs(in: editor.attributedString()) == [chip.id])
     }
 
-    private final class Harness {
+    /// AppKit offers ⌘↩ round as a key equivalent and beeps when nothing takes
+    /// it, so the field editor never sees it. The field claims it instead.
+    @Test func commandReturnReachesTheAssistant() throws {
+        let harness = harness()
+        var asked = 0
+        harness.field.onCommandReturn = { asked += 1 }
+        harness.window.makeFirstResponder(harness.field)
+
+        #expect(harness.field.performKeyEquivalent(with: try returnKey(.command, in: harness)))
+        #expect(asked == 1)
+    }
+
+    @Test func aPlainReturnIsLeftToTheFieldEditor() throws {
+        let harness = harness()
+        var asked = 0
+        harness.field.onCommandReturn = { asked += 1 }
+        harness.window.makeFirstResponder(harness.field)
+
+        #expect(!harness.field.performKeyEquivalent(with: try returnKey([], in: harness)))
+        #expect(!harness.field.performKeyEquivalent(with: try returnKey([.command, .shift], in: harness)))
+        #expect(asked == 0)
+    }
+
+    @Test func anUnfocusedFieldDoesNotAnswerForTheWindow() throws {
+        let harness = harness()
+        var asked = 0
+        harness.field.onCommandReturn = { asked += 1 }
+        harness.window.makeFirstResponder(nil)
+
+        #expect(!harness.field.performKeyEquivalent(with: try returnKey(.command, in: harness)))
+        #expect(asked == 0)
+    }
+
+    private func returnKey(_ modifiers: NSEvent.ModifierFlags, in harness: Harness) throws -> NSEvent {
+        try #require(NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: modifiers,
+            timestamp: 0,
+            windowNumber: harness.window.windowNumber,
+            context: nil,
+            characters: "\r",
+            charactersIgnoringModifiers: "\r",
+            isARepeat: false,
+            keyCode: 36
+        ))
+    }
+
+    fileprivate final class Harness {
         let window = NSWindow(
             contentRect: CGRect(x: 0, y: 0, width: 400, height: 40),
             styleMask: [.titled],
             backing: .buffered,
             defer: false
         )
-        let field = NSTextField(frame: CGRect(x: 0, y: 0, width: 400, height: 24))
+        let field = MentionTextField(frame: CGRect(x: 0, y: 0, width: 400, height: 24))
         var text = ""
         lazy var coordinator = MentionField.Coordinator(
             text: Binding(get: { self.text }, set: { self.text = $0 })
@@ -164,7 +212,7 @@ struct MentionFieldTests {
         }
     }
 
-    private func harness() -> Harness {
+    fileprivate func harness() -> Harness {
         Harness()
     }
 }

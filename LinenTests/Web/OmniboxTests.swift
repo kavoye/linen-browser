@@ -171,6 +171,60 @@ struct OmniboxTests {
         }
     }
 
+    /// ⌘-click is how every browser opens a link beside the page it is on, so
+    /// the palette offers the same destination twice: here, and in a new tab.
+    @Test func theTopRowOffersANewTabAndCommandClickTakesIt() throws {
+        try agentOnly(false) {
+            var here: [URL] = []
+            var beside: [URL] = []
+            let section = try #require(Omnibox.topSection(
+                query: "example.com",
+                openInNewTab: { beside.append($0) },
+                open: { here.append($0) }
+            ))
+
+            #expect(section.items.map(\.id) == ["omnibox-go", "omnibox-new-tab"])
+            #expect(section.items[1].shortcut == "⇧↩")
+
+            section.items[0].run()
+            #expect(here.map(\.absoluteString) == ["https://example.com"])
+            #expect(beside.isEmpty)
+
+            let alternate = try #require(section.items[0].alternate)
+            alternate()
+            section.items[1].run()
+            #expect(beside.map(\.absoluteString) == ["https://example.com", "https://example.com"])
+            #expect(here.count == 1)
+        }
+    }
+
+    /// A typed search gets the same pair, pointed at the engine.
+    @Test func aSearchAlsoOffersANewTab() throws {
+        try agentOnly(false) {
+            var beside: [URL] = []
+            let section = try #require(Omnibox.topSection(
+                query: "weather tomorrow",
+                openInNewTab: { beside.append($0) },
+                open: { _ in }
+            ))
+
+            #expect(section.items.map(\.id) == ["omnibox-search", "omnibox-new-tab"])
+            section.items[1].run()
+            #expect(beside == [SearchURLBuilder.searchURL(for: "weather tomorrow")])
+        }
+    }
+
+    /// Without a second outcome the same gesture still runs the row, rather
+    /// than doing nothing at all.
+    @Test func aRowWithoutASecondOutcomeKeepsItsOwn() throws {
+        try agentOnly(false) {
+            let section = try #require(Omnibox.topSection(query: "example.com") { _ in })
+
+            #expect(section.items.map(\.id) == ["omnibox-go"])
+            #expect(section.items[0].alternate == nil)
+        }
+    }
+
     @Test func anUnmatchedQueryProducesNoHistorySection() {
         let store = HistoryStore(database: .temporary())
         store.record(url: "https://example.com", title: "Something")

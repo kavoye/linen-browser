@@ -67,6 +67,24 @@ extension NSAttributedString.Key {
     static let mentionID = NSAttributedString.Key("linenMentionID")
 }
 
+/// ⌘↩ never reaches a field editor: AppKit offers it round as a key
+/// equivalent and beeps when nothing claims it.
+final class MentionTextField: NSTextField {
+    var onCommandReturn: (() -> Void)?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           event.charactersIgnoringModifiers == "\r",
+           let editor = currentEditor(),
+           window?.firstResponder === editor,
+           let onCommandReturn {
+            onCommandReturn()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
 struct MentionField: NSViewRepresentable {
     @Binding var text: String
     var chips: [MentionChip] = []
@@ -84,8 +102,8 @@ struct MentionField: NSViewRepresentable {
 
     @Environment(\.colorScheme) private var colorScheme
 
-    func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField()
+    func makeNSView(context: Context) -> MentionTextField {
+        let field = MentionTextField()
         field.delegate = context.coordinator
         field.isBordered = false
         field.drawsBackground = false
@@ -101,8 +119,9 @@ struct MentionField: NSViewRepresentable {
         return field
     }
 
-    func updateNSView(_ field: NSTextField, context: Context) {
+    func updateNSView(_ field: MentionTextField, context: Context) {
         let coordinator = context.coordinator
+        field.onCommandReturn = onCommandSubmit
         coordinator.text = $text
         coordinator.onFocusChange = onFocusChange
         coordinator.onChipsChange = onChipsChange

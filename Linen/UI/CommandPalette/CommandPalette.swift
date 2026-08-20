@@ -36,7 +36,7 @@ struct CommandPalette: View {
                 chips: model.mentionChips,
                 focused: $focused,
                 onSubmit: model.submit,
-                onCommandSubmit: model.submit,
+                onCommandSubmit: model.askWhateverIsTyped,
                 onMoveSelection: model.moveSelection,
                 onMoveSection: model.moveSection,
                 onChipsChange: model.mentionsDidChange,
@@ -50,7 +50,8 @@ struct CommandPalette: View {
                 selection: model.interaction.selection,
                 maxHeight: layout.maxListHeight,
                 onSelect: { model.interaction.selection = $0 },
-                onRun: model.run
+                onRun: model.run,
+                onRunAlternate: model.runAlternate
             )
 
             AskContextStrip(pages: model.contextPages)
@@ -61,7 +62,7 @@ struct CommandPalette: View {
         .padding(.top, layout.topInset)
         .onAppear {
             model.prepare()
-            watchForShortcuts(dismiss: model.dismiss)
+            watchForShortcuts(model: model)
         }
         .task {
             focused = true
@@ -84,15 +85,16 @@ struct CommandPalette: View {
         }
     }
 
-    private func watchForShortcuts(dismiss: @escaping () -> Void) {
+    private func watchForShortcuts(model: CommandPaletteModel) {
         guard shortcutMonitor == nil else { return }
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            let shouldDismiss = CommandPaletteShortcutPolicy.shouldDismiss(
-                modifiers: event.modifierFlags,
-                key: event.charactersIgnoringModifiers ?? ""
-            )
-            if shouldDismiss {
-                MainActor.assumeIsolated { dismiss() }
+            let key = event.charactersIgnoringModifiers ?? ""
+            if CommandPaletteShortcutPolicy.opensInNewTab(modifiers: event.modifierFlags, key: key) {
+                MainActor.assumeIsolated { model.submitInNewTab() }
+                return nil
+            }
+            if CommandPaletteShortcutPolicy.shouldDismiss(modifiers: event.modifierFlags, key: key) {
+                MainActor.assumeIsolated { model.dismiss() }
             }
             return event
         }
