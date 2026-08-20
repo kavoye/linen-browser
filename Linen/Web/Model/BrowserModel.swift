@@ -143,6 +143,8 @@ final class BrowserModel {
 
     var recentlyActive: [UUID] = []
 
+    var switcherRecency: [UUID]?
+
     private func noteActivation(_ id: UUID) {
         recentlyActive.removeAll { $0 == id }
         recentlyActive.insert(id, at: 0)

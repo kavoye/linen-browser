@@ -285,6 +285,17 @@ final class AppCoordinator {
 
     var escapeMonitor: Any?
 
+    // MARK: - Tab switching
+
+    var tabSwitchMonitor: Any?
+
+    var controlDownAt: TimeInterval?
+
+    var isControlTap: Bool {
+        let now = NSApp.currentEvent?.timestamp ?? ProcessInfo.processInfo.systemUptime
+        return ModifierTap.isTap(downAt: controlDownAt, now: now)
+    }
+
     // MARK: - Profiles
 
     let profiles = ProfileStore.shared

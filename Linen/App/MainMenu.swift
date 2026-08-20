@@ -208,8 +208,13 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(.separator())
         menu.addItem(command("Show Next Tab", #selector(nextTab), key: "]", modifiers: [.command, .shift]))
         menu.addItem(command("Show Previous Tab", #selector(previousTab), key: "[", modifiers: [.command, .shift]))
-        menu.addItem(hidden(command("Show Next Tab", #selector(nextTab), key: "\t", modifiers: [.control])))
-        menu.addItem(hidden(command("Show Previous Tab", #selector(previousTab), key: "\t", modifiers: [.control, .shift])))
+        menu.addItem(hidden(command("Show Next Tab", #selector(switchToNextTab), key: "\t", modifiers: [.control])))
+        menu.addItem(hidden(command(
+            "Show Previous Tab",
+            #selector(switchToPreviousTab),
+            key: "\t",
+            modifiers: [.control, .shift]
+        )))
         menu.addItem(.separator())
         for slot in 1...8 {
             menu.addItem(hidden(command("Show Tab \(slot)", #selector(showTabAtIndex(_:)), key: "\(slot)")))
@@ -340,6 +345,14 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.browser.cycleTab(forward: false)
         coordinator.showBrowserPage()
     }
+    @objc private func switchToNextTab() {
+        coordinator.browser.switchTab(forward: true, asTap: coordinator.isControlTap)
+        coordinator.showBrowserPage()
+    }
+    @objc private func switchToPreviousTab() {
+        coordinator.browser.switchTab(forward: false)
+        coordinator.showBrowserPage()
+    }
     @objc private func showTabAtIndex(_ sender: NSMenuItem) {
         coordinator.browser.activateTab(at: sender.tag)
         coordinator.showBrowserPage()
@@ -407,7 +420,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             return coordinator.browser.canReopenClosedTab
         case #selector(leavePrivateBrowsing):
             return coordinator.profiles.isPrivate
-        case #selector(nextTab), #selector(previousTab), #selector(showLastTab):
+        case #selector(nextTab), #selector(previousTab), #selector(showLastTab),
+             #selector(switchToNextTab), #selector(switchToPreviousTab):
             return coordinator.browser.tabs.count > 1
         case #selector(showTabAtIndex(_:)):
             return coordinator.browser.tabs.indices.contains(menuItem.tag)

@@ -119,7 +119,7 @@ extension AppCoordinator {
             voiceInput.scheduleFinish()
         }
         activation.start()
-        installEscapeHandler()
+        installKeyMonitors()
 
         onboarding.beginIfNeeded()
 
@@ -239,7 +239,42 @@ extension AppCoordinator {
         }
     }
 
-    // MARK: - Escape
+    // MARK: - Key monitors
+
+    private func installKeyMonitors() {
+        installEscapeHandler()
+        installTabSwitchHandler()
+    }
+
+    private func installTabSwitchHandler() {
+        guard tabSwitchMonitor == nil else { return }
+        tabSwitchMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            MainActor.assumeIsolated {
+                self?.controlChanged(isDown: event.modifierFlags.contains(.control), at: event.timestamp)
+            }
+            return event
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.controlChanged(isDown: false, at: ProcessInfo.processInfo.systemUptime)
+            }
+        }
+    }
+
+    private func controlChanged(isDown: Bool, at timestamp: TimeInterval) {
+        guard isDown else {
+            controlDownAt = nil
+            browser.endTabSwitching()
+            return
+        }
+        if controlDownAt == nil {
+            controlDownAt = timestamp
+        }
+    }
 
     private func installEscapeHandler() {
         guard escapeMonitor == nil else { return }
