@@ -90,6 +90,55 @@ struct MentionFieldTests {
         #expect((attachment?.bounds.width ?? 0) > 0)
     }
 
+    /// A link copied from a page carries the website's own styling. Pasted into
+    /// the address field it used to stay blue and underlined.
+    @Test func aPastedLinkLosesTheWebsitesStyling() throws {
+        let harness = harness()
+        harness.window.makeFirstResponder(harness.field)
+        let editor = try #require(harness.field.currentEditor() as? NSTextView)
+        let storage = try #require(editor.textStorage)
+
+        storage.setAttributedString(NSAttributedString(
+            string: "https://example.com/article",
+            attributes: [
+                .link: URL(string: "https://example.com/article") as Any,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .foregroundColor: NSColor.systemBlue,
+                .font: NSFont.systemFont(ofSize: 24),
+            ]
+        ))
+        harness.coordinator.controlTextDidChange(
+            Notification(name: NSControl.textDidChangeNotification, object: harness.field)
+        )
+
+        let styled = editor.attributedString()
+        var attributes: [NSAttributedString.Key: Any] = [:]
+        attributes = styled.attributes(at: 0, effectiveRange: nil)
+        #expect(attributes[.link] == nil)
+        #expect(attributes[.underlineStyle] == nil)
+        #expect(attributes[.foregroundColor] as? NSColor == .labelColor)
+        #expect((attributes[.font] as? NSFont)?.pointSize == 13)
+        #expect(harness.text == "https://example.com/article")
+    }
+
+    /// The chips are attachments. Cleaning a pasted run must not flatten them.
+    @Test func cleaningAPasteLeavesTheChipsAlone() throws {
+        let harness = harness()
+        let chip = MentionChip(id: UUID(), title: "Nike Air Max")
+        harness.window.makeFirstResponder(harness.field)
+        harness.coordinator.apply(
+            text: "compare \(MentionText.marker)",
+            chips: [chip],
+            isDark: false,
+            to: harness.field
+        )
+
+        let editor = try #require(harness.field.currentEditor() as? NSTextView)
+        MentionFieldRendering.stripPastedStyles(in: editor, fontSize: 13)
+
+        #expect(MentionFieldRendering.mentionIDs(in: editor.attributedString()) == [chip.id])
+    }
+
     private final class Harness {
         let window = NSWindow(
             contentRect: CGRect(x: 0, y: 0, width: 400, height: 40),

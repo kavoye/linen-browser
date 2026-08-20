@@ -250,10 +250,10 @@ struct MentionField: NSViewRepresentable {
             guard let field = notification.object as? NSTextField,
                   let editor = field.currentEditor() as? NSTextView
             else { return }
+            let fontSize = field.font?.pointSize ?? 13
+            MentionFieldRendering.stripPastedStyles(in: editor, fontSize: fontSize)
             let attributed = editor.attributedString()
-            editor.typingAttributes = MentionFieldRendering.baseAttributes(
-                fontSize: field.font?.pointSize ?? 13
-            )
+            editor.typingAttributes = MentionFieldRendering.baseAttributes(fontSize: fontSize)
             renderedText = attributed.string
             renderedChips = MentionFieldRendering.mentionIDs(in: attributed)
             text.wrappedValue = attributed.string
@@ -299,6 +299,41 @@ enum MentionFieldRendering {
             .font: NSFont.systemFont(ofSize: fontSize),
             .foregroundColor: NSColor.labelColor,
         ]
+    }
+
+    static let pastedStyleKeys: [NSAttributedString.Key] = [
+        .link,
+        .underlineStyle,
+        .underlineColor,
+        .strikethroughStyle,
+        .strikethroughColor,
+        .backgroundColor,
+        .strokeColor,
+        .strokeWidth,
+        .shadow,
+        .obliqueness,
+        .expansion,
+    ]
+
+    static func stripPastedStyles(in editor: NSTextView, fontSize: CGFloat) {
+        guard let storage = editor.textStorage, storage.length > 0 else { return }
+        let full = NSRange(location: 0, length: storage.length)
+        var dirty: [NSRange] = []
+        storage.enumerateAttributes(in: full) { attributes, range, _ in
+            guard attributes[.attachment] == nil else { return }
+            let styled = pastedStyleKeys.contains { attributes[$0] != nil }
+            let resized = (attributes[.font] as? NSFont)?.pointSize != fontSize
+            let tinted = (attributes[.foregroundColor] as? NSColor) != .labelColor
+            guard styled || resized || tinted else { return }
+            dirty.append(range)
+        }
+        guard !dirty.isEmpty else { return }
+        let base = baseAttributes(fontSize: fontSize)
+        storage.beginEditing()
+        for range in dirty {
+            storage.setAttributes(base, range: range)
+        }
+        storage.endEditing()
     }
 
     static func mentionIDs(in attributed: NSAttributedString) -> [UUID] {
