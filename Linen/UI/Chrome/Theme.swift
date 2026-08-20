@@ -96,7 +96,7 @@ enum Theme {
         static let micro: SwiftUI.Font = .system(size: 10)
     }
 
-    private static func adaptive(dark: NSColor, light: NSColor) -> Color {
+    static func adaptive(dark: NSColor, light: NSColor) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light
         })
