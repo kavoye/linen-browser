@@ -34,6 +34,23 @@ struct InstallLocationTests {
         )
     }
 
+    private func expectMove(
+        _ decision: InstallLocation.Decision,
+        from expectedFrom: String,
+        to expectedTo: String,
+        isReadOnlySource expectedReadOnly: Bool = false,
+        _ comment: Comment,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) {
+        guard case let .offerMove(from, to, isReadOnlySource) = decision else {
+            Issue.record(comment, sourceLocation: sourceLocation)
+            return
+        }
+        #expect(from.path == expectedFrom, sourceLocation: sourceLocation)
+        #expect(to.path == expectedTo, sourceLocation: sourceLocation)
+        #expect(isReadOnlySource == expectedReadOnly, sourceLocation: sourceLocation)
+    }
+
     @Test func anInstalledCopyIsLeftAlone() {
         #expect(decide(bundle: "/Applications/Linen.app") == .installed)
         #expect(decide(bundle: "/Applications/Browsers/Linen.app") == .installed)
@@ -41,23 +58,22 @@ struct InstallLocationTests {
     }
 
     @Test func aCopyInDownloadsIsOfferedTheMove() {
-        let decision = decide(bundle: "/Users/tester/Downloads/Linen.app")
-
-        #expect(decision == .offerMove(
-            from: URL(fileURLWithPath: "/Users/tester/Downloads/Linen.app"),
-            to: URL(fileURLWithPath: "/Applications/Linen.app"),
-            isReadOnlySource: false
-        ))
+        expectMove(
+            decide(bundle: "/Users/tester/Downloads/Linen.app"),
+            from: "/Users/tester/Downloads/Linen.app",
+            to: "/Applications/Linen.app",
+            "Expected the move to be offered from Downloads"
+        )
     }
 
     @Test func aMountedImageIsCopiedRatherThanMoved() {
-        let decision = decide(bundle: "/Volumes/Linen/Linen.app", isReadOnlySource: true)
-
-        guard case let .offerMove(_, _, isReadOnlySource) = decision else {
-            Issue.record("Expected the move to be offered from a mounted image")
-            return
-        }
-        #expect(isReadOnlySource)
+        expectMove(
+            decide(bundle: "/Volumes/Linen/Linen.app", isReadOnlySource: true),
+            from: "/Volumes/Linen/Linen.app",
+            to: "/Applications/Linen.app",
+            isReadOnlySource: true,
+            "Expected the move to be offered from a mounted image"
+        )
     }
 
     @Test func translocationIsJudgedByTheOriginal() {
@@ -68,26 +84,24 @@ struct InstallLocationTests {
             originalBundle: "/Applications/Linen.app"
         ) == .installed)
 
-        #expect(decide(
-            bundle: translocated,
-            originalBundle: "/Users/tester/Downloads/Linen.app"
-        ) == .offerMove(
-            from: URL(fileURLWithPath: "/Users/tester/Downloads/Linen.app"),
-            to: URL(fileURLWithPath: "/Applications/Linen.app"),
-            isReadOnlySource: false
-        ))
+        expectMove(
+            decide(bundle: translocated, originalBundle: "/Users/tester/Downloads/Linen.app"),
+            from: "/Users/tester/Downloads/Linen.app",
+            to: "/Applications/Linen.app",
+            "Expected the move to be judged by the original copy"
+        )
     }
 
     @Test func anUnresolvedOriginalStillOffersTheMove() {
         let translocated = "/private/var/folders/x1/AppTranslocation/A-B-C/d/Linen.app"
-        let decision = decide(bundle: translocated, isReadOnlySource: true)
 
-        guard case let .offerMove(from, to, _) = decision else {
-            Issue.record("Expected the move to be offered from a translocated mount")
-            return
-        }
-        #expect(from == URL(fileURLWithPath: translocated))
-        #expect(to == URL(fileURLWithPath: "/Applications/Linen.app"))
+        expectMove(
+            decide(bundle: translocated, isReadOnlySource: true),
+            from: translocated,
+            to: "/Applications/Linen.app",
+            isReadOnlySource: true,
+            "Expected the move to be offered from a translocated mount"
+        )
     }
 
     @Test func askingStopsAfterTheFirstRefusal() {
