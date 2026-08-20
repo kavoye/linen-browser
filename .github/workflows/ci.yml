@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: Linen.xcodeproj
+  SCHEME: Linen
+  XCODE: '26.6'
+  DD: ${{ github.workspace }}/build/DD
+  # The macOS runner image carries no SwiftLint. Pinned so a new release cannot
+  # add a rule that fails a build nobody changed.
+  SWIFTLINT: '0.65.0'
+  SWIFTLINT_SHA256: 'd6cb0aa7a2f5f1ef306fc9e37bcb54dc9a26facc8f7784ac0c3dd3eccf5c6ba6'
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Select Xcode ${{ env.XCODE }}
+        run: sudo xcode-select -s "/Applications/Xcode_${XCODE}.app"
+
+      - name: Install SwiftLint ${{ env.SWIFTLINT }}
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" \
+            "https://github.com/realm/SwiftLint/releases/download/$SWIFTLINT/portable_swiftlint.zip"
+          echo "$SWIFTLINT_SHA256  $RUNNER_TEMP/swiftlint.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          sudo install "$RUNNER_TEMP/swiftlint/swiftlint" /usr/local/bin/swiftlint
+
+      - name: Check format
+        run: Tools/check-format.sh
+
+      - name: Cache Swift packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: build/DD/SourcePackages
+          key: spm-${{ hashFiles('Linen.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-
+
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project "$PROJECT" -scheme "$SCHEME" -derivedDataPath "$DD"
+
+      # MIT and Apache both require their terms to travel with the binary, and
+      # a signed app is a redistribution. The app shows this file, so it has to
+      # match what the app actually links.
+      - name: Check acknowledgements
+        run: |
+          swift Tools/make-acknowledgements.swift "$DD/SourcePackages/checkouts"
+          if ! git diff --quiet -- Linen/Support/Acknowledgements.json; then
+            echo "::error file=Linen/Support/Acknowledgements.json::Out of date. Run: swift Tools/make-acknowledgements.swift"
+            git diff --stat -- Linen/Support/Acknowledgements.json
+            exit 1
+          fi
+
+      # No entitlements: `keychain-access-groups` needs a provisioning profile,
+      # and demanding one here would mean a signing certificate for every test
+      # run. Nothing under test reaches the keychain.
+      # ONLY_ACTIVE_ARCH=NO: only the release archive is universal, and a second
+      # xcodebuild rebuilds everything rather than reuse these objects.
+      - name: Test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project "$PROJECT" -scheme "$SCHEME" \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath "$DD" \
+            -resultBundlePath build/TestResults.xcresult \
+            -enableCodeCoverage YES \
+            -skipMacroValidation -skipPackagePluginValidation \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_ENTITLEMENTS=
+
+      - name: Check coverage
+        run: Tools/check-coverage.sh build/TestResults.xcresult 24.0
+
+      - name: Export performance metrics
+        if: always()
+        run: |
+          if [ -d build/TestResults.xcresult ]; then
+            xcrun xcresulttool get test-results metrics \
+              --path build/TestResults.xcresult --compact \
+              > build/performance-metrics.json
+          fi
+
+      - name: Check performance budgets
+        run: Tools/check-performance.sh build/performance-metrics.json
+
+      - name: Upload performance metrics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: PerformanceMetrics
+          path: build/performance-metrics.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # An .xcresult is a bundle. Uploaded as a directory it arrives as loose
+      # files that neither Xcode nor xcresulttool will open.
+      - name: Package test results
+        if: failure()
+        run: |
+          if [ -d build/TestResults.xcresult ]; then
+            ditto -c -k --keepParent build/TestResults.xcresult build/TestResults.xcresult.zip
+          fi
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TestResults
+          path: build/TestResults.xcresult.zip
+          if-no-files-found: ignore

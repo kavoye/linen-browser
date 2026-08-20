@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Linen">
+  <g fill="#121218">
+    <rect x="159.0" y="159.0" width="480.0" height="190.0" rx="46.0"/>
+    <rect x="675.0" y="159.0" width="190.0" height="480.0" rx="46.0"/>
+    <rect x="385.0" y="675.0" width="480.0" height="190.0" rx="46.0"/>
+    <rect x="159.0" y="385.0" width="190.0" height="480.0" rx="46.0"/>
+  </g>
+</svg>

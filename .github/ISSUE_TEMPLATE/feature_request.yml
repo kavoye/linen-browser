@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a change to what Linen does.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: The task Linen makes difficult today. Describe the problem, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Your proposal
+      description: The behavior you want, and where it belongs in the interface.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other solutions you considered, and why they are worse. Name a browser that already does this, and say what it gets right or wrong.

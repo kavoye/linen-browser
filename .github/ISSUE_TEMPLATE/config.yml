@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/kavoye/linen-browser/security/advisories/new
+    about: Report a vulnerability privately. Do not open a public issue.
+  - name: Website compatibility
+    url: https://bugs.webkit.org
+    about: Linen uses WebKit. A page that also fails in Safari is a WebKit bug.

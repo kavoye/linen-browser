@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The hardened runtime denies these resources outright - locationd
+	     won't even show its consent prompt to a hardened app without the
+	     matching entitlement. TCC still asks the user on first use; these
+	     only earn the right to ask. -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<key>com.apple.security.personal-information.location</key>
+	<true/>
+	<!-- The data-protection keychain refuses an item from code with no access
+	     group: SecItemAdd answers errSecMissingEntitlement. This group is what
+	     CredentialStore's API keys are filed under. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.kavoye.Linen</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Local model servers (Ollama, LM Studio, llama.cpp, vLLM) listen on
+	     plain http over loopback, which App Transport Security blocks by
+	     default. This exemption covers loopback and .local only; everything
+	     that leaves this Mac still has to be https. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+
+	<!-- What makes Linen a browser as far as the system is concerned. Both
+	     halves are load-bearing, and neither is enough alone: System Settings
+	     builds its "Default web browser" list from LaunchServices'
+	     `isEligibleWebBrowser`, which wants the http/https schemes *and* an
+	     app that views HTML documents. Claiming only the schemes leaves the
+	     app registered, invisible in that list, and unable to become the
+	     default. Eligible browsers declare both capabilities.
+
+	     Alternate rank on the documents: opening a .html file is something
+	     Linen can do, not something it should take over by installing itself. -->
+	<!-- Gatekeeper's hook. LaunchServices quarantines a downloaded file only
+	     for a sandboxed app or one that says this, and Linen is not sandboxed
+	     (hold-to-talk needs an event tap). Without it a .dmg or .command opens
+	     with no Gatekeeper check and no warning. -->
+	<key>LSFileQuarantineEnabled</key>
+	<true/>
+
+	<!-- The line under the version in the standard About panel, and in the
+	     Finder's Get Info. Absent, AppKit shows nothing at all there. -->
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Kavoye. Apache 2.0 licensed.</string>
+
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>HTML Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.html</string>
+				<string>public.xhtml</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Website URL</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>http</string>
+				<string>https</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- The appcast, published as an asset on every GitHub release so this
+	     permalink always resolves to the newest one. Mirrored in UpdateFeed. -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/kavoye/linen-browser/releases/latest/download/appcast.xml</string>
+
+	<!-- Settled here so Sparkle never asks the user for permission to check;
+	     Linen has no "do you want automatic updates?" dialog. -->
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+
+	<!-- The verifying half of the EdDSA pair from Sparkle's `generate_keys`.
+	     Public by design. Its private half lives in the login keychain of
+	     whoever signs releases; lose that and no existing install can ever
+	     update again. -->
+	<key>SUPublicEDKey</key>
+	<string>LBLxVWfuyfT/bmzWT18Xdvc/2AV0tfxzVpn8E1e1bXA=</string>
+</dict>
+</plist>

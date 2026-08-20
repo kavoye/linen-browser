@@ -1,0 +1,111 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Linen"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Linen"
+          }
+        }
+      }
+    },
+    "CFBundleTypeName" : {
+      "comment" : "The document kind Finder shows for files Linen can open. Use the platform’s own name for an HTML file.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HTML Document"
+          }
+        }
+      }
+    },
+    "CFBundleURLName" : {
+      "comment" : "Names the kind of link Linen can open, shown where the system lists apps that handle web addresses.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Website URL"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "comment" : "System permission prompt: “Linen would like to access the camera.” One sentence saying why. Match app style: curly apostrophes, no exclamation marks.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only websites you allow can use your camera."
+          }
+        }
+      }
+    },
+    "NSHumanReadableCopyright" : {
+      "comment" : "The copyright line under the version in the standard About panel, and in the Finder’s Get Info. “Kavoye” is a name — leave as is. Only the word Copyright and the license sentence are translated.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Copyright © 2026 Kavoye. Apache 2.0 licensed."
+          }
+        }
+      }
+    },
+    "NSLocationUsageDescription" : {
+      "comment" : "System permission prompt asking to use the Mac’s location. One sentence saying why. Match app style: curly apostrophes, no exclamation marks.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only websites you allow can use your location."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Privacy - Location When In Use Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only websites you allow can use your location."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "comment" : "System permission prompt asking to use the microphone. “the talk key” is the push-to-talk shortcut the user holds to speak to the assistant. Match app style: curly apostrophes, no exclamation marks.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linen listens while you hold the talk key. Only websites you allow can use your microphone too."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

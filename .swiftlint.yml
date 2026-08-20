@@ -1,0 +1,86 @@
+included:
+  - Linen
+  - LinenTests
+  - Tools
+
+disabled_rules:
+  # The test suites pass a decision closure and a body closure on purpose;
+  # binding one to a local first would only obscure the call.
+  - multiple_closures_with_trailing_closure
+  # String(decoding:) is deliberate where it appears: logging and parsing
+  # bytes that may not be UTF-8, where replacement beats dropping the text.
+  - optional_data_string_conversion
+
+opt_in_rules:
+  - file_header
+  - sorted_imports
+  - switch_case_on_newline
+  - contains_over_first_not_nil
+  - overridden_super_call
+  - closure_spacing
+
+file_header:
+  required_pattern: '// SPDX-FileCopyrightText: \d{4} Kavoye\n// SPDX-License-Identifier: Apache-2\.0'
+
+identifier_name:
+  min_length: 1
+  max_length: 60
+
+# Long lines are almost all single string-catalog literals, which cannot be
+# split without changing their extraction keys.
+line_length:
+  warning: 200
+  error: 300
+  ignores_urls: true
+
+file_length:
+  warning: 1000
+  error: 1600
+
+type_body_length:
+  warning: 800
+  error: 1200
+
+function_body_length:
+  warning: 120
+  error: 200
+
+function_parameter_count:
+  warning: 8
+  error: 10
+
+cyclomatic_complexity:
+  warning: 20
+  error: 30
+
+large_tuple:
+  warning: 3
+  error: 4
+
+nesting:
+  type_level: 2
+
+trailing_comma:
+  mandatory_comma: true
+
+# Known limit: SwiftLint suppresses a custom-rule match whose range contains
+# an excluded kind, so a single-line body that contains a string literal
+# escapes these two rules. The string exclusion stays because the alternative
+# is flagging JavaScript inside every embedded page script.
+custom_rules:
+  single_line_control_flow_body:
+    name: "Single-line control-flow body"
+    message: "Put the body on its own line"
+    regex: '^[ \t]*(?:\}[ \t]*else[ \t]+)?\b(if|for|while)\b[^{\n]*\{[ \t]\S[^\n]*[ \t]\}[ \t]*$'
+    excluded_match_kinds:
+      - comment
+      - doccomment
+      - string
+  single_line_declaration_body:
+    name: "Single-line declaration body"
+    message: "Put the body on its own line"
+    regex: '^[ \t]*(?:@\w+(?:\([^)\n]*\))?[ \t]+)*(?:(?:public|private|fileprivate|internal|package|open|static|class|override|final|nonisolated|mutating|nonmutating|lazy|weak|unowned|required|convenience|indirect)(?:\([^)\n]*\))?[ \t]+)*\b(func|init|var|subscript)\b[^={\n]*\{[ \t](?!(?:nonmutating[ \t]+|mutating[ \t]+)?(?:get|set)\b)\S[^\n]*[ \t]\}[ \t]*$'
+    excluded_match_kinds:
+      - comment
+      - doccomment
+      - string

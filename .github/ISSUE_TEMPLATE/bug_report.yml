@@ -1,0 +1,69 @@
+name: Bug report
+description: Something in Linen doesn’t work.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "**Not for security bugs.** Report those privately through [Security › Report a vulnerability](https://github.com/kavoye/linen-browser/security/advisories/new), as [SECURITY.md](https://github.com/kavoye/linen-browser/blob/main/SECURITY.md) describes."
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What Linen did, and what you expected instead. Add a screenshot or a screen recording if the bug is visual.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: One instruction to a line, starting from a new window.
+      placeholder: |
+        1. Open a new tab.
+        2. Go to example.com.
+        3. Hold the talk key and say “read this page”.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Linen version
+      description: Read the version in Linen › About Linen.
+      placeholder: "1.2 (145)"
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "26.5"
+    validations:
+      required: true
+
+  - type: input
+    id: website
+    attributes:
+      label: Website
+      description: Give the address if the bug happens on one website only.
+
+  - type: dropdown
+    id: model
+    attributes:
+      label: Model
+      description: Answer only if the bug involves the assistant.
+      options:
+        - Not applicable
+        - On this Mac
+        - A remote model with my own key
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send
+      options:
+        - label: I looked for an existing issue that reports this bug.
+          required: true
+        - label: The bug still happens in a new window, with each extension off.
