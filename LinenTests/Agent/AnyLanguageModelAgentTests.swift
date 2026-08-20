@@ -219,6 +219,17 @@ struct AnyLanguageModelAgentTests {
         #expect(turn.model.prompts == ["Long question", "Long question"])
     }
 
+    @Test func anOnDeviceOverflowIsRecoveredLikeTheProviderOne() async {
+        let turn = Turn(turns: [
+            .toolCall(named: "inspect"),
+            .error(SystemModelFailureTests.contextOverflow()),
+            .text("Recovered."),
+        ])
+        await turn.run("Long task")
+
+        #expect(turn.reply.text == "Recovered.")
+    }
+
     @Test func anOverflowMidTurnIsRecoveredWithoutRestartingTheTask() async {
         let overflow = LanguageModelSession.GenerationError.exceededContextWindowSize(
             .init(debugDescription: "scripted overflow")

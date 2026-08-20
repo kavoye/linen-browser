@@ -169,6 +169,38 @@ struct AgentToolkitPolicyTests {
         #expect((await subject.scrollPage(direction: "down")).contains("Scrolled"))
     }
 
+    /// A domain the page merely names in prose is not somewhere the agent
+    /// was sent. Only the anchors it actually listed widen the allowlist
+    /// behind `navigate`, and only those reach the activity trail.
+    @Test func onlyTheAnchorsItListedWidenWhereItMayGo() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/": .html("""
+                <h1>Front page</h1>
+                <p>Discussed at https://example.org/thread today.</p>
+                <a href="https://example.com/story">The story</a>
+                """),
+        ])
+        let url = try server.url()
+        let browser = BrowserModel(database: .temporary())
+        let log = ConversationLog(database: .temporary())
+        let tab = browser.newTab(url: url)
+        #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
+        tab.assistantAccess.persistsAnswers = false
+        tab.assistantAccess.pageChanged(url: url)
+        tab.assistantAccess.set(.control)
+
+        let subject = AgentToolkit(browser: browser, media: MediaCenter(), log: log)
+        let taskID = log.beginTask("What is on this page?", tabID: tab.id)
+        subject.beginTask(AgentTaskContext(id: taskID, tabID: tab.id))
+
+        _ = await subject.readPage()
+
+        let links = log.latestTrace(forTab: tab.id)?.steps.last?.links ?? []
+        #expect(links.map(\.url.absoluteString) == ["https://example.com/story"])
+        #expect(links.first?.title == "The story")
+        #expect((await subject.navigate(to: "https://example.org/thread")).hasPrefix("For safety"))
+    }
+
     @Test func everyVisiblePageToolStopsAtItsAccessBoundary() async {
         func subject(policy: AssistantAccessPolicy) -> AgentToolkit {
             let browser = BrowserModel(database: .temporary())

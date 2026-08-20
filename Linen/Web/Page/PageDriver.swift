@@ -248,6 +248,38 @@ enum PageDriver {
         return result
     }
 
+    nonisolated struct ListedLink: Equatable, Sendable {
+        let label: String
+        let url: URL
+    }
+
+    nonisolated static let linkArrow = " \u{2192} "
+
+    nonisolated static func listedLinks(in observation: String) -> [ListedLink] {
+        var seen = Set<URL>()
+        return observation.split(separator: "\n").compactMap { line in
+            guard line.hasPrefix("["),
+                  let arrow = line.range(of: linkArrow, options: .backwards)
+            else { return nil }
+
+            let head = line[..<arrow.lowerBound]
+            guard let marker = head.range(of: "] link \""), head.hasSuffix("\"") else { return nil }
+            let label = String(head[marker.upperBound..<head.index(before: head.endIndex)])
+
+            var href = line[arrow.upperBound...]
+            if let suffix = href.range(of: " (disabled)", options: .backwards),
+               suffix.upperBound == href.endIndex {
+                href = href[..<suffix.lowerBound]
+            }
+            guard let url = URL(string: String(href)),
+                  url.scheme == "https" || url.scheme == "http",
+                  seen.insert(url).inserted
+            else { return nil }
+
+            return ListedLink(label: label, url: url)
+        }
+    }
+
     static func renderControls(_ controls: [[String: Any]], limit: Int = 40) -> String {
         var lines: [String] = []
         for control in controls.prefix(limit) {
@@ -257,7 +289,7 @@ enum PageDriver {
             switch kind {
             case "link":
                 if let href = control["h"] as? String, !href.isEmpty {
-                    line += " → \(href)"
+                    line += linkArrow + href
                 }
             case "field":
                 if let type = control["t"] as? String, type != "text" {

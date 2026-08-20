@@ -62,6 +62,34 @@ struct PageDriverTests {
         #expect(!refs(in: observation, matching: "Add to Bag").isEmpty)
     }
 
+    /// The activity trail and the navigation allowlist both read the links
+    /// out of an observation. Only anchors count: a bare domain printed in
+    /// prose - which is how Hacker News labels every story - is text.
+    @Test func onlyAnchorsCountAsLinks() async {
+        let webView = await loadedWebView("""
+        <p>Discussed on news.ycombinator.com and simonwillison.net today.</p>
+        <a href="https://example.com/story">The story</a>
+        <a href="https://example.com/story">The story again</a>
+        """)
+        let observation = await PageDriver.readRenderedPage(webView)
+        let links = PageDriver.listedLinks(in: observation)
+
+        #expect(links.map(\.url.absoluteString) == ["https://example.com/story"])
+        #expect(links.first?.label == "The story")
+    }
+
+    @Test func aLinkListingSurvivesItsOwnPunctuation() {
+        let controls: [[String: Any]] = [
+            ["r": 1, "k": "link", "l": "Home \u{2192} Shop", "h": "https://example.com/shop", "d": 1],
+            ["r": 2, "k": "button", "l": "Buy"],
+            ["r": 3, "k": "link", "l": "Mail us", "h": "mailto:hi@example.com"],
+        ]
+        let links = PageDriver.listedLinks(in: PageDriver.renderControls(controls))
+
+        #expect(links.map(\.url.absoluteString) == ["https://example.com/shop"])
+        #expect(links.first?.label == "Home \u{2192} Shop")
+    }
+
     /// The reason refs exist: five "More" buttons are five different rows,
     /// not one row shown once.
     @Test func duplicateLabelsGetDistinctRefs() async {

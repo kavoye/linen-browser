@@ -204,7 +204,7 @@ final class AgentToolkit {
             completeTool(
                 step,
                 output: output,
-                links: [openedLink] + pageLinks
+                links: [openedLink] + pageLinks.filter { $0.url != url }
             )
             return fencedPageOutput(output)
         }
@@ -335,9 +335,7 @@ final class AgentToolkit {
             return output
         }
         updateFinalResearchURL(from: webView)
-        let links = links(in: output)
-        remember(links: links)
-        completeTool(step, output: output, links: links, failed: !output.hasPrefix("Clicked"))
+        completeTool(step, output: output, failed: !output.hasPrefix("Clicked"))
         return fencedPageOutput(output)
     }
 
@@ -379,9 +377,7 @@ final class AgentToolkit {
             return output
         }
         updateFinalResearchURL(from: webView)
-        let links = links(in: output)
-        remember(links: links)
-        completeTool(step, output: output, links: links, failed: !output.hasPrefix("Typed"))
+        completeTool(step, output: output, failed: !output.hasPrefix("Typed"))
         return fencedPageOutput(output)
     }
 
@@ -482,9 +478,7 @@ final class AgentToolkit {
             return output
         }
         updateFinalResearchURL(from: webView)
-        let links = links(in: output)
-        remember(links: links)
-        completeTool(step, output: output, links: links, failed: output.hasPrefix("There is no"))
+        completeTool(step, output: output, failed: output.hasPrefix("There is no"))
         return fencedPageOutput(output)
     }
 
@@ -860,15 +854,10 @@ final class AgentToolkit {
 }
 
 extension AgentToolkit {
-    private func links(in text: String) -> [ConversationLog.ActivityLink] {
-        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else {
-            return []
-        }
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        var seen = Set<URL>()
-        return detector.matches(in: text, range: range).compactMap { match in
-            guard let url = match.url.flatMap(Self.webURL), seen.insert(url).inserted else { return nil }
-            return ConversationLog.ActivityLink(title: url.host() ?? url.absoluteString, url: url)
+    private func links(in observation: String) -> [ConversationLog.ActivityLink] {
+        PageDriver.listedLinks(in: observation).map { link in
+            let title = link.label.isEmpty ? (link.url.host() ?? link.url.absoluteString) : link.label
+            return ConversationLog.ActivityLink(title: title, url: link.url)
         }
     }
 

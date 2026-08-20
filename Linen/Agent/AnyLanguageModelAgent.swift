@@ -184,6 +184,7 @@ final class AnyLanguageModelAgent: AgentRunner {
                 response = try await session.respond(to: prompt, options: turnOptions)
             }
 
+            hasRecoveredFromOverflow = false
             session = normalizedSession(
                 session,
                 expectedPrefixCount: expectedPrefixCount
@@ -443,31 +444,34 @@ final class AnyLanguageModelAgent: AgentRunner {
     }
 
     private static func estimatedTokens(in transcript: Transcript) -> Int {
-        let characters = transcript.reduce(into: 0) { count, entry in
+        var prose = 0
+        var machine = 0
+        for entry in transcript {
             switch entry {
             case .instructions(let value):
-                count += text(in: value.segments).count
+                prose += text(in: value.segments).count
             case .prompt(let value):
-                count += text(in: value.segments).count
+                prose += text(in: value.segments).count
             case .response(let value):
-                count += text(in: value.segments).count
+                prose += text(in: value.segments).count
             case .toolCalls(let calls):
-                count += calls.reduce(0) { partial, call in
+                machine += calls.reduce(0) { partial, call in
                     partial + call.toolName.count + call.arguments.jsonString.count
                 }
             case .toolOutput(let value):
-                count += text(in: value.segments).count
+                machine += text(in: value.segments).count
             }
         }
-        return characters == 0 ? 0 : max(1, characters / 4)
+        let estimate = prose / 4 + machine / 3
+        return prose + machine == 0 ? 0 : max(1, estimate)
     }
 
     private static func isContextWindowError(_ error: any Error) -> Bool {
-        guard let error = error as? LanguageModelSession.GenerationError else { return false }
-        if case .exceededContextWindowSize = error {
+        if let error = error as? LanguageModelSession.GenerationError,
+           case .exceededContextWindowSize = error {
             return true
         }
-        return false
+        return SystemModelFailure.isContextOverflow(error)
     }
 }
 
