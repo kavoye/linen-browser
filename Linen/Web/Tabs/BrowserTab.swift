@@ -217,6 +217,7 @@ final class BrowserTab: Identifiable {
     let isPrivate: Bool
 
     private var progressObservation: NSKeyValueObservation?
+    private var loadingObservation: NSKeyValueObservation?
     private var cameraObservation: NSKeyValueObservation?
     private var microphoneObservation: NSKeyValueObservation?
     private var pageBackgroundObservation: NSKeyValueObservation?
@@ -299,6 +300,9 @@ final class BrowserTab: Identifiable {
             MainActor.assumeIsolated {
                 self?.progress = value
             }
+        }
+        loadingObservation = webView.observe(\.isLoading, options: [.new, .initial]) { [weak self] _, _ in
+            MainActor.assumeIsolated { self?.refreshChrome() }
         }
         addressObservation = webView.observe(\.url, options: [.new]) { [weak self] view, _ in
             MainActor.assumeIsolated { self?.pageDidChangeInPlace(view) }
