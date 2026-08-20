@@ -53,6 +53,7 @@ struct ContentArea: View {
         }
         .onAppear {
             pull.webViewProvider = { browser.activeTab?.webView }
+            pull.isCovered = { coordinator.isPaletteOpen || coordinator.onboarding.isPresented }
             pull.onChange = { state, animation in
                 if let animation {
                     withAnimation(animation) { pullState = state }

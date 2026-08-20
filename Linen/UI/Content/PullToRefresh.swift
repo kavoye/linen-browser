@@ -38,6 +38,8 @@ nonisolated struct PullStartProbe: Equatable, Codable {
 final class PullToRefreshMonitor {
     var onChange: ((PullState, Animation?) -> Void)?
     var webViewProvider: (() -> WKWebView?)?
+    /// Whether chrome of ours stands over the page and owns the wheel.
+    var isCovered: (() -> Bool)?
 
     private var monitor: Any?
     private var accumulated: CGFloat = 0
@@ -105,6 +107,12 @@ final class PullToRefreshMonitor {
     }
 
     private func handle(_ event: NSEvent) {
+        if isCovered?() == true {
+            if startedAtTop != nil || accumulated != 0 || disqualified {
+                reset()
+            }
+            return
+        }
         guard let webView = webViewProvider?(),
               let window = webView.window,
               event.window === window,
