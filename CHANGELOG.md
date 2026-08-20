@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.1.1
+
+### New
+
+- **Preview channel.** Settings › About has an Update channel. Set it to Preview and Linen follows the newest commit on `main` instead of waiting for the next release. Set it back to Release at any time.
+- **One-click install.** Install in the update banner does the whole thing — it downloads the update, installs it and starts Linen again. Linen asks once.
+- **Release notes in the app.** The notes for a new version open in a tab after it lands. Linen › Release Notes opens them whenever you want them.
+- **⌃⇥ goes back to your last tab.** Tap it and Linen returns the way ⌘⇥ returns you to the last app. Hold ⌃ and ⌃⇥ walks down the sidebar, ⌃⇧⇥ walks up.
+- **Dictation sends itself.** Click the orb and talk: Linen sends what you said once you stop speaking. ⌥Space still sends when you let go.
+- **Stop the assistant from the orb.** Click it while a turn is running and the turn stops.
+- **⌘↩ and ⇧↩ in the command palette.** ⌘↩ asks the assistant about what you typed. ⇧↩ opens a search in a new tab.
+
+### Improved
+
+- **A long conversation no longer breaks the turn.** The assistant recovers from a full context window and carries on.
+- **The assistant counts only the links it listed for you.**
+
+### Fixed
+
+- A pasted link no longer brings its own styling into the address field.
+- The first profile starts grey.
+- A tab stops spinning after a back that stays on the same page.
+- The scroll wheel no longer pulls the page while the command palette is up.
+- A sleeping tab shows an opaque badge and a grey preview.
+- The activity column’s toggle, resize edge and attention dot settle where they belong.
+
 ## 0.1.0
 
 First release.
