@@ -21,14 +21,13 @@ env:
   DD: ${{ github.workspace }}/build/DD
 
 jobs:
-  release:
-    runs-on: macos-26
-    timeout-minutes: 60
-
-    # Every signing secret belongs to this environment, not to the repository.
-    # A tag therefore starts the job, but the job waits for a reviewer before
-    # it can reach the certificate, the notarisation key or the Sparkle key.
-    environment: release
+  # A cheap runner reads the mark that the push to main already left. Tests are
+  # never run twice for one commit, and no signing secret is reachable until
+  # this passes. The tag may be pushed while CI is still running.
+  gate:
+    name: Wait for green
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -45,6 +44,50 @@ jobs:
             echo "::error::${GITHUB_REF_NAME} points at a commit that is not on main."
             exit 1
           fi
+
+      - name: Wait for the tests to pass on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          for _ in $(seq 1 90); do
+            STATE="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+              --jq '.check_runs[] | select(.name == "Build and test") | "\(.status) \(.conclusion)"' \
+              | head -1)"
+            case "$STATE" in
+              "completed success")
+                echo "$SHA passed."
+                exit 0
+                ;;
+              completed*)
+                echo "::error::Build and test ${STATE#completed } on $SHA."
+                exit 1
+                ;;
+              "")
+                echo "No Build and test run on $SHA yet."
+                ;;
+              *)
+                echo "Build and test is ${STATE% *}."
+                ;;
+            esac
+            sleep 30
+          done
+          echo "::error::Build and test did not finish on $SHA."
+          exit 1
+
+  release:
+    needs: gate
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    # Every signing secret belongs to this environment, not to the repository.
+    # Who may create a `v*` tag is a ruleset, not a reviewer on this job.
+    environment: release
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
 
       - name: Select Xcode ${{ env.XCODE }}
         run: sudo xcode-select -s "/Applications/Xcode_${XCODE}.app"
@@ -71,60 +114,16 @@ jobs:
             exit 1
           fi
 
-      # See ci.yml: the entitlements are dropped here, so that the tests need no
-      # signing certificate. The archive below signs with them.
-      - name: Test
-        run: |
-          set -o pipefail
-          xcodebuild test \
-            -project "$PROJECT" -scheme "$SCHEME" \
-            -destination 'platform=macOS,arch=arm64' \
-            -derivedDataPath "$DD" \
-            -resultBundlePath build/TestResults.xcresult \
-            -enableCodeCoverage YES \
-            -skipMacroValidation -skipPackagePluginValidation \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY=- \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_ENTITLEMENTS=
-
-      - name: Check coverage
-        run: Tools/check-coverage.sh build/TestResults.xcresult 24.0
-
-      - name: Export performance metrics
-        if: always()
-        run: |
-          if [ -d build/TestResults.xcresult ]; then
-            xcrun xcresulttool get test-results metrics \
-              --path build/TestResults.xcresult --compact \
-              > build/performance-metrics.json
-          fi
-
-      - name: Check performance budgets
-        run: Tools/check-performance.sh build/performance-metrics.json
-
-      - name: Upload performance metrics
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: PerformanceMetrics
-          path: build/performance-metrics.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: TestResults
-          path: build/TestResults.xcresult
-
       - name: Version from tag
         id: version
         run: |
           TAG="${GITHUB_REF_NAME}"
           echo "tag=$TAG"            >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}"    >> "$GITHUB_OUTPUT"
+          # Sparkle orders updates by this number, and it must never go back.
+          # A run counter restarts if the workflow file is ever replaced; the
+          # commit count cannot, and it rises across both channels.
+          echo "build=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Import signing certificate
         env:
@@ -181,7 +180,7 @@ jobs:
             -derivedDataPath "$DD" \
             -skipMacroValidation -skipPackagePluginValidation \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build }}" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
             DEVELOPMENT_TEAM="$TEAM_ID" \

@@ -184,6 +184,10 @@ The team ID is not a secret. The workflow already contains it.
 
 ## Each release
 
+The release does not run the tests. CI tests each push to `main`, and the tag
+must point at a commit on `main`. Make sure the CI run for that commit passed,
+then push the tag:
+
 ```bash
 git tag v1.1 && git push origin v1.1
 ```
@@ -192,22 +196,21 @@ The workflow starts, then waits. Approve it in the run page, or in the mail
 that GitHub sends you. The workflow then does these steps:
 
 1. It makes sure the tag is on `main`.
-2. It runs the tests.
-3. It makes an archive.
-4. It signs the app with the Developer ID certificate and the profile.
-5. It sends the app to Apple for notarization.
-6. It staples the notarization ticket to the app.
-7. It makes a zip file.
-8. It makes a disk image. The image contains the app and a link to the
+2. It makes an archive.
+3. It signs the app with the Developer ID certificate and the profile.
+4. It sends the app to Apple for notarization.
+5. It staples the notarization ticket to the app.
+6. It makes a zip file.
+7. It makes a disk image. The image contains the app and a link to the
    Applications folder.
-9. It signs the disk image.
-10. It sends the disk image to Apple for notarization.
-11. It staples the notarization ticket to the disk image.
-12. It signs the app for Sparkle.
-13. It makes `appcast.xml`.
-14. It publishes the GitHub release with the three assets.
+8. It signs the disk image.
+9. It sends the disk image to Apple for notarization.
+10. It staples the notarization ticket to the disk image.
+11. It signs the app for Sparkle.
+12. It makes `appcast.xml`.
+13. It publishes the GitHub release with the three assets.
 
-The workflow takes 25 to 45 minutes after you approve it. The Apple notary
+The workflow takes 20 to 40 minutes after you approve it. The Apple notary
 service uses most of this time, and the workflow waits for it two times.
 
 Important information:
