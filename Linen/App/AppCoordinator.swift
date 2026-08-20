@@ -380,12 +380,18 @@ final class AppCoordinator {
     }
 
     func copyLink(for tab: BrowserTab) {
-        guard let url = linkURL(for: tab) else { return }
+        copyLinks(for: [tab])
+    }
+
+    func copyLinks(for tabs: [BrowserTab]) {
+        let urls = tabs.compactMap { linkURL(for: $0) }
+        guard !urls.isEmpty else { return }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.writeObjects([url as NSURL])
-        pasteboard.setString(url.absoluteString, forType: .string)
-        show(notice: String(localized: "Link Copied"))
+        pasteboard.writeObjects(urls.map { $0 as NSURL })
+        pasteboard.setString(urls.map(\.absoluteString).joined(separator: "\n"), forType: .string)
+        let notice: LocalizedStringResource = urls.count == 1 ? "Link Copied" : "Links Copied"
+        show(notice: String(localized: notice))
     }
 
     func linkURL(for tab: BrowserTab) -> URL? {

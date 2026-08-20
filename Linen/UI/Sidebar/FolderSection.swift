@@ -174,6 +174,7 @@ struct FolderSection: View {
                     FolderContextMenu.make(
                         folder: folder,
                         browser: browser,
+                        coordinator: context.coordinator,
                         selected: context.selection.count > 1 && isSelected
                             ? Array(context.selection.items)
                             : [],
@@ -240,6 +241,7 @@ private enum FolderContextMenu {
     static func make(
         folder: TabFolder,
         browser: BrowserModel,
+        coordinator: AppCoordinator,
         selected: [SidebarItem],
         onRename: @escaping () -> Void
     ) -> NSMenu {
@@ -247,7 +249,7 @@ private enum FolderContextMenu {
         menu.autoenablesItems = false
 
         if !selected.isEmpty {
-            addSelectionItems(selected, to: menu, browser: browser)
+            addSelectionItems(selected, to: menu, browser: browser, coordinator: coordinator)
             return menu
         }
 
@@ -264,8 +266,15 @@ private enum FolderContextMenu {
             browser.setFolderColor(color, for: folder)
         }
         menu.addItem(colors)
-
         menu.addItem(.separator())
+
+        addFolderItems([.folder(folder.id)], to: menu, browser: browser)
+        menu.addItem(.separator())
+
+        let kept = browser.allTabs(in: folder).count
+        if kept > 0 {
+            menu.addItem(closeTabsItem([.folder(folder.id)], count: kept, browser: browser))
+        }
         menu.addItem(actionItem(
             title: String(localized: "Delete Folder…"),
             symbol: "trash",
@@ -294,44 +303,77 @@ private enum FolderContextMenu {
     private static func addSelectionItems(
         _ selected: [SidebarItem],
         to menu: NSMenu,
+        browser: BrowserModel,
+        coordinator: AppCoordinator
+    ) {
+        let linkable = browser.tabs(under: selected).filter { coordinator.linkURL(for: $0) != nil }
+        if !linkable.isEmpty {
+            let title: LocalizedStringResource = linkable.count == 1 ? "Copy Link" : "Copy Links"
+            menu.addItem(actionItem(
+                title: String(localized: title),
+                symbol: "doc.on.doc",
+                action: { [weak coordinator] in coordinator?.copyLinks(for: linkable) }
+            ))
+            menu.addItem(.separator())
+        }
+
+        addFolderItems(selected, to: menu, browser: browser)
+        menu.addItem(.separator())
+
+        menu.addItem(closeTabsItem(
+            selected,
+            count: browser.tabCount(in: selected),
+            browser: browser
+        ))
+    }
+
+    private static func addFolderItems(
+        _ items: [SidebarItem],
+        to menu: NSMenu,
         browser: BrowserModel
     ) {
         let move = NSMenu()
         move.autoenablesItems = false
-        for folder in browser.folders {
+        let targets = browser.folders.filter { browser.sidebarTree.canHold($0.id, items) }
+        for folder in targets {
             let target = folder
             move.addItem(actionItem(
                 title: folder.name,
                 symbol: "folder",
                 action: { [weak browser, weak target] in
                     guard let browser, let target else { return }
-                    browser.move(selected, into: target)
+                    browser.move(items, into: target)
                 }
             ))
         }
-        if !browser.folders.isEmpty {
+        if !targets.isEmpty {
             move.addItem(.separator())
         }
         move.addItem(actionItem(
             title: String(localized: "New Folder…"),
             symbol: "folder.badge.plus",
-            action: { [weak browser] in browser?.createFolder(containing: selected) }
+            action: { [weak browser] in browser?.createFolder(containing: items) }
         ))
         let moveItem = NSMenuItem(title: String(localized: "Move to Folder"), action: nil, keyEquivalent: "")
         moveItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
         moveItem.submenu = move
         menu.addItem(moveItem)
 
-        if selected.contains(where: { browser.sidebarTree.parent(of: $0) != nil }) {
+        if items.contains(where: { browser.sidebarTree.parent(of: $0) != nil }) {
             menu.addItem(actionItem(
                 title: String(localized: "Remove from Folder"),
                 symbol: "folder.badge.minus",
-                action: { [weak browser] in browser?.moveOut(selected) }
+                action: { [weak browser] in browser?.moveOut(items) }
             ))
         }
+    }
 
-        let count = browser.tabCount(in: selected)
-        menu.addItem(actionItem(
+    private static func closeTabsItem(
+        _ items: [SidebarItem],
+        count: Int,
+        browser: BrowserModel
+    ) -> NSMenuItem {
+        actionItem(
             title: String(localized: "Close \(count) Tabs"),
             symbol: "xmark",
             action: { [weak browser] in
@@ -341,10 +383,10 @@ private enum FolderContextMenu {
                         "Close \(count) tabs?",
                         verb: "Close Tabs"
                     ) else { return }
-                    browser.close(selected)
+                    browser.close(items)
                 }
             }
-        ))
+        )
     }
 
     private static func actionItem(

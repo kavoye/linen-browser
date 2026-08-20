@@ -64,10 +64,6 @@ struct Sidebar: View {
                 newFolderDrop: newFolderDrop
             )
             NewTabRow(coordinator: coordinator)
-            Rectangle()
-                .fill(Theme.Wash.hairline)
-                .frame(height: 1)
-                .padding(.horizontal, sidebarStyle == .icons ? 4 : 2)
             ZStack(alignment: .bottom) {
                 WorkspaceList(
                     browser: browser,

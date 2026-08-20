@@ -136,6 +136,7 @@ struct ChromeIcon: View {
         .hoverVerified($hovering)
         .animation(Theme.Motion.quick, value: hovering)
         .help(help)
+        .toolTipText(help)
     }
 }
 
@@ -163,6 +164,40 @@ struct CloseButton: View {
 
     var body: some View {
         ChromeIcon.rowControl(symbol: "xmark", help: help, action: action)
+    }
+}
+
+extension View {
+    /// An `NSView` tooltip, which the view under the pointer answers even when
+    /// an ancestor's `.help` rect covers it.
+    func toolTipText(_ text: String) -> some View {
+        overlay(ToolTipArea(text: text))
+    }
+}
+
+struct ToolTipArea: NSViewRepresentable {
+    let text: String
+
+    func makeNSView(context: Context) -> TipArea {
+        let view = TipArea()
+        apply(to: view)
+        return view
+    }
+
+    func updateNSView(_ nsView: TipArea, context: Context) {
+        apply(to: nsView)
+    }
+
+    func apply(to view: TipArea) {
+        let wanted = text.isEmpty ? nil : text
+        guard view.toolTip != wanted else { return }
+        view.toolTip = wanted
+    }
+
+    final class TipArea: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            nil
+        }
     }
 }
 

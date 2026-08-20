@@ -209,6 +209,12 @@ extension BrowserModel {
         return (try? await webView.evaluateJavaScript(script)) as? Bool ?? false
     }
 
+    func closeOthers(_ kept: BrowserTab) {
+        for tab in tabs.reversed() where tab !== kept {
+            close(tab)
+        }
+    }
+
     func closeActiveTab() {
         if let activeTab {
             close(activeTab)
@@ -390,6 +396,15 @@ extension BrowserModel {
             if let folder = foldersByID[id] {
                 deleteFolder(folder)
             }
+        }
+    }
+
+    /// Every tab the selection reaches, folders included, in sidebar order.
+    func tabs(under items: [SidebarItem]) -> [BrowserTab] {
+        let wanted = sidebarTree.expanded(Set(items))
+        return sidebarTree.walk().compactMap { item in
+            guard wanted.contains(item), case .tab(let id) = item else { return nil }
+            return tabsByID[id]
         }
     }
 

@@ -120,6 +120,31 @@ struct TabOrderingTests {
 
     // MARK: - What can be reopened
 
+    /// "Close Other Tabs" leaves the one it was asked from, wherever it sat.
+    @Test func closingTheOthersKeepsOnlyTheNamedTab() {
+        let model = makeModel()
+        let first = model.newTab()
+        let kept = model.newTab()
+        let last = model.newTab()
+
+        model.closeOthers(kept)
+
+        #expect(model.tabs.count == 1)
+        #expect(model.tabs.first === kept)
+        #expect(model.activeTab === kept)
+        _ = (first, last)
+    }
+
+    @Test func closingTheOthersOnALoneTabChangesNothing() {
+        let model = makeModel()
+        let only = model.newTab()
+
+        model.closeOthers(only)
+
+        #expect(model.tabs.count == 1)
+        #expect(model.tabs.first === only)
+    }
+
     @Test func nothingClosedMeansNothingToReopen() {
         let model = makeModel()
         _ = model.newTab()
@@ -233,6 +258,19 @@ struct TabOrderingTests {
     @Test func countingASelectionReachesTheSameDepth() {
         let nest = nested()
         #expect(nest.model.tabCount(in: [.folder(nest.parent.id)]) == 2)
+    }
+
+    /// The menus copy links in the order the sidebar shows them, and a folder
+    /// hands over everything under it.
+    @Test func gatheringTabsReachesIntoFoldersInSidebarOrder() {
+        let nest = nested()
+
+        let gathered = nest.model.tabs(under: [.folder(nest.parent.id)])
+
+        #expect(gathered.count == 2)
+        #expect(gathered.contains { $0 === nest.outer })
+        #expect(gathered.contains { $0 === nest.inner })
+        #expect(gathered == nest.model.tabs.filter { gathered.contains($0) })
     }
 
     @Test func countingALooseTabCountsOne() {

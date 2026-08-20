@@ -13,6 +13,39 @@ struct ChromeInkTests {
         NSColor(color).usingColorSpace(.sRGB) ?? NSColor(color)
     }
 
+    // MARK: - Tooltips on the controls inside a row
+
+    /// A sidebar row carries its own `.help`, whose rect covers the controls
+    /// sitting in it, so the control's own text never surfaced. An `NSView`
+    /// tooltip is answered by the view under the pointer instead.
+    @MainActor
+    @Test func aControlCarriesItsOwnTooltip() {
+        let view = ToolTipArea.TipArea()
+        ToolTipArea(text: "Remove Bookmark").apply(to: view)
+
+        #expect(view.toolTip == "Remove Bookmark")
+    }
+
+    @MainActor
+    @Test func noTextMeansNoTooltip() {
+        let view = ToolTipArea.TipArea()
+        ToolTipArea(text: "Close Tab").apply(to: view)
+        ToolTipArea(text: "").apply(to: view)
+
+        #expect(view.toolTip == nil)
+    }
+
+    /// The area sits over the button it speaks for, so it must never take the
+    /// click. Tracking, and with it the tooltip, runs whatever hit testing says.
+    @MainActor
+    @Test func theTooltipAreaNeverTakesTheClick() {
+        let view = ToolTipArea.TipArea()
+        ToolTipArea(text: "Close Tab").apply(to: view)
+        view.frame = NSRect(x: 0, y: 0, width: 20, height: 20)
+
+        #expect(view.hitTest(NSPoint(x: 10, y: 10)) == nil)
+    }
+
     // MARK: - Which way the ink points
 
     @Test func aLightBandTakesDarkerInkAsItGetsMoreEmphatic() {

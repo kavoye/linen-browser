@@ -1058,6 +1058,9 @@
     "Close Other Pages" : {
       "comment" : "Destructive command that closes every page shown alongside the one in focus, leaving that one. Title Case. A View menu item and a page context-menu item."
     },
+    "Close Other Tabs" : {
+      "comment" : "Tab context menu in the sidebar: closes every tab except the one that was right-clicked. Asks first. Title case, no count — the confirmation names the number."
+    },
     "Close Tab" : {
       "comment" : "Command that closes the current tab: a File menu item and a tab context-menu item. Title Case, as menu commands are."
     },
@@ -1132,6 +1135,9 @@
     },
     "Copy Link" : {
       "comment" : "Command that puts the current page's address on the clipboard: an Edit menu item, an item in the site controls menu on the toolbar, and a tab context-menu item. Title Case."
+    },
+    "Copy Links" : {
+      "comment" : "Sidebar context menu on a split row or several selected tabs: puts one web address per line on the clipboard. Plural of Copy Link. Title case."
     },
     "Couldn’t build the download URL" : {
       "comment" : "Error shown when an extension cannot be fetched because its download address could not be assembled. A technical failure message, shown to the user."
@@ -1815,6 +1821,9 @@
     },
     "Link Copied" : {
       "comment" : "Brief notice confirming the page's address is now on the clipboard. Title Case, as the app's other short notices are; a past participle, not a command."
+    },
+    "Links Copied" : {
+      "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
     },
     "Links you click still open." : {
       "comment" : "Caption under Block pop-ups in Websites settings, and its settings search caption."

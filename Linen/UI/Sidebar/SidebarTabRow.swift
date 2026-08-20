@@ -54,20 +54,20 @@ struct SidebarTabRow: View {
         sidebarStyle == .full && tab.isAwayFromPin
     }
 
-    private var returnHelp: Text {
-        Text("Back to \(pinnedPageName(of: tab))")
+    private var returnHelp: String {
+        String(localized: "Back to \(pinnedPageName(of: tab))")
     }
 
     private var showsHoverPreview: Bool {
         tab.internalPage == nil && !tab.urlString.isEmpty
     }
 
-    private var helpText: Text {
-        if isActive, tab.isAwayFromPin {
+    private var helpText: String {
+        if isActive, tab.isAwayFromPin, !showsPinSegment {
             return returnHelp
         }
-        guard sidebarStyle == .icons, isActive || !showsHoverPreview else { return Text(verbatim: "") }
-        return Text(verbatim: tab.title)
+        guard sidebarStyle == .icons, isActive || !showsHoverPreview else { return "" }
+        return tab.title
     }
 
     private func tapped() {
@@ -100,6 +100,7 @@ struct SidebarTabRow: View {
         return Array(context.selection.items)
     }
 
+    @ViewBuilder
     private var trailingControls: some View {
         Group {
             if tab.pinnedURL == nil {
@@ -107,7 +108,10 @@ struct SidebarTabRow: View {
                     browser.close(tab)
                 }
             } else {
-                ChromeIcon.rowControl(symbol: "minus", help: String(localized: "Remove Bookmark")) {
+                ChromeIcon.rowControl(
+                    symbol: "minus",
+                    help: String(localized: "Remove Bookmark")
+                ) {
                     browser.unpin(tab)
                 }
             }
@@ -187,7 +191,7 @@ struct SidebarTabRow: View {
             .frame(maxWidth: .infinity)
         }
         .frame(height: 32)
-        .help(helpText)
+        .help(Text(verbatim: helpText))
         .sidebarRowSelectionEffect(
             isSelected: isActive || isSelected,
             isHovering: hovering,
@@ -232,20 +236,15 @@ struct SidebarTabRow: View {
             if selected.isEmpty {
                 menu
             } else {
-                SidebarSelectionMenuItems(items: selected, browser: browser)
+                SidebarSelectionMenuItems(items: selected, browser: browser, coordinator: coordinator)
             }
         }
     }
 
     @ViewBuilder
     private var menu: some View {
-        Button {
-            coordinator.copyLink(for: tab)
-        } label: {
-            Label("Copy Link", systemImage: "doc.on.doc")
-        }
-        .disabled(coordinator.linkURL(for: tab) == nil)
-        Divider()
+        SidebarLinkMenuItems(tabs: [tab], coordinator: coordinator)
+
         Button {
             browser.duplicate(tab)
         } label: {
@@ -266,95 +265,28 @@ struct SidebarTabRow: View {
             }
         }
         Divider()
-        if tab.pinnedURL == nil {
-            Button {
-                browser.pin(tab)
-            } label: {
-                Label("Bookmark This Page", systemImage: "bookmark")
-            }
-        } else {
-            if tab.isAwayFromPin {
-                Button {
-                    browser.returnToPin(tab)
-                } label: {
-                    Label("Back to Bookmarked Page", systemImage: "arrow.uturn.backward")
-                }
-                Divider()
-                Button {
-                    browser.pin(tab)
-                } label: {
-                    Label("Move Bookmark to This Page", systemImage: "bookmark")
-                }
-            }
-            Button {
-                browser.unpin(tab)
-            } label: {
-                Label("Remove Bookmark", systemImage: "bookmark.slash")
-            }
-        }
-        Divider()
+
+        SidebarBookmarkMenuItems(tab: tab, browser: browser)
+        SidebarAudioMenuItems(tab: tab, coordinator: coordinator)
         SidebarFolderMenuItems(items: [item], browser: browser)
-        Divider()
+
         Button(role: .destructive) {
             browser.close(tab)
         } label: {
             Label("Close Tab", systemImage: "xmark")
         }
-    }
-}
-
-struct SidebarSelectionMenuItems: View {
-    let items: [SidebarItem]
-    let browser: BrowserModel
-
-    var body: some View {
-        SidebarFolderMenuItems(items: items, browser: browser)
-        Button(role: .destructive) {
-            let count = browser.tabCount(in: items)
-            Task {
-                guard await ConfirmAlert.destructive(
-                    "Close \(count) tabs?",
-                    verb: "Close Tabs"
-                ) else { return }
-                browser.close(items)
-            }
-        } label: {
-            Label("Close \(browser.tabCount(in: items)) Tabs", systemImage: "xmark")
-        }
-    }
-}
-
-struct SidebarFolderMenuItems: View {
-    let items: [SidebarItem]
-    let browser: BrowserModel
-
-    private var isFiled: Bool {
-        items.contains { browser.sidebarTree.parent(of: $0) != nil }
-    }
-
-    var body: some View {
-        Menu {
-            ForEach(browser.folders) { folder in
-                Button {
-                    browser.move(items, into: folder)
-                } label: {
-                    Text(verbatim: folder.name)
+        if browser.tabs.count > 1 {
+            Button(role: .destructive) {
+                let count = browser.tabs.count - 1
+                Task {
+                    guard await ConfirmAlert.destructive(
+                        "Close \(count) tabs?",
+                        verb: "Close Tabs"
+                    ) else { return }
+                    browser.closeOthers(tab)
                 }
-            }
-            Divider()
-            Button {
-                browser.createFolder(containing: items)
             } label: {
-                Label("New Folder…", systemImage: "folder.badge.plus")
-            }
-        } label: {
-            Label("Move to Folder", systemImage: "folder")
-        }
-        if isFiled {
-            Button {
-                browser.moveOut(items)
-            } label: {
-                Label("Remove from Folder", systemImage: "folder.badge.minus")
+                Label("Close Other Tabs", systemImage: "xmark.square")
             }
         }
     }
@@ -362,7 +294,7 @@ struct SidebarFolderMenuItems: View {
 
 private struct PinReturnSegment: View {
     let tab: BrowserTab
-    let help: Text
+    let help: String
     let action: () -> Void
 
     @State private var hovering = false
@@ -404,7 +336,8 @@ private struct PinReturnSegment: View {
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
         }
-        .help(help)
+        .help(Text(verbatim: help))
+        .toolTipText(help)
         .task(id: tab.pinnedURL) {
             pinnedFavicon = nil
             guard let host = tab.pinnedURL?.host() else { return }

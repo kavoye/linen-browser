@@ -165,8 +165,14 @@ struct SidebarSplitRow: View {
         }
     }
 
+    private var panes: [BrowserTab] {
+        split.tabs.compactMap { browser.tab(id: $0) }
+    }
+
     @ViewBuilder
     private var menu: some View {
+        SidebarLinkMenuItems(tabs: panes, coordinator: coordinator)
+
         if let axis = split.axis {
             Button {
                 browser.setSplitAxis(axis == .stacked ? .sideBySide : .stacked, containing: leading)
@@ -177,7 +183,6 @@ struct SidebarSplitRow: View {
                     Label("Stack Pages", systemImage: "rectangle.split.2x1")
                 }
             }
-            Divider()
         }
         Button {
             browser.dissolveSplit(containing: leading)
@@ -185,13 +190,12 @@ struct SidebarSplitRow: View {
             Label("Exit Split", systemImage: "rectangle")
         }
         Divider()
+
         SidebarFolderMenuItems(items: carried, browser: browser)
-        Divider()
+
         Button(role: .destructive) {
-            for id in split.tabs.reversed() {
-                if let tab = browser.tab(id: id) {
-                    browser.close(tab)
-                }
+            for tab in panes.reversed() {
+                browser.close(tab)
             }
         } label: {
             Label("Close These Tabs", systemImage: "xmark")
@@ -240,7 +244,7 @@ private struct SplitRowCell: View {
     var body: some View {
         HStack(spacing: SidebarMetrics.rowIconSpacing) {
             if showsPinReturn {
-                SplitRowPinReturn(help: Text("Back to \(pinnedPageName(of: tab))")) {
+                SplitRowPinReturn(help: String(localized: "Back to \(pinnedPageName(of: tab))")) {
                     browser.returnToPin(tab)
                     coordinator.showBrowserPage()
                 }
@@ -289,7 +293,7 @@ private struct SplitRowCell: View {
 }
 
 private struct SplitRowPinReturn: View {
-    let help: Text
+    let help: String
     let action: () -> Void
 
     @State private var hovering = false
@@ -306,6 +310,7 @@ private struct SplitRowPinReturn: View {
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
         }
-        .help(help)
+        .help(Text(verbatim: help))
+        .toolTipText(help)
     }
 }
