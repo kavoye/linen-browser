@@ -162,6 +162,8 @@ struct ContentArea: View {
                             HistoryView(browser: browser)
                         case .downloads:
                             DownloadsView(browser: browser)
+                        case .releaseNotes:
+                            ReleaseNotesView(browser: browser, notes: coordinator.releaseNotes)
                         }
                     }
                     .safeAreaPadding(.top, Theme.topBarHeight)

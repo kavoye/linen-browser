@@ -74,6 +74,7 @@ enum CommandPaletteAction: String, CaseIterable {
     case settings
     case extensions
     case checkForUpdates
+    case releaseNotes
 }
 
 enum CommandPaletteGroup: String, CaseIterable {
@@ -601,6 +602,13 @@ enum CommandPaletteCatalog {
                     symbol: "arrow.down.circle",
                     aliases: ["new version", "upgrade"],
                     isAvailable: context.canCheckForUpdates
+                ),
+                make(
+                    .releaseNotes,
+                    group: .library,
+                    title: "Release Notes",
+                    symbol: "doc.text",
+                    aliases: ["what's new", "whats new", "changelog", "notes", "version"]
                 ),
             ]
         }

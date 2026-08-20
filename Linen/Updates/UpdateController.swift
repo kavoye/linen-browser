@@ -45,6 +45,9 @@ final class UpdateController: NSObject {
 
     private var updater: SPUUpdater?
 
+    // Sparkle asks for the feed from a nonisolated callback.
+    private let channel = OSAllocatedUnfairLock(initialState: UpdateChannel.release)
+
     private var pendingChoice: ((SPUUserUpdateChoice) -> Void)?
     private var expectedBytes: UInt64 = 0
     private var receivedBytes: UInt64 = 0
@@ -68,7 +71,7 @@ final class UpdateController: NSObject {
         do {
             try updater.start()
             self.updater = updater
-            Pipeline.log.notice("updater: started, feed \(UpdateFeed.appcastURL.absoluteString, privacy: .public)")
+            Pipeline.log.notice("updater: started, feed \(self.feedURL, privacy: .public)")
         } catch {
             Pipeline.log.error("updater: start failed - \(error, privacy: .public)")
         }
@@ -79,6 +82,16 @@ final class UpdateController: NSObject {
     /// Sparkle refuses a check while a session already runs.
     var canCheck: Bool {
         updater?.canCheckForUpdates ?? false
+    }
+
+    func setChannel(_ channel: UpdateChannel) {
+        let changed = self.channel.withLock { state in
+            defer { state = channel }
+            return state != channel
+        }
+        guard changed else { return }
+        Pipeline.log.notice("updater: feed \(self.feedURL, privacy: .public)")
+        checkNow()
     }
 
     func checkNow() {
@@ -210,10 +223,12 @@ extension UpdateController: SPUUserDriver {
         model.progress = min(1, max(0, progress))
     }
 
+    // The download only starts from an explicit Install, so consent already exists.
     func showReady(toInstallAndRelaunch reply: @escaping (SPUUserUpdateChoice) -> Void) {
-        pendingChoice = reply
+        pendingChoice = nil
         model.isDismissed = false
-        model.phase = .readyToInstall
+        model.phase = .installing
+        reply(.install)
     }
 
     func showInstallingUpdate(
@@ -254,6 +269,10 @@ extension UpdateController: SPUUserDriver {
 
 extension UpdateController: SPUUpdaterDelegate {
     nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
-        UpdateFeed.appcastURL.absoluteString
+        feedURL
+    }
+
+    nonisolated var feedURL: String {
+        UpdateFeed.appcastURL(for: channel.withLock { $0 }).absoluteString
     }
 }

@@ -514,6 +514,12 @@ final class AppCoordinator {
         browser.showDownloads()
     }
 
+    func showReleaseNotes() {
+        showBrowser()
+        showBrowserPage()
+        browser.showReleaseNotes()
+    }
+
     func toggleAgentInspector() {
         if !browserVisible {
             showBrowser()

@@ -37,6 +37,7 @@ final class BrowserSettings {
         static let customUserAgent = "advanced.userAgent.custom"
         static let webInspector = "advanced.webInspector"
         static let reportIssueButton = "appearance.reportIssueButton"
+        static let updateChannel = "updates.channel"
         static let startPageOrder = "startPage.order"
         static let startPageHidden = "startPage.hidden"
         static let startPageHiddenSites = "startPage.hiddenSites"
@@ -57,6 +58,7 @@ final class BrowserSettings {
     @ObservationIgnored private var sessionDefaults: UserDefaults
 
     @ObservationIgnored var onWebPreferencesChanged: (() -> Void)?
+    @ObservationIgnored var onUpdateChannelChanged: ((UpdateChannel) -> Void)?
 
     private func store(for key: String) -> UserDefaults {
         Self.sessionKeySet.contains(key) ? sessionDefaults : appDefaults
@@ -104,6 +106,14 @@ final class BrowserSettings {
         didSet {
             guard showsReportIssueButton != oldValue else { return }
             write(showsReportIssueButton, forKey: Key.reportIssueButton)
+        }
+    }
+
+    var updateChannel: UpdateChannel {
+        didSet {
+            guard updateChannel != oldValue else { return }
+            write(updateChannel.rawValue, forKey: Key.updateChannel)
+            onUpdateChannelChanged?(updateChannel)
         }
     }
 
@@ -387,6 +397,8 @@ final class BrowserSettings {
             showsReportIssueButton = false
         }
         #endif
+        updateChannel = string(Key.updateChannel)
+            .flatMap(UpdateChannel.init(rawValue:)) ?? .release
         let storedZoom = double(Key.pageZoom)
         pageZoom = storedZoom > 0 ? storedZoom : 1
 
@@ -666,6 +678,33 @@ enum NewTabBehavior: String, CaseIterable, Identifiable {
             "A blank page, with the address bar ready."
         case .homepage:
             "A website you choose."
+        }
+    }
+}
+
+enum UpdateChannel: String, CaseIterable, Identifiable {
+    case release
+    case preview
+
+    var id: String {
+        rawValue
+    }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .release:
+            "Release"
+        case .preview:
+            "Preview"
+        }
+    }
+
+    var caption: LocalizedStringResource {
+        switch self {
+        case .release:
+            "Linen updates when a version is ready for everyone."
+        case .preview:
+            "Linen updates to preview builds, ahead of the release."
         }
     }
 }

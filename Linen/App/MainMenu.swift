@@ -64,6 +64,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(chain("About Linen", #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
         menu.addItem(.separator())
         menu.addItem(command("Check for Updates…", #selector(checkForUpdates)))
+        menu.addItem(command("Release Notes", #selector(showReleaseNotes)))
         menu.addItem(.separator())
         menu.addItem(command("Settings…", #selector(openSettings), key: ","))
         menu.addItem(.separator())
@@ -230,6 +231,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.openSettings(.about)
         coordinator.updates.checkNow()
     }
+    @objc private func showReleaseNotes() {
+        coordinator.showReleaseNotes()
+    }
+
     @objc private func openDownloads() {
         coordinator.openSettings(.downloads)
     }

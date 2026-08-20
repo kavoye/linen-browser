@@ -98,9 +98,12 @@ extension AppCoordinator {
         }
         drainQueuedExternalURLs()
 
-        updates.start()
+        startUpdates()
         MoveToApplications.reregisterDefaultBrowserIfNeeded()
-        Task { await releaseNotes.presentIfNewVersion() }
+        Task { [weak self] in
+            guard let self, await releaseNotes.shouldOpenForNewVersion() else { return }
+            showReleaseNotes()
+        }
 
         extensions.onOpenTab = { [weak self] url in
             self?.openNewTab(url: url)
@@ -213,6 +216,14 @@ extension AppCoordinator {
         }
         Pipeline.log.notice("agent engine = \(self.agentName, privacy: .public)")
         discoverLocalContextWindow()
+    }
+
+    private func startUpdates() {
+        updates.setChannel(settings.updateChannel)
+        settings.onUpdateChannelChanged = { [weak self] channel in
+            self?.updates.setChannel(channel)
+        }
+        updates.start()
     }
 
     private func discoverLocalContextWindow() {

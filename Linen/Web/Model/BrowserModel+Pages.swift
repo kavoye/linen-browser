@@ -86,6 +86,11 @@ extension BrowserModel {
     }
 
     @discardableResult
+    func showReleaseNotes() -> BrowserTab {
+        show(.releaseNotes)
+    }
+
+    @discardableResult
     private func show(_ page: BrowserTab.InternalPage) -> BrowserTab {
         sidebarSelection.dropMarks()
         let origin = activeTabID

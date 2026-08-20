@@ -108,7 +108,7 @@ struct SettingsView: View {
                     case .advanced:
                         AdvancedSettings(settings: coordinator.settings)
                     case .about:
-                        AboutSettings(coordinator: coordinator)
+                        AboutSettings(coordinator: coordinator, settings: coordinator.settings)
                     }
                 }
                 .frame(maxWidth: SettingsMetrics.detailWidth, alignment: .leading)
@@ -279,6 +279,7 @@ private struct ExtensionsSettings: View {
 
 private struct AboutSettings: View {
     let coordinator: AppCoordinator
+    @Bindable var settings: BrowserSettings
 
     @State private var readingAcknowledgements = false
 
@@ -296,6 +297,16 @@ private struct AboutSettings: View {
 
             SettingsCard {
                 UpdateRow(updates: coordinator.updates)
+                RowSeparator()
+                DetailRow(title: "Update channel", caption: settings.updateChannel.caption) {
+                    SettingsMenu(
+                        options: UpdateChannel.allCases.map {
+                            .init(value: $0, label: String(localized: $0.label))
+                        },
+                        selection: $settings.updateChannel
+                    )
+                }
+                .settingsAnchor("about.updates.channel")
             }
             .settingsAnchor("about.updates")
 

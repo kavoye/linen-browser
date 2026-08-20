@@ -104,20 +104,6 @@ struct BrowserView: View {
                 .transition(.opacity)
             }
 
-            if coordinator.releaseNotes.isPresented, let release = coordinator.releaseNotes.release {
-                ZStack {
-                    Color.black.opacity(0.35)
-                        .contentShape(Rectangle())
-                        .onTapGesture { coordinator.releaseNotes.dismiss() }
-
-                    ReleaseNotesSheet(release: release) {
-                        coordinator.releaseNotes.dismiss()
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .transition(.opacity)
-            }
-
             if coordinator.onboarding.isPresented {
                 OnboardingOverlay(coordinator: coordinator, model: coordinator.onboarding)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -130,7 +116,6 @@ struct BrowserView: View {
         .animation(nil, value: sidebar.isPeeking)
         .animation(Theme.Motion.settle, value: showsInspector)
         .animation(coordinator.isPaletteOpen ? Theme.Motion.quick : nil, value: coordinator.isPaletteOpen)
-        .animation(Theme.Motion.settle, value: coordinator.releaseNotes.isPresented)
         .animation(nil, value: coordinator.onboarding.isPresented)
     }
 }

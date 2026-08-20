@@ -49,21 +49,21 @@ struct UpdateBanner: View {
                 }
             }
 
-            if isOpen, let caption {
-                Text(caption)
-                    .font(.system(size: 10.5, design: captionIsVersions ? .monospaced : .default))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 3)
-                    .padding(.leading, 17)
-            }
+            if isOpen, caption != nil || actionTitle != nil {
+                // The sidebar goes down to 190pt, where a caption and a button cannot share a line.
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: 8) {
+                        captionText
+                        Spacer(minLength: 8)
+                        actionButton
+                    }
 
-            if isOpen, let actionTitle {
-                SettingsButton(title: actionTitle, isProminent: isPrimaryAction) {
-                    act()
+                    VStack(alignment: .leading, spacing: 9) {
+                        captionText
+                        actionButton
+                    }
                 }
-                .padding(.top, 9)
+                .padding(.top, 5)
                 .padding(.leading, 17)
             }
 
@@ -100,6 +100,27 @@ struct UpdateBanner: View {
         .transition(.identity)
     }
 
+    @ViewBuilder
+    private var captionText: some View {
+        if let caption {
+            Text(caption)
+                .font(.system(size: 10.5, design: captionIsVersions ? .monospaced : .default))
+                .foregroundStyle(.tertiary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder
+    private var actionButton: some View {
+        if let actionTitle {
+            SettingsButton(title: actionTitle, isProminent: isPrimaryAction) {
+                act()
+            }
+            .layoutPriority(1)
+        }
+    }
+
     private var dismiss: some View {
         CloseButton(help: String(localized: "Dismiss")) {
             updates.dismiss()
@@ -132,7 +153,7 @@ struct UpdateBanner: View {
     }
 
     private var isPrimaryAction: Bool {
-        model.phase == .readyToInstall
+        model.phase == .available || model.phase == .readyToInstall
     }
 
     private var tint: Color {
@@ -166,10 +187,8 @@ struct UpdateBanner: View {
 
     private var actionTitle: LocalizedStringResource? {
         switch model.phase {
-        case .available:
-            "Download"
-        case .readyToInstall:
-            "Install and Relaunch"
+        case .available, .readyToInstall:
+            LocalizedStringResource("update.banner.install", defaultValue: "Install")
         case .failed:
             "Try Again"
         default:
@@ -230,7 +249,7 @@ struct UpdateRow: View {
     private var statusTitle: LocalizedStringResource {
         switch model.phase {
         case .available:
-            "Version \(model.version) is available"
+            "Version \(model.version) is available. Installing restarts Linen."
         case .downloading:
             "Downloading update"
         case .extracting:
@@ -406,7 +425,7 @@ private struct UpdateActionButton: View {
         case .checking:
             String(localized: "Checking…")
         case .available:
-            String(localized: "Download")
+            String(localized: "update.banner.install", defaultValue: "Install")
         case .downloading:
             if model.isProgressKnown {
                 String(localized: "update.banner.downloadingShare", defaultValue: "Downloading \(share)")
@@ -420,7 +439,7 @@ private struct UpdateActionButton: View {
                 String(localized: "Preparing…")
             }
         case .readyToInstall:
-            String(localized: "Install and Relaunch")
+            String(localized: "update.banner.install", defaultValue: "Install")
         case .installing:
             String(localized: "Installing…")
         case .failed:
@@ -434,12 +453,11 @@ private struct UpdateActionButton: View {
         [
             String(localized: "Check for Updates"),
             String(localized: "Checking…"),
-            String(localized: "Download"),
+            String(localized: "update.banner.install", defaultValue: "Install"),
             String(localized: "update.banner.downloadingShare", defaultValue: "Downloading \(share(of: 1))"),
             String(localized: "Downloading…"),
             String(localized: "update.banner.preparingShare", defaultValue: "Preparing \(share(of: 1))"),
             String(localized: "Preparing…"),
-            String(localized: "Install and Relaunch"),
             String(localized: "Installing…"),
             String(localized: "Try Again"),
         ]

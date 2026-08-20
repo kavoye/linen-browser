@@ -1241,9 +1241,6 @@
     "Done" : {
       "comment" : "Button that closes something the user has finished with: the Done button on the find bar and the one on the release notes sheet. Use the wording macOS uses on such buttons."
     },
-    "Download" : {
-      "comment" : "Button in the update banner and the About settings page that starts fetching a new release. A verb (a command), not the noun “a download”."
-    },
     "Downloaded %@" : {
       "comment" : "Brief notice shown when a download finishes. %@ is the file's name. A past participle describing what happened, not a command."
     },
@@ -1601,19 +1598,16 @@
       "comment" : "Label on the disclosure control of a step row in the agent activity panel when the step has output but no links; it reveals what the step returned. Verb, narrow column; alternates with “%lld links”."
     },
     "Install" : {
-      "comment" : "The confirming button in the sheet that asks whether to install an extension, and the button Linen adds to an extension's page in the Chrome Web Store. A verb (a command)."
+      "comment" : "The confirming button in the sheet that asks whether to install an extension, and the button Linen adds to an extension's page in the Chrome Web Store. A verb (a command). Not the update button: that is `update.banner.install`."
     },
     "Install “%@”?" : {
       "comment" : "Heading of the sheet asking whether to install an extension. %@ is the extension's own name, taken from its package and never translated, inside curly quotes."
-    },
-    "Install and Relaunch" : {
-      "comment" : "Button that installs a downloaded update and restarts the app. Title Case; both words are verbs, and “relaunch” means the app quits and reopens."
     },
     "Install this extension in Linen" : {
 
     },
     "Installed" : {
-      "comment" : "Marker shown in place of an Install button on a Chrome Web Store page for an extension Linen already has. A past participle describing a state, not a command."
+      "comment" : "Marker shown in place of an Install button on a Chrome Web Store page for an extension Linen already has. A past participle describing a state, not a command. The Release Notes page shows the same word under its own key, releaseNotes.installedBadge."
     },
     "Installed extensions" : {
       "comment" : "Title of the Extensions list row in Settings search results. Sentence case; “installed” is an adjective."
@@ -1810,6 +1804,12 @@
     "Linen opens in the same profile every time." : {
       "comment" : "Caption for the choice that pins the browser to one profile at launch."
     },
+    "Linen updates to preview builds, ahead of the release." : {
+      "comment" : "Caption under the Update channel menu in Settings > About while Preview is chosen. Describes the chosen channel, not the other one. Must stay on one line — about 57 characters."
+    },
+    "Linen updates when a version is ready for everyone." : {
+      "comment" : "Caption under the Update channel menu in Settings > About while Release is chosen. Describes the chosen channel, not the other one. Must stay on one line — about 57 characters."
+    },
     "Linen uses the system user agent. Changing this can break websites." : {
 
     },
@@ -1848,6 +1848,9 @@
     },
     "Looking for related tabs…" : {
 
+    },
+    "Looking for the notes…" : {
+      "comment" : "Line on the Release Notes page while the app fetches the notes from GitHub. Ends with an ellipsis character, not three full stops."
     },
     "Low" : {
       "comment" : "The second of the four Thinking levels in Settings > Provider (None, Low, Medium, High). One segment of a segmented control, so space is tight."
@@ -2057,6 +2060,9 @@
     },
     "No matches" : {
       "comment" : "Shown in place of the website-data list when the filter text matches no website in it."
+    },
+    "No notes are published yet." : {
+      "comment" : "Line on the Release Notes page when GitHub returns no releases at all. A Try Again button sits below it. Not an error: the fetch may simply have failed."
     },
     "No notes for this release." : {
       "comment" : "Shown in the release notes sheet when the update carries no description."
@@ -2424,6 +2430,9 @@
     "Press shortcut" : {
       "comment" : "Placeholder inside the keyboard-shortcut field while it is waiting for a keystroke. Press is a verb. Very tight space — the field is only as wide as a couple of key caps."
     },
+    "Preview" : {
+      "comment" : "One choice in the Update channel menu in Settings > About: builds made from the newest change, before a release. A noun. Its twin is “Release”. One word, it sits in a narrow menu."
+    },
     "Previous (⇧⌘G)" : {
       "comment" : "Tooltip on the up-chevron in the find bar, which moves to the previous match on the page. ⇧⌘G is the keyboard shortcut — keyboard symbols, keep exactly, including the parentheses."
     },
@@ -2546,6 +2555,24 @@
     },
     "Redo" : {
       "comment" : "Standard macOS Edit menu command, shortcut ⇧⌘Z. Use Apple’s own wording for it in the target language."
+    },
+    "Release" : {
+      "comment" : "One choice in the Update channel menu in Settings > About: the normal, numbered versions. A noun, not the verb “to release”. Its twin is “Preview”. One word, it sits in a narrow menu."
+    },
+    "Release Notes" : {
+      "comment" : "Name of the page that lists what changed in this version. It appears in three places: the Linen menu next to “Check for Updates…”, the heading with the back arrow at the top of the page, and the command palette. Title Case, because a macOS menu item is title case. Use the same wording in all three."
+    },
+    "releaseNotes.installedBadge" : {
+      "comment" : "Badge beside the version you are running, in the list of every release on the Release Notes page. Shares its English text with the Chrome Web Store marker of the same name, which is why it carries a key of its own.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Installed"
+          }
+        }
+      }
     },
     "Reload" : {
       "comment" : "Tooltip on the circular-arrow button in the toolbar, which loads the current page again. Verb; alternates with “Stop” while a page is still loading. Title Case, very tight."
@@ -3391,6 +3418,9 @@
     "Update %@ ready" : {
       "comment" : "Title line of the sidebar update card once the update has been unpacked and can be installed. %@ is the new version number, for example 1.4.2. Update is a noun here."
     },
+    "Update channel" : {
+      "comment" : "Title of the pop-up menu in Settings > About that chooses which builds the app updates to. The choices are “Release” and “Preview”. Sentence case. “Channel” is the usual software word for a stream of builds."
+    },
     "Update to %@" : {
       "comment" : "Title line of the sidebar update card when a newer version is available. %@ is the new version number, for example 1.4.2. Update reads as an invitation to update to that version."
     },
@@ -3402,6 +3432,18 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Downloading %@"
+          }
+        }
+      }
+    },
+    "update.banner.install" : {
+      "comment" : "The one button that updates the app, in the update banner and on the About settings page. One click downloads the update, installs it and restarts Linen; there is no second step. A verb (a command). Its twin is the plain “Install” key, the extension button — the same English word for a different button, so the two are kept apart. The button is narrow, so keep this short.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Install"
           }
         }
       }
@@ -3466,8 +3508,8 @@
     "Version %@" : {
       "comment" : "Line beside the Linen heading on the About page in Settings. %@ is the version number of the running app, for example 1.4.2."
     },
-    "Version %@ is available" : {
-      "comment" : "Status line under the Software Update heading in Settings when a newer release exists. %@ is the new version number, for example 1.4.2."
+    "Version %@ is available. Installing restarts Linen." : {
+      "comment" : "Status line under the Software Update heading in Settings when a newer release exists. %@ is the new version number, e.g. 1.4.2. The second sentence is the only warning the user gets: the Install button does not ask again."
     },
     "Video and audio may start playing as soon as a page loads." : {
       "comment" : "Caption for the most permissive choice of the Autoplay setting, describing what that choice allows websites to do."
@@ -3558,6 +3600,9 @@
     },
     "Whether Linen is your default browser." : {
       "comment" : "Description of the Open links from other apps row, shown only in the Settings search results. Linen is the application name and is never translated. Sentence case with a final full stop."
+    },
+    "Whether updates arrive on releases, or early on preview builds." : {
+      "comment" : "Detail line for the Update channel row in the Settings search results. Covers both choices, because the search index cannot know which one is set."
     },
     "Whether video and sound may start on their own." : {
       "comment" : "Caption describing the Autoplay setting in the Settings search results. A sentence fragment naming what the setting decides."

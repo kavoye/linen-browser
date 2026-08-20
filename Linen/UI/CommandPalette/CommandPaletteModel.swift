@@ -539,6 +539,8 @@ final class CommandPaletteModel {
         case .checkForUpdates:
             coordinator.openSettings(.about)
             coordinator.updates.checkNow()
+        case .releaseNotes:
+            coordinator.showReleaseNotes()
         }
     }
 }

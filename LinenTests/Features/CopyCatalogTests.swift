@@ -161,6 +161,7 @@ struct SettingsIndexParityTests {
         "general.importSafari",     // import rows describe themselves in the import section
         "general.importChrome",
         "about.updates",            // the About page renders version state, not a caption
+        "about.updates.channel",    // the page caption names the chosen channel; the index covers both
         "about.acknowledgements",
         "profiles.launch",          // the picker row's caption names the current profile
         "extensions.installed",     // the extensions section renders its own header

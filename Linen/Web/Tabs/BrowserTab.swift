@@ -157,6 +157,7 @@ final class BrowserTab: Identifiable {
     enum InternalPage: String, Codable, CaseIterable {
         case history
         case downloads
+        case releaseNotes
 
         var title: String {
             switch self {
@@ -164,6 +165,8 @@ final class BrowserTab: Identifiable {
                 "History"
             case .downloads:
                 "Downloads"
+            case .releaseNotes:
+                "Release Notes"
             }
         }
 
@@ -173,6 +176,8 @@ final class BrowserTab: Identifiable {
                 "clock"
             case .downloads:
                 "arrow.down"
+            case .releaseNotes:
+                "doc.text"
             }
         }
     }
