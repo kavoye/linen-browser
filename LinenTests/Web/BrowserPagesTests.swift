@@ -135,6 +135,50 @@ struct BrowserPagesTests {
         #expect(model.tabs.count == 2)
     }
 
+    @Test func aPageSlidesInTheFirstTimeItIsOpened() {
+        let model = makeModel()
+        _ = model.newTab(url: URL(string: "https://example.com/article")!)
+        let before = model.internalPageMoves
+
+        _ = model.showHistory()
+
+        #expect(model.internalPageMoves == before + 1)
+    }
+
+    @Test func askingForAPageThatIsAlreadyOpenDoesNotSlideItInAgain() {
+        let model = makeModel()
+        _ = model.newTab(url: URL(string: "https://example.com/article")!)
+        _ = model.showHistory()
+        let opened = model.internalPageMoves
+
+        _ = model.showHistory()
+
+        #expect(model.internalPageMoves == opened)
+    }
+
+    @Test func returningToAnOpenPageFromTheSidebarDoesNotSlideItInAgain() {
+        let model = makeModel()
+        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+        let history = model.showHistory()
+        let opened = model.internalPageMoves
+
+        model.activate(reading)
+        model.activate(history)
+
+        #expect(model.internalPageMoves == opened)
+    }
+
+    @Test func leavingAPageSlidesItBackOut() {
+        let model = makeModel()
+        _ = model.newTab(url: URL(string: "https://example.com/article")!)
+        _ = model.showHistory()
+        let opened = model.internalPageMoves
+
+        model.dismissInternalPage(.history)
+
+        #expect(model.internalPageMoves == opened + 1)
+    }
+
     @Test func historyAndDownloadsAreSeparatePages() {
         let model = makeModel()
         _ = model.newTab(url: URL(string: "https://example.com/article")!)

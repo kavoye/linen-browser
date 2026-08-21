@@ -259,6 +259,8 @@ final class BrowserModel {
 
     var internalReturn: InternalReturn?
 
+    var internalPageMoves = 0
+
     @ObservationIgnored var saveTask: Task<Void, Never>?
 
     @ObservationIgnored var saveChain: Task<Void, Never>?

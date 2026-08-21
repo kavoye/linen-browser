@@ -204,7 +204,7 @@ struct ContentArea: View {
                         )
                 }
             }
-            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: browser.activeTab?.internalPage)
+            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: browser.internalPageMoves)
             .overlay(alignment: .top) {
                 if let tab = browser.activeTab, tab.isLoading {
                     LoadingBar(progress: tab.progress)

@@ -120,6 +120,7 @@ extension BrowserModel {
         guard let tab = tabs.first(where: { $0.internalPage == page }) else { return }
         let origin = internalReturn?.page == page ? internalReturn : nil
         internalReturn = nil
+        internalPageMoves += 1
 
         if origin?.closesTab == true {
             close(tab)
@@ -146,6 +147,7 @@ extension BrowserModel {
     }
 
     private func install(_ page: BrowserTab.InternalPage, in tab: BrowserTab) {
+        internalPageMoves += 1
         tab.internalPage = page
         tab.title = page.title
         tab.urlString = ""
