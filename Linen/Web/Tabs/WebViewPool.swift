@@ -112,6 +112,8 @@ final class TabWebView: WKWebView {
     private var contextImageURL: URL?
     private var contextLinkURL: URL?
 
+    private static let reloadItem = "WKMenuItemIdentifierReload"
+
     private static let downloadItems: Set<String> = [
         "WKMenuItemIdentifierDownloadImage",
         "WKMenuItemIdentifierDownloadLinkedFile",
@@ -140,11 +142,17 @@ final class TabWebView: WKWebView {
 
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
-        for item in menu.items {
+        var reloadIndex: Int?
+        for (index, item) in menu.items.enumerated() {
             guard let identifier = item.identifier?.rawValue else { continue }
 
             if let title = Self.newWindowItems[identifier] {
                 item.title = String(localized: title)
+            }
+
+            if identifier == Self.reloadItem {
+                item.title = String(localized: "Reload Page")
+                reloadIndex = index
             }
 
             if Self.downloadItems.contains(identifier) {
@@ -152,6 +160,39 @@ final class TabWebView: WKWebView {
                 item.action = #selector(startContextDownload(_:))
             }
         }
+
+        guard let reloadIndex else { return }
+        var index = reloadIndex + 1
+        for item in pageItems() {
+            menu.insertItem(item, at: index)
+            index += 1
+        }
+    }
+
+    private func pageItems() -> [NSMenuItem] {
+        let save = NSMenuItem(
+            title: String(localized: "Save Page As…"),
+            action: #selector(savePage),
+            keyEquivalent: ""
+        )
+        save.target = self
+        save.image = NSImage(systemSymbolName: "square.and.arrow.down", accessibilityDescription: nil)
+        let printing = NSMenuItem(
+            title: String(localized: "Print Page…"),
+            action: #selector(printPage),
+            keyEquivalent: ""
+        )
+        printing.target = self
+        printing.image = NSImage(systemSymbolName: "printer", accessibilityDescription: nil)
+        return [.separator(), save, printing]
+    }
+
+    @objc private func savePage() {
+        PageSaving.begin(for: self)
+    }
+
+    @objc private func printPage() {
+        PagePrinting.begin(for: self)
     }
 
     @objc private func startContextDownload(_ sender: NSMenuItem) {

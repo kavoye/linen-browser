@@ -2517,6 +2517,9 @@
     "Previous tabs" : {
       "comment" : "One segment of the two-way control for what happens at launch, meaning the tabs from the last session come back. It completes the row title Linen opens with. A segmented control segment, so it must stay short; the other segment is A new tab."
     },
+    "Print Page…" : {
+      "comment" : "Command in the page’s right-click menu, below Save Page As…. It opens the macOS print panel. The ellipsis says that a panel opens; keep it. Title Case."
+    },
     "Print…" : {
       "comment" : "Menu bar command under File, shortcut ⌘P. Title Case with a real ellipsis, which promises that a dialog follows. Use Apple’s own wording for the system Print command."
     },
@@ -2656,7 +2659,7 @@
       "comment" : "Tooltip on the circular-arrow button in the toolbar, which loads the current page again. Verb; alternates with “Stop” while a page is still loading. Title Case, very tight."
     },
     "Reload Page" : {
-      "comment" : "Menu bar command under View, shortcut ⌘R, and the same command in the site controls menu. Title Case and established platform terminology."
+      "comment" : "Menu bar command under View, shortcut ⌘R, and the same command in the site controls menu and at the top of the page’s right-click menu. Title Case and established platform terminology."
     },
     "Reload Page from Origin" : {
       "comment" : "Menu bar command under View, shortcut ⇧⌘R, which reloads while ignoring the cache. Origin means the web server the page came from. Title Case and established platform terminology."
@@ -2866,6 +2869,12 @@
     },
     "Save files to" : {
       "comment" : "Title of the Downloads settings row whose control names the folder, so it reads as an unfinished sentence completed by the folder shown beside it. Save is a verb; sentence case."
+    },
+    "Save Page As" : {
+      "comment" : "Title of the macOS save panel that the Save Page As… command opens. It carries no ellipsis, because the panel is already open."
+    },
+    "Save Page As…" : {
+      "comment" : "Command in the page’s right-click menu. It opens the macOS save panel, where the page is saved as a web archive file. The ellipsis says that a panel opens; keep it. Title Case."
     },
     "Saved in your Keychain." : {
       "comment" : "Caption under the API key row when a key is stored but cannot be shown in masked form. The implied subject is the key. Keychain is Apple’s password store — use Apple’s own name for it."
@@ -3343,6 +3352,9 @@
     "The page changed before the assistant could use it." : {
 
     },
+    "The page couldn’t be saved." : {
+      "comment" : "Message of the warning shown when the web archive file could not be written. The reason supplied by macOS follows below it. Curly apostrophe."
+    },
     "The page moved to another website. Use Read Page before the assistant reads or controls it." : {
       "comment" : "Message shown in the agent activity panel when the page navigated away before the assistant could act. Read Page is the name of one of the assistant’s tools — keep its capitalisation."
     },
@@ -3534,6 +3546,9 @@
     },
     "Unsupported CRX container version %lld" : {
       "comment" : "Error shown when an extension package uses a file format version the app cannot read. %lld is the version number found in the file. CRX is the name of Chrome’s extension package format — leave as is. No final full stop."
+    },
+    "Untitled" : {
+      "comment" : "Name suggested in the save panel for a page that has no title and no address to name the file after. A noun."
     },
     "Up to date" : {
       "comment" : "Update status meaning no newer version exists, shown both in the Settings update section and on the sidebar update card. An adjective phrase describing the app."
