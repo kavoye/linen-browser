@@ -37,6 +37,8 @@ final class BrowserTab: Identifiable {
     var pageColor: NSColor?
     var isRestoring = false
     var isPlayingAudio = false
+    var hasVideo = false
+    var isPictureOut = false
     var isAgentWorking: Bool {
         processState.isAgentWorking
     }
@@ -205,6 +207,8 @@ final class BrowserTab: Identifiable {
     var onOpenInNewTab: ((URL, Bool) -> Void)?
     var onOpenInSplit: ((URL) -> Void)?
     var onCloseRequested: (() -> Void)?
+    var onPictureInPictureChanged: ((Bool) -> Void)?
+    var onPictureReturnExpected: (() -> Void)?
     var onDownload: ((WKDownload, URL?) -> Void)?
 
     let extensionBaseURL: URL?
@@ -455,7 +459,11 @@ final class BrowserTab: Identifiable {
 
     var onSameDocumentNavigation: (() -> Void)?
 
+    var onContentProcessTerminated: (() -> Void)?
+
     func contentProcessDidTerminate() {
+        isPlayingAudio = false
+        onContentProcessTerminated?()
         if !processState.shouldReloadAfterUnexpectedTermination() {
             Pipeline.log.error("web content process died twice; leaving the tab alone")
             return

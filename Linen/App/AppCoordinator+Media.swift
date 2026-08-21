@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import Foundation
+import os
+import WebKit
 
 extension AppCoordinator {
     // MARK: - Media following the tab you're looking at
@@ -9,6 +12,7 @@ extension AppCoordinator {
     func followMedia(to newTab: BrowserTab?, from previousTab: BrowserTab?) {
         mediaClaim += 1
         let claim = mediaClaim
+        returnPictureToTheTabInFront()
 
         if let newTab, media.controlledTabID == newTab.id {
             media.releaseControl()
@@ -32,6 +36,128 @@ extension AppCoordinator {
                   !previousTab.isMuted
             else { return }
             controlPlayback(in: previousTab)
+            if settings.automaticPictureInPicture {
+                media.requestNativePiP(on: previousTab.webView)
+            }
+        }
+    }
+
+    /// The picture is borrowed only for the experiment that shows it, and never
+    /// while video leaves for the floating window on its own.
+    func applyPictureLending() {
+        media.lendsPicture = settings.showsVideoInPlayer && !settings.automaticPictureInPicture
+    }
+
+    /// The video needs somewhere on screen to land, or WebKit will not let go
+    /// of it. The card counts as somewhere, so a lent picture stays put.
+    func makeRoomForPicture(in webView: WKWebView?) {
+        if let webView, webView !== media.model.pictureWebView,
+           let tab = browser.tabs.first(where: { $0.webView === webView }) {
+            openTab(tab)
+        }
+        showBrowser()
+    }
+
+    /// What left on its own comes back on its own: looking at the tab again is
+    /// the same answer as the floating window's return button.
+    func returnPictureToTheTabInFront() {
+        guard settings.automaticPictureInPicture, browserVisible, page == .browser else { return }
+        let inFront = browser.tabs.filter {
+            $0.id == browser.activeTabID || browser.isVisibleInSplit($0)
+        }
+        guard let tab = inFront.first(where: { media.isPictureOut($0.webView) }) else { return }
+        Pipeline.log.notice("media: its tab is in front again, putting the picture back")
+        media.exitPictureInPicture(for: tab.webView)
+    }
+
+    func togglePictureInPicture(for tab: BrowserTab) {
+        media.togglePictureInPicture(for: tab.webView)
+    }
+
+    func moveVideoToPictureInPicture() {
+        guard settings.automaticPictureInPicture else { return }
+        let active = browser.activeTab
+        guard let id = MediaRoster.pictureTarget(
+            active: active.flatMap { $0.internalPage == nil ? $0.id : nil },
+            isActivePlaying: active.map { $0.isPlayingAudio && !$0.isMuted } ?? false,
+            docked: media.controlledTabID,
+            isDockedPlaying: media.model.isPlaying
+        ),
+            let tab = browser.tabs.first(where: { $0.id == id }), !tab.isDeferred
+        else { return }
+        media.requestNativePiP(on: tab.webView)
+    }
+
+    func wireMedia() {
+        media.onPictureChanged = { [weak self] in self?.applyHoverShield() }
+        media.onControlledTabChanged = { [weak self] previousID, currentID in
+            guard let self else { return }
+            if let previousID, let tab = browser.tabs.first(where: { $0.id == previousID }) {
+                tab.isControlledByMediaDock = false
+            }
+            if let currentID, let tab = browser.tabs.first(where: { $0.id == currentID }) {
+                tab.isControlledByMediaDock = true
+            }
+        }
+        media.onTabAudioChanged = { [weak self] webView, isPlaying in
+            guard let self, let tab = browser.tabs.first(where: { $0.webView === webView }) else { return }
+            guard tab.isPlayingAudio != isPlaying else { return }
+            tab.isPlayingAudio = isPlaying
+            if isPlaying {
+                playedPages[tab.id] = tab.urlString
+            }
+            if isPlaying, !tab.isMuted, tab.id != browser.activeTabID,
+               media.controlledTabID == nil {
+                controlPlayback(in: tab)
+            }
+        }
+        media.onTabVideoChanged = { [weak self] webView, hasVideo in
+            guard let self, let tab = browser.tabs.first(where: { $0.webView === webView }),
+                  tab.hasVideo != hasVideo
+            else { return }
+            tab.hasVideo = hasVideo
+        }
+        media.onPictureOutChanged = { [weak self] webView, isOut in
+            guard let self, let tab = browser.tabs.first(where: { $0.webView === webView }),
+                  tab.isPictureOut != isOut
+            else { return }
+            tab.isPictureOut = isOut
+        }
+        media.onReturnedInline = { [weak self] webView in
+            guard let self else { return }
+            Pipeline.log.notice("media: the picture came home, making room for it")
+            makeRoomForPicture(in: webView)
+        }
+        browser.onContentProcessTerminated = { [weak self] tab in
+            tab.hasVideo = false
+            self?.media.pageDidReset(tab.webView)
+        }
+        browser.onPictureInPictureChanged = { [weak self] tab, isOut in
+            Pipeline.log.notice("media: WebKit reports the picture \(isOut ? "out" : "home", privacy: .public)")
+            self?.media.setPictureInPicture(isOut, for: tab.webView, source: .webKit)
+        }
+        browser.onPictureReturnExpected = { [weak self] tab in
+            guard let self, media.notePictureReturnAsk(for: tab.webView) else { return }
+            Pipeline.log.notice("media: the floating window wants to hand the video back")
+            makeRoomForPicture(in: tab.webView)
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.moveVideoToPictureInPicture()
+            }
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.returnPictureToTheTabInFront()
+            }
         }
     }
 

@@ -85,6 +85,8 @@ struct AskSurfaceRow: View {
                         .frame(width: placement.iconSlot)
                     SiteControlsMenu(browser: model.browser, coordinator: model.coordinator)
                         .frame(width: placement.iconSlot)
+                    TabPictureBadge(browser: model.browser, coordinator: model.coordinator)
+                        .frame(width: placement.iconSlot)
                     TabAudioBadge(browser: model.browser, coordinator: model.coordinator)
                         .frame(width: placement.iconSlot)
                 }

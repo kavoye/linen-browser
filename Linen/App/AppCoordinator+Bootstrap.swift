@@ -57,29 +57,8 @@ extension AppCoordinator {
         WebViewPool.shared.installExtensionController(extensions.controller)
         WebViewPool.shared.warmUp()
         browser.restoreSession()
-        conversationLog.retainTabs(Set(browser.tabs.map(\.id)))
-        media.onPictureChanged = { [weak self] in self?.applyHoverShield() }
-        media.onControlledTabChanged = { [weak self] previousID, currentID in
-            guard let self else { return }
-            if let previousID, let tab = browser.tabs.first(where: { $0.id == previousID }) {
-                tab.isControlledByMediaDock = false
-            }
-            if let currentID, let tab = browser.tabs.first(where: { $0.id == currentID }) {
-                tab.isControlledByMediaDock = true
-            }
-        }
-        media.onTabAudioChanged = { [weak self] webView, isPlaying in
-            guard let self, let tab = browser.tabs.first(where: { $0.webView === webView }) else { return }
-            guard tab.isPlayingAudio != isPlaying else { return }
-            tab.isPlayingAudio = isPlaying
-            if isPlaying {
-                playedPages[tab.id] = tab.urlString
-            }
-            if isPlaying, !tab.isMuted, tab.id != browser.activeTabID,
-               media.controlledTabID == nil {
-                controlPlayback(in: tab)
-            }
-        }
+        retainAgentMemory()
+        wireMedia()
         let notifyExtensions = browser.onActiveTabChanged
         browser.onActiveTabChanged = { [weak self] newTab, previousTab in
             notifyExtensions?(newTab, previousTab)
@@ -87,10 +66,6 @@ extension AppCoordinator {
         }
         browser.onSpaceAnchorChanged = { [weak self] from, to in
             self?.agentTurns.reassignSpace(from: from, to: to)
-        }
-        media.onReturnedInline = { [weak self] in
-            guard let self, !browserVisible else { return }
-            showBrowser()
         }
         showBrowser()
         if !AppDatabase.ownsSession {

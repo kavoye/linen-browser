@@ -10,8 +10,13 @@ import WebKit
 @Observable
 final class MediaModel {
     var title = ""
+    var pageTitle = ""
+    var trackTitle = ""
+    var artist = ""
+    var album = ""
     var isActive = false
     var isInNativePiP = false
+    var hasVideo = false
 
     // MARK: - Transport state
 
@@ -34,11 +39,48 @@ final class MediaModel {
     }
 }
 
+/// Who says a video went out or came home. A live document only speaks when
+/// something in it changed, so the page speaks for the user; WebKit also speaks
+/// while tearing a page down, which nobody asked for.
+enum PictureSource {
+    case page
+    case webKit
+
+    var speaksForTheUser: Bool {
+        self == .page
+    }
+
+    var name: String {
+        self == .page ? "the page" : "WebKit"
+    }
+}
+
 @MainActor
 final class MediaCenter {
     let model = MediaModel()
-    var onReturnedInline: (() -> Void)?
+    let watched = MediaModel()
+
+    /// Off in Settings, nothing docks: what plays stays in its own tab. The
+    /// watched model is untouched, so the lyrics still follow the tab you are on.
+    var isEnabled = true {
+        didSet {
+            guard !isEnabled else { return }
+            releaseControl()
+        }
+    }
+
+    /// Video that pops out on its own belongs in the floating window, so the
+    /// card keeps its artwork instead of cropping a picture nobody can see.
+    var lendsPicture = true {
+        didSet {
+            guard !lendsPicture else { return }
+            setPicture(nil)
+        }
+    }
+    var onReturnedInline: ((WKWebView?) -> Void)?
     var onTabAudioChanged: ((WKWebView, Bool) -> Void)?
+    var onTabVideoChanged: ((WKWebView, Bool) -> Void)?
+    var onPictureOutChanged: ((WKWebView, Bool) -> Void)?
     var onControlledTabChanged: ((UUID?, UUID?) -> Void)?
     var onPictureChanged: (() -> Void)?
 
@@ -48,7 +90,7 @@ final class MediaCenter {
         messageHandler
     }
     nonisolated static var frameScriptSource: String {
-        mediaScript
+        MediaScript.source
     }
     nonisolated static let frameScriptHandlerName = "linenpip"
 
@@ -59,16 +101,90 @@ final class MediaCenter {
     }
 
     func receiveScriptMessage(_ message: String, from webView: WKWebView?, isMainFrame: Bool) {
+        if let webView, message == "picture-in-picture" || message == "inline" {
+            applyPresentationMode(message, from: webView)
+            return
+        }
+        if let webView, isMainFrame, message == "hello" {
+            forgetPicture(webView)
+        }
         if let controlled = controlledWebView, webView === controlled {
             if isMainFrame, let playing = Self.audioReport(in: message) {
                 onTabAudioChanged?(controlled, playing)
             }
+            if isMainFrame, let hasVideo = Self.videoReport(in: message) {
+                onTabVideoChanged?(controlled, hasVideo)
+            }
             handleScriptMessage(message, from: controlled, isMainFrame: isMainFrame)
+            return
+        }
+        if let webView, webView === pipTarget,
+           handlePiPMessage(message, from: webView, isMainFrame: isMainFrame) {
             return
         }
         guard isMainFrame else { return }
         if let playing = Self.audioReport(in: message), let webView {
             onTabAudioChanged?(webView, playing)
+        }
+        if let hasVideo = Self.videoReport(in: message), let webView {
+            onTabVideoChanged?(webView, hasVideo)
+        }
+        if let watchedWebView, webView === watchedWebView {
+            applyWatched(message)
+        }
+    }
+
+    // MARK: - The tab you are looking at
+
+    func watch(webView: WKWebView, title: String, tabID: UUID, artwork: URL?) {
+        guard watchedWebView !== webView else { return }
+        watchedWebView = webView
+        watched.artworkURL = artwork
+        watched.controlledTabID = tabID
+        watched.pageTitle = title
+        watched.trackTitle = ""
+        watched.artist = ""
+        watched.album = ""
+        watched.title = title
+        watched.currentTime = 0
+        watched.duration = 0
+        watched.isLive = false
+        watched.isPlaying = true
+        watched.isActive = true
+        Self.post("linen-resend", to: webView)
+    }
+
+    func stopWatching() {
+        guard watchedWebView != nil else { return }
+        watchedWebView = nil
+        watched.controlledTabID = nil
+        watched.artworkURL = nil
+        watched.title = ""
+        watched.pageTitle = ""
+        watched.trackTitle = ""
+        watched.artist = ""
+        watched.album = ""
+        watched.isActive = false
+    }
+
+    private func applyWatched(_ message: String) {
+        if message == "hello" {
+            watched.currentTime = 0
+            watched.duration = 0
+            watched.isLive = false
+            return
+        }
+        if message.hasPrefix("state:") {
+            guard let fields = Self.fields(in: String(message.dropFirst("state:".count))) else { return }
+            applyTiming(fields, to: watched)
+            return
+        }
+        if message.hasPrefix("meta:") {
+            applyMetadata(String(message.dropFirst("meta:".count)), to: watched)
+            return
+        }
+        if message == "ended" {
+            watched.isPlaying = false
         }
     }
 
@@ -81,7 +197,7 @@ final class MediaCenter {
         isPlaying: Bool = true,
         artwork: URL?
     ) {
-        guard controlledTabID != tabID else { return }
+        guard isEnabled, controlledTabID != tabID else { return }
 
         let previous = controlledTabID
         setPicture(nil)
@@ -91,26 +207,69 @@ final class MediaCenter {
         onControlledTabChanged?(previous, tabID)
         model.artworkURL = artwork
         artworkIsGuess = artwork == nil
+        model.pageTitle = title
+        model.trackTitle = ""
+        model.artist = ""
+        model.album = ""
         model.title = title.isEmpty ? String(localized: "Now Playing") : title
-        model.isInNativePiP = false
+        model.isInNativePiP = nativePiPView === webView
+        model.hasVideo = false
         model.isPlaying = isPlaying
         model.isLive = false
         model.currentTime = 0
         model.duration = 0
         model.isActive = true
+        needsReveal = true
+        Self.post("linen-resend", to: webView)
         Pipeline.log.notice("media: controlling playback in a background tab")
     }
 
     func releaseControl() {
         guard let previous = controlledTabID else { return }
         setPicture(nil)
+        model.isInNativePiP = false
+        model.hasVideo = false
         model.playerViewportRect = nil
         model.controlledTabID = nil
         controlledWebView = nil
         onControlledTabChanged?(previous, nil)
         model.artworkURL = nil
+        model.pageTitle = ""
+        model.trackTitle = ""
+        model.artist = ""
+        model.album = ""
         model.isActive = false
+        needsReveal = true
         Pipeline.log.notice("media: released tab playback control")
+    }
+
+    func pageDidReset(_ webView: WKWebView) {
+        forgetPicture(webView)
+        if webView === watchedWebView {
+            watched.currentTime = 0
+            watched.duration = 0
+            watched.isLive = false
+        }
+        guard webView === controlledWebView else { return }
+        forgetControlledPage()
+    }
+
+    private func forgetControlledPage() {
+        setPicture(nil)
+        model.hasVideo = false
+        model.pageTitle = ""
+        model.trackTitle = ""
+        model.artist = ""
+        model.album = ""
+        model.title = String(localized: "Now Playing")
+        model.artworkURL = nil
+        artworkIsGuess = true
+        model.playerViewportRect = nil
+        model.currentTime = 0
+        model.duration = 0
+        model.isLive = false
+        model.isPlaying = false
+        needsReveal = true
     }
 
     private func setPicture(_ webView: WKWebView?) {
@@ -123,6 +282,8 @@ final class MediaCenter {
         model.controlledTabID
     }
     private weak var controlledWebView: WKWebView?
+    private weak var watchedWebView: WKWebView?
+    private var needsReveal = true
 
     var pictureCrop: CGRect? {
         guard let webView = model.pictureWebView,
@@ -203,6 +364,10 @@ final class MediaCenter {
         Self.post(message, to: controlledWebView)
     }
 
+    static func seek(to seconds: Double, on webView: WKWebView) {
+        post("linen-seekabs:\(seconds)", to: webView)
+    }
+
     static func setMuted(_ muted: Bool, on webView: WKWebView) {
         post("linen-mute:\(muted ? 1 : 0)", to: webView)
     }
@@ -221,18 +386,191 @@ final class MediaCenter {
         return message.hasSuffix("1")
     }
 
+    nonisolated private static func videoReport(in message: String) -> Bool? {
+        guard message.hasPrefix("video:") else { return nil }
+        return message.hasSuffix("1")
+    }
+
     func toggleNativePiP() {
-        let entering = !model.isInNativePiP
-        pipRequestedAt = entering ? Date() : nil
-        send(entering ? "linen-pip" : "linen-pip-exit")
+        guard let controlledWebView else { return }
+        togglePictureInPicture(for: controlledWebView)
+    }
+
+    func isPictureOut(_ webView: WKWebView) -> Bool {
+        nativePiPView === webView
+    }
+
+    /// Never a toggle: a stale belief that the video is out would otherwise send
+    /// it out at the very moment the user came back to watch it. Asking the page
+    /// for `inline` has no other direction to go, so it is always safe to ask,
+    /// and it covers a `_isPictureInPictureActive` that answers for a view it
+    /// cannot see.
+    func exitPictureInPicture(for webView: WKWebView) {
+        guard nativePiPView === webView else { return }
+        returnAskedAt = Date()
+        if Self.pictureInPictureActive(webView) == true, Self.togglePictureInPicture(on: webView) {
+            forgetGestureRequest()
+            return
+        }
+        Self.post("linen-pip-exit", to: webView)
+        guard Self.pictureInPictureActive(webView) == false else { return }
+        Pipeline.log.notice("media: WebKit says the picture was already home")
+        setPictureInPicture(false, for: webView, source: .webKit)
+    }
+
+    /// WebKit answers for a view it can see. A tab parked off screen is not one,
+    /// so the synthesized gesture stays as the way in for those.
+    func togglePictureInPicture(for webView: WKWebView) {
+        guard nativePiPView !== webView else {
+            exitPictureInPicture(for: webView)
+            return
+        }
+        if Self.canTogglePictureInPicture(webView), Self.togglePictureInPicture(on: webView) {
+            forgetGestureRequest()
+            return
+        }
+        pipRequestedAt = Date()
+        pipTarget = webView
+        pipTargetRect = nil
+        Self.post("linen-rect", to: webView)
+        Self.post("linen-pip", to: webView)
+    }
+
+    func requestNativePiP(on webView: WKWebView) {
+        guard nativePiPView !== webView else { return }
+        if Self.canTogglePictureInPicture(webView), Self.togglePictureInPicture(on: webView) {
+            forgetGestureRequest()
+            return
+        }
+        pipRequestedAt = Date()
+        pipTarget = webView
+        pipTargetRect = nil
+        Self.post("linen-rect", to: webView)
+        Self.post("linen-pip-auto", to: webView)
     }
 
     private var pipRequestedAt: Date?
+    private weak var pipTarget: WKWebView?
+    private var pipTargetRect: CGRect?
+    private weak var nativePiPView: WKWebView?
+    private var pictureWentOutAt: Date?
+    private var returnAskedAt: Date?
     private static let gestureWindow: TimeInterval = 10
+    private static let settleAfterLeaving: TimeInterval = 1
+    private static let returnWindow: TimeInterval = 5
+
+    private func forgetGestureRequest() {
+        pipRequestedAt = nil
+        pipTarget = nil
+        pipTargetRect = nil
+    }
+
+    private func forgetPicture(_ webView: WKWebView) {
+        guard nativePiPView === webView else { return }
+        nativePiPView = nil
+        if pipTarget === webView {
+            pipTarget = nil
+            pipTargetRect = nil
+        }
+        if webView === controlledWebView {
+            model.isInNativePiP = false
+        }
+        onPictureOutChanged?(webView, false)
+    }
+
+    /// Answers whether this is the user asking for the video back, and records
+    /// the ask, so the completion that follows is known to be their doing.
+    /// WebKit warns on the way *out* too, so an ask that arrives while the video
+    /// is still settling into the floating window is not one.
+    func notePictureReturnAsk(for webView: WKWebView) -> Bool {
+        guard nativePiPView === webView else { return false }
+        if let wentOut = pictureWentOutAt,
+           Date().timeIntervalSince(wentOut) < Self.settleAfterLeaving {
+            return false
+        }
+        returnAskedAt = Date()
+        return true
+    }
+
+    private func returnWasAsked(for webView: WKWebView) -> Bool {
+        guard let asked = returnAskedAt else { return false }
+        return Date().timeIntervalSince(asked) < Self.returnWindow
+    }
+
+    private func applyPresentationMode(_ message: String, from webView: WKWebView) {
+        setPictureInPicture(message == "picture-in-picture", for: webView, source: .page)
+    }
+
+    /// One truth for "which view is out in the floating window", so a docked
+    /// video that gets undocked, or a second ask on the way out of the app,
+    /// cannot lose the way back. WebKit answers here through the tab's UI
+    /// delegate, and the injected script through its presentation-mode message.
+    func setPictureInPicture(_ isNative: Bool, for webView: WKWebView, source: PictureSource) {
+        if webView === controlledWebView {
+            model.isInNativePiP = isNative
+        }
+        if isNative {
+            guard nativePiPView !== webView else { return }
+            if let previous = nativePiPView {
+                forgetPicture(previous)
+            }
+            pipRequestedAt = nil
+            nativePiPView = webView
+            pictureWentOutAt = Date()
+            onPictureOutChanged?(webView, true)
+            Pipeline.log.notice("media: the picture is out, \(source.name, privacy: .public) said so")
+            return
+        }
+        guard nativePiPView === webView else { return }
+        let wasAsked = source.speaksForTheUser || returnWasAsked(for: webView)
+        forgetPicture(webView)
+        returnAskedAt = nil
+        Pipeline.log.notice("""
+        media: the picture came home, \(source.name, privacy: .public) said so, \
+        asked for \(wasAsked)
+        """)
+        guard wasAsked else { return }
+        onReturnedInline?(webView)
+    }
+
+    private func handlePiPMessage(
+        _ message: String,
+        from webView: WKWebView,
+        isMainFrame: Bool
+    ) -> Bool {
+        if isMainFrame, message.hasPrefix("rect:") {
+            pipTargetRect = Self.rect(in: String(message.dropFirst("rect:".count)))
+            return false
+        }
+        if message == "diag:need-gesture" {
+            answerGestureRequest(on: webView)
+            return true
+        }
+        if message.hasPrefix("diag:") {
+            Pipeline.log.notice("media \(message, privacy: .public)")
+            return true
+        }
+        return false
+    }
+
+    private func answerGestureRequest(on webView: WKWebView) {
+        guard let asked = pipRequestedAt, Date().timeIntervalSince(asked) < Self.gestureWindow else {
+            Pipeline.log.notice("media: unsolicited gesture request ignored")
+            return
+        }
+        let rect = webView === controlledWebView ? model.playerViewportRect : pipTargetRect
+        synthesizeGestureClick(on: webView, viewportRect: rect)
+    }
 
     // MARK: - Script messages
 
     private func handleScriptMessage(_ message: String, from source: WKWebView?, isMainFrame: Bool) {
+        if message == "hello" {
+            if isMainFrame {
+                forgetControlledPage()
+            }
+            return
+        }
         if message.hasPrefix("state:") {
             applyState(String(message.dropFirst("state:".count)), from: source)
             return
@@ -247,18 +585,16 @@ final class MediaCenter {
             return
         }
         if message == "diag:need-gesture" {
-            guard let asked = pipRequestedAt, Date().timeIntervalSince(asked) < Self.gestureWindow else {
-                Pipeline.log.notice("media: unsolicited gesture request ignored")
-                return
+            if let source {
+                answerGestureRequest(on: source)
             }
-            synthesizeGestureClick()
             return
         }
-        if message.hasPrefix("audio:") {
+        if message.hasPrefix("audio:") || message.hasPrefix("video:") {
             return
         }
         if message.hasPrefix("meta:") {
-            applyMetadata(String(message.dropFirst("meta:".count)))
+            applyMetadata(String(message.dropFirst("meta:".count)), to: model)
             return
         }
         if message.hasPrefix("diag:") {
@@ -266,58 +602,58 @@ final class MediaCenter {
             return
         }
         Pipeline.log.notice("media mode → \(message, privacy: .public)")
-        switch message {
-        case "picture-in-picture":
-            model.isInNativePiP = true
-        case "inline":
-            let wasNative = model.isInNativePiP
-            model.isInNativePiP = false
-            if wasNative {
-                onReturnedInline?()
-            }
-        default:
-            break
-        }
     }
 
     private func applyState(_ json: String, from source: WKWebView?) {
-        guard let data = json.data(using: .utf8),
-              let fields = try? JSONSerialization.jsonObject(with: data) as? [String: Double]
-        else { return }
+        guard let fields = Self.fields(in: json) else { return }
 
-        if model.pictureWebView == nil,
-           let source, source === controlledWebView, (fields["w"] ?? 0) > 0 {
-            setPicture(source)
-            Self.post("linen-reveal", to: source)
+        if let source, source === controlledWebView {
+            let hasVideo = (fields["w"] ?? 0) > 0
+            model.hasVideo = hasVideo
+            if hasVideo, lendsPicture {
+                setPicture(source)
+                if needsReveal {
+                    needsReveal = false
+                    Self.post("linen-reveal", to: source)
+                }
+            }
         }
+        applyTiming(fields, to: model)
+    }
 
+    nonisolated private static func fields(in json: String) -> [String: Double]? {
+        guard let data = json.data(using: .utf8) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Double]
+    }
+
+    private func applyTiming(_ fields: [String: Double], to target: MediaModel) {
         let isLive = fields["l"] == 1
-        if let time = fields["t"], abs(time - model.currentTime) > 0.05 {
-            model.currentTime = time
+        if let time = fields["t"], abs(time - target.currentTime) > 0.05 {
+            target.currentTime = time
         }
-        if let duration = fields["d"], duration > 0, duration != model.duration {
-            model.duration = duration
+        if let duration = fields["d"], duration > 0, duration != target.duration {
+            target.duration = duration
         }
         if isLive {
-            if !model.isLive {
-                model.isLive = true
+            if !target.isLive {
+                target.isLive = true
             }
-        } else if model.isLive, let duration = fields["d"], duration > 0 {
-            model.isLive = false
+        } else if target.isLive, let duration = fields["d"], duration > 0 {
+            target.isLive = false
         }
         if let playing = fields["p"] {
             let isPlaying = playing == 1
-            if isPlaying != model.isPlaying {
-                model.isPlaying = isPlaying
+            if isPlaying != target.isPlaying {
+                target.isPlaying = isPlaying
             }
         }
-        if let volume = fields["v"], abs(volume - model.volume) > 0.005 {
-            model.volume = volume
+        if let volume = fields["v"], abs(volume - target.volume) > 0.005 {
+            target.volume = volume
         }
         if let muted = fields["m"] {
             let isMuted = muted == 1
-            if isMuted != model.isMuted {
-                model.isMuted = isMuted
+            if isMuted != target.isMuted {
+                target.isMuted = isMuted
             }
         }
     }
@@ -329,48 +665,61 @@ final class MediaCenter {
             }
             return
         }
+        guard let rect = Self.rect(in: json), rect != model.playerViewportRect else { return }
+        model.playerViewportRect = rect
+    }
+
+    nonisolated private static func rect(in json: String) -> CGRect? {
         guard let data = json.data(using: .utf8),
               let fields = try? JSONSerialization.jsonObject(with: data) as? [String: Double],
               let x = fields["x"], let y = fields["y"],
               let width = fields["w"], let height = fields["h"],
               width > 0, height > 0
-        else { return }
-        let rect = CGRect(x: x, y: y, width: width, height: height)
-        if rect != model.playerViewportRect {
-            model.playerViewportRect = rect
-        }
+        else { return nil }
+        return CGRect(x: x, y: y, width: width, height: height)
     }
 
-    private func applyMetadata(_ json: String) {
+    private func applyMetadata(_ json: String, to target: MediaModel) {
         guard let data = json.data(using: .utf8),
               let fields = try? JSONSerialization.jsonObject(with: data) as? [String: String]
         else { return }
 
-        if let title = fields["t"], !title.isEmpty {
-            if let artist = fields["a"], !artist.isEmpty {
-                model.title = "\(title) — \(artist)"
-            } else {
-                model.title = title
-            }
+        let track = fields["t"] ?? ""
+        let artist = fields["a"] ?? ""
+        let album = fields["al"] ?? ""
+        if target.trackTitle != track {
+            target.trackTitle = track
         }
+        if target.artist != artist {
+            target.artist = artist
+        }
+        if target.album != album {
+            target.album = album
+        }
+        if !track.isEmpty {
+            target.title = artist.isEmpty ? track : "\(track) — \(artist)"
+        }
+
         guard let art = fields["art"], let url = URL(string: art),
               let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http"
         else { return }
         let isGuess = fields["g"] == "1"
-        guard !isGuess || artworkIsGuess || model.artworkURL == nil else { return }
-        artworkIsGuess = isGuess
-        if url != model.artworkURL {
-            model.artworkURL = url
+        if target === model {
+            guard !isGuess || artworkIsGuess || model.artworkURL == nil else { return }
+            artworkIsGuess = isGuess
+        }
+        if url != target.artworkURL {
+            target.artworkURL = url
         }
     }
 
-    private func synthesizeGestureClick() {
-        guard let webView = controlledWebView, let window = webView.window else {
+    private func synthesizeGestureClick(on webView: WKWebView, viewportRect: CGRect?) {
+        guard let window = webView.window else {
             Pipeline.log.notice("media: no hosting window for gesture click")
             return
         }
         let point: NSPoint
-        if let rect = model.playerViewportRect,
+        if let rect = viewportRect,
            let crop = MediaCropMath.visibleCrop(
                viewportRect: rect,
                viewBounds: webView.bounds,
@@ -404,6 +753,37 @@ final class MediaCenter {
 
     // MARK: - WebKit switches (all diagnosed via the diag log)
 
+    nonisolated private static let canToggleSelector = Selector(("_canTogglePictureInPicture"))
+    nonisolated private static let toggleSelector = Selector(("_togglePictureInPicture"))
+    nonisolated private static let isActiveSelector = Selector(("_isPictureInPictureActive"))
+
+    nonisolated static func canTogglePictureInPicture(_ webView: WKWebView) -> Bool {
+        answersTrue(canToggleSelector, on: webView)
+    }
+
+    nonisolated static func pictureInPictureActive(_ webView: WKWebView) -> Bool? {
+        guard webView.responds(to: isActiveSelector) else { return nil }
+        return answersTrue(isActiveSelector, on: webView)
+    }
+
+    @discardableResult
+    nonisolated static func togglePictureInPicture(on webView: WKWebView) -> Bool {
+        guard webView.responds(to: toggleSelector) else {
+            Pipeline.log.notice("media: no toggle SPI, falling back to a synthesized gesture")
+            return false
+        }
+        webView.perform(toggleSelector)
+        return true
+    }
+
+    nonisolated private static func answersTrue(_ selector: Selector, on webView: WKWebView) -> Bool {
+        guard webView.responds(to: selector), let method = webView.method(for: selector) else {
+            return false
+        }
+        typealias Answer = @convention(c) (AnyObject, Selector) -> Bool
+        return unsafeBitCast(method, to: Answer.self)(webView, selector)
+    }
+
     static func enablePictureInPicture(on preferences: WKPreferences) {
         if preferences.responds(to: Selector(("_setAllowsPictureInPictureMediaPlayback:"))) {
             preferences.setValue(true, forKey: "allowsPictureInPictureMediaPlayback")
@@ -436,256 +816,6 @@ final class MediaCenter {
             setEnabled(preferences, setSelector, true, feature)
         }
     }
-
-    nonisolated private static let mediaScript = """
-    (function () {
-      if (window.__linenMedia) { return; }
-      window.__linenMedia = true;
-      const post = function (message) {
-        try { window.webkit.messageHandlers.linenpip.postMessage(message); } catch (e) {}
-      };
-      let video = null;
-      let gestureAttempts = 0;
-      let muteAll = false;
-      const attached = new WeakSet();
-      function media() {
-        return Array.prototype.slice.call(document.querySelectorAll('video, audio'));
-      }
-      function primary() { return video || media()[0] || null; }
-      function audible(m) {
-        if (m.paused || m.ended) { return false; }
-        if (muteAll) { return true; }
-        if (m.muted || m.volume <= 0) { return false; }
-        var tracks = m.audioTracks;
-        if (tracks && m.readyState >= 2 && tracks.length === 0) { return false; }
-        return true;
-      }
-      function anyPlaying() {
-        return media().some(audible);
-      }
-      let lastAudio = null;
-      function reportAudio() {
-        const playing = anyPlaying();
-        if (playing === lastAudio) { return; }
-        lastAudio = playing;
-        post('audio:' + (playing ? 1 : 0));
-      }
-      let lastMeta = '';
-      function posterImage() {
-        if (window !== window.top) { return ''; }
-        var m = primary();
-        var found = (m && m.poster) || '';
-        if (!found) {
-          var sources = ['meta[property="og:image"]', 'meta[name="twitter:image"]', 'link[rel="image_src"]'];
-          for (var i = 0; i < sources.length && !found; i += 1) {
-            var node = document.querySelector(sources[i]);
-            if (node) { found = node.content || node.href || ''; }
-          }
-        }
-        if (!found) { return ''; }
-        try { return new URL(found, location.href).href; } catch (e) { return ''; }
-      }
-      function sendMeta() {
-        try {
-          var m = navigator.mediaSession ? navigator.mediaSession.metadata : null;
-          var art = '';
-          if (m && m.artwork && m.artwork.length) {
-            art = m.artwork[m.artwork.length - 1].src || '';
-          }
-          var guessed = !art;
-          if (guessed) { art = posterImage(); }
-          if (!m && !art) { return; }
-          var payload = JSON.stringify({
-            t: (m && m.title) || '',
-            a: (m && m.artist) || '',
-            art: art,
-            g: guessed ? '1' : '0'
-          });
-          if (payload === lastMeta) { return; }
-          lastMeta = payload;
-          post('meta:' + payload);
-        } catch (e) {}
-      }
-      function stageElement() {
-        const media = primary();
-        if (media) { return media; }
-        let best = null;
-        let bestArea = 40000;
-        Array.prototype.forEach.call(document.querySelectorAll('iframe'), function (frame) {
-          const box = frame.getBoundingClientRect();
-          const area = box.width * box.height;
-          if (area > bestArea) { bestArea = area; best = frame; }
-        });
-        return best;
-      }
-      let lastRect = '';
-      function reportRect() {
-        if (window !== window.top) { return; }
-        const stage = stageElement();
-        let payload = '';
-        if (stage) {
-          const box = stage.getBoundingClientRect();
-          if (box.width > 0 && box.height > 0) {
-            payload = JSON.stringify({
-              x: Math.round(box.left),
-              y: Math.round(box.top),
-              w: Math.round(box.width),
-              h: Math.round(box.height)
-            });
-          }
-        }
-        if (payload === lastRect) { return; }
-        lastRect = payload;
-        post('rect:' + payload);
-      }
-      function forgetReportedRect() { lastRect = ''; }
-      function revealStage() {
-        forgetReportedRect();
-        if (window !== window.top) { return; }
-        const stage = stageElement();
-        if (!stage) { return; }
-        const box = stage.getBoundingClientRect();
-        const outside = box.top < 0 || box.left < 0 ||
-          box.bottom > window.innerHeight || box.right > window.innerWidth;
-        if (outside) {
-          try { stage.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
-        }
-        reportRect();
-      }
-      const MAX_REAL_DURATION = 1e7;
-      function realDuration(m) {
-        const raw = m.duration;
-        return (isFinite(raw) && raw > 0 && raw < MAX_REAL_DURATION) ? raw : 0;
-      }
-      function isLive(m) {
-        const raw = m.duration;
-        return !isNaN(raw) && raw !== 0 && realDuration(m) === 0;
-      }
-      function sendState() {
-        const video = primary();
-        if (!video) { return; }
-        post('state:' + JSON.stringify({
-          t: video.currentTime || 0,
-          d: realDuration(video),
-          l: isLive(video) ? 1 : 0,
-          p: video.paused ? 0 : 1,
-          v: video.volume,
-          m: video.muted ? 1 : 0,
-          w: video.videoWidth || 0
-        }));
-      }
-      function clamp(value, low, high) { return Math.max(low, Math.min(high, value)); }
-      function command(data) {
-        const arg = parseFloat(data.slice(data.indexOf(':') + 1));
-        if (data === 'linen-reveal') {
-          revealStage();
-          return;
-        }
-        const video = primary();
-        if (!video) { return; }
-        const duration = realDuration(video);
-        if (data === 'linen-play') { const p = video.play(); if (p) { p.catch(function () {}); } }
-        else if (data === 'linen-pause') { video.pause(); }
-        else if (data.indexOf('linen-seek:') === 0) {
-          video.currentTime = clamp(video.currentTime + arg, 0, duration || video.currentTime + arg);
-        } else if (data.indexOf('linen-seekto:') === 0) {
-          if (duration) { video.currentTime = clamp(duration * arg, 0, duration); }
-        } else if (data.indexOf('linen-seekabs:') === 0) {
-          video.currentTime = clamp(arg, 0, duration || arg);
-        } else if (data.indexOf('linen-volume:') === 0) {
-          video.muted = arg <= 0;
-          video.volume = clamp(arg, 0, 1);
-        } else if (data.indexOf('linen-mute:') === 0) {
-          muteAll = arg === 1;
-          media().forEach(function (m) { m.muted = muteAll; });
-        }
-        sendState();
-      }
-      let armedGesture = null;
-      let armedGestureExpiry = null;
-      function disarmGesture() {
-        if (armedGesture) {
-          document.removeEventListener('click', armedGesture, true);
-          armedGesture = null;
-        }
-        if (armedGestureExpiry) {
-          clearTimeout(armedGestureExpiry);
-          armedGestureExpiry = null;
-        }
-      }
-      function armGesture() {
-        if (!video || video.webkitPresentationMode === 'picture-in-picture') { return; }
-        if (gestureAttempts >= 4) { post('diag:gave-up'); gestureAttempts = 0; return; }
-        gestureAttempts += 1;
-        disarmGesture();
-        armedGesture = function () {
-          disarmGesture();
-          const wasPlaying = !video.paused;
-          try {
-            video.webkitSetPresentationMode('picture-in-picture');
-          } catch (err) {
-            post('diag:error ' + err.message);
-          }
-          setTimeout(function () {
-            if (wasPlaying && video && video.paused) {
-              const p = video.play();
-              if (p) { p.catch(function () {}); }
-            }
-            if (video && video.webkitPresentationMode !== 'picture-in-picture') { armGesture(); }
-            else { gestureAttempts = 0; }
-          }, 700);
-        };
-        document.addEventListener('click', armedGesture, true);
-        armedGestureExpiry = setTimeout(function () {
-          disarmGesture();
-          gestureAttempts = 0;
-          post('diag:gesture-expired');
-        }, 10000);
-        post('diag:need-gesture');
-      }
-      window.addEventListener('message', function (event) {
-        if (event.source !== window && event.source !== window.parent) { return; }
-        const data = event.data;
-        if (typeof data !== 'string' || data.indexOf('linen-') !== 0) { return; }
-        if (data === 'linen-pip') { gestureAttempts = 0; armGesture(); return; }
-        if (data === 'linen-pip-exit') {
-          disarmGesture();
-          gestureAttempts = 0;
-          if (video) { try { video.webkitSetPresentationMode('inline'); } catch (e) {} }
-          return;
-        }
-        command(data);
-      });
-      function bind(found, asPrimary) {
-        if (!found) { return; }
-        if (asPrimary) { video = found; }
-        if (!found.__linenBound) {
-          found.__linenBound = true;
-          if (muteAll) { found.muted = true; }
-          ['play', 'pause', 'timeupdate', 'volumechange', 'durationchange', 'seeked', 'ended']
-            .forEach(function (name) { found.addEventListener(name, sendState); });
-          ['play', 'pause', 'ended', 'emptied', 'volumechange']
-            .forEach(function (name) { found.addEventListener(name, reportAudio); });
-          found.addEventListener('ended', function () { post('ended'); });
-          found.addEventListener('webkitpresentationmodechanged', function () {
-            post(found.webkitPresentationMode);
-          });
-        }
-        sendState();
-        reportAudio();
-      }
-      function scan() {
-        const main = document.querySelector('video');
-        if (main && main !== video) { bind(main, true); }
-        media().forEach(function (m) { if (!m.__linenBound) { bind(m, false); } });
-        sendMeta();
-        reportAudio();
-        reportRect();
-      }
-      scan();
-      setInterval(scan, 500);
-    })();
-    """
 }
 
 enum MediaRoster {
@@ -721,6 +851,48 @@ enum MediaRoster {
             isVisibleInSplit: isVisibleInSplit,
             isDocked: isDocked
         )
+    }
+
+    /// Pausing or muting must not take the words off the screen, so a tab that
+    /// played its current page stays the one the lyrics follow.
+    static func isLyricsSource(
+        isPlayingAudio: Bool,
+        hasPlayed: Bool,
+        isInternalPage: Bool,
+        isDeferred: Bool
+    ) -> Bool {
+        guard !isInternalPage, !isDeferred else { return false }
+        return isPlayingAudio || hasPlayed
+    }
+
+    /// The tab you are looking at owns the words. The dock is only the fallback,
+    /// so a docked stream cannot take the panel off the song in front of you.
+    static func lyricsOwner(
+        pinned: UUID?,
+        active: UUID?,
+        docked: UUID?,
+        candidates: [UUID]
+    ) -> UUID? {
+        for choice in [pinned, active, docked] {
+            if let choice, candidates.contains(choice) {
+                return choice
+            }
+        }
+        return nil
+    }
+
+    /// Leaving the window takes the video with you: the tab in front goes
+    /// first, the dock answers for it, and a paused video stays where it is.
+    static func pictureTarget(
+        active: UUID?,
+        isActivePlaying: Bool,
+        docked: UUID?,
+        isDockedPlaying: Bool
+    ) -> UUID? {
+        if let active, isActivePlaying {
+            return active
+        }
+        return isDockedPlaying ? docked : nil
     }
 
     static func successor(to previous: UUID, in roster: [UUID]) -> UUID? {

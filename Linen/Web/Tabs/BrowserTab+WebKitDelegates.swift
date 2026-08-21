@@ -111,6 +111,21 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab?.onCloseRequested?()
     }
 
+    /// `WKUIDelegatePrivate`. WebKit tells the app itself, so these arrive even
+    /// when the page cannot: spell them exactly or they never fire.
+    @objc(_webView:hasVideoInPictureInPictureDidChange:)
+    func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isOut: Bool) {
+        tab?.onPictureInPictureChanged?(isOut)
+    }
+
+    /// The floating window wants to hand the video back. WebKit will not finish
+    /// that while the page has nowhere on screen to return to, and it asks here
+    /// first, which is the only warning a window in the Dock ever gets.
+    @objc(_webViewFullscreenMayReturnToInline:)
+    func webViewFullscreenMayReturnToInline(_ webView: WKWebView) {
+        tab?.onPictureReturnExpected?()
+    }
+
     // MARK: - Page dialogs
 
     func webView(

@@ -147,6 +147,49 @@ struct SiteControlsItems: View {
     }
 }
 
+struct TabPictureBadge: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+
+    private var tab: BrowserTab? {
+        guard let tab = browser.activeTab, tab.hasVideo, !tab.isDeferred,
+              tab.internalPage == nil
+        else { return nil }
+        return tab
+    }
+
+    private enum Face: Equatable {
+        case video(out: Bool)
+        case absent
+    }
+
+    private var face: Face {
+        guard let tab else { return .absent }
+        return .video(out: tab.isPictureOut)
+    }
+
+    private func pictureHelp(isOut: Bool) -> LocalizedStringResource {
+        isOut ? "Exit Picture in Picture" : "Picture in Picture"
+    }
+
+    var body: some View {
+        Group {
+            if let tab {
+                let isOut = tab.isPictureOut
+                ChromeIcon(
+                    symbol: isOut ? "pip.exit" : "pip.enter",
+                    weight: .semibold,
+                    help: String(localized: pictureHelp(isOut: isOut))
+                ) {
+                    coordinator.togglePictureInPicture(for: tab)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.6)))
+            }
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.7), value: face)
+    }
+}
+
 struct TabAudioBadge: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator

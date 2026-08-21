@@ -1355,7 +1355,7 @@
       "comment" : "Command that leaves full screen; the same command reads “Enter Full Screen” while the window is not full screen. Use Apple’s own wording for the standard macOS command."
     },
     "Exit Picture in Picture" : {
-      "comment" : "Tooltip on the same media dock button while the video is already in Picture in Picture; pressing it returns the video. Title Case, narrow dock."
+      "comment" : "Tooltip on the same button while the video is already in Picture in Picture; pressing it returns the video to its tab. Title Case."
     },
     "Exit Split" : {
       "comment" : "Menu command that goes back to one page in the window. Neither page is closed: the one being read keeps the window and the other returns to being an ordinary sidebar row. Title Case."
@@ -2386,7 +2386,7 @@
       "comment" : "Caption for the Choose From Menus tool in assistant settings."
     },
     "Picture in Picture" : {
-      "comment" : "Tooltip on the media dock button that floats the video in a system Picture in Picture window. Apple feature name; use the platform glossary. Title Case, narrow dock."
+      "comment" : "Tooltip on the button that floats the video in a system Picture in Picture window. It is used twice: beside the address field, left of the speaker, for the tab you are looking at, and on the media player in the sidebar. Apple feature name; use the platform glossary. Title Case."
     },
     "Pin" : {
       "comment" : "Small button in the extensions overflow popover that puts the extension’s button back on the toolbar. Imperative verb, in the sense of fixing something in place. Very tight space — a chip only a few characters wide."

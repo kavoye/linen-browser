@@ -56,6 +56,9 @@ final class BrowserModel {
     var onTabClosed: ((BrowserTab) -> Void)?
     var onActiveTabChanged: ((BrowserTab?, BrowserTab?) -> Void)?
     var onSpaceAnchorChanged: ((UUID, UUID) -> Void)?
+    var onContentProcessTerminated: ((BrowserTab) -> Void)?
+    var onPictureInPictureChanged: ((BrowserTab, Bool) -> Void)?
+    var onPictureReturnExpected: ((BrowserTab) -> Void)?
 
     var activeTab: BrowserTab? {
         guard let activeTabID else { return tabs.first }
@@ -86,6 +89,10 @@ final class BrowserModel {
         }
         tab.onSameDocumentNavigation = { [weak self] in
             self?.scheduleSave()
+        }
+        tab.onContentProcessTerminated = { [weak self, weak tab] in
+            guard let tab else { return }
+            self?.onContentProcessTerminated?(tab)
         }
         tab.onNavigationOutsideExtension = { [weak self] url in
             self?.newTab(url: url)
@@ -119,6 +126,14 @@ final class BrowserModel {
         tab.onCloseRequested = { [weak self, weak tab] in
             guard let tab else { return }
             self?.close(tab)
+        }
+        tab.onPictureInPictureChanged = { [weak self, weak tab] isOut in
+            guard let tab else { return }
+            self?.onPictureInPictureChanged?(tab, isOut)
+        }
+        tab.onPictureReturnExpected = { [weak self, weak tab] in
+            guard let tab else { return }
+            self?.onPictureReturnExpected?(tab)
         }
         tab.onDownload = { [weak self, weak tab] download, source in
             self?.downloads.adopt(download, suggestedSource: source, sourceTabID: tab?.id)
