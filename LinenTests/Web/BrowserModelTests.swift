@@ -37,7 +37,7 @@ struct BrowserModelTests {
         #expect(model.activeTab === front)
     }
 
-    @Test func closingTheActiveTabHandsFocusToTheTopmost() {
+    @Test func closingTheActiveTabHandsFocusToTheOneBelowIt() {
         let model = makeModel()
         let survivor = model.newTab()
         let doomed = model.newTab()
@@ -46,6 +46,36 @@ struct BrowserModelTests {
         #expect(model.activeTab === survivor)
         #expect(model.tabs.count == 1)
         #expect(!model.sidebarItems.contains(.tab(doomed.id)))
+    }
+
+    @Test func closingTheLastTabInTheListFallsBackUpwards() {
+        let model = makeModel()
+        let bottom = model.newTab()
+        let middle = model.newTab(activate: false)
+        let top = model.newTab(activate: false)
+        #expect(model.tabs.map(\.id) == [top.id, middle.id, bottom.id])
+
+        model.activate(middle)
+        model.close(middle)
+        #expect(model.activeTab === bottom)
+
+        model.close(bottom)
+        #expect(model.activeTab === top)
+    }
+
+    @Test func aLinkOpenedFromATabLandsRightBelowIt() {
+        let model = makeModel()
+        let opener = model.newTab()
+        let top = model.newTab()
+        #expect(model.tabs.map(\.id) == [top.id, opener.id])
+
+        opener.onOpenInNewTab?(URL(string: "https://example.com/linked")!, false)
+
+        #expect(model.tabs.count == 3)
+        #expect(model.tabs[1] === opener)
+        let opened = model.tabs[2]
+        #expect(model.sidebarItems == [.tab(top.id), .tab(opener.id), .tab(opened.id)])
+        #expect(model.activeTab === top)
     }
 
     @Test func closingABackgroundTabLeavesFocusAlone() {

@@ -98,20 +98,20 @@ final class BrowserModel {
             self?.newTab(url: url)
         }
         tab.onNewWindow = { [weak self, weak tab] view, activate in
-            let opened = self?.newTab(activate: activate, adopting: view)
+            let opened = self?.newTab(activate: activate, adopting: view, after: tab)
             guard let self, let opened, let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }
         tab.onOpenInNewTab = { [weak self, weak tab] url, activate in
             guard let self else { return }
-            let opened = newTab(url: url, activate: activate, transition: .link)
+            let opened = newTab(url: url, activate: activate, after: tab, transition: .link)
             guard let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }
         tab.onOpenInSplit = { [weak self, weak tab] url in
             guard let self, let tab else { return }
             let full = splits.split(containing: tab.id)?.isFull == true
-            let opened = newTab(url: url, activate: full, transition: .link)
+            let opened = newTab(url: url, activate: full, after: tab, transition: .link)
             if !full {
                 if splits.contains(tab.id) {
                     insertIntoSplit(opened, beside: tab, edge: .right)
@@ -173,12 +173,19 @@ final class BrowserModel {
         url: URL? = nil,
         activate: Bool = true,
         adopting: WKWebView? = nil,
+        after opener: BrowserTab? = nil,
         transition: HistoryStore.Transition = .typed
     ) -> BrowserTab {
         let url = adopting == nil ? (url ?? BrowserSettings.shared.newTabURL) : url
         let tab = makeTab(for: url, adopting: adopting)
-        tabs.insert(tab, at: 0)
-        place([.tab(tab.id)], in: nil, before: reconciledTree().root.first)
+        if let anchor = opener.flatMap(insertionAnchor(after:)),
+           let index = tabs.firstIndex(where: { $0 === anchor }) {
+            tabs.insert(tab, at: tabs.index(after: index))
+            storedTree = reconciledTree().inserting(.tab(tab.id), after: .tab(anchor.id))
+        } else {
+            tabs.insert(tab, at: 0)
+            place([.tab(tab.id)], in: nil, before: reconciledTree().root.first)
+        }
         sidebarDidChange()
         onTabOpened?(tab)
         if activate {
@@ -189,6 +196,12 @@ final class BrowserModel {
         }
         scheduleSave()
         return tab
+    }
+
+    private func insertionAnchor(after opener: BrowserTab) -> BrowserTab? {
+        let space = Set(spaceTabs(spaceID(of: opener.id)).map(\.id))
+        guard !space.isEmpty else { return tabs.contains { $0 === opener } ? opener : nil }
+        return tabs.last { space.contains($0.id) }
     }
 
     @discardableResult

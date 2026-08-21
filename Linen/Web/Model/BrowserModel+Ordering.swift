@@ -185,7 +185,7 @@ extension BrowserModel {
         let survivor = splits.others(of: tab.id).first.flatMap { tabsByID[$0] }
         splits = splits.removing(tab.id)
         if activeTabID == tab.id {
-            activeTabID = survivor?.id ?? tabs.first { $0 !== tab }?.id
+            activeTabID = (survivor ?? neighbor(of: tab))?.id
         }
         tabs.removeAll { $0 === tab }
         storedTree = reconciledTree().removing([.tab(tab.id)])
@@ -198,6 +198,19 @@ extension BrowserModel {
         tab.webView.stopLoading()
         tab.webView.load(URLRequest(url: URL(string: "about:blank")!))
         tab.webView.removeFromSuperview()
+    }
+
+    private func neighbor(of tab: BrowserTab) -> BrowserTab? {
+        guard let index = tabs.firstIndex(where: { $0 === tab }) else {
+            return tabs.first { $0 !== tab }
+        }
+        let hidden = hiddenSidebarTabIDs
+        let below = tabs[tabs.index(after: index)...]
+        let above = tabs[..<index].reversed()
+        return below.first { !hidden.contains($0.id) }
+            ?? above.first { !hidden.contains($0.id) }
+            ?? below.first
+            ?? above.first
     }
 
     static func isPlayingMedia(_ webView: WKWebView) async -> Bool {
