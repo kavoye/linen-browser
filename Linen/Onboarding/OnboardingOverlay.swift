@@ -111,8 +111,8 @@ extension OnboardingUI {
                 WelcomeScreen(coordinator: coordinator, model: model)
             case .model:
                 ModelScreen(coordinator: coordinator, model: model)
-            case .history:
-                HistoryScreen(coordinator: coordinator, model: model)
+            case .bookmarks:
+                BookmarksScreen(coordinator: coordinator, model: model)
             case nil:
                 EmptyView()
             }

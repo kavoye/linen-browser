@@ -2,92 +2,180 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
-import SQLite3
 import Testing
 import WebKit
 
 @testable import Linen
 
-/// The importer against real file shapes: Chrome's JSON and epoch, Safari's
-/// plist and epoch, and each history schema via a fixture database - the
-/// SQL is the part reading code can't check.
+/// The importer against the file every browser exports: one Netscape bookmark
+/// file. The fixtures below are trimmed copies of real exports - Safari's,
+/// Chrome's and Firefox's - because the markup is the part reading code can't
+/// check.
 @MainActor
 @Suite(.boundedWebViews)
 struct BrowserImportTests {
-    // MARK: - Bookmarks
+    private static let chromeExport = """
+    <!DOCTYPE NETSCAPE-Bookmark-file-1>
+    <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+    <TITLE>Bookmarks</TITLE>
+    <H1>Bookmarks</H1>
+    <DL><p>
+        <DT><H3 ADD_DATE="1724198400" PERSONAL_TOOLBAR_FOLDER="true">Bookmarks bar</H3>
+        <DL><p>
+            <DT><A HREF="https://example.com/" ADD_DATE="1724198400" ICON="data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==">Example</A>
+            <DT><H3 ADD_DATE="1724198400">Work</H3>
+            <DL><p>
+                <DT><A HREF="https://docs.example.com/" ADD_DATE="1724198401">Docs &amp; Notes</A>
+            </DL><p>
+        </DL><p>
+        <DT><A HREF="https://deep.example.com/">Deep</A>
+    </DL><p>
+    """
 
-    @Test func chromeBookmarksComeOutOfEveryFolder() throws {
-        let json = """
-        {"roots": {
-            "bookmark_bar": {"type": "folder", "children": [
-                {"type": "url", "name": "Example", "url": "https://example.com/", "date_added": "13380000000000000"},
-                {"type": "folder", "name": "Work", "children": [
-                    {"type": "url", "name": "Docs", "url": "https://docs.example.com/"}
-                ]}
-            ]},
-            "other": {"type": "folder", "children": [
-                {"type": "url", "name": "Deep", "url": "https://deep.example.com/"}
-            ]}
-        }}
-        """
-        let marks = BrowserImport.chromeBookmarks(from: Data(json.utf8))
-        #expect(Set(marks.map(\.url)) == [
+    private static let safariExport = """
+    <!DOCTYPE NETSCAPE-Bookmark-file-1>
+    <HTML>
+    <HEAD><Title>Bookmarks</Title></HEAD>
+    <BODY>
+    <H1>Bookmarks</H1>
+    <DL>
+        <DT><H3 FOLDED>Favorites</H3>
+        <DL>
+            <DT><A HREF="https://apple.com/">Apple</A>
+            <DT><A HREF="https://example.com/?a=1&amp;b=2">It&#39;s a Test</A>
+        </DL>
+    </DL>
+    </BODY></HTML>
+    """
+
+    // MARK: - Reading the file
+
+    @Test func linksComeOutOfEveryNestedFolder() {
+        let marks = BrowserImport.bookmarks(inHTML: Self.chromeExport)
+
+        #expect(marks.map(\.url) == [
             "https://example.com/", "https://docs.example.com/", "https://deep.example.com/",
         ])
-        #expect(marks.first { $0.url == "https://example.com/" }?.title == "Example")
+        #expect(marks.first?.title == "Example")
+        // Folder names are not bookmarks; the H3 rows must not become tabs.
+        #expect(!marks.map(\.title).contains("Work"))
     }
 
-    @Test func safariBookmarksComeOutOfNestedFolders() throws {
-        let plist: [String: Any] = [
-            "WebBookmarkType": "WebBookmarkTypeList",
-            "Children": [
-                [
-                    "WebBookmarkType": "WebBookmarkTypeLeaf",
-                    "URLString": "https://example.com/",
-                    "URIDictionary": ["title": "Example"],
-                ],
-                [
-                    "WebBookmarkType": "WebBookmarkTypeList",
-                    "Children": [[
-                        "WebBookmarkType": "WebBookmarkTypeLeaf",
-                        "URLString": "https://nested.example.com/",
-                        "URIDictionary": ["title": "Nested"],
-                    ],
-                ],
-                ],
-            ],
-        ]
-        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)
-        let marks = BrowserImport.safariBookmarks(from: data)
-        #expect(Set(marks.map(\.url)) == ["https://example.com/", "https://nested.example.com/"])
-        #expect(marks.first { $0.url == "https://nested.example.com/" }?.title == "Nested")
+    @Test func safariUsesTheSameFormat() {
+        let marks = BrowserImport.bookmarks(inHTML: Self.safariExport)
+
+        #expect(marks.map(\.url) == ["https://apple.com/", "https://example.com/?a=1&b=2"])
+        #expect(marks.last?.title == "It's a Test")
     }
 
-    // MARK: - Epochs
-
-    @Test func chromeTimeIsMicrosecondsSinceSixteenOhOne() {
-        // 1970-01-01 in Chrome's clock.
-        #expect(BrowserImport.chromeDate(11_644_473_600_000_000) == Date(timeIntervalSince1970: 0))
-        #expect(BrowserImport.chromeDate(0) == .distantPast)
+    /// Titles and addresses are HTML-escaped in the file. An ampersand in a
+    /// query string is `&amp;`, and every browser writes apostrophes and
+    /// dashes as numeric references.
+    @Test func escapedTextIsDecoded() {
+        #expect(BrowserImport.entities(in: "Rock &amp; Roll") == "Rock & Roll")
+        #expect(BrowserImport.entities(in: "&lt;tag&gt; &quot;quoted&quot;") == "<tag> \"quoted\"")
+        #expect(BrowserImport.entities(in: "It&#39;s &#x2014; here") == "It's — here")
+        // A bare ampersand is left alone rather than eating what follows it.
+        #expect(BrowserImport.entities(in: "Q & A") == "Q & A")
     }
 
-    @Test func safariTimeIsSecondsSinceTwoThousandOne() {
-        #expect(BrowserImport.safariDate(100) == Date(timeIntervalSinceReferenceDate: 100))
-        #expect(BrowserImport.safariDate(0) == .distantPast)
+    @Test func onlyWebPagesArrive() {
+        let html = """
+        <DT><A HREF="https://good.example/">Good</A>
+        <DT><A HREF="javascript:void(0)">Bookmarklet</A>
+        <DT><A HREF="place:type=6&amp;sort=14">Recent Tags</A>
+        <DT><A HREF="file:///Users/someone/notes.html">Notes</A>
+        """
+        #expect(BrowserImport.bookmarks(inHTML: html).map(\.url) == ["https://good.example/"])
     }
 
-    // MARK: - Merge
+    /// The same page saved in the toolbar and in a folder is one bookmark,
+    /// not two tabs with the same address.
+    @Test func aPageSavedTwiceArrivesOnce() {
+        let html = """
+        <DT><A HREF="https://example.com/">First</A>
+        <DT><A HREF="https://example.com/">Second</A>
+        """
+        let marks = BrowserImport.bookmarks(inHTML: html)
+        #expect(marks.count == 1)
+        #expect(marks.first?.title == "First")
+    }
+
+    /// Any HTML file can be chosen in the panel. A saved web page is full of
+    /// links, and none of them are bookmarks: only a file a browser exported
+    /// is read.
+    @Test func aSavedWebPageIsNotAnExport() {
+        let page = """
+        <html><body>
+        <a href="https://example.com/one">One</a>
+        <a href="https://example.com/two">Two</a>
+        </body></html>
+        """
+        #expect(!BrowserImport.isExport(page))
+        #expect(BrowserImport.bookmarks(inHTML: page).isEmpty)
+        #expect(BrowserImport.isExport(Self.chromeExport))
+        #expect(BrowserImport.isExport(Self.safariExport))
+    }
+
+    @Test func anUntitledLinkShowsItsAddress() {
+        let marks = BrowserImport.bookmarks(inHTML: "<DT><A HREF=\"https://bare.example/\"></A>")
+        #expect(marks.first?.title == "https://bare.example/")
+    }
+
+    @Test func addDateIsSecondsSinceNineteenSeventy() {
+        let marks = BrowserImport.bookmarks(
+            inHTML: "<DT><A HREF=\"https://example.com/\" ADD_DATE=\"1724198400\">Example</A>"
+        )
+        #expect(marks.first?.date == Date(timeIntervalSince1970: 1_724_198_400))
+        #expect(BrowserImport.date(0) == .distantPast)
+    }
+
+    /// Older exports are Windows-1252, not UTF-8. Reading must not fail on
+    /// a file that has one accented character in a title.
+    @Test func aFileThatIsNotUTF8IsStillRead() throws {
+        let latin = try #require("Café".data(using: .windowsCP1252))
+        #expect(BrowserImport.decode(latin) == "Café")
+    }
+
+    @Test func readingAFileThatIsNotThereFails() {
+        let missing = URL(fileURLWithPath: "/nowhere/bookmarks.html")
+        #expect(throws: BrowserImport.Failure.self) { try BrowserImport.read(missing) }
+    }
+
+    @Test func readingAnExportGivesTheFolderItsName() throws {
+        let file = FileManager.default.temporaryDirectory
+            .appending(path: "linen-import-\(UUID().uuidString).html")
+        try Data(Self.safariExport.utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        let payload = try BrowserImport.read(file)
+        #expect(payload.bookmarks.count == 2)
+        #expect(payload.folderName == BrowserImport.folderName)
+        #expect(!payload.isEmpty)
+    }
+
+    /// The half the confirmation dialog reads out loud. A file with nothing
+    /// in it must say so rather than offering "0 bookmarks".
+    @Test func thePayloadNamesOnlyWhatItFound() {
+        #expect(BrowserImport.Payload(bookmarks: []).isEmpty)
+        #expect(BrowserImport.bookmarks(inHTML: "<html><body>Not a bookmarks file</body></html>").isEmpty)
+        #expect(BrowserImport.Payload(bookmarks: [
+            .init(url: "https://example.com/", title: "Example", date: .distantPast),
+        ]).phrase == "1 bookmark")
+    }
+
+    // MARK: - Applying
 
     @Test func bookmarksBecomeOneCollapsedFolderOfColdTabs() {
         let model = BrowserModel(database: .temporary())
-        let folder = model.importBookmarksFolder(named: "Safari Bookmarks", entries: [
+        let folder = model.importBookmarksFolder(named: "Imported Bookmarks", entries: [
             .init(url: "https://example.com/", title: "Example", date: .distantPast),
             .init(url: "https://docs.example.com/", title: "Docs", date: .distantPast),
             // Not a web page; a bookmarklet must not become a tab.
             .init(url: "javascript:void(0)", title: "Bookmarklet", date: .distantPast),
         ])
 
-        #expect(folder?.name == "Safari Bookmarks")
+        #expect(folder?.name == "Imported Bookmarks")
         #expect(folder?.isExpanded == false)
         #expect(folder.map { model.tabs(in: $0).count } == 2)
         // Imported in the background: nothing steals the active tab, and
@@ -95,97 +183,21 @@ struct BrowserImportTests {
         #expect(model.tabs.allSatisfy { $0.webView.url == nil })
     }
 
-    /// The half the confirmation dialog reads out loud. A scan that found
-    /// nothing must say so rather than offering "0 pages and 0 bookmarks".
-    @Test func theSummaryNamesOnlyWhatItActuallyFound() {
-        #expect(BrowserImport.Summary(pages: 1, bookmarks: 1).phrase == "1 page of history and 1 bookmark")
-        #expect(BrowserImport.Summary(pages: 12, bookmarks: 0).phrase == "12 pages of history")
-        #expect(BrowserImport.Summary(pages: 0, bookmarks: 3).phrase == "3 bookmarks")
-        #expect(BrowserImport.Summary().isEmpty)
-    }
-
-    /// Reading and writing are two steps now: the dialog counts a payload,
-    /// and only `apply` puts anything into the browser.
-    @Test func applyingAPayloadWritesBothHalves() {
+    /// Reading and writing are two steps: the dialog counts a payload, and
+    /// only `apply` puts anything into the browser.
+    @Test func applyingAPayloadFillsTheFolder() {
         let model = BrowserModel(database: .temporary())
         let payload = BrowserImport.Payload(
-            pages: [.init(url: "https://visited.example/", title: "Visited", date: .now)],
             bookmarks: [.init(url: "https://saved.example/", title: "Saved", date: .distantPast)],
-            folderName: "Chrome Bookmarks"
+            folderName: "Imported Bookmarks"
         )
 
-        #expect(payload.summary.pages == 1)
-        #expect(payload.summary.bookmarks == 1)
-        // Scanning alone changes nothing.
-        #expect(model.history.entries.isEmpty)
+        #expect(model.folders.isEmpty)
 
         BrowserImport.apply(payload, into: model)
-        #expect(model.history.entries.map(\.url) == ["https://visited.example/"])
-        #expect(model.folders.first?.name == "Chrome Bookmarks")
-    }
-
-    @Test func mergeKeepsTheNewerVisitAndReportsOnlyNewURLs() {
-        let history = HistoryStore(database: .temporary())
-        history.record(url: "https://known.example/", title: "Known")
-
-        let added = history.merge([
-            // Older visit of a known page: must not replace the fresh one.
-            .init(url: "https://known.example/", title: "Stale", date: .distantPast),
-            .init(url: "https://new.example/", title: "New", date: Date(timeIntervalSinceNow: -60)),
-            // Unrecordable schemes never land.
-            .init(url: "file:///etc/hosts", title: "No", date: .now),
-        ])
-
-        #expect(added == 1)
-        #expect(history.entries.first?.title == "Known")
-        #expect(history.entries.map(\.url).contains("https://new.example/"))
-        #expect(!history.entries.map(\.url).contains("file:///etc/hosts"))
-    }
-}
-
-/// The two history queries against databases with the real schemas.
-@MainActor
-struct BrowserImportDatabaseTests {
-    private func makeDatabase(_ statements: [String]) throws -> URL {
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("linen-import-fixture-\(UUID().uuidString).db")
-        var db: OpaquePointer?
-        #expect(sqlite3_open(url.path, &db) == SQLITE_OK)
-        defer { sqlite3_close(db) }
-        for sql in statements {
-            #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
-        }
-        return url
-    }
-
-    @Test func chromeHistoryRowsReadTheUrlsTable() throws {
-        let db = try makeDatabase([
-            "CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, title TEXT, last_visit_time INTEGER)",
-            "INSERT INTO urls VALUES (1, 'https://example.com/', 'Example', 13380000000000000)",
-            "INSERT INTO urls VALUES (2, 'https://old.example/', '', 13370000000000000)",
-        ])
-        let rows = BrowserImport.testHistoryRows(chrome: db)
-        #expect(rows.count == 2)
-        #expect(rows.first?.url == "https://example.com/")
-        // An untitled page shows its address, same as live recording.
-        #expect(rows.last?.title == "https://old.example/")
-    }
-
-    @Test func safariHistoryRowsJoinItemsAndVisits() throws {
-        let db = try makeDatabase([
-            "CREATE TABLE history_items (id INTEGER PRIMARY KEY, url TEXT)",
-            """
-            CREATE TABLE history_visits (
-                id INTEGER PRIMARY KEY, history_item INTEGER, visit_time REAL, title TEXT
-            )
-            """,
-            "INSERT INTO history_items VALUES (1, 'https://example.com/')",
-            "INSERT INTO history_visits VALUES (1, 1, 700000000, 'Old Title')",
-            "INSERT INTO history_visits VALUES (2, 1, 800000000, 'New Title')",
-        ])
-        let rows = BrowserImport.testHistoryRows(safari: db)
-        #expect(rows.count == 1)
-        #expect(rows.first?.url == "https://example.com/")
-        #expect(rows.first?.date == Date(timeIntervalSinceReferenceDate: 800000000))
+        #expect(model.folders.first?.name == "Imported Bookmarks")
+        #expect(model.tabs.map(\.urlString) == ["https://saved.example/"])
+        // Bookmarks are not visited pages: nothing lands in history.
+        #expect(model.history.entries.isEmpty)
     }
 }

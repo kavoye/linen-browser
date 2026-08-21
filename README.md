@@ -160,8 +160,10 @@ to other browsers, and passkeys work only for websites tied to an app. Use a
 password manager extension everywhere else.
 
 **Bookmarks are tabs.** There is no separate bookmarks manager. Pinned pages
-and folders do that job. Import from Safari or Chrome in Settings › General:
-your history goes to the address field, your bookmarks to a sidebar folder.
+and folders do that job. To bring bookmarks in, export them to an HTML file
+from the other browser. Then choose that file in Settings › General. Safari,
+Chrome, Firefox and Edge all write this file. The bookmarks become one folder
+in the sidebar. History does not come across.
 
 **One window.** `window.open` and `target="_blank"` open as tabs.
 

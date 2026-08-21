@@ -78,24 +78,23 @@ extension OnboardingUI {
         }
     }
 
-    struct HistoryScreen: View {
+    struct BookmarksScreen: View {
         let coordinator: AppCoordinator
         let model: OnboardingModel
 
         var body: some View {
             Screen {
                 Heading(
-                    title: "Bring your browsing over",
-                    caption: "Import what you already have, and open links from other apps in Linen."
+                    title: "Bring your bookmarks over",
+                    caption: "Import bookmarks from another browser, and open links from other apps in Linen."
                 )
 
                 SettingsCard {
-                    ForEach(BrowserImport.Source.allCases, id: \.self) { source in
-                        if source != BrowserImport.Source.allCases.first {
-                            RowSeparator()
-                        }
-                        ImportRow(source: source, browser: coordinator.browser)
-                    }
+                    BookmarkImportRow(
+                        browser: coordinator.browser,
+                        caption: "An HTML file from another browser.",
+                        actionWidth: OnboardingUI.actionWidth
+                    )
 
                     RowSeparator()
 
@@ -254,84 +253,6 @@ extension OnboardingUI {
 
         private var border: Color {
             isSelected ? SettingsMetrics.borderHover : SettingsMetrics.border
-        }
-    }
-}
-
-extension OnboardingUI {
-    struct ImportRow: View {
-        let source: BrowserImport.Source
-        let browser: BrowserModel
-
-        @State private var payload: BrowserImport.Payload?
-        @State private var status: String?
-        @State private var needsFullDiskAccess = false
-        @State private var isScanning = false
-        @State private var isImported = false
-
-        var body: some View {
-            DetailRow(verbatimTitle: source.name, verbatimCaption: caption) {
-                control
-                    .frame(width: OnboardingUI.actionWidth, alignment: .trailing)
-            }
-            .task { await scan() }
-        }
-
-        @ViewBuilder
-        private var control: some View {
-            if isScanning {
-                Spinner(size: 12)
-                    .foregroundStyle(.secondary)
-            } else if isImported {
-                Text("Imported")
-                    .font(Theme.Font.body)
-                    .foregroundStyle(.tertiary)
-            } else if needsFullDiskAccess {
-                SettingsButton(
-                    title: "Open System Settings",
-                    minWidth: OnboardingUI.actionWidth
-                ) {
-                    let pane = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
-                    if let url = URL(string: pane) {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-            } else {
-                SettingsButton(title: "Import", minWidth: OnboardingUI.actionWidth) {
-                    guard let payload else { return }
-                    BrowserImport.apply(payload, into: browser)
-                    isImported = true
-                }
-                .disabled(payload == nil)
-            }
-        }
-
-        private var caption: String {
-            if let status {
-                return status
-            }
-            if let payload {
-                return payload.summary.phrase + "."
-            }
-            return String(localized: source.caption)
-        }
-
-        private func scan() async {
-            guard source.isPresent, payload == nil, !needsFullDiskAccess else { return }
-            isScanning = true
-            let result = await Task.detached { Result { try source.scan() } }.value
-            isScanning = false
-            switch result {
-            case .success(let found) where found.summary.isEmpty:
-                status = String(localized: "Nothing to import.")
-            case .success(let found):
-                payload = found
-            case .failure(BrowserImport.Failure.needsFullDiskAccess):
-                needsFullDiskAccess = true
-                status = String(localized: "Needs Full Disk Access.")
-            case .failure:
-                status = String(localized: "Couldn’t read these files.")
-            }
         }
     }
 }

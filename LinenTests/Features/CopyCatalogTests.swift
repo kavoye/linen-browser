@@ -158,8 +158,6 @@ struct SettingsIndexParityTests {
         "search.engine",            // the page caption names the chosen model
         "assistant.tools",          // the page caption names the chosen model
         "voice.readAloud",          // the page caption adds a System Settings link
-        "general.importSafari",     // import rows describe themselves in the import section
-        "general.importChrome",
         "about.updates",            // the About page renders version state, not a caption
         "about.updates.channel",    // the page caption names the chosen channel; the index covers both
         "about.acknowledgements",

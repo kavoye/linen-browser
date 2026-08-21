@@ -10,7 +10,7 @@ final class OnboardingModel {
     enum Step: Int, CaseIterable {
         case welcome
         case model
-        case history
+        case bookmarks
     }
 
     enum ModelChoice {

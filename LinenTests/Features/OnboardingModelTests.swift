@@ -20,7 +20,7 @@ struct OnboardingModelTests {
         model.advance()
         #expect(model.step == .model)
         model.advance()
-        #expect(model.step == .history)
+        #expect(model.step == .bookmarks)
         #expect(model.isLastStep)
         model.advance()
         #expect(!model.isPresented)

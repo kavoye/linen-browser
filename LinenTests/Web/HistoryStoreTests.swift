@@ -443,4 +443,23 @@ struct HistoryStoreTests {
         #expect(store.visits.count == 1)
         #expect(store.visits.first?.transition == .imported)
     }
+
+    /// `merge` is what the stage session and any future importer write
+    /// through: an older copy of a page must not overwrite the fresh one,
+    /// and only genuinely new addresses are counted.
+    @Test func mergeKeepsTheNewerVisitAndReportsOnlyNewURLs() {
+        let (store, _) = makeStore()
+        store.record(url: "https://known.example/", title: "Known")
+
+        let added = store.merge([
+            .init(url: "https://known.example/", title: "Stale", date: .distantPast),
+            .init(url: "https://new.example/", title: "New", date: Date(timeIntervalSinceNow: -60)),
+            .init(url: "file:///etc/hosts", title: "No", date: .now),
+        ])
+
+        #expect(added == 1)
+        #expect(store.entries.first?.title == "Known")
+        #expect(store.entries.map(\.url).contains("https://new.example/"))
+        #expect(!store.entries.map(\.url).contains("file:///etc/hosts"))
+    }
 }

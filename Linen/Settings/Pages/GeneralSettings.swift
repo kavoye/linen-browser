@@ -173,97 +173,17 @@ private struct HomepageRow: View {
 private struct ImportSection: View {
     let coordinator: AppCoordinator
 
-    private typealias Source = BrowserImport.Source
-
-    @State private var status: [Source: String] = [:]
-    @State private var scanning: Source?
-    @State private var safariNeedsAccess = false
-    @State private var pending: (source: Source, payload: BrowserImport.Payload)?
-
     var body: some View {
-        SettingsSection(title: "Import", symbol: "square.and.arrow.down") {
-            row(.safari) {
-                if safariNeedsAccess {
-                    SettingsButton(title: "Open System Settings", isProminent: true) {
-                        let pane = "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
-                        if let url = URL(string: pane) {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                }
-            }
-            .settingsAnchor("general.importSafari")
-
-            RowSeparator()
-
-            row(.chrome)
-                .settingsAnchor("general.importChrome")
-        }
-        .confirmationDialog(
-            pending.map { "Import Items from \($0.source.name)" } ?? "",
-            isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })
+        SettingsSection(
+            title: "Import",
+            symbol: "square.and.arrow.down",
+            footnote: "In the other browser, export your bookmarks to an HTML file first."
         ) {
-            Button("Import") {
-                guard let pending else { return }
-                BrowserImport.apply(pending.payload, into: coordinator.browser)
-                status[pending.source] = "Imported \(pending.payload.summary.phrase)."
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(importMessage)
-        }
-    }
-
-    private var importMessage: String {
-        guard let payload = pending?.payload else { return "" }
-        var lines = ["\(payload.summary.phrase) will be imported."]
-        if !payload.bookmarks.isEmpty {
-            lines.append("The bookmarks go into a new folder in the sidebar.")
-        }
-        return lines.joined(separator: " ")
-    }
-
-    @ViewBuilder
-    private func row(
-        _ source: Source,
-        @ViewBuilder leading: () -> some View = { EmptyView() }
-    ) -> some View {
-        DetailRow(
-            verbatimTitle: source.name,
-            verbatimCaption: status[source] ?? String(localized: source.caption)
-        ) {
-            HStack(spacing: 8) {
-                leading()
-                if scanning == source {
-                    Spinner(size: 12)
-                        .foregroundStyle(.secondary)
-                }
-                SettingsButton(title: "Import…") { beginImport(source) }
-                    .disabled(!source.isPresent || scanning != nil)
-            }
-        }
-    }
-
-    private func beginImport(_ source: Source) {
-        scanning = source
-        Task {
-            let result = await Task.detached { Result { try source.scan() } }.value
-            scanning = nil
-            switch result {
-            case .success(let payload) where payload.summary.isEmpty:
-                status[source] = "No items to import from \(source.name)."
-            case .success(let payload):
-                if source == .safari {
-                    safariNeedsAccess = false
-                }
-                pending = (source, payload)
-            case .failure(BrowserImport.Failure.needsFullDiskAccess):
-                safariNeedsAccess = true
-                status[source] = "macOS protects Safari’s files. Allow Linen under "
-                    + "Privacy & Security → Full Disk Access, then try again."
-            case .failure:
-                status[source] = "\(source.name)’s files couldn’t be read."
-            }
+            BookmarkImportRow(
+                browser: coordinator.browser,
+                caption: "An HTML file exported from Safari, Chrome, Firefox, or Edge."
+            )
+            .settingsAnchor("general.import")
         }
     }
 }

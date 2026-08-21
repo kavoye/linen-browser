@@ -55,6 +55,9 @@
     "%@ unavailable, using Apple Intelligence" : {
       "comment" : "Status message shown when the chosen model provider cannot answer and Linen falls back to the on-device model. %@ is the provider's name, e.g. OpenAI or Ollama. “Apple Intelligence” is Apple's product name — leave as is."
     },
+    "%@ will be imported." : {
+      "comment" : "First sentence of the confirmation dialog shown before bookmarks are imported. %@ is a count fragment such as “87 bookmarks”. The sentence “The bookmarks go into a new folder in the sidebar.” follows it."
+    },
     "%@ without asking" : {
       "comment" : "Fragment in the one-line summary under a website, naming what the assistant may do there unprompted. %@ is a list of action kinds already worded and joined, for example purchases. Lower case: joined with other fragments."
     },
@@ -84,7 +87,7 @@
       }
     },
     "%lld bookmarks" : {
-      "comment" : "Half of the summary of what an import from Safari or Chrome would bring over; it is joined with “%lld pages of history” by “and” and dropped into the sentences “… will be imported.” and “Imported …”. %lld is the number of bookmarks. A mid-sentence fragment, not a sentence of its own.",
+      "comment" : "Count fragment dropped into the import dialog’s “… will be imported.” and into “Imported ….”. %lld is the number of bookmarks. A mid-sentence fragment, not a sentence of its own.",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -288,7 +291,7 @@
       "comment" : "Caption under the Keep history for row, saying how many pages the history holds now and that anything past the chosen age is dropped. %lld is the count of pages; use a plural variation if the language needs one. The alternative caption, shown when the history is empty, is No pages recorded yet."
     },
     "%lld pages of history" : {
-      "comment" : "Half of the summary of what an import from Safari or Chrome would bring over; it is joined with “%lld bookmarks” by “and” and dropped into the sentences “… will be imported.” and “Imported …”. %lld is the number of history entries. A mid-sentence fragment, not a sentence of its own.",
+      "comment" : "One figure in the summary line under a profile on the Profiles settings page, joined to the other figures by “ · ”. %lld is the number of pages that profile has in its history. A fragment, not a sentence.",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -640,6 +643,12 @@
     "Always Keep This Website Loaded" : {
       "comment" : "Toggle in Site Settings. When selected, this website is not unloaded to save memory. Title Case."
     },
+    "An HTML file exported from Safari, Chrome, Firefox, or Edge." : {
+      "comment" : "Caption under the Bookmarks row in the Import section of the General settings page, and the caption of that same row in Settings search. The four names are products — leave them as they are."
+    },
+    "An HTML file from another browser." : {
+      "comment" : "Caption under the Bookmarks row on the last onboarding screen. It names the file the user picks. It must stay on one line, so it is shorter than its twin on the General settings page."
+    },
     "and %lld more" : {
       "comment" : "Last bullet after a list of website names in the extension install confirmation dialog, when more than eight sites are covered. %lld is how many further websites are not listed. It sits after a bullet character supplied by the app, so it starts mid-line and takes no full stop.",
       "localizations" : {
@@ -831,17 +840,14 @@
     "Bookmark This Page in the Tab" : {
       "comment" : "Tooltip on the bookmark button in the toolbar when the current tab has no anchor yet; clicking makes this page the tab's anchor. Longer than the menu wording on purpose, because it says what the page is bookmarked in. Title Case."
     },
-    "Bookmarks and history, from every profile." : {
-      "comment" : "Caption under Import from Chrome on the General settings page, and the caption of that same row in Settings search. “Profile” is Chrome's word for a separate browsing account."
-    },
-    "Bookmarks and history." : {
-      "comment" : "Caption under Import from Safari on the General settings page, and the caption of that same row in Settings search: what an import brings over."
+    "Bookmarks" : {
+      "comment" : "Title of the row that imports bookmarks, in the Import section of the General settings page and on the last onboarding screen. A noun."
     },
     "Bring All to Front" : {
       "comment" : "Standard macOS item at the bottom of the Window menu. Use the system's own wording. Title Case."
     },
-    "Bring your browsing over" : {
-      "comment" : "Heading of the last onboarding screen, where the user imports from another browser and makes Linen the default. An invitation to move existing browsing to this app."
+    "Bring your bookmarks over" : {
+      "comment" : "Heading of the last onboarding screen, where the user imports bookmarks from another browser and makes Linen the default browser. An invitation, not a command."
     },
     "Browse extensions to install" : {
       "comment" : "Tooltip on the Chrome Web Store button on the Extensions settings page."
@@ -942,11 +948,17 @@
     "Choose a model" : {
 
     },
+    "Choose File…" : {
+      "comment" : "Button beside the Bookmarks row. It opens the macOS file panel, where the user picks the exported bookmarks file. The ellipsis says that a panel opens; keep it."
+    },
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
     "Choose Site Settings in the toolbar to change one." : {
       "comment" : "Guidance under No websites changed, saying where per-website settings are made. Site Settings is the name of a menu in the browser toolbar — translate it the same way there. Imperative."
+    },
+    "Choose the bookmarks file you exported from another browser." : {
+      "comment" : "Message at the top of the macOS file panel that Choose File… opens. It tells the user which file to pick."
     },
     "Choose what to clear and how far back to go. This can’t be undone." : {
       "comment" : "Message in that dialog, naming its two controls: the checkboxes for what, and the time-range menu for how far back. Do not list the kinds themselves here — they are the checkbox labels, and unticking one would make a list go stale. Curly apostrophe."
@@ -1156,9 +1168,6 @@
     },
     "Couldn’t reach the model provider. Check its connection and API key in Settings." : {
       "comment" : "The assistant's reply text when a request to the model failed and there is no more specific error. “Settings” is the app's Settings window. Curly apostrophe."
-    },
-    "Couldn’t read these files." : {
-
     },
     "Couldn’t set up speech: %@" : {
       "comment" : "Status line shown when the speech recogniser could not be started. %@ is the underlying error description supplied by macOS, which arrives already translated by the system."
@@ -1580,31 +1589,28 @@
       "comment" : "Caption under the Reload Page from Origin command in the command palette. Sentence fragment, lower case."
     },
     "Import" : {
-      "comment" : "Used twice for bringing bookmarks and history in: the heading of the section on the General settings page (a noun there), and the confirming button in the import dialog (a verb there)."
+      "comment" : "Used twice for bringing bookmarks in: the heading of the section on the General settings page (a noun there), and the confirming button in the import dialog and the file panel (a verb there)."
     },
-    "Import from Chrome" : {
-      "comment" : "Title of the row on the General settings page that brings bookmarks and history over from Chrome, and the title of that same row in Settings search. “Chrome” is a product name — leave as is."
+    "Import Bookmarks" : {
+      "comment" : "Heading of the confirmation dialog shown after the file is read and before anything is imported. Title Case."
     },
-    "Import from Safari" : {
-      "comment" : "Title of the row on the General settings page that brings bookmarks and history over from Safari, and the title of that same row in Settings search. “Safari” is a product name — leave as is."
+    "Import bookmarks from another browser, and open links from other apps in Linen." : {
+      "comment" : "Caption under the Bring your bookmarks over heading on the last onboarding screen. It names the two things the card below it offers."
     },
-    "Import Items from %@" : {
-      "comment" : "Heading of the confirmation dialog shown before an import runs. %@ is the source name, Safari or Chrome — leave as is. Title Case; “Items” means the bookmarks and history being brought over."
+    "Imported %@." : {
+      "comment" : "Caption under the Bookmarks row after an import finishes. %@ is a count fragment such as “87 bookmarks”."
     },
-    "Import what you already have, and open links from other apps in Linen." : {
-      "comment" : "Caption under the Bring your browsing over heading on the last onboarding screen. It names the two things the card below offers: importing bookmarks and history, and becoming the default browser. Linen is the application name and is never translated."
-    },
-    "Import…" : {
-      "comment" : "Button on the General settings page that starts reading the selected source; a dialog then reports what was found. A verb, with a real ellipsis (…) promising that dialog."
-    },
-    "Imported" : {
-
+    "Imported Bookmarks" : {
+      "comment" : "Name of the sidebar folder that imported bookmarks go into. The user can rename the folder afterwards. Title Case."
     },
     "In sync" : {
       "comment" : "Label between the two timing buttons at the foot of the lyrics view, shown while the words have not been shifted against the sound. Clicking it puts a shift back to zero. Sentence case; the space is very tight."
     },
     "In System Settings, choose Linen as the default web browser." : {
 
+    },
+    "In the other browser, export your bookmarks to an HTML file first." : {
+      "comment" : "Footnote under the Import section of the General settings page. It says what the user does in the other browser before choosing a file here."
     },
     "In use" : {
       "comment" : "Status shown beside the selected provider in Settings > Provider when it is ready and answering. The row is very narrow — keep it to two short words."
@@ -2064,9 +2070,6 @@
     "Needs an API key" : {
       "comment" : "Settings → Assistant → Add a provider. Section heading over providers set up by entering an API key."
     },
-    "Needs Full Disk Access." : {
-      "comment" : "Caption under the Safari row on the import card, shown when macOS has not granted Linen permission to read Safari's files. “Full Disk Access” is the name of the macOS privacy category — use the system's own wording. The button beside it opens System Settings. Keep it to one short line; the row is one line tall."
-    },
     "Never" : {
       "comment" : "Option in the Autoplay segmented control on the Websites settings page: nothing starts playing on its own."
     },
@@ -2105,6 +2108,9 @@
     },
     "No app can open this link." : {
       "comment" : "Heading of the alert shown when nothing installed on the Mac handles the kind of link that was clicked."
+    },
+    "No bookmarks in this file." : {
+      "comment" : "Caption under the Bookmarks row when the chosen file was read but held no web pages."
     },
     "No connection to check" : {
       "comment" : "Label used where the address bar's security glyph has nothing to report — no page is loaded. Sentence case, no final period."
@@ -2205,9 +2211,6 @@
     "Not Now" : {
       "comment" : "Button that refuses the move in that alert. Linen does not ask again. Title Case, and Apple’s own wording for a refusal that is not final."
     },
-    "Not on this Mac." : {
-      "comment" : "Caption under Import from Chrome on the General settings page when Chrome is not installed, so there is nothing to import from."
-    },
     "Not responding" : {
       "comment" : "Settings → Assistant → a provider page. Readiness status when a local server did not answer."
     },
@@ -2234,9 +2237,6 @@
     },
     "Nothing plays until you press play." : {
       "comment" : "Caption under Autoplay on the Websites settings page when it is set to Never. “Press play” means clicking the play button on the page."
-    },
-    "Nothing to import." : {
-
     },
     "notifications" : {
       "comment" : "Lowercase name of one website permission, inserted mid-sentence into the confirmation: Are you sure you want to remove the notifications setting for every website? Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Notifications is a separate string."
@@ -2315,9 +2315,6 @@
     },
     "Open Profile" : {
       "comment" : "Button that switches the browser to the profile whose page is open."
-    },
-    "Open System Settings" : {
-      "comment" : "Button that opens Apple’s System Settings app, used for the Accessibility permission row and the Safari import row. System Settings is Apple’s app name — use Apple’s own translation of it in the target language. Open is a verb here."
     },
     "Open Tabs" : {
       "comment" : "Section heading in the ⌘K palette over the tabs already open. “Open” is an adjective describing the tabs, not a command to open them. Title Case."
@@ -3277,6 +3274,9 @@
     "the bookmarked page" : {
       "comment" : "Last-resort name for a tab's bookmarked page when it has neither title nor host, dropped into “Back to %@”. Deliberately lowercase and with an article because it lands mid-sentence; capitalise only if your language demands it."
     },
+    "The bookmarks go into a new folder in the sidebar." : {
+      "comment" : "Second sentence of the confirmation dialog shown before bookmarks are imported. It says where they land."
+    },
     "The browser action failed…" : {
       "comment" : "Status line under the assistant’s reply when one of its actions on the page did not work. Real ellipsis."
     },
@@ -3423,6 +3423,9 @@
     },
     "This extension’s package has no manifest" : {
       "comment" : "Error shown when an extension install fails because the package holds no manifest.json. Manifest is the extension’s own description file — keep the term. Curly apostrophe, no final full stop."
+    },
+    "This file couldn’t be read." : {
+      "comment" : "Caption under the Bookmarks row when the chosen file could not be opened, or was not a bookmarks file."
     },
     "This isn’t a valid URL. Try http://localhost:8000/v1" : {
       "comment" : "Error under the field where a user-added endpoint address is typed. The address is an example of the expected form and must be kept exactly as it is. URL is the technical term for a web address; curly apostrophe."
