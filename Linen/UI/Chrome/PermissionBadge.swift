@@ -205,6 +205,15 @@ private struct PermissionPopover: View {
         return .secondary
     }
 
+    private func chosen(_ policy: PermissionPolicy, for permission: WebPermission) -> Binding<Bool> {
+        Binding {
+            center.menuPolicy(for: permission) == policy
+        } set: { isOn in
+            guard isOn else { return }
+            center.set(policy, for: permission)
+        }
+    }
+
     private var recordFace: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(center.rows) { row in
@@ -229,14 +238,8 @@ private struct PermissionPopover: View {
 
                     Menu {
                         ForEach([PermissionPolicy.ask, .allow, .deny], id: \.self) { policy in
-                            Button {
-                                center.set(policy, for: row.permission)
-                            } label: {
-                                if center.menuPolicy(for: row.permission) == policy {
-                                    Label(policy.label, systemImage: "checkmark")
-                                } else {
-                                    Text(policy.label)
-                                }
+                            Toggle(isOn: chosen(policy, for: row.permission)) {
+                                Text(policy.label)
                             }
                         }
                     } label: {

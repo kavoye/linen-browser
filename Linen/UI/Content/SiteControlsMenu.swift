@@ -62,37 +62,21 @@ struct SiteControlsItems: View {
         Divider()
 
         if let tab, !tab.assistantAccess.origin.isEmpty {
-            Menu {
+            Picker(selection: assistantAccess(for: tab)) {
                 ForEach(AssistantAccessPolicy.allCases, id: \.self) { policy in
-                    Button {
-                        tab.assistantAccess.set(policy)
-                    } label: {
-                        if tab.assistantAccess.effectivePolicy == policy {
-                            Label {
-                                Text(policy.label)
-                            } icon: {
-                                Image(systemName: "checkmark")
-                            }
-                        } else {
-                            Text(policy.label)
-                        }
-                    }
+                    Text(policy.label).tag(policy)
                 }
             } label: {
                 Label("Assistant Access", systemImage: "sparkles")
             }
+            .pickerStyle(.menu)
 
             Divider()
         }
 
         if let tab, !browser.keepActiveOrigin(for: tab).isEmpty {
-            Button {
-                browser.setKeepsActive(!browser.keepsActive(tab), for: tab)
-            } label: {
-                Label(
-                    "Always Keep This Website Loaded",
-                    systemImage: browser.keepsActive(tab) ? "checkmark" : "bolt"
-                )
+            Toggle(isOn: keepsActive(for: tab)) {
+                Label("Always Keep This Website Loaded", systemImage: "bolt")
             }
 
             Divider()
@@ -135,6 +119,22 @@ struct SiteControlsItems: View {
             tab?.webView.reload()
         } label: {
             Label("Reload Page", systemImage: "arrow.clockwise")
+        }
+    }
+
+    private func assistantAccess(for tab: BrowserTab) -> Binding<AssistantAccessPolicy> {
+        Binding {
+            tab.assistantAccess.effectivePolicy
+        } set: { policy in
+            tab.assistantAccess.set(policy)
+        }
+    }
+
+    private func keepsActive(for tab: BrowserTab) -> Binding<Bool> {
+        Binding {
+            browser.keepsActive(tab)
+        } set: { keeps in
+            browser.setKeepsActive(keeps, for: tab)
         }
     }
 

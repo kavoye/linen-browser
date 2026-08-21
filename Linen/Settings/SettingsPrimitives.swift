@@ -564,6 +564,28 @@ struct SettingsMenu<Value: Hashable>: View {
     @Binding var selection: Value
     var placeholder: LocalizedStringResource = "Choose"
 
+    private func chosen(_ option: Option) -> Binding<Bool> {
+        Binding {
+            option.value == selection
+        } set: { isOn in
+            guard isOn else { return }
+            selection = option.value
+        }
+    }
+
+    private func title(for option: Option) -> String {
+        guard !option.detail.isEmpty else { return option.label }
+        return String(
+            localized: "menu.option.labelAndDetail",
+            defaultValue: "\(option.label) — \(option.detail)",
+            comment: """
+                One line of an open pop-up menu: %1$@ is the choice \
+                itself (often a model or endpoint name), %2$@ a short \
+                note about it. Only the separator is ours to change.
+                """
+        )
+    }
+
     private var current: Option? {
         options.first { $0.value == selection }
     }
@@ -571,30 +593,8 @@ struct SettingsMenu<Value: Hashable>: View {
     var body: some View {
         Menu {
             ForEach(options) { option in
-                Button {
-                    selection = option.value
-                } label: {
-                    let title = option.detail.isEmpty
-                        ? option.label
-                        : String(
-                            localized: "menu.option.labelAndDetail",
-                            defaultValue:
-                                "\(option.label) — \(option.detail)",
-                            comment: """
-                                One line of an open pop-up menu: %1$@ is the choice \
-                                itself (often a model or endpoint name), %2$@ a short \
-                                note about it. Only the separator is ours to change.
-                                """
-                        )
-                    if option.value == selection {
-                        Label {
-                            Text(verbatim: title)
-                        } icon: {
-                            Image(systemName: "checkmark")
-                        }
-                    } else {
-                        Text(verbatim: title)
-                    }
+                Toggle(isOn: chosen(option)) {
+                    Text(verbatim: title(for: option))
                 }
             }
         } label: {

@@ -707,19 +707,29 @@ private struct ModelControl: View {
     private var menu: some View {
         Menu {
             if !model.subject.suggestedModels.isEmpty {
-                Section("Suggested") {
+                Picker(selection: chosenModel) {
                     ForEach(model.subject.suggestedModels) { suggestion in
-                        item(id: suggestion.id, title: Text(verbatim: suggestion.id))
+                        Text(verbatim: suggestion.id).tag(suggestion.id)
                     }
+                } label: {
+                    Text("Suggested")
                 }
+                .pickerStyle(.inline)
             }
 
             if !catalogModels.isEmpty {
-                Section(model.subject.isLocal ? "Pulled locally" : "Available to this key") {
+                Picker(selection: chosenModel) {
                     ForEach(catalogModels, id: \.self) { id in
-                        item(id: id, title: Text(verbatim: id))
+                        Text(verbatim: id).tag(id)
+                    }
+                } label: {
+                    if model.subject.isLocal {
+                        Text("Pulled locally")
+                    } else {
+                        Text("Available to this key")
                     }
                 }
+                .pickerStyle(.inline)
             }
 
             Divider()
@@ -749,19 +759,11 @@ private struct ModelControl: View {
         }
     }
 
-    @ViewBuilder
-    private func item(id: String, title: Text) -> some View {
-        Button {
+    private var chosenModel: Binding<String> {
+        Binding {
+            model.selectedModel
+        } set: { id in
             model.selectModel(id)
-        } label: {
-            if id == model.selectedModel {
-                HStack {
-                    Image(systemName: "checkmark")
-                    title
-                }
-            } else {
-                title
-            }
         }
     }
 }
