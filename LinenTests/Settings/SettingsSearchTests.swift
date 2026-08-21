@@ -28,6 +28,12 @@ struct SettingsSearchTests {
         #expect(SettingsIndex.search("activation").contains { $0.id == "voice.talk" })
     }
 
+    @Test func theVoiceRowsLiveOnTheAssistantPage() {
+        let voice = SettingsIndex.all.filter { $0.id.hasPrefix("voice.") }
+        #expect(voice.count == 2)
+        #expect(voice.allSatisfy { $0.category == .provider })
+    }
+
     @Test func searchMatchesWordsInsideTitles() {
         #expect(SettingsIndex.search("links").contains { $0.id == "general.defaultBrowser" })
     }

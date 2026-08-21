@@ -939,9 +939,6 @@
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
-    "Choose how you speak to Linen and hear replies." : {
-
-    },
     "Choose Site Settings in the toolbar to change one." : {
       "comment" : "Guidance under No websites changed, saying where per-website settings are made. Site Settings is the name of a menu in the browser toolbar — translate it the same way there. Imperative."
     },
@@ -3623,7 +3620,7 @@
       "comment" : "Button in the release notes sheet that opens the release page in a browser. View is a verb; GitHub is a product name — leave as is."
     },
     "Voice" : {
-      "comment" : "Title of the Voice page in Settings and its name in the Settings sidebar. Noun, meaning speaking to the app and hearing it reply. Narrow sidebar row, so keep it short."
+      "comment" : "Heading of the Voice section on the Assistant page in Settings. Noun, meaning speaking to the app and hearing it reply. Sits above two rows, so keep it short."
     },
     "Watch every network request the browser makes" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Watch means observe. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."

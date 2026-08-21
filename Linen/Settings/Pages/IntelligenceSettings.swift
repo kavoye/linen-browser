@@ -69,6 +69,8 @@ private struct AssistantOverview: View {
             ThinkingSection(model: model)
         }
 
+        VoiceSection(coordinator: coordinator)
+
         SettingsSection(title: "Providers", symbol: "link") {
             ForEach(model.connected) { provider in
                 ProviderRow(
@@ -154,6 +156,55 @@ private struct AnsweringRow: View {
             return provider.blurb
         }
         return LLMSettings.model(for: provider)
+    }
+}
+
+private struct VoiceSection: View {
+    let coordinator: AppCoordinator
+
+    @State private var talk = ActivationSettings.talk
+    @State private var recording: String?
+
+    var body: some View {
+        SettingsSection(title: "Voice", symbol: "waveform") {
+            DetailRow(
+                title: "Read aloud",
+                caption: "Speak answers as they arrive. Change the voice or speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)."
+            ) {
+                SettingsToggle(Binding(
+                    get: { !coordinator.isSpeechMuted },
+                    set: { enabled in
+                        if enabled == coordinator.isSpeechMuted {
+                            coordinator.toggleSpeechMute()
+                        }
+                    }
+                ))
+            }
+            .settingsAnchor("voice.readAloud")
+
+            RowSeparator()
+
+            DetailRow(
+                title: "Push to talk",
+                caption: "Hold while speaking. Release to send."
+            ) {
+                ShortcutRecorder(
+                    id: "talk",
+                    recording: $recording,
+                    shortcut: talk,
+                    defaultShortcut:
+                        ActivationSettings.defaultTalk
+                ) { recorded in
+                    talk = recorded
+                    ActivationSettings.talk = recorded
+                    coordinator.reloadActivation()
+                }
+            }
+            .settingsAnchor("voice.talk")
+        }
+        .onChange(of: recording) { _, listening in
+            coordinator.setActivationSuspended(listening != nil)
+        }
     }
 }
 
