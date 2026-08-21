@@ -10,13 +10,17 @@ struct AgentActivityPanel: View {
     let onRetry: (String) -> Void
 
     var body: some View {
+        if traces.isEmpty {
+            AgentActivityEmptyState()
+        } else {
+            list
+        }
+    }
+
+    private var list: some View {
         ScrollViewReader { scrollProxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Metrics.traceGap) {
-                    if traces.isEmpty {
-                        AgentActivityEmptyState()
-                    }
-
                     ForEach(traces.reversed()) { trace in
                         AgentTaskTraceView(
                             trace: trace,
@@ -106,13 +110,11 @@ struct AgentUsageSummary: View {
 
 private struct AgentActivityEmptyState: View {
     var body: some View {
-        Text("No tasks yet. Type @ in the address bar, or press ⌘↩ while typing there, to start a task on this page.")
-            .font(Theme.Font.row)
-            .foregroundStyle(.secondary)
-            .padding(.leading, Metrics.titleIndent)
-            .padding(.trailing, Metrics.titleIndent)
-            .padding(.top, 10)
-            .padding(.bottom, 14)
+        PanelNotice(
+            symbol: "sparkle",
+            title: "No tasks yet",
+            caption: "Type @ in the address bar to start one on this page."
+        )
     }
 }
 

@@ -511,11 +511,8 @@
     "Actions" : {
       "comment" : "Section heading in the ⌘K palette over the app's own commands (New Tab, Settings, Clear History…). Plural noun, Title Case."
     },
-    "Activity on these pages" : {
-      "comment" : "Title at the top of the agent activity column when no task is running and the window is split between two or more pages, which the assistant treats as one workspace. Sentence case, one line; alternates with “Working on these pages”."
-    },
-    "Activity on this tab" : {
-      "comment" : "Title at the top of the agent activity column when no task is running and one page fills the window. Sentence case, one line; alternates with “Working on this tab”."
+    "Activity" : {
+      "comment" : "Title of the Activity tab in the side panel, where the assistant’s steps are listed. A noun on a tab, so keep it to one short word — the tab is narrow and sits beside others."
     },
     "Actual Size" : {
       "comment" : "Command that resets page zoom to 100 per cent: an item in the View menu and in the site controls menu on the toolbar. Title Case, as macOS menu commands are."
@@ -930,6 +927,9 @@
     "Choose" : {
       "comment" : "Used twice, as a verb: the placeholder in a Settings pop-up menu with nothing selected yet, and the confirm button of the macOS folder-picking panel for the download folder — for the second, use the wording macOS itself puts on that button."
     },
+    "Choose a Different Match" : {
+      "comment" : "Tooltip on the ⋯ button at the top of the lyrics view. Its menu lists the other entries the lyrics library holds for this song, so the user can pick a better one. Title Case."
+    },
     "Choose a location every time." : {
       "comment" : "Caption for the “Ask where to save each file” row in Settings search results. “Location” means a folder on disk."
     },
@@ -947,6 +947,9 @@
     },
     "Choose what to clear and how far back to go. This can’t be undone." : {
       "comment" : "Message in that dialog, naming its two controls: the checkboxes for what, and the time-range menu for how far back. Do not list the kinds themselves here — they are the checkbox labels, and unticking one would make a list go stale. Curly apostrophe."
+    },
+    "Choose Which Tab the Words Follow" : {
+      "comment" : "Tooltip on the lyrics panel title while more than one tab has media; the title opens a menu that lists those tabs so the user can pick which one the lyrics follow. Title Case. Twin of “Choose Which Tab to Control”, which is the same control on the media dock."
     },
     "Choose Which Tab to Control" : {
       "comment" : "Tooltip on the media dock title while more than one tab is playing; the title opens a menu that lists those tabs so the user can pick which one the transport drives. Title Case, narrow dock."
@@ -1081,6 +1084,9 @@
     },
     "Closing the video…" : {
       "comment" : "Line in the assistant's live activity feed while it closes a video it had opened. Present participle; real ellipsis."
+    },
+    "Collapse Side Panel" : {
+      "comment" : "Tooltip on the arrows button while the side panel fills the window. It puts the panel back to its narrow width beside the page. Pairs with “Expand Side Panel”. Title Case."
     },
     "Color" : {
       "comment" : "Label of the color swatches that tint a profile’s symbol."
@@ -1360,6 +1366,9 @@
     "Exit Split" : {
       "comment" : "Menu command that goes back to one page in the window. Neither page is closed: the one being read keeps the window and the other returns to being an ordinary sidebar row. Title Case."
     },
+    "Expand Side Panel" : {
+      "comment" : "Tooltip on the arrows button in the side panel’s tab strip while the panel is narrow. It makes the panel fill the window beside the sidebar. Pairs with “Collapse Side Panel”. Title Case."
+    },
     "Extension" : {
       "comment" : "Placeholder name used for an installed extension whose package declares no name of its own. A generic noun."
     },
@@ -1368,6 +1377,9 @@
     },
     "Extensions" : {
       "comment" : "The Extensions page in Settings: its name in the sidebar and the heading at the top of the page. A plural noun — browser extensions."
+    },
+    "Extra Large" : {
+      "comment" : "Fourth and largest of the sizes in the lyrics text-size menu. Title Case."
     },
     "Failed" : {
       "comment" : "Small chip in the agent activity panel marking a task that ended in an error, next to the “Try Again” button. One word; very tight."
@@ -1389,6 +1401,9 @@
     },
     "Find a video and play it in the media player." : {
       "comment" : "Caption for the Play Videos tool in assistant settings."
+    },
+    "Find Another Match" : {
+      "comment" : "Menu item under the ⋯ button of the lyrics view. It searches the lyrics library again for other entries for the same song. Title Case, as macOS menu items are."
     },
     "Find Next" : {
       "comment" : "Item in the Find submenu that jumps to the next match on the page. Title Case."
@@ -1480,11 +1495,8 @@
     "Help" : {
       "comment" : "Title of the Help menu in the menu bar. Use the standard macOS wording."
     },
-    "Hide Agent Activity" : {
-      "comment" : "View menu item that hides the panel showing what the assistant is doing; the same item reads “Show Agent Activity” while the panel is hidden. Title Case."
-    },
-    "Hide Agent Activity (⌥⌘A)" : {
-      "comment" : "Tooltip on the collapse button at the top of the agent activity column. The parenthesised ⌥⌘A is the keyboard shortcut — keyboard symbols, keep exactly. Title Case; a separate sentence-case variant exists for the small chip in the address field."
+    "Hide Assistant Activity" : {
+      "comment" : "View menu item that hides the panel showing what the assistant is doing; the same item reads “Show Assistant Activity” while the panel is hidden. Title Case."
     },
     "Hide Browser" : {
       "comment" : "View menu item that hides the web view; the same item reads “Show Browser” while it is hidden. Title Case."
@@ -1495,11 +1507,17 @@
     "Hide Linen" : {
 
     },
+    "Hide Lyrics" : {
+      "comment" : "Tooltip on the lyrics button in the media player while the lyrics are on screen. Pairs with “Show Lyrics”. Title Case."
+    },
     "Hide Others" : {
       "comment" : "Standard macOS app-menu item that hides every other app. Use the system's own wording. Title Case."
     },
     "Hide Player" : {
       "comment" : "Tooltip on the small media button in the sidebar while the floating player is pulled out; clicking puts the player away again. Title Case."
+    },
+    "Hide Side Panel" : {
+      "comment" : "Tooltip on the ✕ at the right of the side panel’s tab strip. It takes the whole panel off screen and keeps its tabs for next time. “Side Panel” is the right-hand one; the left is the Sidebar. Title Case."
     },
     "Hide Sidebar" : {
       "comment" : "View menu item that hides the tab sidebar; the same item reads “Show Sidebar” while it is hidden. Title Case."
@@ -1576,8 +1594,8 @@
     "Imported" : {
 
     },
-    "In Picture in Picture" : {
-      "comment" : "Line shown in the media dock in place of the video while the video is playing in the system's floating Picture in Picture window. “Picture in Picture” is Apple's feature name — use the established term for your language. Small type in a narrow card."
+    "In sync" : {
+      "comment" : "Label between the two timing buttons at the foot of the lyrics view, shown while the words have not been shifted against the sound. Clicking it puts a shift back to zero. Sentence case; the space is very tight."
     },
     "In System Settings, choose Linen as the default web browser." : {
 
@@ -1629,6 +1647,9 @@
     },
     "Installing…" : {
       "comment" : "Used twice, as a present participle with a real ellipsis: the update button's title while an update is being installed, and the state shown beside an extension while it is being installed."
+    },
+    "Instrumental" : {
+      "comment" : "Shown in the middle of the lyrics view for a track that has no words. One word, sentence case."
     },
     "Issued to: %@" : {
 
@@ -1737,6 +1758,9 @@
     },
     "Keys are saved to your Keychain." : {
       "comment" : "Settings → Assistant → Add a provider. Footnote under the providers that need an API key. “Keychain” is the macOS password store — use Apple’s own name for it."
+    },
+    "Large" : {
+      "comment" : "Third of the four sizes in the lyrics text-size menu (Small, Regular, Large, Extra Large). Title Case."
     },
     "Last 4 weeks" : {
       "comment" : "Option in the Time range pop-up menu on the Privacy settings page, saying how far back to clear. A lowercase in-sentence variant exists as a separate entry."
@@ -1852,6 +1876,9 @@
     "Look things up with the search engine." : {
       "comment" : "Caption for the Search the Web tool in assistant settings."
     },
+    "Looking for lyrics…" : {
+      "comment" : "Shown with a spinner in the lyrics view while the words are being looked up. Present participle with a real ellipsis."
+    },
     "Looking for related tabs…" : {
 
     },
@@ -1860,6 +1887,27 @@
     },
     "Low" : {
       "comment" : "The second of the four Thinking levels in Settings > Provider (None, Low, Medium, High). One segment of a segmented control, so space is tight."
+    },
+    "Lyrics" : {
+      "comment" : "Heading of the settings group on the General page that holds the “Show lyrics” switch. A noun, plural in English."
+    },
+    "Lyrics are off" : {
+      "comment" : "Title shown in the middle of the Lyrics panel when the setting is off. A statement of fact, sentence case with no final full stop, as empty-state titles are."
+    },
+    "Lyrics from LRCLIB" : {
+      "comment" : "Credit line at the foot of the lyrics view, naming the website the words came from. LRCLIB is a name and is never translated. Not a sentence; very small type."
+    },
+    "lyrics.offset.seconds" : {
+      "comment" : "Reading at the foot of the lyrics view once the user has shifted the words against the sound, for example “+0.50 s”. %@ is an already-formatted number carrying its own plus or minus sign. “s” is the symbol for seconds; keep it short.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ s"
+          }
+        }
+      }
     },
     "Manage profiles" : {
       "comment" : "Subtitle under the open profile's name at the top of the Settings sidebar, saying that clicking it opens the Profiles page. A profile is a separate set of cookies, history and tabs. Sentence case, no final full stop, and short enough for a narrow sidebar."
@@ -2064,6 +2112,9 @@
     "No key yet" : {
       "comment" : "Settings → Assistant. Shown under a provider name when it has no API key."
     },
+    "No lyrics found" : {
+      "comment" : "Title of the empty state in the lyrics view when nothing matched the track. Sentence case with no final full stop."
+    },
     "No matches" : {
       "comment" : "Shown in place of the website-data list when the filter text matches no website in it."
     },
@@ -2100,8 +2151,8 @@
     "No tabs" : {
       "comment" : "Shown where a tab count would be, when a profile has none. A fragment, not a sentence."
     },
-    "No tasks yet. Type @ in the address bar, or press ⌘↩ while typing there, to start a task on this page." : {
-      "comment" : "Empty state of the agent activity column, before any task has been run on this tab. The “@” is the literal character the user types into the address bar and ⌘↩ is Command-Return — both fixed, keep exactly. Two sentences, sentence case; “the address bar” must stay the app’s name for that field."
+    "No tasks yet" : {
+      "comment" : "Title shown in the middle of the Activity panel before the assistant has done anything on this page. Sentence case with no final full stop."
     },
     "No webpage is open yet." : {
 
@@ -2163,8 +2214,14 @@
     "nothing is kept" : {
       "comment" : "Caption under the Private Browsing command in the command palette: no history, cookie or cache survives the session. Sentence fragment, lower case."
     },
+    "Nothing is playing" : {
+      "comment" : "Title of the empty state in the lyrics view when the media player holds no track. Sentence case with no final full stop."
+    },
     "Nothing matches." : {
       "comment" : "Shown in the Settings sidebar when a search finds no settings and no pages."
+    },
+    "Nothing on LRCLIB matches this track." : {
+      "comment" : "Caption under “No lyrics found” in the Lyrics panel. LRCLIB is the name of the website the words come from and is never translated. Full sentence."
     },
     "Nothing plays until you press play." : {
       "comment" : "Caption under Autoplay on the Websites settings page when it is set to Never. “Press play” means clicking the play button on the page."
@@ -2565,6 +2622,9 @@
     "Redo" : {
       "comment" : "Standard macOS Edit menu command, shortcut ⇧⌘Z. Use Apple’s own wording for it in the target language."
     },
+    "Regular" : {
+      "comment" : "Second of the four sizes in the lyrics text-size menu, and the one Linen starts with. Use the word macOS itself uses for a default type size. Title Case."
+    },
     "Release" : {
       "comment" : "One choice in the Update channel menu in Settings > About: the normal, numbered versions. A noun, not the verb “to release”. Its twin is “Preview”. One word, it sits in a narrow menu."
     },
@@ -2690,6 +2750,9 @@
     },
     "Reset the settings for “%@”?" : {
       "comment" : "Title of the confirmation for clearing one website's rules. %@ is the website's own address, for example example.com, and is never translated. Keep the curly quotation marks around it."
+    },
+    "Reset the Timing" : {
+      "comment" : "Tooltip on the offset reading at the foot of the lyrics view. Clicking it puts the shift between the words and the sound back to zero. Title Case."
     },
     "Reset This Website…" : {
       "comment" : "Button that clears every rule saved for one website. Title Case as a button naming a command, and the ellipsis is there because a confirmation follows."
@@ -2909,12 +2972,6 @@
     "Show %@ on the toolbar" : {
       "comment" : "Tooltip on the Pin button in the extensions overflow popover. %@ is the extension’s own display name, taken from the extension’s manifest — it is not translated. Show is a verb, and toolbar is the row of buttons at the top of the window."
     },
-    "Show Agent Activity" : {
-      "comment" : "Menu bar command under View that opens the panel showing what the assistant is doing. The same item reads Hide Agent Activity when the panel is already open, so the two should stay parallel. Title Case; Agent is the assistant."
-    },
-    "Show Agent Activity (⌥⌘A)" : {
-      "comment" : "Tooltip on the toolbar button that opens the agent activity column. The parenthesised ⌥⌘A is the keyboard shortcut — keyboard symbols, keep exactly. Title Case; a separate sentence-case variant exists for the chip in the address field."
-    },
     "Show All" : {
       "comment" : "Serves two places at once: the standard macOS application-menu command that unhides all applications, and a button at the end of the start page’s history list that reveals the full list. Use Apple’s own wording for the system command, since that is the one users recognise. Title Case, Show is a verb."
     },
@@ -2923,6 +2980,9 @@
     },
     "Show all models" : {
 
+    },
+    "Show Assistant Activity" : {
+      "comment" : "Menu bar command under View that opens the panel showing what the assistant is doing. The same item reads Hide Assistant Activity when the panel is already open, so the two should stay parallel. Title Case."
     },
     "Show Browser" : {
       "comment" : "Menu bar command under View that reveals the web view. The same item reads Hide Browser when the browser is already showing, so the two should stay parallel. Title Case, Show is a verb."
@@ -2936,6 +2996,15 @@
     "Show Last Tab" : {
       "comment" : "Hidden menu command under Window, shortcut ⌘9, which switches to the last tab in the row. Title Case and established platform terminology."
     },
+    "Show Lyrics" : {
+      "comment" : "Tooltip on the lyrics button in the media player while the lyrics are hidden. Pairs with “Hide Lyrics”. Title Case."
+    },
+    "Show Lyrics Earlier" : {
+      "comment" : "Tooltip on the − button at the foot of the lyrics view. It moves every line earlier against the sound. Pairs with “Show Lyrics Later”. Title Case."
+    },
+    "Show Lyrics Later" : {
+      "comment" : "Tooltip on the + button at the foot of the lyrics view. It moves every line later against the sound. Pairs with “Show Lyrics Earlier”. Title Case."
+    },
     "Show Next Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘] and ⌃Tab, which switches to the tab after the current one. Title Case and established platform terminology."
     },
@@ -2947,6 +3016,9 @@
     },
     "Show report button" : {
 
+    },
+    "Show Side Panel (⌥⌘A)" : {
+      "comment" : "Tooltip on the one toolbar button that opens the side panel on the right. It disappears while the panel is open. The part in brackets is the keyboard shortcut and is never translated. “Side Panel” is the right-hand one; the left is the Sidebar. Title Case."
     },
     "Show sidebar" : {
       "comment" : "Sentence case title of the Appearance settings row that turns the sidebar on, and the same wording in the Settings search index. Show is a verb. Deliberately sentence case, unlike the Title Case menu command with the same words."
@@ -2981,6 +3053,9 @@
     "Since %@" : {
       "comment" : "How far back a profile’s history goes, joined to the page count by “ · ”. %@ is a date, such as “March 4”. A fragment, not a sentence."
     },
+    "sing along with the track" : {
+      "comment" : "Second line of the Show Lyrics row in the command palette, under the command name. A fragment, not a sentence: lower case and no final full stop, as every palette caption is."
+    },
     "Site Settings" : {
       "comment" : "Tooltip on the sliders button in the toolbar, which opens the menu of controls for the page on screen (copy link, zoom, reload). Title Case."
     },
@@ -2989,6 +3064,9 @@
     },
     "Skip Setup" : {
       "comment" : "Secondary button on the onboarding screens; ends onboarding without granting anything. Title Case."
+    },
+    "Small" : {
+      "comment" : "First of the four sizes in the lyrics text-size menu (Small, Regular, Large, Extra Large). An adjective for the size of the words. Title Case, as macOS menu items are."
     },
     "Software update" : {
       "comment" : "Sentence case name of the same update section as it is indexed for the Settings search. Apple’s term for the same thing on macOS — use Apple’s own translation."
@@ -3134,6 +3212,9 @@
     },
     "Teal" : {
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
+    },
+    "Text Size" : {
+      "comment" : "Tooltip on the aA button at the top of the lyrics view. Its menu sets how large the words are. Title Case."
     },
     "That username or password wasn’t accepted. Try again." : {
       "comment" : "Message inside the website sign-in dialog after a failed attempt. Curly apostrophe."
@@ -3376,11 +3457,17 @@
     "Turn sections on or off. Drag to reorder." : {
       "comment" : "Caption under the Start Page heading in the editor popover. Two short sentences."
     },
+    "Turn them on in Settings › General." : {
+      "comment" : "Caption under “Lyrics are off”. “Them” is the lyrics. The › is the separator macOS uses between a settings window and one of its pages; keep the page names as they are translated elsewhere. Full sentence."
+    },
     "Turn this off if the website breaks." : {
       "comment" : "Caption under the Block known trackers switch on one website's page, saying what to do when tracker blocking stops a website working. Imperative."
     },
     "Type" : {
       "comment" : "Tool name in assistant settings: typing into fields on a web page."
+    },
+    "Type @ in the address bar to start one on this page." : {
+      "comment" : "Caption under “No tasks yet”. “One” is a task. The @ is the character that addresses the assistant and is never translated. Full sentence."
     },
     "Type > for commands" : {
       "comment" : "Note beside the Actions heading in the ⌘K palette, telling the reader that typing the greater-than sign filters the list down to commands only. Keep the “>” character as it is: it is the key the user presses, not punctuation."
@@ -3636,12 +3723,6 @@
     },
     "Window" : {
       "comment" : "Title of one of the menus in the menu bar. Use Apple’s own wording for the standard Window menu in the target language."
-    },
-    "Working on these pages" : {
-      "comment" : "Title at the top of the agent activity column while the assistant is running a task and the window is split between two or more pages, which the assistant treats as one workspace. Sentence case, one line; alternates with “Activity on these pages”."
-    },
-    "Working on this tab" : {
-      "comment" : "Title at the top of the agent activity column while the assistant is running a task and one page fills the window. Sentence case, one line; alternates with “Activity on this tab”."
     },
     "Working…" : {
       "comment" : "Status line under the assistant’s reply for any action that has no wording of its own. Real ellipsis."

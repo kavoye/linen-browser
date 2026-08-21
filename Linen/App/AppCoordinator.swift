@@ -62,6 +62,11 @@ final class AppCoordinator {
     let browser = BrowserModel()
     let extensions: ExtensionManager
     let media: MediaCenter
+    #if DEBUG
+    let lyrics = LyricsModel(defaults: StageMode.defaults)
+    #else
+    let lyrics = LyricsModel()
+    #endif
     let conversationLog = ConversationLog()
     var agentReply: AgentReplyModel {
         agentTurns.reply
@@ -75,9 +80,9 @@ final class AppCoordinator {
     #endif
     let sidebar = SidebarLayout()
     #if DEBUG
-    let agentInspector = InspectorLayout(defaults: StageMode.defaults)
+    let sidePanel = SidePanelModel(defaults: StageMode.defaults)
     #else
-    let agentInspector = InspectorLayout()
+    let sidePanel = SidePanelModel()
     #endif
     let tabPreview = TabPreviewModel()
     let sidebarDrag = SidebarDragModel()
@@ -90,6 +95,11 @@ final class AppCoordinator {
     let activation: any ActivationSource = HoldToTalkMonitor()
     let modelProviders: any ModelProviderResolving
 
+    #if DEBUG
+    let attention = AgentAttention(defaults: StageMode.defaults)
+    #else
+    let attention = AgentAttention()
+    #endif
     let memoryPressure = MemoryPressureMonitor()
     private var host: BrowserHost?
     var mainMenu: MainMenu?
@@ -366,6 +376,7 @@ final class AppCoordinator {
 
     var mediaClaim = 0
     var playedPages: [UUID: String] = [:]
+    var lyricsPinnedTabID: UUID?
 
     func togglePin() {
         guard let tab = browser.activeTab else { return }
@@ -542,7 +553,7 @@ final class AppCoordinator {
             showBrowser()
         }
         showBrowserPage()
-        agentInspector.toggle()
+        sidePanel.toggle(.activity)
     }
 
     func toggleSidebar() {

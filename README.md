@@ -183,7 +183,7 @@ to use the assistant there.
 | `Linen/Settings` | The settings model and the settings pages |
 | `Linen/Profiles` | The profile list and where each profile keeps its files |
 | `Linen/Voice` | Microphone capture, transcription, and speech output |
-| `Linen/Media` | The docked media player |
+| `Linen/Media` | The docked media player and the lyrics view |
 | `Linen/Extensions` | Installation, verification, and consent for web extensions |
 | `Linen/Updates` | The Sparkle integration and the update banner |
 | `Linen/Onboarding` | The first-run screens |

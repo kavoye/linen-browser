@@ -99,6 +99,14 @@ struct AgentActivityScopeTests {
 
     // MARK: - The activity dot
 
+    private func newAttention() -> AgentAttention {
+        AgentAttention(defaults: scratch())
+    }
+
+    private func scratch() -> UserDefaults {
+        UserDefaults(suiteName: "AgentAttentionTests-\(UUID().uuidString)")!
+    }
+
     @Test func aFailedTurnRaisesTheFailureCount() {
         let log = ConversationLog(database: .temporary())
         let tab = UUID()
@@ -123,39 +131,39 @@ struct AgentActivityScopeTests {
         #expect(log.failureCount(forTab: tabA) == 1)
         #expect(log.failureCount(forTab: tabB) == 0)
 
-        let layout = scratchLayout()
-        #expect(layout.needsAttention(failureCount: log.failureCount(forTab: tabA), inSpace: tabA))
-        #expect(!layout.needsAttention(failureCount: log.failureCount(forTab: tabB), inSpace: tabB))
+        let attention = newAttention()
+        #expect(attention.needsAttention(
+            failureCount: log.failureCount(forTab: tabA), inSpace: tabA, isShowing: false
+        ))
+        #expect(!attention.needsAttention(
+            failureCount: log.failureCount(forTab: tabB), inSpace: tabB, isShowing: false
+        ))
     }
 
     @Test func anUnseenFailureTurnsTheDotOrangeUntilTheColumnOpens() {
-        let layout = scratchLayout()
+        let attention = newAttention()
         let space = UUID()
 
-        #expect(!layout.needsAttention(failureCount: 0, inSpace: space))
-        #expect(layout.needsAttention(failureCount: 1, inSpace: space))
+        #expect(!attention.needsAttention(failureCount: 0, inSpace: space, isShowing: false))
+        #expect(attention.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
         #expect(AgentActivityDot.state(isWorking: false, needsAttention: true) == .attention)
 
-        layout.show()
-        layout.reviewFailures(1, inSpace: space)
-        layout.close()
-        #expect(!layout.needsAttention(failureCount: 1, inSpace: space))
+        attention.review(1, inSpace: space, isShowing: true)
+        #expect(!attention.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
 
         #expect(AgentActivityDot.state(isWorking: true, needsAttention: false) == .working)
     }
 
     /// Reviewing one space says nothing about the next one.
     @Test func reviewingOneSpaceLeavesAnotherUnseen() {
-        let layout = scratchLayout()
+        let attention = newAttention()
         let seen = UUID()
         let unseen = UUID()
 
-        layout.show()
-        layout.reviewFailures(1, inSpace: seen)
-        layout.close()
+        attention.review(1, inSpace: seen, isShowing: true)
 
-        #expect(!layout.needsAttention(failureCount: 1, inSpace: seen))
-        #expect(layout.needsAttention(failureCount: 1, inSpace: unseen))
+        #expect(!attention.needsAttention(failureCount: 1, inSpace: seen, isShowing: false))
+        #expect(attention.needsAttention(failureCount: 1, inSpace: unseen, isShowing: false))
     }
 
     @Test func attentionOutranksTheWorkingPulse() {
@@ -164,23 +172,65 @@ struct AgentActivityScopeTests {
     }
 
     @Test func aFailureWhileTheColumnIsOpenLeavesNoStaleOrange() {
-        let layout = scratchLayout()
+        let attention = newAttention()
         let space = UUID()
 
-        layout.show()
-        layout.reviewFailures(1, inSpace: space)
-        layout.close()
+        attention.review(1, inSpace: space, isShowing: true)
 
-        #expect(!layout.needsAttention(failureCount: 1, inSpace: space))
-        #expect(layout.needsAttention(failureCount: 2, inSpace: space))
+        #expect(!attention.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
+        #expect(attention.needsAttention(failureCount: 2, inSpace: space, isShowing: false))
     }
 
-    @Test func reviewingWhileClosedChangesNothing() {
-        let layout = scratchLayout()
+    @Test func reviewingWhileTheColumnIsHiddenChangesNothing() {
+        let attention = newAttention()
         let space = UUID()
 
-        layout.reviewFailures(3, inSpace: space)
-        #expect(layout.needsAttention(failureCount: 3, inSpace: space))
+        attention.review(3, inSpace: space, isShowing: false)
+
+        #expect(attention.needsAttention(failureCount: 3, inSpace: space, isShowing: false))
+    }
+
+    @Test func theDotNeverLightsWhileYouAreLookingAtTheColumn() {
+        let attention = newAttention()
+
+        #expect(!attention.needsAttention(failureCount: 9, inSpace: UUID(), isShowing: true))
+    }
+
+    // MARK: - What was seen stays seen
+
+    @Test func aFailureSeenInOneLaunchIsStillSeenInTheNext() {
+        let defaults = scratch()
+        let space = UUID()
+        AgentAttention(defaults: defaults).review(1, inSpace: space, isShowing: true)
+
+        let relaunched = AgentAttention(defaults: defaults)
+
+        #expect(!relaunched.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
+        #expect(
+            relaunched.needsAttention(failureCount: 2, inSpace: space, isShowing: false),
+            "a later failure is news again"
+        )
+    }
+
+    @Test func aSpaceThatIsGoneTakesWhatWasSeenWithIt() {
+        let defaults = scratch()
+        let attention = AgentAttention(defaults: defaults)
+        attention.review(1, inSpace: UUID(), isShowing: true)
+
+        attention.retainSpaces([UUID()])
+
+        #expect(attention.seenFailures.isEmpty)
+        #expect(AgentAttention(defaults: defaults).seenFailures.isEmpty)
+    }
+
+    @Test func aSpaceThatIsStillOpenKeepsWhatWasSeen() {
+        let space = UUID()
+        let attention = newAttention()
+        attention.review(1, inSpace: space, isShowing: true)
+
+        attention.retainSpaces([space, UUID()])
+
+        #expect(attention.seenFailures[space] == 1)
     }
 
     // MARK: - The footer disclaimer
@@ -190,15 +240,11 @@ struct AgentActivityScopeTests {
         let width = (caption as NSString)
             .size(withAttributes: [.font: NSFont.systemFont(ofSize: 10)])
             .width
-        let budget = InspectorMetrics.minWidth - 24 - 2
+        let budget = SidePanelMetrics.minWidth - 24 - 2
 
         #expect(width <= budget)
     }
 
-    private func scratchLayout() -> InspectorLayout {
-        let defaults = UserDefaults(suiteName: "AgentActivityScopeTests-\(UUID().uuidString)")!
-        return InspectorLayout(defaults: defaults)
-    }
 }
 
 @MainActor

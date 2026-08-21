@@ -25,18 +25,6 @@ struct MediaPlayerSurface: View {
             Color.black
 
             MediaCropSurface(webView: webView, crop: crop)
-
-            if media.model.isInNativePiP {
-                VStack(spacing: 4) {
-                    Image(systemName: "pip")
-                        .font(.system(size: 17, weight: .light))
-                    Text("In Picture in Picture")
-                        .font(Theme.Font.caption)
-                }
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Theme.sidebarTint)
-            }
         }
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
@@ -199,50 +187,6 @@ final class MediaCropContainer: NSView {
         }
         setBoundsSize(scaled.size)
         setBoundsOrigin(scaled.origin)
-    }
-}
-
-struct MediaArtworkSurface: View {
-    let media: MediaCenter
-    var width: CGFloat
-    var cornerRadius: CGFloat
-
-    private var height: CGFloat {
-        (width * 9 / 16).rounded()
-    }
-
-    var body: some View {
-        if let artwork = media.model.artworkURL {
-            AsyncImage(url: artwork) { phase in
-                ZStack {
-                    Color.black
-                    if case .success(let image) = phase {
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .blur(radius: 14)
-                            .opacity(0.45)
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                    } else {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 21, weight: .light))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-            }
-            .frame(width: width, height: height)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(Color.black, lineWidth: 0.5)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                media.playPause()
-            }
-        }
     }
 }
 

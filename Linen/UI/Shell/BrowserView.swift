@@ -14,16 +14,18 @@ struct BrowserView: View {
     @State private var containerWidth: CGFloat = 0
     @Environment(\.colorScheme) private var scheme
 
-    private var inspector: InspectorLayout {
-        coordinator.agentInspector
+    private var panel: SidePanelModel {
+        coordinator.sidePanel
     }
-    private var showsInspector: Bool {
-        inspector.isVisible && coordinator.page == .browser
+    private var showsPanel: Bool {
+        panel.isVisible && coordinator.page == .browser
     }
 
     var body: some View {
         let width = sidebar.openWidth(in: containerWidth)
-        let inspectorWidth = inspector.openWidth(in: containerWidth)
+        let isExpanded = showsPanel && panel.isExpanded
+        let panelWidth = isExpanded ? containerWidth : panel.openWidth(in: containerWidth)
+        let panelReach = showsPanel && !isExpanded ? panelWidth : 0
 
         ZStack(alignment: .leading) {
             Group {
@@ -34,8 +36,17 @@ struct BrowserView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.leading, sidebar.isVisible ? width + 1 : 0)
-            .padding(.trailing, showsInspector ? inspectorWidth + 1 : 0)
+            .padding(.leading, sidebar.isVisible ? width : 0)
+            .padding(.trailing, panelReach)
+
+            SidePanelSurface(
+                browser: browser,
+                coordinator: coordinator,
+                containerWidth: containerWidth
+            )
+            .frame(width: isExpanded ? max(containerWidth - (sidebar.isVisible ? width : 0), 0) : panelWidth)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .offset(x: showsPanel ? 0 : panelWidth + 24)
 
             Sidebar(
                 browser: browser,
@@ -57,16 +68,6 @@ struct BrowserView: View {
                         sidebar.isPeeking = false
                     }
                 }
-
-            AgentInspector(
-                browser: browser,
-                coordinator: coordinator,
-                layout: inspector,
-                containerWidth: containerWidth
-            )
-            .frame(width: inspectorWidth)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .offset(x: showsInspector ? 0 : inspectorWidth + 24)
 
             TabPreviewOverlay(browser: browser, model: coordinator.tabPreview)
 
@@ -114,7 +115,8 @@ struct BrowserView: View {
         .environment(\.chromeIsLight, scheme == .light)
         .animation(Theme.Motion.settle, value: sidebar.isVisible)
         .animation(nil, value: sidebar.isPeeking)
-        .animation(Theme.Motion.settle, value: showsInspector)
+        .animation(Theme.Motion.settle, value: showsPanel)
+        .animation(Theme.Motion.settle, value: panel.isExpanded)
         .animation(coordinator.isPaletteOpen ? Theme.Motion.quick : nil, value: coordinator.isPaletteOpen)
         .animation(nil, value: coordinator.onboarding.isPresented)
     }

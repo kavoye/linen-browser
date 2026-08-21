@@ -42,7 +42,7 @@ struct ContentArea: View {
                     .background { WindowDragArea() }
                     .overlay(alignment: .leading) { bareBarControls }
                     .overlay(alignment: .trailing) {
-                        AgentActivityToggle(browser: browser, coordinator: coordinator)
+                        SidePanelToggle(coordinator: coordinator)
                             .padding(.trailing, Self.barTrailingPadding)
                     }
                     .zIndex(10)

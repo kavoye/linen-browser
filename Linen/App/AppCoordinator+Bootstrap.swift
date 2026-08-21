@@ -271,7 +271,7 @@ extension AppCoordinator {
             onboarding.finish()
             return true
         }
-        let closedInspector = agentInspector.close()
+        let closedInspector = sidePanel.close()
         if state == .listening || state == .executing {
             voiceInput.cancel()
             stopAgent()

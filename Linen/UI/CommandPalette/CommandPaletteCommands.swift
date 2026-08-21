@@ -24,6 +24,8 @@ struct CommandPaletteContext {
     var hasSplitAxis = false
     var isSidebarVisible = true
     var isActivityVisible = false
+    var isLyricsVisible = false
+    var canShowLyrics = false
     var isBrowserVisible = true
     var isFullScreen = false
     var canCheckForUpdates = false
@@ -62,6 +64,7 @@ enum CommandPaletteAction: String, CaseIterable {
 
     case toggleSidebar
     case toggleActivity
+    case toggleLyrics
     case toggleFullScreen
     case toggleBrowser
 
@@ -487,8 +490,9 @@ enum CommandPaletteCatalog {
         var view: [CommandPaletteCommand] {
             let sidebarTitle: LocalizedStringResource = context.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"
             let activityTitle: LocalizedStringResource = context.isActivityVisible
-                ? "Hide Agent Activity"
-                : "Show Agent Activity"
+                ? "Hide Assistant Activity"
+                : "Show Assistant Activity"
+            let lyricsTitle: LocalizedStringResource = context.isLyricsVisible ? "Hide Lyrics" : "Show Lyrics"
             let fullScreenTitle: LocalizedStringResource = context.isFullScreen
                 ? "Exit Full Screen"
                 : "Enter Full Screen"
@@ -510,6 +514,16 @@ enum CommandPaletteCatalog {
                     symbol: "sparkle",
                     shortcut: "⌥⌘A",
                     aliases: ["inspector", "transcript", "log"]
+                ),
+                make(
+                    .toggleLyrics,
+                    group: .view,
+                    title: lyricsTitle,
+                    detail: "sing along with the track",
+                    symbol: "quote.bubble",
+                    shortcut: "⌥⌘Y",
+                    aliases: ["words", "sing", "karaoke", "song", "music"],
+                    isAvailable: context.canShowLyrics
                 ),
                 make(
                     .toggleFullScreen,

@@ -4,125 +4,76 @@
 import AppKit
 import SwiftUI
 
-enum InspectorMetrics {
-    static let defaultWidth: CGFloat = 268
-    static let minWidth: CGFloat = defaultWidth
-    static let maxWidth: CGFloat = 520
-    static let maxWindowFraction: CGFloat = 0.45
-    static let grabWidth: CGFloat = 8
-
-    static func clampWidth(_ width: CGFloat, container: CGFloat) -> CGFloat {
-        let ceiling = container > 0
-            ? max(minWidth, min(maxWidth, container * maxWindowFraction))
-            : maxWidth
-        return min(max(width, minWidth), ceiling)
-    }
-}
-
+/// What the activity column has already been seen to contain, so the mark on
+/// the Activity tab only lights for failures the user has not looked at. It
+/// outlives the launch it was seen in, because the failures do too.
 @MainActor
 @Observable
-final class InspectorLayout {
+final class AgentAttention {
     private enum Key {
-        static let visible = "inspector.visible"
-        static let width = "inspector.width"
+        static let seen = "agent.seenFailures"
     }
-
-    var isVisible: Bool {
-        didSet {
-            guard isVisible != oldValue else { return }
-            defaults.set(isVisible, forKey: Key.visible)
-        }
-    }
-
-    private(set) var width: CGFloat
-    private(set) var dragWidth: CGFloat?
 
     private(set) var seenFailures: [UUID: Int] = [:]
 
-    private var dragOrigin: CGFloat?
-
-    private let defaults: UserDefaults
+    @ObservationIgnored private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        isVisible = defaults.object(forKey: Key.visible) as? Bool ?? false
-        let stored = defaults.double(forKey: Key.width)
-        width = stored > 0 ? CGFloat(stored) : InspectorMetrics.defaultWidth
-    }
-
-    var isDragging: Bool {
-        dragOrigin != nil
-    }
-
-    func openWidth(in container: CGFloat) -> CGFloat {
-        if let dragWidth {
-            return dragWidth
+        let stored = defaults.dictionary(forKey: Key.seen) as? [String: Int] ?? [:]
+        seenFailures = stored.reduce(into: [:]) { found, entry in
+            guard let spaceID = UUID(uuidString: entry.key) else { return }
+            found[spaceID] = entry.value
         }
-        return InspectorMetrics.clampWidth(width, container: container)
     }
 
-    func show() {
-        guard !isVisible else { return }
-        isVisible = true
+    func review(_ count: Int, inSpace spaceID: UUID?, isShowing: Bool) {
+        guard isShowing, let spaceID else { return }
+        let seen = max(seenFailures[spaceID] ?? 0, count)
+        guard seenFailures[spaceID] != seen else { return }
+        seenFailures[spaceID] = seen
+        persist()
     }
 
-    func toggle() {
-        isVisible.toggle()
-    }
-
-    @discardableResult
-    func close() -> Bool {
-        guard isVisible else { return false }
-        isVisible = false
-        return true
-    }
-
-    func resetWidth() {
-        width = InspectorMetrics.defaultWidth
-        dragWidth = nil
-        persistWidth()
-    }
-
-    func reviewFailures(_ count: Int, inSpace spaceID: UUID?) {
-        guard isVisible, let spaceID else { return }
-        seenFailures[spaceID] = max(seenFailures[spaceID] ?? 0, count)
-    }
-
-    func needsAttention(failureCount: Int, inSpace spaceID: UUID?) -> Bool {
-        guard !isVisible, let spaceID else { return false }
+    func needsAttention(failureCount: Int, inSpace spaceID: UUID?, isShowing: Bool) -> Bool {
+        guard !isShowing, let spaceID else { return false }
         return failureCount > (seenFailures[spaceID] ?? 0)
     }
 
-    // MARK: - Drag
-
-    func dragChanged(translation: CGFloat, container: CGFloat) {
-        if dragOrigin == nil {
-            dragOrigin = openWidth(in: container)
-        }
-        apply((dragOrigin ?? 0) - translation, releasing: false, container: container)
+    /// Spaces that are gone take what was seen in them with them.
+    func retainSpaces(_ spaceIDs: Set<UUID>) {
+        let kept = seenFailures.filter { spaceIDs.contains($0.key) }
+        guard kept.count != seenFailures.count else { return }
+        seenFailures = kept
+        persist()
     }
 
-    func dragEnded(translation: CGFloat, container: CGFloat) {
-        apply((dragOrigin ?? openWidth(in: container)) - translation, releasing: true, container: container)
-        dragOrigin = nil
-        dragWidth = nil
-        persistWidth()
+    private func persist() {
+        let stored = seenFailures.map { ($0.key.uuidString, $0.value) }
+        defaults.set(Dictionary(uniqueKeysWithValues: stored), forKey: Key.seen)
+    }
+}
+
+extension AppCoordinator {
+    /// The one mark the Activity tab carries, wherever it is drawn: on the
+    /// panel's own button while the panel is away, and on the tab itself once
+    /// the panel is open on something else.
+    var agentMark: AgentActivityDot.State? {
+        let spaceID = browser.activeSpaceID
+        return AgentActivityDot.state(
+            isWorking: browser.activeTab?.isAgentWorking == true,
+            needsAttention: attention.needsAttention(
+                failureCount: spaceID.map { conversationLog.failureCount(forTab: $0) } ?? 0,
+                inSpace: spaceID,
+                isShowing: sidePanel.isShowing(.activity)
+            )
+        )
     }
 
-    private func apply(_ proposed: CGFloat, releasing: Bool, container: CGFloat) {
-        let live = InspectorMetrics.clampWidth(proposed, container: container)
-
-        if !releasing {
-            dragWidth = live
-            return
-        }
-
-        width = live
-        dragWidth = live
-    }
-
-    private func persistWidth() {
-        defaults.set(Double(width), forKey: Key.width)
+    func retainAgentMemory() {
+        let live = Set(browser.tabs.map(\.id))
+        conversationLog.retainTabs(live)
+        attention.retainSpaces(live)
     }
 }
 
@@ -140,56 +91,9 @@ enum AgentActivityDot {
     }
 }
 
-struct AgentActivityToggle: View {
-    let browser: BrowserModel
-    let coordinator: AppCoordinator
-
-    private var layout: InspectorLayout {
-        coordinator.agentInspector
-    }
-
-    private var dot: AgentActivityDot.State? {
-        let spaceID = browser.activeSpaceID
-        return AgentActivityDot.state(
-            isWorking: browser.activeTab?.isAgentWorking == true,
-            needsAttention: layout.needsAttention(
-                failureCount: spaceID.map { coordinator.conversationLog.failureCount(forTab: $0) } ?? 0,
-                inSpace: spaceID
-            )
-        )
-    }
-
-    var body: some View {
-        if !layout.isVisible {
-            ToolbarButton(
-                symbol: "sidebar.right",
-                enabled: true,
-                help: String(localized: "Show Agent Activity (⌥⌘A)")
-            ) {
-                layout.toggle()
-            }
-            .overlay(alignment: .topTrailing) {
-                if let dot {
-                    AgentStateMarker(
-                        isRunning: true,
-                        tint: dot == .attention ? Theme.warning : Theme.accent
-                    )
-                    .frame(width: 12, height: 12)
-                    .offset(x: -3, y: 3)
-                    .allowsHitTesting(false)
-                }
-            }
-        }
-    }
-}
-
 struct AgentInspector: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
-    let layout: InspectorLayout
-    let containerWidth: CGFloat
-
-    @Environment(\.windowControlsInset) private var windowControlsInset
 
     private var activeTabID: UUID? {
         browser.activeTab?.id
@@ -197,10 +101,6 @@ struct AgentInspector: View {
 
     private var activeSpaceID: UUID? {
         browser.activeSpaceID
-    }
-
-    private var isRunning: Bool {
-        traces.last?.state == .running
     }
 
     private var traces: [ConversationLog.TaskTrace] {
@@ -218,19 +118,8 @@ struct AgentInspector: View {
         return coordinator.conversationLog.usage(forTab: activeSpaceID)
     }
 
-    private var topPadding: CGFloat {
-        windowControlsInset > 0 ? 8 : 10
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            InspectorTopRow(
-                layout: layout,
-                isRunning: isRunning,
-                pageCount: browser.activeSplit?.count ?? 1
-            )
-            .padding(.horizontal, 12)
-
             ResearchGlimpse(preview: coordinator.researchPreview, activeSpaceID: activeSpaceID)
                 .padding(.horizontal, 12)
 
@@ -250,27 +139,25 @@ struct AgentInspector: View {
             InspectorFooter(coordinator: coordinator, usage: usage)
                 .padding(.horizontal, 12)
         }
-        .padding(.top, topPadding)
+        .padding(.top, 4)
         .padding(.bottom, 12)
-        .onChange(of: layout.isVisible, initial: true) { _, _ in
-            layout.reviewFailures(failureCount, inSpace: activeSpaceID)
+        .onChange(of: isShowing, initial: true) { _, _ in
+            review()
         }
         .onChange(of: activeSpaceID) { _, _ in
-            layout.reviewFailures(failureCount, inSpace: activeSpaceID)
+            review()
         }
-        .onChange(of: failureCount) { _, count in
-            layout.reviewFailures(count, inSpace: activeSpaceID)
+        .onChange(of: failureCount) { _, _ in
+            review()
         }
-        .background {
-            ZStack {
-                VisualEffectView(material: .sidebar)
-                Theme.sidebarTint.opacity(0.55)
-                WindowDragArea()
-            }
-        }
-        .overlay(alignment: .leading) {
-            InspectorDivider(layout: layout, containerWidth: containerWidth)
-        }
+    }
+
+    private var isShowing: Bool {
+        coordinator.sidePanel.isShowing(.activity)
+    }
+
+    private func review() {
+        coordinator.attention.review(failureCount, inSpace: activeSpaceID, isShowing: isShowing)
     }
 }
 
@@ -318,37 +205,6 @@ private struct ResearchGlimpse: View {
     }
 }
 
-private struct InspectorTopRow: View {
-    let layout: InspectorLayout
-    let isRunning: Bool
-    let pageCount: Int
-
-    private var title: LocalizedStringResource {
-        if pageCount > 1 {
-            return isRunning ? "Working on these pages" : "Activity on these pages"
-        }
-        return isRunning ? "Working on this tab" : "Activity on this tab"
-    }
-
-    var body: some View {
-        HStack(spacing: 6) {
-            AgentStateMarker(isRunning: isRunning)
-                .frame(width: 12)
-
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .lineLimit(1)
-
-            Spacer(minLength: 6)
-
-            QuietIconButton(symbol: "sidebar.right", isOn: false, help: String(localized: "Hide Agent Activity (⌥⌘A)")) {
-                layout.toggle()
-            }
-        }
-        .padding(.bottom, 2)
-    }
-}
-
 private struct InspectorFooter: View {
     let coordinator: AppCoordinator
     let usage: ConversationLog.Usage
@@ -368,21 +224,5 @@ private struct InspectorFooter: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.trailing, 2)
         }
-    }
-}
-
-private struct InspectorDivider: View {
-    let layout: InspectorLayout
-    let containerWidth: CGFloat
-
-    var body: some View {
-        ColumnEdgeHandle(
-            edge: .leading,
-            grabWidth: InspectorMetrics.grabWidth,
-            isDragging: layout.isDragging,
-            onDragChanged: { layout.dragChanged(translation: $0, container: containerWidth) },
-            onDragEnded: { layout.dragEnded(translation: $0, container: containerWidth) },
-            onReset: { layout.resetWidth() }
-        )
     }
 }

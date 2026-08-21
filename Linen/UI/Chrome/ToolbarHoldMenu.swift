@@ -91,7 +91,7 @@ private final class MenuHandler: NSObject {
 }
 
 extension NSMenu {
-    fileprivate func addItem(
+    func addItem(
         title: String,
         image: NSImage? = nil,
         key: String = "",

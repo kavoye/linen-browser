@@ -20,6 +20,10 @@ struct MediaSidebarCard: View {
         isPlayerHidden ? "Show Video" : "Hide Video"
     }
 
+    private var showsLyricsButton: Bool {
+        coordinator.settings.showsLyrics && !coordinator.sidePanel.isShowing(.lyrics)
+    }
+
     private var pipHelp: LocalizedStringResource {
         media.model.isInNativePiP ? "Exit Picture in Picture" : "Picture in Picture"
     }
@@ -115,7 +119,7 @@ struct MediaSidebarCard: View {
         !isStowed || isPulledOut
     }
     private var showsVideo: Bool {
-        showsPlayer && !isPlayerHidden
+        showsPlayer && !isPlayerHidden && !media.model.isInNativePiP
     }
 
     nonisolated static let floatingWidth: CGFloat = 300
@@ -152,7 +156,7 @@ struct MediaSidebarCard: View {
     }
 
     private var panel: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 0) {
             if let picture = media.model.pictureWebView, let crop = media.pictureCrop {
                 MediaPlayerSurface(
                     media: media,
@@ -163,13 +167,7 @@ struct MediaSidebarCard: View {
                     isStowed: !showsVideo
                 )
                 .shadow(color: .black.opacity(0.3), radius: 14, y: 5)
-            } else if showsVideo {
-                MediaArtworkSurface(
-                    media: media,
-                    width: panelWidth,
-                    cornerRadius: Theme.Radius.control
-                )
-                .shadow(color: .black.opacity(0.3), radius: 14, y: 5)
+                .padding(.bottom, showsVideo ? 6 : 0)
             }
 
             if showsPlayer {
@@ -179,15 +177,27 @@ struct MediaSidebarCard: View {
 
                         Spacer(minLength: 4)
 
-                        MediaButton(
-                            systemName: isPlayerHidden ? "eye.slash" : "eye",
-                            size: 9,
-                            help: playerVisibilityHelp
-                        ) {
-                            isPlayerHidden.toggle()
+                        if showsLyricsButton {
+                            MediaButton(
+                                systemName: "quote.bubble",
+                                size: 9,
+                                help: "Show Lyrics"
+                            ) {
+                                coordinator.toggleLyrics()
+                            }
                         }
 
-                        if media.model.pictureWebView != nil {
+                        if media.model.pictureWebView != nil, !media.model.isInNativePiP {
+                            MediaButton(
+                                systemName: isPlayerHidden ? "eye.slash" : "eye",
+                                size: 9,
+                                help: playerVisibilityHelp
+                            ) {
+                                isPlayerHidden.toggle()
+                            }
+                        }
+
+                        if media.model.hasVideo {
                             MediaButton(
                                 systemName: media.model.isInNativePiP ? "pip.exit" : "pip.enter",
                                 size: 9,

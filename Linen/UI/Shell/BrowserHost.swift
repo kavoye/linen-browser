@@ -38,11 +38,30 @@ final class BrowserHost: NSObject, NSWindowDelegate {
     func show() {
         let window = ensureWindow()
 
-        if !window.isVisible || !window.isKeyWindow || window.isMiniaturized {
+        Pipeline.log.notice("""
+        window: asked to show, in the Dock \(window.isMiniaturized), \
+        on screen \(window.isVisible), app active \(NSApp.isActive), app hidden \(NSApp.isHidden)
+        """)
+
+        let wasActive = NSApp.isActive
+        if NSApp.isHidden {
+            NSApp.unhide(nil)
+        }
+        if !wasActive {
+            NSApp.activate()
+        }
+        // `makeKeyAndOrderFront` leaves a window that is in the Dock in the Dock,
+        // and a miniaturized window cannot be made key.
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
+        if !window.isVisible || !window.isKeyWindow {
             window.makeKeyAndOrderFront(nil)
         }
-        if !NSApp.isActive {
-            NSApp.activate(ignoringOtherApps: true)
+        // macOS may refuse a background app the front, and then everything above
+        // this leaves the window behind whatever the user is looking at.
+        if !wasActive {
+            window.orderFrontRegardless()
         }
 
         window.alignWindowControls()

@@ -32,7 +32,7 @@ extension AppCoordinator {
         WebViewPool.shared.installExtensionController(extensions.controller)
 
         browser.restoreSession(force: true)
-        conversationLog.retainTabs(Set(browser.tabs.map(\.id)))
+        retainAgentMemory()
         browser.ensureActiveTab()
         showBrowserPage()
         show(notice: profile.name)

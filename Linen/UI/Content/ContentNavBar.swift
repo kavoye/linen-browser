@@ -51,9 +51,9 @@ struct ContentNavBar: View {
 
     private var extensionBudget: CGFloat? {
         guard barWidth > 0 else { return nil }
-        let inspectorToggle: CGFloat = coordinator.agentInspector.isVisible ? 0 : Self.buttonSlot
+        let panelToggle: CGFloat = coordinator.sidePanel.isVisible ? 0 : Self.buttonSlot
         let sideRoom = (barWidth - Self.addressBarMinWidth) / 2
-        return max(0, sideRoom - Self.barInset - Self.clusterGap - inspectorToggle)
+        return max(0, sideRoom - Self.barInset - Self.clusterGap - panelToggle)
     }
 
     private var windowControlsPadding: CGFloat {
@@ -198,7 +198,7 @@ struct ContentNavBar: View {
                 availableWidth: extensionBudget
             )
 
-            AgentActivityToggle(browser: browser, coordinator: coordinator)
+            SidePanelToggle(coordinator: coordinator)
         }
     }
 }

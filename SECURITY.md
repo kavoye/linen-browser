@@ -48,3 +48,8 @@ your report.
   does not ask the user. The camera, the microphone, the location and the
   notifications are for the main frame only. A path that lets a frame spend
   the permission of the page around it is a defect.
+- The lyrics lookup (`Linen/Media/Lyrics/LyricsModel.swift`). The app sends the
+  name of the track and the name of the artist to lrclib.net. The app does this
+  only when the setting is on, and only for a tab that is not private. A path
+  that looks up a private tab, or that looks up while the setting is off, is a
+  defect.
