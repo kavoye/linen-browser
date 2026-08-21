@@ -192,6 +192,8 @@ struct DetailRow<Content: View>: View {
 
     @ViewBuilder let content: Content
 
+    @Environment(\.isEnabled) private var isEnabled
+
     init(
         title: LocalizedStringResource? = nil,
         caption: LocalizedStringResource? = nil,
@@ -246,12 +248,13 @@ struct DetailRow<Content: View>: View {
                 if let title {
                     title
                         .font(Theme.Font.rowTitle)
+                        .foregroundStyle(isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
                 }
 
                 if let caption {
                     caption
                         .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

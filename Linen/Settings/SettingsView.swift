@@ -105,6 +105,8 @@ struct SettingsView: View {
                         ExtensionsSettings(coordinator: coordinator)
                     case .advanced:
                         AdvancedSettings(settings: coordinator.settings)
+                    case .experiments:
+                        ExperimentsSettings(settings: coordinator.settings)
                     case .about:
                         AboutSettings(coordinator: coordinator, settings: coordinator.settings)
                     }

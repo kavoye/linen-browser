@@ -498,7 +498,7 @@ final class AgentToolkit {
             return output
         }
         if let videoID = resolved.videoID, let watch = Self.watchURL(videoID: videoID) {
-            let tab = browser.newTab(url: watch, activate: false, transition: .agent)
+            let tab = browser.newTab(url: watch, activate: !media.isEnabled, transition: .agent)
             agentOpenedTabIDs.insert(tab.id)
             media.controlTab(
                 webView: tab.webView,
@@ -506,7 +506,9 @@ final class AgentToolkit {
                 tabID: tab.id,
                 artwork: MediaCenter.poster(forPage: watch.absoluteString)
             )
-            let output = "Playing in the browser's media player."
+            let output = media.isEnabled
+                ? "Playing in the browser's media player."
+                : "Opened it in a tab. The media player is off in Settings."
             completeTool(step, output: output)
             return output
         }

@@ -21,6 +21,11 @@ struct GeneralSettings: View {
         isDefault ? "Default" : "Set as Default…"
     }
 
+    private var mediaFootnote: LocalizedStringResource? {
+        guard settings.showsVideoInPlayer else { return nil }
+        return "Automatic Picture in Picture is off while “Show video in the player” is on in Experiments."
+    }
+
     var body: some View {
         SettingsPageHeader(title: "General")
 
@@ -77,6 +82,33 @@ struct GeneralSettings: View {
             Footnote("System Settings is open. Choose Linen under “Default web browser.”")
         } else if askedToBeDefault, !isDefault {
             Footnote("If no panel appeared, set it in System Settings under Desktop & Dock.")
+        }
+
+        SettingsSection(title: "Media", symbol: "play.rectangle", footnote: mediaFootnote) {
+            DetailRow(
+                title: "Show media player",
+                caption: "The sidebar shows what’s playing, so you can pause or skip from any tab."
+            ) {
+                SettingsToggle($settings.showsMediaPlayer)
+            }
+            .settingsAnchor("general.mediaPlayer")
+
+            DetailRow(
+                title: "Automatic Picture in Picture",
+                caption: "Video moves into a floating window when you leave its tab or switch to another app."
+            ) {
+                SettingsToggle($settings.automaticPictureInPicture)
+            }
+            .settingsAnchor("general.automaticPiP")
+            .disabled(settings.showsVideoInPlayer)
+
+            DetailRow(
+                title: "Show lyrics",
+                caption: "Linen looks up lyrics on LRCLIB. Only the song and artist names leave your Mac, and never from a private tab."
+            ) {
+                SettingsToggle($settings.showsLyrics)
+            }
+            .settingsAnchor("general.lyrics")
         }
 
         ImportSection(coordinator: coordinator)

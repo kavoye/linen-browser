@@ -14,6 +14,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case downloads
     case extensions
     case advanced
+    case experiments
     case about
 
     var id: String {
@@ -42,6 +43,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "Extensions"
         case .advanced:
             "Advanced"
+        case .experiments:
+            "Experiments"
         case .about:
             "About"
         }
@@ -69,6 +72,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "puzzlepiece.extension"
         case .advanced:
             "wrench.and.screwdriver"
+        case .experiments:
+            "flask"
         case .about:
             "info.circle"
         }
@@ -82,7 +87,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             .intelligence
         case .privacy, .websites, .downloads, .extensions:
             .browsing
-        case .advanced, .about:
+        case .advanced, .experiments, .about:
             .system
         case .profiles:
             nil
@@ -109,7 +114,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             Color(nsColor: .systemGreen)
         case .extensions:
             Color(nsColor: .systemOrange)
-        case .advanced, .about:
+        case .advanced, .experiments, .about:
             Color(nsColor: .systemGray)
         }
     }
@@ -141,6 +146,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             ["chrome", "web store", "add-ons", "plugins"]
         case .advanced:
             ["user agent", "developer", "inspector", "devtools", "reset", "certificate", "proxy"]
+        case .experiments:
+            ["experiment", "experiments", "experimental", "flag", "flags", "feature", "preview",
+             "video", "player", "media",
+             ]
         case .about:
             ["version", "update", "release", "build", "credits", "licence", "license", "open source"]
         }

@@ -31,6 +31,10 @@ final class BrowserSettings {
         static let blockPopups = "content.blockPopups"
         static let blockTrackers = "content.blockTrackers"
         static let autoplay = "content.autoplay"
+        static let mediaPlayer = "media.player"
+        static let lyrics = "media.lyrics"
+        static let automaticPiP = "media.automaticPiP"
+        static let videoInPlayer = "experiments.videoInPlayer"
         static let downloadFolder = "downloads.folder"
         static let askWhereToSave = "downloads.ask"
         static let userAgent = "advanced.userAgent"
@@ -59,6 +63,10 @@ final class BrowserSettings {
 
     @ObservationIgnored var onWebPreferencesChanged: (() -> Void)?
     @ObservationIgnored var onUpdateChannelChanged: ((UpdateChannel) -> Void)?
+    @ObservationIgnored var onLyricsChanged: ((Bool) -> Void)?
+    @ObservationIgnored var onMediaPlayerChanged: ((Bool) -> Void)?
+    @ObservationIgnored var onAutomaticPictureInPictureChanged: ((Bool) -> Void)?
+    @ObservationIgnored var onVideoInPlayerChanged: ((Bool) -> Void)?
 
     private func store(for key: String) -> UserDefaults {
         Self.sessionKeySet.contains(key) ? sessionDefaults : appDefaults
@@ -122,6 +130,45 @@ final class BrowserSettings {
             guard pageZoom != oldValue else { return }
             write(pageZoom, forKey: Key.pageZoom)
             onWebPreferencesChanged?()
+        }
+    }
+
+    // MARK: - Media
+
+    var showsMediaPlayer: Bool {
+        didSet {
+            guard showsMediaPlayer != oldValue else { return }
+            write(showsMediaPlayer, forKey: Key.mediaPlayer)
+            onMediaPlayerChanged?(showsMediaPlayer)
+        }
+    }
+
+    var showsLyrics: Bool {
+        didSet {
+            guard showsLyrics != oldValue else { return }
+            write(showsLyrics, forKey: Key.lyrics)
+            onLyricsChanged?(showsLyrics)
+        }
+    }
+
+    var automaticPictureInPicture: Bool {
+        didSet {
+            guard automaticPictureInPicture != oldValue else { return }
+            write(automaticPictureInPicture, forKey: Key.automaticPiP)
+            onAutomaticPictureInPictureChanged?(automaticPictureInPicture)
+        }
+    }
+
+    // MARK: - Experiments
+
+    var showsVideoInPlayer: Bool {
+        didSet {
+            guard showsVideoInPlayer != oldValue else { return }
+            write(showsVideoInPlayer, forKey: Key.videoInPlayer)
+            if showsVideoInPlayer {
+                automaticPictureInPicture = false
+            }
+            onVideoInPlayerChanged?(showsVideoInPlayer)
         }
     }
 
@@ -392,6 +439,10 @@ final class BrowserSettings {
         appearance = string(Key.appearance)
             .flatMap(AppearanceMode.init(rawValue:)) ?? .system
         showsReportIssueButton = object(Key.reportIssueButton) as? Bool ?? true
+        showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
+        showsLyrics = object(Key.lyrics) as? Bool ?? true
+        automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
+        showsVideoInPlayer = object(Key.videoInPlayer) as? Bool ?? false
         #if DEBUG
         if StageMode.isActive {
             showsReportIssueButton = false

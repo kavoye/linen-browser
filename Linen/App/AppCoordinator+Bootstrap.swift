@@ -13,9 +13,7 @@ extension AppCoordinator {
         Pipeline.log.notice("bootstrap: begin")
         OutputDucker.restoreAfterUncleanExit()
         settings.applyAppearance()
-        settings.onWebPreferencesChanged = { [weak self] in
-            self?.browser.applyWebSettings()
-        }
+        followSettings()
         applyProfileStores(profiles.current)
         extensions.useLibrary(for: profiles.current)
         memoryPressure.onPressure = { [weak self] level in
@@ -191,6 +189,27 @@ extension AppCoordinator {
         }
         Pipeline.log.notice("agent engine = \(self.agentName, privacy: .public)")
         discoverLocalContextWindow()
+    }
+
+    private func followSettings() {
+        settings.onWebPreferencesChanged = { [weak self] in
+            self?.browser.applyWebSettings()
+        }
+        media.isEnabled = settings.showsMediaPlayer
+        settings.onMediaPlayerChanged = { [weak self] isOn in
+            self?.media.isEnabled = isOn
+        }
+        applyPictureLending()
+        settings.onAutomaticPictureInPictureChanged = { [weak self] _ in
+            self?.applyPictureLending()
+        }
+        settings.onVideoInPlayerChanged = { [weak self] _ in
+            self?.applyPictureLending()
+        }
+        sidePanel.setAvailable(settings.showsLyrics, for: .lyrics)
+        settings.onLyricsChanged = { [weak self] isOn in
+            self?.sidePanel.setAvailable(isOn, for: .lyrics)
+        }
     }
 
     private func startUpdates() {

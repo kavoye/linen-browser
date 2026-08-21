@@ -124,7 +124,7 @@ struct CopyCatalogTests {
         "all time", "assistant access", "background scripts", "browsing history",
         "cached files", "cookies and site data", "local storage", "money transfers",
         "new tab", "on this mac", "posting and sending", "reset settings",
-        "show sidebar", "software update", "start page",
+        "show lyrics", "show sidebar", "software update", "start page",
     ]
 
     /// Two keys that differ only in case are one label about to fork - the
@@ -191,6 +191,7 @@ struct SettingsIndexParityTests {
         "Linen/Settings/Pages/WebsiteSettings.swift",
         "Linen/Settings/Pages/DownloadsSettings.swift",
         "Linen/Settings/Pages/AdvancedSettings.swift",
+        "Linen/Settings/Pages/ExperimentsSettings.swift",
         "Linen/Settings/SettingsView.swift",
         "Linen/Settings/Pages/ProfileSettings.swift",
         "Linen/Settings/Pages/IntelligenceSettings.swift",

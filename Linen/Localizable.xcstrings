@@ -765,6 +765,12 @@
     "Attach Tab" : {
 
     },
+    "Automatic Picture in Picture" : {
+      "comment" : "Title of the row on the General settings page that makes video float in its own window on its own, and the title of that same row in Settings search. “Picture in Picture” is the macOS name of that window — use the system’s own wording. Title Case."
+    },
+    "Automatic Picture in Picture is off while “Show video in the player” is on in Experiments." : {
+      "comment" : "Footnote under the Media card on the General settings page, shown only while the Experiments row is on and the Automatic Picture in Picture switch above is dimmed. It says why that switch cannot be used. The quoted phrase is the exact title of the Experiments row — translate it identically there and here, and keep the curly quotation marks. Full sentence."
+    },
     "Autoplay" : {
       "comment" : "Title of the row on the Websites settings page controlling whether video and sound may start on their own, and the title of that same row in Settings search. A noun; the browser term."
     },
@@ -1366,6 +1372,9 @@
     "Expand Side Panel" : {
       "comment" : "Tooltip on the arrows button in the side panel’s tab strip while the panel is narrow. It makes the panel fill the window beside the sidebar. Pairs with “Collapse Side Panel”. Title Case."
     },
+    "Experiments" : {
+      "comment" : "Name of the Settings page that holds unfinished features, in the System group of the Settings sidebar, and the heading of that page. A noun, plural."
+    },
     "Extension" : {
       "comment" : "Placeholder name used for an installed extension whose package declares no name of its own. A generic noun."
     },
@@ -1821,6 +1830,9 @@
     },
     "Linen isn’t your default browser." : {
       "comment" : "Caption under the Open links from other apps row, shown while Linen is not the default browser. The alternative caption, shown once it is, is Linen is your default browser. Linen is the application name and is never translated; curly apostrophe."
+    },
+    "Linen looks up lyrics on LRCLIB. Only the song and artist names leave your Mac, and never from a private tab." : {
+      "comment" : "Caption under the “Show lyrics” switch on the General settings page, and the same sentence in settings search. It says what the feature does and what leaves the Mac, since nothing else asks the user first. LRCLIB is the name of the website and is never translated. Two full sentences."
     },
     "Linen opens in" : {
       "comment" : "Heading on Profiles over the choice of which profile Linen starts in."
@@ -2993,6 +3005,9 @@
     "Show Last Tab" : {
       "comment" : "Hidden menu command under Window, shortcut ⌘9, which switches to the last tab in the row. Title Case and established platform terminology."
     },
+    "Show lyrics" : {
+      "comment" : "Title of the switch on the General settings page that adds the lyrics button to the media player, and its settings-search title. Sentence case, as settings rows are."
+    },
     "Show Lyrics" : {
       "comment" : "Tooltip on the lyrics button in the media player while the lyrics are hidden. Pairs with “Hide Lyrics”. Title Case."
     },
@@ -3001,6 +3016,9 @@
     },
     "Show Lyrics Later" : {
       "comment" : "Tooltip on the + button at the foot of the lyrics view. It moves every line later against the sound. Pairs with “Show Lyrics Earlier”. Title Case."
+    },
+    "Show media player" : {
+      "comment" : "Label of the switch on the General settings page that decides whether video and sound move into the player in the sidebar. Sentence case, as settings labels are."
     },
     "Show Next Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘] and ⌃Tab, which switches to the tab after the current one. Title Case and established platform terminology."
@@ -3028,6 +3046,9 @@
     },
     "Show Video" : {
       "comment" : "Tooltip on the same eye button once the picture is hidden; it brings the picture back. Title Case, narrow dock."
+    },
+    "Show video in the player" : {
+      "comment" : "Title of the only row on the Experiments settings page, and the title of that same row in Settings search. It turns on the picture inside the media player in the sidebar."
     },
     "Show what went wrong" : {
       "comment" : "Tooltip on the warning button beside an extension that reported problems; pressing it opens a panel listing them. Show is a verb."
@@ -3337,6 +3358,9 @@
     "The server refused the connection or isn’t running." : {
       "comment" : "Explanation on the error page shown when the site could not be reached, below the headline. Curly apostrophe."
     },
+    "The sidebar shows what’s playing, so you can pause or skip from any tab." : {
+      "comment" : "Caption under the “Show media player” switch on the General settings page, and the same sentence in settings search. The player is a strip in the sidebar naming the track and carrying the transport buttons; it does not move the sound or the picture out of the tab. One full sentence."
+    },
     "The speech engine is still warming up." : {
       "comment" : "Brief status line shown when the user tries to speak before the speech recogniser has finished starting up. Conversational and reassuring."
     },
@@ -3490,6 +3514,9 @@
     "Unexpected response from the provider" : {
       "comment" : "Error shown when the AI provider’s reply could not be understood. Provider means the AI provider. No final full stop."
     },
+    "Unfinished work you can try. Anything here can change or go away." : {
+      "comment" : "Caption under the Experiments heading. It warns that everything on the page is unfinished and may be removed."
+    },
     "unknown" : {
       "comment" : "Lowercase word used as the provider’s error message when the server’s reply carried none; it is then inserted after the colon in a line such as Provider error 500: unknown. Deliberately lowercase because it sits mid-sentence."
     },
@@ -3610,6 +3637,9 @@
     "Video and audio may start playing as soon as a page loads." : {
       "comment" : "Caption for the most permissive choice of the Autoplay setting, describing what that choice allows websites to do."
     },
+    "Video moves into a floating window when you leave its tab or switch to another app." : {
+      "comment" : "Caption under the Automatic Picture in Picture row on the General settings page, and the caption of that same row in Settings search. It names the two moments the video floats. One full sentence."
+    },
     "Video plays without sound until you click." : {
       "comment" : "Caption for the middle choice of the Autoplay setting: pictures may start on their own but sound may not."
     },
@@ -3690,6 +3720,9 @@
     },
     "When Linen opens" : {
       "comment" : "Heading on General over the choice of what Linen shows at launch — the previous tabs, or one new tab."
+    },
+    "When you leave a playing tab, its video moves into the sidebar player. Automatic Picture in Picture turns off while this is on." : {
+      "comment" : "Caption under the Show video in the player row on the Experiments settings page, and the caption of that same row in Settings search. The video only moves while the user is on a different tab, and turning this row on turns the Automatic Picture in Picture row off. “Picture in Picture” is the macOS name of the floating video window — use the system’s own wording. Two full sentences."
     },
     "Where downloaded files are saved." : {
       "comment" : "Caption describing the Save files to setting in the Settings search results. A sentence fragment."
