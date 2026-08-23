@@ -213,10 +213,8 @@ struct FindBar: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 34)
-        .background(Theme.windowBackground.opacity(0.97), in: RoundedRectangle(cornerRadius: Theme.Radius.control))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.control)
-                .strokeBorder(Theme.Wash.selection, lineWidth: 1)
+        .glassSurface(
+            in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
         )
         .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
         .onAppear { focused = true }

@@ -4,6 +4,11 @@
 import AppKit
 import SwiftUI
 
+private enum DestinationLayout {
+    static let maxWidth: CGFloat = 780
+    static let headerVerticalPadding: CGFloat = 12
+}
+
 struct DestinationPage<Toolbar: View, Content: View>: View {
     @ViewBuilder let toolbar: Toolbar
     @ViewBuilder let content: Content
@@ -12,25 +17,25 @@ struct DestinationPage<Toolbar: View, Content: View>: View {
         VStack(spacing: 0) {
             toolbar
                 .padding(.horizontal, 12)
-                .frame(maxWidth: 780)
+                .frame(maxWidth: DestinationLayout.maxWidth)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 32)
-                .padding(.top, 30)
-                .padding(.bottom, 16)
+                .padding(.vertical, DestinationLayout.headerVerticalPadding)
 
             Divider().opacity(0.4)
 
             ScrollView {
                 content
-                    .frame(maxWidth: 780, alignment: .leading)
+                    .frame(maxWidth: DestinationLayout.maxWidth, alignment: .leading)
                     .padding(.horizontal, 32)
                     .padding(.vertical, 14)
                     .frame(maxWidth: .infinity)
             }
+            .scrollContentBackground(.hidden)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            Theme.windowBackground
+            Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture { NSApp.keyWindow?.makeFirstResponder(nil) }
         )
@@ -66,6 +71,6 @@ struct DestinationCount: View {
             .foregroundStyle(.tertiary)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Theme.Wash.hairline, in: Capsule())
+            .controlGlassSurface(in: Capsule())
     }
 }

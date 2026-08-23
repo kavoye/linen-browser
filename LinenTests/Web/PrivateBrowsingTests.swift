@@ -240,7 +240,7 @@ struct PrivateBrowsingTests {
         model.closeAllTabs()
         let session = PrivateBrowsingSession()
         model.adopt(database: session.database, sitePermissions: permissions, privately: true)
-        model.restoreSession(force: true)
+        model.restoreSession()
 
         #expect(model.tabs.isEmpty)
     }
@@ -261,7 +261,7 @@ struct PrivateBrowsingTests {
 
         let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
         model.adopt(database: onDisk, sitePermissions: permissions, privately: true)
-        model.restoreSession(force: true)
+        model.restoreSession()
         #expect(model.tabs.isEmpty)
 
         _ = model.newTab(url: URL(string: "https://private.example/secret"))
@@ -317,12 +317,12 @@ struct PrivateBrowsingTests {
         model.closeAllTabs()
         let session = PrivateBrowsingSession()
         model.adopt(database: session.database, sitePermissions: permissions, privately: true)
-        model.restoreSession(force: true)
+        model.restoreSession()
         _ = model.newTab(url: URL(string: "https://private.example/secret"))
 
         model.closeAllTabs()
         model.adopt(database: personal, sitePermissions: permissions, privately: false)
-        model.restoreSession(force: true)
+        model.restoreSession()
 
         #expect(model.tabs.map(\.urlString) == ["https://personal.example/kept"])
         let rows = try personal.writer.read { db in
@@ -343,16 +343,16 @@ struct PrivateBrowsingTests {
         model.closeAllTabs()
         let session = PrivateBrowsingSession()
         model.adopt(database: session.database, sitePermissions: permissions, privately: true)
-        model.restoreSession(force: true)
+        model.restoreSession()
         _ = model.newTab(url: URL(string: "https://private.example/secret"))
 
         model.closeAllTabs()
         model.adopt(database: personal, sitePermissions: permissions, privately: false)
-        model.restoreSession(force: true)
+        model.restoreSession()
 
         model.closeAllTabs()
         model.adopt(database: session.database, sitePermissions: permissions, privately: true)
-        model.restoreSession(force: true)
+        model.restoreSession()
 
         #expect(model.tabs.map(\.urlString) == ["https://private.example/secret"])
         #expect(model.tabs.allSatisfy { $0.isPrivate })

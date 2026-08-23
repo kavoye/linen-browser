@@ -30,6 +30,45 @@ struct ExtensionsSettingsCard: View {
     }
 }
 
+private struct ExtensionRowMenu: View {
+    let manager: ExtensionManager
+    let record: InstalledExtension
+
+    @State private var hovering = false
+
+    var body: some View {
+        Menu {
+            if manager.hasOptionsPage(id: record.id) {
+                Button("Extension Options") {
+                    manager.openOptionsPage(id: record.id)
+                }
+
+                Divider()
+            }
+
+            Button("Remove Extension", role: .destructive) {
+                manager.confirmUninstall(id: record.id)
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(
+                    width: SettingsMetrics.controlHeight,
+                    height: SettingsMetrics.controlHeight
+                )
+                .settingsSurface(isActive: hovering, isLifted: true, in: Circle())
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .fixedSize()
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
+        .help(Text("More Options"))
+    }
+}
+
 private struct ExtensionRow: View {
     let manager: ExtensionManager
     let record: InstalledExtension
@@ -68,9 +107,7 @@ private struct ExtensionRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            SettingsButton(title: "Remove…", isDestructive: true) {
-                manager.confirmUninstall(id: record.id)
-            }
+            ExtensionRowMenu(manager: manager, record: record)
 
             SettingsToggle(Binding(
                 get: { record.enabled },
@@ -142,6 +179,6 @@ private struct ExtensionIcon: View {
             }
         }
         .frame(width: 30, height: 30)
-        .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
+        .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
     }
 }

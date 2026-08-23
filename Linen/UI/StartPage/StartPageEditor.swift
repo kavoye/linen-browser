@@ -19,14 +19,7 @@ struct EditStartPageButton: View {
             }
             .padding(.horizontal, 11)
             .frame(height: 28)
-            .background(
-                hovering || editing ? Theme.Wash.hover : Theme.Wash.faint,
-                in: Capsule()
-            )
-            .overlay(
-                Capsule()
-                    .strokeBorder(hovering || editing ? Theme.Wash.strong : Theme.Wash.hover, lineWidth: 1)
-            )
+            .glassSurface(isActive: hovering || editing, in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -76,6 +69,7 @@ private struct StartPageEditor: View {
             .scrollContentBackground(.hidden)
             .scrollDisabled(true)
             .environment(\.defaultMinListRowHeight, Self.rowHeight)
+            .listRowBackground(Color.clear)
             .frame(height: CGFloat(settings.startPageOrder.count) * Self.rowHeight)
 
             if !settings.hiddenFrequentHosts.isEmpty {
@@ -86,6 +80,9 @@ private struct StartPageEditor: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                .padding(.vertical, 7)
+                .padding(.horizontal, 10)
+                .glassSurface(in: Capsule())
                 .padding(.horizontal, 14)
                 .padding(.top, 10)
             }
@@ -99,6 +96,8 @@ private struct StartPageEditorRow: View {
     let section: StartPageSection
     let settings: BrowserSettings
     let height: CGFloat
+
+    @State private var hovering = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -133,7 +132,14 @@ private struct StartPageEditorRow: View {
             .controlSize(.mini)
         }
         .frame(height: height)
+        .padding(.horizontal, 8)
+        .hoverBackground(
+            isActive: hovering,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
+        )
+        .onHover { hovering = $0 }
         .listRowInsets(EdgeInsets(top: 0, leading: 14, bottom: 0, trailing: 14))
+        .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
     }
 }

@@ -112,8 +112,6 @@ private struct LyricsLookup: Equatable {
     var isOnScreen: Bool
 }
 
-/// The panel paints this behind its own header too, so the tab strip sits on
-/// the record rather than on a band of its own.
 struct LyricsBackdrop: View {
     let artwork: URL?
 
@@ -203,7 +201,7 @@ struct LyricsBoard: View {
                     in: sourceAnchor.view ?? NSView()
                 )
             } label: {
-                HStack(spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     titleBlock
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8, weight: .semibold))
@@ -251,7 +249,7 @@ struct LyricsBoard: View {
 
     @ViewBuilder
     private var artworkThumb: some View {
-        RoundedRectangle(cornerRadius: 6)
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
             .fill(.white.opacity(0.1))
             .frame(width: 38, height: 38)
             .overlay {
@@ -267,7 +265,7 @@ struct LyricsBoard: View {
                         .foregroundStyle(.white.opacity(0.5))
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 
     private var sizeButton: some View {
@@ -642,6 +640,7 @@ private struct LyricsGlyph: View {
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.white.opacity(hovering ? 0.95 : 0.55))
             .frame(width: 22, height: 22)
-            .contentShape(Rectangle())
+            .hoverBackground(isActive: hovering)
+            .environment(\.chromeIsLight, false)
     }
 }

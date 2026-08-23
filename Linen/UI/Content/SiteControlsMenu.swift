@@ -7,10 +7,12 @@ import WebKit
 
 struct SiteControlsMenu: View {
     let browser: BrowserModel
-    let coordinator: AppCoordinator
 
     @State private var hovering = false
+    @State private var isPresented = false
     @Environment(\.chromeIsLight) private var chromeIsLight
+    @Environment(\.chromeIconExtent) private var extent
+    @Environment(\.windowColorScheme) private var windowColorScheme
 
     private var tab: BrowserTab? {
         browser.activeTab
@@ -20,130 +22,511 @@ struct SiteControlsMenu: View {
     }
 
     var body: some View {
-        Menu {
-            SiteControlsItems(browser: browser, coordinator: coordinator)
+        Button {
+            isPresented.toggle()
         } label: {
             Image(systemName: "slider.horizontal.3")
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight, hovering: hovering))
-                .frame(width: 16, height: 16)
-                .contentShape(Rectangle())
+                .frame(width: extent, height: extent)
+                .hoverBackground(isActive: hovering || isPresented)
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .fixedSize()
         .disabled(!hasPage)
         .opacity(hasPage ? 1 : 0.4)
         .onHover { hovering = $0 }
-        .hoverVerified($hovering)
-        .help("Site Settings")
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            if let tab {
+                SiteControlsPanel(browser: browser, tab: tab)
+                    .environment(\.colorScheme, windowColorScheme)
+            }
+        }
+        .help("Website Settings")
     }
-
 }
 
-struct SiteControlsItems: View {
+private struct SiteControlsPanel: View {
     let browser: BrowserModel
-    let coordinator: AppCoordinator
+    let tab: BrowserTab
 
-    private var tab: BrowserTab? {
-        browser.activeTab
+    var body: some View {
+        VStack(spacing: 0) {
+            SiteControlsHeader(tab: tab)
+
+            Divider()
+
+            SiteZoomSection(tab: tab)
+
+            Divider()
+
+            SiteBehaviorSection(browser: browser, tab: tab)
+
+            if !tab.permissions.origin.isEmpty {
+                Divider()
+                SitePermissionsSection(tab: tab)
+            }
+        }
+        .frame(width: 340)
+        .background(.ultraThickMaterial)
+    }
+}
+
+private struct SiteControlsHeader: View {
+    let tab: BrowserTab
+
+    private var host: String {
+        let permissionHost = tab.permissions.displayHost
+        if !permissionHost.isEmpty {
+            return permissionHost
+        }
+        return URL(string: tab.urlString)?.host() ?? tab.title
     }
 
     var body: some View {
-        Button {
-            guard let tab else { return }
-            coordinator.copyLink(for: tab)
-        } label: {
-            Label("Copy Link", systemImage: "doc.on.doc")
-        }
-        .disabled(tab.flatMap { coordinator.linkURL(for: $0) } == nil)
-
-        Divider()
-
-        if let tab, !tab.assistantAccess.origin.isEmpty {
-            Picker(selection: assistantAccess(for: tab)) {
-                ForEach(AssistantAccessPolicy.allCases, id: \.self) { policy in
-                    Text(policy.label).tag(policy)
-                }
-            } label: {
-                Label("Assistant Access", systemImage: "sparkles")
-            }
-            .pickerStyle(.menu)
-
-            Divider()
-        }
-
-        if let tab, !browser.keepActiveOrigin(for: tab).isEmpty {
-            Toggle(isOn: keepsActive(for: tab)) {
-                Label("Always Keep This Website Loaded", systemImage: "bolt")
-            }
-
-            Divider()
-        }
-
-        Button {
-            tab?.resetZoom()
-        } label: {
-            Label("Actual Size", systemImage: "1.magnifyingglass")
-        }
-        .disabled(!(tab?.isZoomed ?? false))
-        Button {
-            tab?.zoomIn()
-        } label: {
-            Label("Zoom In", systemImage: "plus.magnifyingglass")
-        }
-        Button {
-            tab?.zoomOut()
-        } label: {
-            Label("Zoom Out", systemImage: "minus.magnifyingglass")
-        }
-
-        Divider()
-
-        if let host = blockableHost {
-            Button {
-                let blocker = ContentBlocker.shared
-                blocker.setExempt(!blocker.isExempt(host), for: host)
-                tab?.webView.reload()
-            } label: {
-                if ContentBlocker.shared.isExempt(host) {
-                    Label("Block Trackers on This Website", systemImage: "shield")
+        HStack(spacing: 10) {
+            Group {
+                if let favicon = tab.favicon {
+                    Image(nsImage: favicon)
+                        .resizable()
                 } else {
-                    Label("Allow Trackers on This Website", systemImage: "shield.slash")
+                    Image(systemName: "globe")
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(.secondary)
+                        .padding(3)
                 }
             }
-        }
+            .frame(width: 22, height: 22)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
 
-        Button {
-            tab?.webView.reload()
-        } label: {
-            Label("Reload Page", systemImage: "arrow.clockwise")
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Website Controls")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(verbatim: host)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+}
+
+private struct SiteZoomSection: View {
+    let tab: BrowserTab
+
+    private var percentage: String {
+        "\(Int((tab.zoomLevel * 100).rounded()))%"
     }
 
-    private func assistantAccess(for tab: BrowserTab) -> Binding<AssistantAccessPolicy> {
-        Binding {
-            tab.assistantAccess.effectivePolicy
-        } set: { policy in
-            tab.assistantAccess.set(policy)
+    var body: some View {
+        HStack(spacing: 12) {
+            Label("Page zoom", systemImage: "magnifyingglass")
+                .font(.system(size: 12.5, weight: .medium))
+
+            Spacer(minLength: 12)
+
+            HStack(spacing: 0) {
+                zoomButton("minus", help: "Zoom Out") {
+                    tab.zoomOut()
+                }
+
+                Divider()
+                    .frame(height: 18)
+
+                Button {
+                    tab.resetZoom()
+                } label: {
+                    Text(verbatim: percentage)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .frame(width: 48, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Reset Zoom")
+
+                Divider()
+                    .frame(height: 18)
+
+                zoomButton("plus", help: "Zoom In") {
+                    tab.zoomIn()
+                }
+            }
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
-    private func keepsActive(for tab: BrowserTab) -> Binding<Bool> {
-        Binding {
-            browser.keepsActive(tab)
-        } set: { keeps in
-            browser.setKeepsActive(keeps, for: tab)
+    private func zoomButton(
+        _ symbol: String,
+        help: LocalizedStringResource,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .frame(width: 30, height: 28)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
+private struct SiteBehaviorSection: View {
+    let browser: BrowserModel
+    let tab: BrowserTab
+
+    private var keepActiveOrigin: String {
+        browser.keepActiveOrigin(for: tab)
     }
 
     private var blockableHost: String? {
         guard BrowserSettings.shared.blocksTrackers,
-              let host = tab.flatMap({ URL(string: $0.urlString)?.host() }),
+              let host = URL(string: tab.urlString)?.host(),
               !host.isEmpty
         else { return nil }
         return host
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if !tab.assistantAccess.origin.isEmpty {
+                SiteControlRow(symbol: "sparkles", title: "Assistant Access") {
+                    AssistantAccessMenu(tab: tab)
+                }
+            }
+
+            if BrowserSettings.shared.sleepsInactiveTabs, !keepActiveOrigin.isEmpty {
+                SiteControlRow(symbol: "bolt", title: "Keep Website Loaded") {
+                    Toggle("", isOn: Binding(
+                        get: { browser.keepsActive(tab) },
+                        set: { browser.setKeepsActive($0, for: tab) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                }
+            }
+
+            if let blockableHost {
+                SiteControlRow(symbol: "shield", title: "Block Trackers") {
+                    HStack(spacing: 7) {
+                        TrackerInfoButton(tab: tab, host: blockableHost)
+
+                        Toggle("", isOn: Binding(
+                            get: { !ContentBlocker.shared.isExempt(blockableHost) },
+                            set: { blocks in
+                                ContentBlocker.shared.setExempt(!blocks, for: blockableHost)
+                                tab.webView.reload()
+                            }
+                        ))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct TrackerInfoButton: View {
+    let tab: BrowserTab
+    let host: String
+
+    @State private var isPresented = false
+
+    private var isBlocking: Bool {
+        !ContentBlocker.shared.isExempt(host)
+    }
+
+    var body: some View {
+        Button {
+            isPresented.toggle()
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(
+                    isPresented ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary)
+                )
+                .frame(width: 20, height: 20)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("About Tracker Blocking")
+        .popover(isPresented: $isPresented, arrowEdge: .trailing) {
+            TrackerInfoPopover(tab: tab, isBlocking: isBlocking)
+        }
+    }
+}
+
+private struct TrackerInfoPopover: View {
+    let tab: BrowserTab
+    let isBlocking: Bool
+
+    @State private var domains: [String]?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            TrackerInfoHeader(isBlocking: isBlocking)
+
+            Divider()
+
+            if let domains {
+                TrackerDomainList(domains: domains, isBlocking: isBlocking)
+            } else {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Checking this page…")
+                        .font(Theme.Font.label)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 74)
+            }
+
+            Divider()
+
+            TrackerInfoCaption()
+        }
+        .frame(width: 310)
+        .background(.ultraThickMaterial)
+        .task(id: tab.urlString) {
+            let result = await TrackerPageReport.matchingDomains(in: tab.webView)
+            guard !Task.isCancelled else { return }
+            domains = result
+        }
+    }
+}
+
+private struct TrackerInfoHeader: View {
+    let isBlocking: Bool
+
+    private var status: LocalizedStringResource {
+        isBlocking ? "Enabled for this website" : "Disabled for this website"
+    }
+
+    var body: some View {
+        HStack(spacing: 9) {
+            Image(systemName: isBlocking ? "shield.checkered" : "shield.slash")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(
+                    isBlocking ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary)
+                )
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Tracker blocking")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(status)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(14)
+    }
+}
+
+private struct TrackerDomainList: View {
+    let domains: [String]
+    let isBlocking: Bool
+
+    private var listHeight: CGFloat {
+        min(CGFloat(domains.count) * 27, 160)
+    }
+
+    private var heading: LocalizedStringResource {
+        isBlocking ? "Blocked on this page" : "Would be blocked on this page"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text(heading)
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                if !domains.isEmpty {
+                    Text(domains.count, format: .number)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                }
+            }
+
+            if domains.isEmpty {
+                Text("No known tracker domains were found.")
+                    .font(Theme.Font.label)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 7) {
+                        ForEach(domains, id: \.self) { domain in
+                            Label {
+                                Text(verbatim: domain)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            } icon: {
+                                Image(systemName: "shield.slash")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .font(Theme.Font.label)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(height: listHeight)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+}
+
+private struct TrackerInfoCaption: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Linen blocks third-party requests to known advertising, analytics, session-recording, social-pixel, and fingerprinting domains.")
+            Text("The list is based on tracker URLs referenced by this page.")
+        }
+        .font(Theme.Font.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(14)
+    }
+}
+
+private struct AssistantAccessMenu: View {
+    let tab: BrowserTab
+
+    var body: some View {
+        Menu {
+            ForEach(AssistantAccessPolicy.allCases, id: \.self) { policy in
+                Button {
+                    tab.assistantAccess.set(policy)
+                } label: {
+                    if tab.assistantAccess.effectivePolicy == policy {
+                        Label {
+                            Text(policy.label)
+                        } icon: {
+                            Image(systemName: "checkmark")
+                        }
+                    } else {
+                        Text(policy.label)
+                    }
+                }
+            }
+        } label: {
+            Text(tab.assistantAccess.effectivePolicy.label)
+                .font(Theme.Font.label)
+        }
+        .menuStyle(.button)
+        .controlSize(.small)
+        .fixedSize()
+    }
+}
+
+private struct SitePermissionsSection: View {
+    let tab: BrowserTab
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Permissions")
+                .font(Theme.Font.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
+                .padding(.top, 9)
+                .padding(.bottom, 3)
+
+            ForEach(WebPermission.allCases, id: \.self) { permission in
+                SiteControlRow(symbol: permission.symbol, title: permission.label) {
+                    PermissionPolicyMenu(tab: tab, permission: permission)
+                }
+            }
+        }
+        .padding(.bottom, 4)
+    }
+}
+
+private struct PermissionPolicyMenu: View {
+    let tab: BrowserTab
+    let permission: WebPermission
+
+    private var center: TabPermissionCenter {
+        tab.permissions
+    }
+
+    var body: some View {
+        Menu {
+            ForEach([PermissionPolicy.ask, .allow, .deny], id: \.self) { policy in
+                Button {
+                    center.set(policy, for: permission)
+                } label: {
+                    if center.menuPolicy(for: permission) == policy {
+                        Label {
+                            Text(policy.label)
+                        } icon: {
+                            Image(systemName: "checkmark")
+                        }
+                    } else {
+                        Text(policy.label)
+                    }
+                }
+                .disabled(!center.isSecure && policy == .allow)
+            }
+        } label: {
+            Text(center.menuPolicy(for: permission).label)
+                .font(Theme.Font.label)
+        }
+        .menuStyle(.button)
+        .controlSize(.small)
+        .fixedSize()
+    }
+}
+
+private struct SiteControlRow<Accessory: View>: View {
+    let symbol: String
+    let title: LocalizedStringResource
+    let accessory: Accessory
+
+    init(
+        symbol: String,
+        title: LocalizedStringResource,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.symbol = symbol
+        self.title = title
+        self.accessory = accessory()
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 11.5, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
+
+            Text(title)
+                .font(.system(size: 12.5))
+
+            Spacer(minLength: 12)
+
+            accessory
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: 36)
     }
 }
 

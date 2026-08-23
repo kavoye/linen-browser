@@ -103,7 +103,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         created.toolbarStyle = .unified
         created.titlebarSeparatorStyle = .none
         created.backgroundColor = .windowBackgroundColor
-        created.minSize = NSSize(width: 940, height: 580)
+        created.minSize = NSSize(width: BrowserWindowMetrics.minWidth, height: 580)
         created.preservesContentDuringLiveResize = true
         created.collectionBehavior = [.fullScreenPrimary, .moveToActiveSpace]
         created.isReleasedWhenClosed = false
@@ -351,6 +351,10 @@ struct BrowserRootView: View {
 
 extension EnvironmentValues {
     @Entry var windowControlsInset: CGFloat = 0
+}
+
+nonisolated enum BrowserWindowMetrics {
+    static let minWidth: CGFloat = 680
 }
 
 private final class BrowserWindow: NSWindow {

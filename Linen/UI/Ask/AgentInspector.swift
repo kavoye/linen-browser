@@ -4,9 +4,6 @@
 import AppKit
 import SwiftUI
 
-/// What the activity column has already been seen to contain, so the mark on
-/// the Activity tab only lights for failures the user has not looked at. It
-/// outlives the launch it was seen in, because the failures do too.
 @MainActor
 @Observable
 final class AgentAttention {
@@ -40,7 +37,6 @@ final class AgentAttention {
         return failureCount > (seenFailures[spaceID] ?? 0)
     }
 
-    /// Spaces that are gone take what was seen in them with them.
     func retainSpaces(_ spaceIDs: Set<UUID>) {
         let kept = seenFailures.filter { spaceIDs.contains($0.key) }
         guard kept.count != seenFailures.count else { return }
@@ -55,9 +51,6 @@ final class AgentAttention {
 }
 
 extension AppCoordinator {
-    /// The one mark the Activity tab carries, wherever it is drawn: on the
-    /// panel's own button while the panel is away, and on the tab itself once
-    /// the panel is open on something else.
     var agentMark: AgentActivityDot.State? {
         let spaceID = browser.activeSpaceID
         return AgentActivityDot.state(
@@ -165,16 +158,20 @@ private struct ResearchGlimpse: View {
     let preview: ResearchPreview
     let activeSpaceID: UUID?
 
+    private static var maxSnapshotWidth: CGFloat {
+        SidePanelMetrics.minWidth - 24
+    }
+
     var body: some View {
         if let snapshot = preview.snapshot, preview.spaceID == activeSpaceID {
             VStack(alignment: .leading, spacing: 5) {
                 Image(nsImage: snapshot)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .frame(maxWidth: Self.maxSnapshotWidth)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(Theme.Wash.selection, lineWidth: 1)
                     )
                     .opacity(preview.isLive ? 1 : 0.55)
@@ -191,6 +188,7 @@ private struct ResearchGlimpse: View {
                     Spacer(minLength: 0)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .transition(.opacity)
             .animation(Theme.Motion.settle, value: preview.isLive)
         }

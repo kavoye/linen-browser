@@ -70,6 +70,7 @@ struct ExtensionActionsCluster: View {
             }
         }
         .coordinateSpace(.named(Self.space))
+        .holdsWindowStillOnHover()
         // The gesture belongs to the container. A reorder rebuilds the dragged
         // button, and a rebuilt view never delivers `.onEnded`.
         .gesture(
@@ -100,10 +101,10 @@ struct ExtensionActionsCluster: View {
                 .frame(width: drag.origin.width, height: drag.origin.height)
                 .background(
                     Theme.windowBackground.opacity(0.82),
-                    in: RoundedRectangle(cornerRadius: Theme.Radius.control)
+                    in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: Theme.Radius.control)
+                    RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
                         .strokeBorder(Theme.Wash.selection, lineWidth: 0.5)
                 }
                 .shadow(color: .black.opacity(0.3), radius: 11, y: 5)
@@ -257,10 +258,9 @@ struct ExtensionActionButton: View {
                         .padding(.trailing, 1)
                 }
             }
-            .chromeButtonPlate(isLit: hovering)
+            .hoverBackground(isActive: hovering)
             .opacity(isLifted ? 0 : (action?.isEnabled == false ? 0.4 : 1))
             .onTapGesture { manager.performAction(for: record.id) }
-            .hoverVerified($hovering)
             .onHover { hovering = $0 }
             .animation(Theme.Motion.quick, value: hovering)
             .help(action?.label ?? record.displayName)
@@ -289,10 +289,10 @@ struct ExtensionOverflowButton: View {
                 .font(.system(size: 12, weight: .semibold))
                 .frame(width: 30, height: 28)
                 .overlay(alignment: .bottomTrailing) { marker }
-                .chromeButtonPlate(isLit: hovering || isPresented)
+                .hoverBackground(isActive: hovering || isPresented)
                 .overlay {
                     if isArmed {
-                        RoundedRectangle(cornerRadius: Theme.Radius.hover)
+                        Circle()
                             .strokeBorder(Theme.accent, lineWidth: 1.5)
                     }
                 }
@@ -377,6 +377,7 @@ private struct ExtensionOverflowRow: View {
     @Binding var isPresented: Bool
 
     @State private var hovering = false
+    @State private var pinHovering = false
 
     var body: some View {
         HStack(spacing: 9) {
@@ -389,22 +390,25 @@ private struct ExtensionOverflowRow: View {
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: run)
+            .onHover { hovering = $0 }
 
             trailing
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(
-            hovering ? Theme.Wash.hairline : Theme.Wash.none,
-            in: RoundedRectangle(cornerRadius: Self.rowRadius)
+        .hoverBackground(
+            isActive: hovering,
+            in: RoundedRectangle(cornerRadius: Self.rowRadius, style: .continuous)
         )
-        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
     }
 
-    static let rowRadius = Theme.Radius.nested(
-        in: Theme.Radius.panel,
-        inset: ExtensionOverflowList.inset
-    )
+    static var rowRadius: CGFloat {
+        Theme.Radius.nested(
+            in: Theme.Radius.window,
+            inset: ExtensionOverflowList.inset
+        )
+    }
 
     @ViewBuilder
     private var trailing: some View {
@@ -422,11 +426,13 @@ private struct ExtensionOverflowRow: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
-                        Theme.Wash.hover,
-                        in: RoundedRectangle(cornerRadius: Theme.Radius.chip)
+                        pinHovering ? Theme.Wash.selection : Theme.Wash.hover,
+                        in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                     )
             }
             .buttonStyle(.plain)
+            .onHover { pinHovering = $0 }
+            .animation(Theme.Motion.quick, value: pinHovering)
             .help("Show \(record.displayName) on the toolbar")
         }
     }
@@ -620,7 +626,8 @@ struct StoreInstallButton: View {
         .foregroundStyle(tint)
         .padding(.horizontal, 9)
         .frame(height: 24)
-        .background(hovering ? Theme.Wash.hover : Theme.Wash.hairline, in: Capsule())
+        .background(Theme.Wash.hairline, in: Capsule())
+        .hoverBackground(isActive: hovering, tint: tint, in: Capsule())
         .contentShape(Capsule())
         .animation(Theme.Motion.quick, value: hovering)
     }

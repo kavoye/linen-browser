@@ -2,25 +2,48 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import AppKit
-import ApplicationServices
 import Observation
 import SwiftUI
 
-struct SettingsView: View {
-    let coordinator: AppCoordinator
+@MainActor
+@Observable
+final class SettingsWorkspace {
+    var category = SettingsCategory.general
+    var query = ""
+    var highlight: String?
 
-    @State private var category = SettingsCategory.general
-    @State private var query = ""
-    @State private var intelligence: IntelligenceViewModel
-    @State private var highlight: String?
-    @State private var highlightTask: Task<Void, Never>?
+    let intelligence: IntelligenceViewModel
+
+    @ObservationIgnored private var highlightTask: Task<Void, Never>?
 
     init(coordinator: AppCoordinator) {
-        self.coordinator = coordinator
-        _intelligence = State(wrappedValue: IntelligenceViewModel(
+        intelligence = IntelligenceViewModel(
             onConfigurationChanged: coordinator.configureEngines
-        ))
+        )
     }
+
+    func select(_ category: SettingsCategory) {
+        self.category = category
+        query = ""
+        highlightTask?.cancel()
+        highlight = nil
+    }
+
+    func open(_ entry: SettingsEntry) {
+        category = entry.category
+        highlightTask?.cancel()
+        highlight = entry.id
+        highlightTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2.4))
+            guard !Task.isCancelled else { return }
+            self?.highlight = nil
+        }
+    }
+}
+
+struct SettingsView: View {
+    let coordinator: AppCoordinator
+    let workspace: SettingsWorkspace
 
     private var badges: [SettingsCategory: String] {
         var badges: [SettingsCategory: String] = [:]
@@ -36,48 +59,48 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SettingsTopBar(sidebar: coordinator.sidebar)
+        @Bindable var workspace = workspace
 
-            Rectangle()
-                .fill(Theme.Wash.hairline)
-                .frame(height: 1)
-
-            HStack(spacing: 0) {
-                SettingsNavigator(
-                    selection: $category,
-                    query: $query,
-                    profileName: coordinator.profiles.current.name,
-                    profileSymbol: coordinator.profiles.current.symbol,
-                    profileTint: coordinator.profiles.current.color.tint,
-                    badges: badges,
-                    onOpen: open
-                )
-
-                detail
+        HStack(spacing: 0) {
+            SettingsNavigator(
+                selection: $workspace.category,
+                query: $workspace.query,
+                profileName: coordinator.profiles.current.name,
+                profileSymbol: coordinator.profiles.current.symbol,
+                profileTint: coordinator.profiles.current.color.tint,
+                badges: badges,
+                onOpen: workspace.open
+            )
+            .frame(width: SettingsMetrics.navWidth)
+            .overlay(alignment: .trailing) {
+                Rectangle()
+                    .fill(SettingsMetrics.hairline)
+                    .frame(width: 1)
             }
+
+            SettingsDetail(
+                category: workspace.category,
+                coordinator: coordinator,
+                intelligence: workspace.intelligence,
+                highlight: workspace.highlight
+            )
         }
-        .background(Theme.windowBackground)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onChange(of: coordinator.settingsDestination, initial: true) { _, destination in
             guard let destination else { return }
-            category = destination
-            query = ""
+            workspace.select(destination)
             coordinator.settingsDestination = nil
         }
     }
+}
 
-    private func open(_ entry: SettingsEntry) {
-        category = entry.category
-        highlightTask?.cancel()
-        highlight = entry.id
-        highlightTask = Task {
-            try? await Task.sleep(for: .seconds(2.4))
-            guard !Task.isCancelled else { return }
-            highlight = nil
-        }
-    }
+private struct SettingsDetail: View {
+    let category: SettingsCategory
+    let coordinator: AppCoordinator
+    let intelligence: IntelligenceViewModel
+    let highlight: String?
 
-    private var detail: some View {
+    var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: SettingsMetrics.sectionSpacing) {
@@ -117,6 +140,7 @@ struct SettingsView: View {
                 .padding(.bottom, 64)
                 .frame(maxWidth: .infinity)
             }
+            .scrollContentBackground(.hidden)
             .environment(\.settingsHighlight, highlight)
             .onChange(of: highlight) { _, anchor in
                 guard let anchor else { return }
@@ -130,53 +154,6 @@ struct SettingsView: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Window chrome
-
-private struct SettingsTopBar: View {
-    let sidebar: SidebarLayout
-
-    @Environment(\.windowControlsInset) private var windowControlsInset
-
-    private var windowControlsPadding: CGFloat {
-        SidebarMetrics.windowControlsPadding(
-            isVisible: sidebar.isVisible,
-            style: sidebar.style,
-            windowControlsInset: windowControlsInset
-        )
-    }
-
-    private var sidebarToggleHelp: LocalizedStringResource {
-        sidebar.isVisible ? "Hide Sidebar" : "Show Sidebar"
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            if SidebarTogglePlacement.inNavBar(isVisible: sidebar.isVisible, style: sidebar.style) {
-                ToolbarButton(symbol: "sidebar.left", enabled: true, help: String(localized: sidebarToggleHelp)) {
-                    if sidebar.isVisible {
-                        sidebar.toggleVisible()
-                    } else {
-                        sidebar.show()
-                    }
-                }
-                .onHover { if $0, !sidebar.isVisible { sidebar.isPeeking = true } }
-                .contextMenu {
-                    SidebarStyleMenuItems(sidebar: sidebar)
-                }
-            }
-
-            Text("Settings")
-                .font(.system(size: 13, weight: .semibold))
-
-            Spacer(minLength: 12)
-        }
-        .padding(.horizontal, 14)
-        .padding(.leading, windowControlsPadding)
-        .frame(height: Theme.topBarHeight)
-        .background { WindowDragArea() }
     }
 }
 

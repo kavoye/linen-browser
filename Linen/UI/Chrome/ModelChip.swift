@@ -5,7 +5,9 @@ import SwiftUI
 
 enum ModelChipMetrics {
     static let height = SettingsMetrics.controlHeight
-    static let radius = Theme.Radius.control
+    static var radius: CGFloat {
+        Theme.Radius.control
+    }
     static let inset: CGFloat = 9
     static let markSize: CGFloat = 14
     static let markGap: CGFloat = 7
@@ -65,8 +67,6 @@ struct ModelChip: View {
                     .layoutPriority(-1)
             }
 
-            Spacer(minLength: 0)
-
             if !coordinator.isUsingSelectedProvider {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 9))
@@ -82,19 +82,10 @@ struct ModelChip: View {
         }
         .padding(.horizontal, ModelChipMetrics.inset)
         .frame(height: ModelChipMetrics.height)
-        .background {
-            if isAdjustable {
-                let shape = RoundedRectangle(cornerRadius: ModelChipMetrics.radius)
-                shape
-                    .fill(hovering || isPresenting ? SettingsMetrics.fillHover : SettingsMetrics.fill)
-                    .overlay(
-                        shape.strokeBorder(
-                            hovering || isPresenting ? SettingsMetrics.borderHover : SettingsMetrics.border,
-                            lineWidth: 1
-                        )
-                    )
-            }
-        }
+        .glassSurface(
+            isActive: isAdjustable && (hovering || isPresenting),
+            in: RoundedRectangle(cornerRadius: ModelChipMetrics.radius, style: .continuous)
+        )
         .contentShape(Rectangle())
     }
 
@@ -146,7 +137,9 @@ private enum PopoverMetrics {
     static let sectionGap: CGFloat = 10
     static let visibleCatalogRows = 5
 
-    static let plateRadius = Theme.Radius.nested(in: Theme.Radius.panel, inset: plateInset)
+    static var plateRadius: CGFloat {
+        Theme.Radius.nested(in: Theme.Radius.panel, inset: plateInset)
+    }
 }
 
 private struct EnginePopover: View {
@@ -377,11 +370,10 @@ private struct EngineRow: View {
             }
             .padding(.horizontal, PopoverMetrics.inset)
             .frame(height: PopoverMetrics.rowHeight)
-            .background {
-                RoundedRectangle(cornerRadius: PopoverMetrics.plateRadius)
-                    .fill(hovering ? Theme.Wash.hover : Theme.Wash.none)
-                    .padding(.horizontal, PopoverMetrics.plateInset)
-            }
+            .hoverBackground(
+                isActive: hovering,
+                in: RoundedRectangle(cornerRadius: PopoverMetrics.plateRadius, style: .continuous)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -420,11 +412,10 @@ private struct PlainRow: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, PopoverMetrics.inset)
             .frame(height: PopoverMetrics.rowHeight)
-            .background {
-                RoundedRectangle(cornerRadius: PopoverMetrics.plateRadius)
-                    .fill(hovering && isEnabled ? Theme.Wash.hover : Theme.Wash.none)
-                    .padding(.horizontal, PopoverMetrics.plateInset)
-            }
+            .hoverBackground(
+                isActive: hovering && isEnabled,
+                in: RoundedRectangle(cornerRadius: PopoverMetrics.plateRadius, style: .continuous)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

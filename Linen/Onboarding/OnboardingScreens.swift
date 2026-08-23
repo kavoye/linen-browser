@@ -232,27 +232,17 @@ extension OnboardingUI {
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(fill, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Radius.card)
-                        .strokeBorder(border, lineWidth: 1)
+                .selectionBackground(
+                    isSelected: isSelected,
+                    isHovering: hovering,
+                    rests: true,
+                    in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 )
-                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
+                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
             .onHover { hovering = $0 }
             .animation(Theme.Motion.quick, value: hovering)
-        }
-
-        private var fill: Color {
-            if isSelected {
-                return SettingsMetrics.fillSelected
-            }
-            return hovering ? SettingsMetrics.fill : Theme.Wash.faint
-        }
-
-        private var border: Color {
-            isSelected ? SettingsMetrics.borderHover : SettingsMetrics.border
         }
     }
 }

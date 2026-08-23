@@ -22,8 +22,6 @@ struct OmniboxItem: Identifiable {
     let symbol: String
     let iconHost: String?
     let shortcut: String
-    /// What a command-click, or ⌘↩, runs instead. Nil means the row has one
-    /// outcome and both gestures reach it.
     let alternate: (() -> Void)?
     let run: () -> Void
 
@@ -132,7 +130,7 @@ enum Omnibox {
 
     @TaskLocal static var agentOnlyForTesting: Bool?
 
-    static let agentOnlyPlaceholder = String(localized: "Ask, or paste a link")
+    static let agentOnlyPlaceholder = String(localized: "Ask, or enter website name")
 
     static func location(for query: String) -> URL? {
         guard BrowserModel.looksLikeLocation(query) else { return nil }

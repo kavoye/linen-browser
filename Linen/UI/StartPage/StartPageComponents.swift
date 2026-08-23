@@ -3,6 +3,44 @@
 
 import SwiftUI
 
+private struct StartPageSurface<S: Shape>: ViewModifier {
+    let isHovering: Bool
+    let shape: S
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var onLight: Bool {
+        colorScheme == .light
+    }
+
+    private var baseFill: Color {
+        ChromeInk.wash(onLight: onLight, opacity: onLight ? 0.025 : 0.04)
+    }
+
+    private var hoverFill: AnyShapeStyle {
+        isHovering ? ChromeInk.hoverStyle : AnyShapeStyle(.clear)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                shape
+                    .fill(baseFill)
+                    .overlay { shape.fill(hoverFill) }
+            }
+            .contentShape(shape)
+    }
+}
+
+extension View {
+    func startPageSurface<S: Shape>(
+        isHovering: Bool = false,
+        in shape: S
+    ) -> some View {
+        modifier(StartPageSurface(isHovering: isHovering, shape: shape))
+    }
+}
+
 struct LiveWaveform: View {
     let isListening: Bool
 
@@ -106,15 +144,11 @@ struct StartPageTaskCard: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 11)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                hovering ? Theme.Wash.hover : Theme.Wash.faint,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.card)
+            .startPageSurface(
+                isHovering: hovering,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.card)
-                    .strokeBorder(hovering ? Theme.Wash.strong : Theme.Wash.hover, lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .overlay(alignment: .topTrailing) {
@@ -193,15 +227,11 @@ struct StartPageSiteTile: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .padding(.horizontal, 8)
-            .background(
-                hovering ? Theme.Wash.hover : Theme.Wash.faint,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.card)
+            .startPageSurface(
+                isHovering: hovering,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.card)
-                    .strokeBorder(hovering ? Theme.chrome(0.2) : Theme.Wash.selection, lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .animation(Theme.Motion.quick, value: hovering)
@@ -262,9 +292,9 @@ struct StartPageDownloadRow: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 34)
-            .background(
-                hovering ? Theme.Wash.hairline : Theme.Wash.none,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
+            .hoverBackground(
+                isActive: hovering,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
             )
             .contentShape(Rectangle())
         }
@@ -320,9 +350,9 @@ struct HistoryRow: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 34)
-            .background(
-                hovering ? Theme.Wash.hairline : Theme.Wash.none,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
+            .hoverBackground(
+                isActive: hovering,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
             )
             .contentShape(Rectangle())
         }
@@ -361,11 +391,7 @@ struct StartPageShowAllButton: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 30)
-            .background(hovering ? Theme.Wash.hover : Theme.Wash.faint, in: Capsule())
-            .overlay(
-                Capsule().strokeBorder(hovering ? Theme.Wash.strong : Theme.Wash.hover, lineWidth: 1)
-            )
-            .contentShape(Capsule())
+            .startPageSurface(isHovering: hovering, in: Capsule())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -388,13 +414,12 @@ struct SuggestionChip: View {
                     .foregroundStyle(.secondary)
                 Text(label)
                     .font(Theme.Font.rowTitle)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
             .padding(.horizontal, 13)
             .padding(.vertical, 8)
-            .background(hovering ? Theme.Wash.hover : Theme.Wash.hairline, in: Capsule())
-            .overlay(
-                Capsule().strokeBorder(hovering ? Theme.Wash.strong : Theme.Wash.hover, lineWidth: 1)
-            )
+            .startPageSurface(isHovering: hovering, in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

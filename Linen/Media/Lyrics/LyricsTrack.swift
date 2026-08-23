@@ -41,7 +41,6 @@ nonisolated struct LyricsTrack: Equatable, Sendable {
 nonisolated enum LyricsParser {
     static let shortestGap: Double = 3
     static let openingGap: Double = 5
-    static let longestHold: Double = 8
 
     static func lines(fromLRC source: String, duration: Double) -> [LyricsLine] {
         var stamped: [(time: Double, text: String)] = []

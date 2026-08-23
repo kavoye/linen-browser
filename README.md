@@ -27,10 +27,10 @@ any time and then it is yours again.
 <img src="https://img.shields.io/badge/universal-Apple%20silicon%20%2B%20Intel-1c1c1e?style=flat-square" alt="Universal binary">
 <img src="https://img.shields.io/badge/license-Apache%202.0-1c1c1e?style=flat-square" alt="Apache 2.0 license">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/screenshot-dark.png">
-  <img src=".github/assets/screenshot-light.png" alt="Linen showing the sidebar with pinned tabs and a Reading folder, a video playing in the media dock, and the start page with frequently visited sites and history" width="900">
-</picture>
+https://github.com/user-attachments/assets/a4a28bdd-6751-4f02-84a5-f0f7fbb87153
+
+Linen showing the sidebar with pinned tabs and a Reading folder, a video playing
+in the media dock, and the assistant reading a page to answer a question.
 
 </div>
 

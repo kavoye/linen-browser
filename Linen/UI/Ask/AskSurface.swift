@@ -33,7 +33,7 @@ struct AskSurface: View {
             self == .toolbar ? 4 : 6
         }
         var placeholder: String {
-            String(localized: "Search, “@” to ask, or paste a link")
+            String(localized: "Search, “@” to ask, or enter website name")
         }
         var mirrorsPageURL: Bool {
             self == .toolbar
@@ -44,17 +44,8 @@ struct AskSurface: View {
         var showsKeyHints: Bool {
             self == .startPage
         }
-        var usesMaterial: Bool {
-            self == .toolbar
-        }
         var takesFocusOnAppear: Bool {
             self == .startPage
-        }
-        var liftRadius: CGFloat {
-            self == .toolbar ? 14 : 22
-        }
-        var liftOffset: CGFloat {
-            self == .toolbar ? 4 : 8
         }
     }
 
@@ -73,12 +64,7 @@ struct AskSurface: View {
         let activity = model.activity
         let restingContent = model.restingContent
         let status = surfaceStatus(activity: activity)
-        let overhangs = model.interaction.rowHeight > model.placement.rowHeight + 1
         let contextPages = sections.contains { $0.id == "ask" } ? model.contextPages : []
-        let isRaised = model.isFocused || !sections.isEmpty || overhangs
-        let restingShadow = model.placement.usesMaterial
-            ? (opacity: 0.10, radius: CGFloat(3), y: CGFloat(1))
-            : (opacity: 0.0, radius: CGFloat(0), y: CGFloat(0))
 
         VStack(spacing: 0) {
             AskSurfaceRow(
@@ -117,10 +103,6 @@ struct AskSurface: View {
             AskSurfaceBackdrop(
                 placement: model.placement,
                 status: status,
-                isPrivate: model.isPrivate,
-                isFocused: model.isFocused,
-                hasResults: !sections.isEmpty,
-                overhangs: overhangs,
                 isThinking: activity.isThinking,
                 isRunning: activity.isRunning
             )
@@ -141,13 +123,7 @@ struct AskSurface: View {
         }
         .transformEnvironment(\.colorScheme) { if model.isPrivate { $0 = .dark } }
         .transformEnvironment(\.chromeIsLight) { if model.isPrivate { $0 = false } }
-        .contentShape(RoundedRectangle(cornerRadius: model.placement.cornerRadius))
-        .compositingGroup()
-        .shadow(
-            color: .black.opacity(isRaised ? 0.34 : restingShadow.opacity),
-            radius: isRaised ? model.placement.liftRadius : restingShadow.radius,
-            y: isRaised ? model.placement.liftOffset : restingShadow.y
-        )
+        .contentShape(RoundedRectangle(cornerRadius: model.placement.cornerRadius, style: .continuous))
         .fixedSize(horizontal: false, vertical: true)
         .frame(height: model.placement.rowHeight, alignment: .top)
         .animation(Theme.Motion.settle, value: model.isFocused)

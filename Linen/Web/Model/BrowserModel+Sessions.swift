@@ -278,8 +278,8 @@ extension BrowserModel {
         }
     }
 
-    func restoreSession(force: Bool = false) {
-        guard force || BrowserSettings.shared.startup == .restore, tabs.isEmpty else { return }
+    func restoreSession() {
+        guard tabs.isEmpty else { return }
 
         let stored = try? database.writer.read { db in
             (

@@ -14,6 +14,7 @@ struct FolderSection: View {
     @FocusState private var renameFocused: Bool
 
     @Environment(\.sidebarStyle) private var sidebarStyle
+    @Environment(\.windowColorScheme) private var windowColorScheme
     @State private var hovering = false
 
     private var browser: BrowserModel {
@@ -54,32 +55,6 @@ struct FolderSection: View {
 
     private var isFoldCandidate: Bool {
         context.isFoldCandidate(item)
-    }
-
-    private var headerBackground: AnyShapeStyle {
-        if isArmed {
-            return AnyShapeStyle(Theme.accent.opacity(0.18))
-        }
-        if isFoldCandidate {
-            return AnyShapeStyle(Theme.accent.opacity(0.08))
-        }
-        if isSelected {
-            return AnyShapeStyle(Theme.Wash.selection)
-        }
-        if hovering {
-            return AnyShapeStyle(folder.color.tint.opacity(0.10))
-        }
-        return AnyShapeStyle(.clear)
-    }
-
-    private var headerStroke: AnyShapeStyle {
-        if isArmed {
-            return AnyShapeStyle(Theme.accent)
-        }
-        if isFoldCandidate {
-            return AnyShapeStyle(Theme.accent.opacity(0.45))
-        }
-        return AnyShapeStyle(isSelected ? Theme.Wash.hover : Theme.Wash.none)
     }
 
     @ViewBuilder
@@ -150,17 +125,13 @@ struct FolderSection: View {
             .padding(.horizontal, sidebarStyle == .icons ? 0 : 9)
             .frame(maxWidth: .infinity)
             .frame(height: 30)
-            .background(
-                headerBackground,
-                in: RoundedRectangle(
-                    cornerRadius: showsOutline ? Self.rowRadius(depth: depth) : Theme.Radius.hover
-                )
-            )
-            .overlay(
-                RoundedRectangle(
-                    cornerRadius: showsOutline ? Self.rowRadius(depth: depth) : Theme.Radius.hover
-                )
-                .strokeBorder(headerStroke, lineWidth: isArmed ? 2 : 1)
+            .sidebarRowSelectionEffect(
+                isSelected: isSelected,
+                isHovering: hovering,
+                isDropTarget: isArmed,
+                isDropCandidate: isFoldCandidate,
+                hoverTint: folder.color.tint,
+                radius: showsOutline ? Self.rowRadius(depth: depth) : Theme.Radius.hover
             )
             .contentShape(Rectangle())
             .help(Text(verbatim: sidebarStyle == .icons ? folder.name : ""))
@@ -190,12 +161,14 @@ struct FolderSection: View {
         .padding(showsOutline ? Self.outlineInset : 0)
         .background {
             if showsOutline {
-                RoundedRectangle(cornerRadius: outlineRadius)
-                    .fill(folder.color.tint.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: outlineRadius)
-                            .strokeBorder(folder.color.tint.opacity(0.18), lineWidth: 1)
-                    )
+                let shape = RoundedRectangle(cornerRadius: outlineRadius, style: .continuous)
+                ZStack {
+                    Color.clear
+                        .glassEffect(.clear.tint(folder.color.tint.opacity(0.22)), in: shape)
+                    shape.fill(folder.color.tint.opacity(0.05))
+                    shape.strokeBorder(folder.color.tint.opacity(0.18), lineWidth: 1)
+                }
+                .environment(\.colorScheme, windowColorScheme)
             }
         }
         .opacity(context.isLifted(item) ? 0 : 1)

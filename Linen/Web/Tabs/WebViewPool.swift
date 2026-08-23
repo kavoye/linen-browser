@@ -329,7 +329,6 @@ final class WebViewPool {
     }
 
     func makeView(configuration: WKWebViewConfiguration) -> WKWebView {
-        PageColorSampling.enable(on: configuration)
         let view = TabWebView(
             frame: NSRect(x: 0, y: 0, width: 800, height: 600),
             configuration: configuration
@@ -367,7 +366,6 @@ final class WebViewPool {
         configuration.websiteDataStore = dataStore
         configuration.webExtensionController = extensionController
         BrowserSettings.shared.apply(to: configuration)
-        PageColorSampling.enable(on: configuration)
         MediaCenter.enablePictureInPicture(on: configuration.preferences)
 
         let contentController = WKUserContentController()

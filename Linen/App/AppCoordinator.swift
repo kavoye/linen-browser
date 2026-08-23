@@ -201,6 +201,7 @@ final class AppCoordinator {
         }
 
         sidebar.onShowingChange = { [weak self] in self?.applyHoverShield() }
+        sidePanel.onFootprintChange = { [weak self] in self?.applyHoverShield() }
         TabWebView.refreshHoverShield = { [weak self] in self?.applyHoverShield() }
         observeAppearance()
     }
@@ -221,24 +222,38 @@ final class AppCoordinator {
     }
 
     func applyHoverShield() {
-        let width = sidebar.openWidth(in: sidebarDrag.contentFrameInWindow.width)
+        let content = sidebarDrag.contentFrameInWindow
+        let width = sidebar.openWidth(in: content.width)
+        let shell = LoomShellGeometry(
+            containerWidth: content.width,
+            sidebarWidth: width,
+            preferredPanelWidth: sidePanel.openWidth(in: content.width),
+            isSidebarVisible: false,
+            isPanelVisible: sidePanel.isVisible,
+            isPanelExpanded: sidePanel.isExpanded
+        )
         for view in TabWebView.liveInstances.allObjects {
             guard view.window != nil else {
                 view.setHoverParked(false)
                 continue
             }
-            view.setHoverParked(SidebarPeekShield.suppressesHover(
-                isVisible: sidebar.isVisible,
-                isPeeking: sidebar.isPeeking,
-                viewMaxX: view.convert(view.bounds, to: nil).maxX,
-                width: width,
-                isMediaPicture: view === media.model.pictureWebView
-            ))
+            let viewMaxX = view.convert(view.bounds, to: nil).maxX
+            view.setHoverParked(
+                SidebarPeekShield.suppressesHover(
+                    isVisible: sidebar.isVisible,
+                    isPeeking: sidebar.isPeeking,
+                    viewMaxX: viewMaxX,
+                    width: width,
+                    isMediaPicture: view === media.model.pictureWebView
+                )
+                    || shell.panelCoversPage(viewMaxX: viewMaxX - content.minX)
+            )
         }
     }
 
     private func tabDidClose(_ tab: BrowserTab) {
         playedPages[tab.id] = nil
+        FaviconTint.forget(tab.id)
         if media.controlledTabID == tab.id {
             media.releaseControl()
             dockSuccessor(to: tab.id)

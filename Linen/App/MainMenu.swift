@@ -6,6 +6,9 @@ import WebKit
 
 @MainActor
 enum ShortcutPriority {
+    private static let leftArrow = String(UnicodeScalar(NSLeftArrowFunctionKey)!)
+    private static let rightArrow = String(UnicodeScalar(NSRightArrowFunctionKey)!)
+
     private static let pageFirst: [(key: String, modifiers: NSEvent.ModifierFlags)] = [
         ("z", [.command]),
         ("z", [.command, .shift]),
@@ -17,6 +20,8 @@ enum ShortcutPriority {
         ("f", [.command]),
         ("g", [.command]),
         ("g", [.command, .shift]),
+        (leftArrow, [.command]),
+        (rightArrow, [.command]),
     ]
 
     static func menuAnswersFirst(_ event: NSEvent) -> Bool {
@@ -64,7 +69,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(chain("About Linen", #selector(NSApplication.orderFrontStandardAboutPanel(_:))))
         menu.addItem(.separator())
         menu.addItem(command("Check for Updates…", #selector(checkForUpdates)))
-        menu.addItem(command("Release Notes", #selector(showReleaseNotes)))
+        menu.addItem(command("Release Notes…", #selector(showReleaseNotes)))
         menu.addItem(.separator())
         menu.addItem(command("Settings…", #selector(openSettings), key: ","))
         menu.addItem(.separator())

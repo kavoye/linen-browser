@@ -9,7 +9,12 @@ private struct SidebarRowSelectionEffect: ViewModifier {
     let isHovering: Bool
     var isDropTarget = false
     var isDropCandidate = false
+    var hoverTint: Color?
+    var glassTint: Color?
     var radius = Theme.Radius.hover
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.windowColorScheme) private var windowColorScheme
 
     private var fill: AnyShapeStyle {
         if isDropTarget {
@@ -18,32 +23,83 @@ private struct SidebarRowSelectionEffect: ViewModifier {
         if isDropCandidate {
             return AnyShapeStyle(Theme.accent.opacity(0.08))
         }
-        if isSelected {
-            return AnyShapeStyle(Theme.Wash.selection)
+        guard isHovering, !isSelected else { return AnyShapeStyle(.clear) }
+        if let hoverTint {
+            return AnyShapeStyle(hoverTint.opacity(0.18))
         }
-        if isHovering {
-            return AnyShapeStyle(Theme.Wash.faint)
-        }
-        return AnyShapeStyle(.clear)
+        return ChromeInk.hoverStyle
     }
 
-    private var stroke: AnyShapeStyle {
+    private var wearsGlass: Bool {
+        isSelected && !isDropTarget && !isDropCandidate
+    }
+
+    private var dropStroke: AnyShapeStyle {
         if isDropTarget {
             return AnyShapeStyle(Theme.accent)
         }
         if isDropCandidate {
             return AnyShapeStyle(Theme.accent.opacity(0.45))
         }
-        return AnyShapeStyle(isSelected ? Theme.Wash.hover : Theme.Wash.none)
+        return AnyShapeStyle(.clear)
+    }
+
+    private var wearsPanelGlass: Bool {
+        windowColorScheme == .dark
+    }
+
+    private var glass: Glass {
+        if wearsPanelGlass {
+            guard let glassTint else { return .regular }
+            return .regular.tint(glassTint.opacity(0.32))
+        }
+        let base = glassTint ?? Theme.windowBackground
+        return .clear.tint(base.opacity(glassTint == nil ? 0.34 : 0.16))
+    }
+
+    private var surfaceWash: Color {
+        guard let glassTint else { return Color.primary.opacity(0.06) }
+        return glassTint.opacity(0.10)
+    }
+
+    private var surfaceEdge: Color {
+        guard let glassTint else { return Color.primary.opacity(0.12) }
+        return glassTint.opacity(0.24)
     }
 
     func body(content: Content) -> some View {
-        content
-            .background(fill, in: RoundedRectangle(cornerRadius: radius))
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        return content
+            .background {
+                ZStack {
+                    if wearsGlass {
+                        Color.clear.glassEffect(glass, in: shape)
+                        if !wearsPanelGlass {
+                            shape.fill(surfaceWash)
+                            shape.strokeBorder(surfaceEdge, lineWidth: 1)
+                        }
+                    }
+                    shape.fill(fill)
+                }
+                .environment(\.colorScheme, windowColorScheme)
+                .allowsHitTesting(false)
+            }
             .overlay(
-                RoundedRectangle(cornerRadius: radius)
-                    .strokeBorder(stroke, lineWidth: isDropTarget ? 2 : 1)
+                shape
+                    .strokeBorder(dropStroke, lineWidth: isDropTarget ? 2 : 1)
+                    .allowsHitTesting(false)
             )
+    }
+}
+
+extension View {
+    func sidebarHoverFill<S: InsettableShape>(
+        isHovering: Bool,
+        tint: Color? = nil,
+        in shape: S
+    ) -> some View {
+        hoverBackground(isActive: isHovering, tint: tint, in: shape)
+            .contentShape(shape)
     }
 }
 
@@ -53,6 +109,8 @@ extension View {
         isHovering: Bool,
         isDropTarget: Bool = false,
         isDropCandidate: Bool = false,
+        hoverTint: Color? = nil,
+        glassTint: Color? = nil,
         radius: CGFloat = Theme.Radius.hover
     ) -> some View {
         modifier(SidebarRowSelectionEffect(
@@ -60,6 +118,8 @@ extension View {
             isHovering: isHovering,
             isDropTarget: isDropTarget,
             isDropCandidate: isDropCandidate,
+            hoverTint: hoverTint,
+            glassTint: glassTint,
             radius: radius
         ))
     }

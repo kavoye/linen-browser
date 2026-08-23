@@ -26,15 +26,11 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
         }
     }
 
-    /// A repeatable kind opens a new tab every time. Nothing is repeatable yet;
-    /// a chat would be.
     var isRepeatable: Bool {
         false
     }
 
-    /// Whether this kind paints the whole panel, tab strip included, and so
-    /// carries its own idea of what the chrome sits on.
-    var paintsThePanel: Bool {
+    var usesImmersiveBackdrop: Bool {
         self == .lyrics
     }
 }
@@ -54,8 +50,9 @@ nonisolated enum SidePanelMetrics {
     static let defaultWidth: CGFloat = minWidth
     static let maxWidth: CGFloat = 620
     static let maxWindowFraction: CGFloat = 0.5
-    static let grabWidth: CGFloat = 8
-    static let headerHeight: CGFloat = 34
+    static let controlInset: CGFloat = LoomChrome.canvasInset
+
+    static let headerHeight: CGFloat = 28 + controlInset * 2
 
     static func clampWidth(_ width: CGFloat, container: CGFloat) -> CGFloat {
         let ceiling = container > 0
@@ -75,28 +72,32 @@ final class SidePanelModel {
         static let selected = "sidePanel.selected"
     }
 
-    /// Every kind a setting allows has a tab, always. Nothing is added or
-    /// closed yet; a repeatable kind is what would make this list move.
     var tabs: [SidePanelTab] {
         allTabs.filter { !hidden.contains($0.kind) }
     }
 
-    /// A kind turned off in Settings has no tab, so the panel cannot land on it.
     private(set) var hidden: Set<SidePanelKind> = []
 
-    /// Nil until the panel has been opened once, which is what lets the first
-    /// open land on whatever the toolbar button was marked for.
     private(set) var selection: UUID?
-    private(set) var isVisible: Bool
-    private(set) var width: CGFloat
-    private(set) var dragWidth: CGFloat?
+    private(set) var isVisible: Bool {
+        didSet { if isVisible != oldValue { onFootprintChange?() } }
+    }
+    private(set) var width: CGFloat {
+        didSet { if width != oldValue { onFootprintChange?() } }
+    }
+    private(set) var dragWidth: CGFloat? {
+        didSet { if dragWidth != oldValue { onFootprintChange?() } }
+    }
 
     var isExpanded: Bool {
         didSet {
             guard isExpanded != oldValue else { return }
             defaults.set(isExpanded, forKey: Key.expanded)
+            onFootprintChange?()
         }
     }
+
+    @ObservationIgnored var onFootprintChange: (() -> Void)?
 
     @ObservationIgnored private let allTabs: [SidePanelTab]
     @ObservationIgnored private var dragOrigin: CGFloat?
@@ -139,8 +140,6 @@ final class SidePanelModel {
         persist()
     }
 
-    /// The panel's own button reopens whatever was last in it, and only picks a
-    /// kind when there is nothing to come back to.
     func show(seeding kind: SidePanelKind) {
         if selection == nil {
             selection = tabs.first { $0.kind == kind }?.id ?? tabs.first?.id
@@ -150,7 +149,14 @@ final class SidePanelModel {
         persist()
     }
 
-    /// Turning a kind off takes its tab away, and the panel steps off it.
+    func toggleVisibility(seeding kind: SidePanelKind) {
+        if isVisible {
+            hide()
+        } else {
+            show(seeding: kind)
+        }
+    }
+
     func setAvailable(_ isAvailable: Bool, for kind: SidePanelKind) {
         let next = isAvailable ? hidden.subtracting([kind]) : hidden.union([kind])
         guard next != hidden else { return }
@@ -177,7 +183,6 @@ final class SidePanelModel {
         persist()
     }
 
-    /// Leaves the selection where it is, so reopening brings back the same tab.
     func hide() {
         guard isVisible else { return }
         isVisible = false

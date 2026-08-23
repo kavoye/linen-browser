@@ -7,7 +7,6 @@ import SwiftUI
 struct Sidebar: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
-    let containerWidth: CGFloat
 
     private var sidebar: SidebarLayout {
         coordinator.sidebar
@@ -16,7 +15,7 @@ struct Sidebar: View {
     @Environment(\.windowControlsInset) private var windowControlsInset
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.colorScheme) private var scheme
-    @State private var mediaObscuredHeight: CGFloat = 0
+    @State private var bottomObscuredHeight: CGFloat = 0
     @State private var newFolderDrop = SidebarNewFolderDrop()
 
     private var selection: SidebarSelection {
@@ -32,6 +31,15 @@ struct Sidebar: View {
     }
 
     private var inkIsLight: Bool {
+        if coordinator.page == .browser {
+            return PageInk.isLight(
+                LoomChrome.sampledColor(
+                    ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+                    scheme: scheme
+                ),
+                scheme: scheme
+            )
+        }
         guard wearsBand else { return scheme == .light }
         return PageInk.isLight(
             ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
@@ -43,6 +51,90 @@ struct Sidebar: View {
         guard windowControlsInset > 0 else { return 10 }
         return sidebarStyle == .icons ? Theme.topBarHeight : 8
     }
+
+    private var contentInsets: EdgeInsets {
+        guard sidebarStyle == .full else {
+            return EdgeInsets(top: 0, leading: LoomChrome.canvasInset, bottom: 0, trailing: 0)
+        }
+        let inset = SidebarMetrics.contentInset(style: .full)
+        let balance = LoomChrome.sidebarContentBalanceOffset
+        return EdgeInsets(
+            top: 0,
+            leading: inset + balance,
+            bottom: 0,
+            trailing: inset - balance
+        )
+    }
+
+    var body: some View {
+        WorkspaceList(
+            browser: browser,
+            coordinator: coordinator,
+            selection: selection,
+            newFolderDrop: newFolderDrop,
+            frames: frames,
+            bottomClearance: bottomObscuredHeight,
+            topBar: SidebarTopChrome(
+                browser: browser,
+                coordinator: coordinator,
+                selection: selection,
+                newFolderDrop: newFolderDrop
+            ),
+            bottomBar: SidebarBottomChrome(
+                coordinator: coordinator,
+                obscuredHeight: $bottomObscuredHeight
+            ),
+            contentInsets: contentInsets
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.bottom, 12)
+        .padding(.top, topPadding)
+        .background {
+            ZStack {
+                if sidebar.isFloating {
+                    LoomFloatingFill(
+                        sampledPageColor: ChromeBand.measuredColor(
+                            browser: browser,
+                            coordinator: coordinator
+                        )
+                    )
+                }
+                WindowDragArea()
+            }
+        }
+        .environment(\.chromeIsLight, inkIsLight)
+        .environment(\.windowColorScheme, scheme)
+        .environment(\.colorScheme, inkIsLight ? .light : .dark)
+        .animation(nil, value: inkIsLight)
+        .animation(Theme.Motion.settle, value: coordinator.media.model.isActive)
+    }
+}
+
+private struct SidebarTopChrome: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+    let selection: SidebarSelection
+    let newFolderDrop: SidebarNewFolderDrop
+
+    var body: some View {
+        VStack(spacing: 6) {
+            SidebarTopRow(
+                browser: browser,
+                coordinator: coordinator,
+                selection: selection,
+                newFolderDrop: newFolderDrop
+            )
+            NewTabRow(coordinator: coordinator)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct SidebarBottomChrome: View {
+    let coordinator: AppCoordinator
+    @Binding var obscuredHeight: CGFloat
+
+    @Environment(\.sidebarStyle) private var sidebarStyle
 
     private var expandsProfile: Bool {
         sidebarStyle == .full
@@ -56,100 +148,86 @@ struct Sidebar: View {
     }
 
     var body: some View {
-        VStack(alignment: sidebarStyle == .icons ? .center : .leading, spacing: 6) {
-            SidebarTopRow(
-                browser: browser,
+        VStack(spacing: 6) {
+            SidebarPinnedCards(
                 coordinator: coordinator,
-                selection: selection,
-                newFolderDrop: newFolderDrop
+                obscuredHeight: $obscuredHeight
             )
-            NewTabRow(coordinator: coordinator)
-            ZStack(alignment: .bottom) {
-                WorkspaceList(
-                    browser: browser,
-                    coordinator: coordinator,
-                    selection: selection,
-                    newFolderDrop: newFolderDrop,
-                    frames: frames,
-                    bottomClearance: mediaObscuredHeight
-                )
-                if coordinator.media.model.isActive {
-                    MediaSidebarCard(
-                        media: coordinator.media,
-                        coordinator: coordinator,
-                        obscuredHeight: $mediaObscuredHeight
-                    )
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            UpdateBanner(updates: coordinator.updates)
 
-            Group {
-                if sidebarStyle == .icons {
-                    VStack(spacing: 6) {
+            if sidebarStyle == .icons {
+                VStack(spacing: 6) {
+                    SidebarProfileButton(coordinator: coordinator)
+                    downloadsButton
+                    if coordinator.settings.showsReportIssueButton {
+                        SidebarFeedbackRow(coordinator: coordinator)
+                    }
+                    SidebarSettingsRow(coordinator: coordinator)
+                }
+            } else {
+                HStack(spacing: 6) {
+                    if expandsProfile {
                         SidebarProfileButton(coordinator: coordinator)
                         downloadsButton
                         if coordinator.settings.showsReportIssueButton {
                             SidebarFeedbackRow(coordinator: coordinator)
                         }
                         SidebarSettingsRow(coordinator: coordinator)
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        if expandsProfile {
-                            SidebarProfileButton(coordinator: coordinator)
-                            downloadsButton
-                            if coordinator.settings.showsReportIssueButton {
-                            SidebarFeedbackRow(coordinator: coordinator)
-                        }
-                            SidebarSettingsRow(coordinator: coordinator)
-                        } else {
-                            SidebarSettingsRow(coordinator: coordinator)
-                            if coordinator.settings.showsReportIssueButton {
-                            SidebarFeedbackRow(coordinator: coordinator)
-                        }
-                            downloadsButton
-                            SidebarProfileButton(coordinator: coordinator)
-                        }
-                    }
-                }
-            }
-            .animation(Theme.Motion.settle, value: coordinator.browser.downloads.hasRecent)
-        }
-        .padding(.horizontal, sidebarStyle == .icons ? 8 : 12)
-        .padding(.bottom, 12)
-        .padding(.top, topPadding)
-        .background {
-            ZStack(alignment: .trailing) {
-                Group {
-                    if wearsBand {
-                        ChromeBand.fill(browser: browser, coordinator: coordinator)
                     } else {
-                        VisualEffectView(material: .sidebar)
-                        Theme.sidebarTint.opacity(0.55)
+                        SidebarSettingsRow(coordinator: coordinator)
+                        if coordinator.settings.showsReportIssueButton {
+                            SidebarFeedbackRow(coordinator: coordinator)
+                        }
+                        downloadsButton
+                        SidebarProfileButton(coordinator: coordinator)
                     }
                 }
-                .transaction { $0.animation = nil }
-
-                if wearsBand {
-                    ChromeBand.fill(browser: browser, coordinator: coordinator)
-                        .frame(width: 1)
-                        .offset(x: 1)
-                        .allowsHitTesting(false)
-                        .transaction { $0.animation = nil }
-                }
-
-                WindowDragArea()
-                SidebarDivider(layout: sidebar, containerWidth: containerWidth)
             }
         }
-        .environment(\.chromeIsLight, inkIsLight)
-        .environment(\.colorScheme, inkIsLight ? .light : .dark)
-        .animation(nil, value: inkIsLight)
-        .animation(Theme.Motion.settle, value: coordinator.media.model.isActive)
+        .frame(maxWidth: .infinity)
+        .animation(Theme.Motion.settle, value: coordinator.browser.downloads.hasRecent)
+    }
+}
+
+private struct SidebarPinnedCards: View {
+    let coordinator: AppCoordinator
+    @Binding var obscuredHeight: CGFloat
+
+    @State private var mediaHeight: CGFloat = 0
+    @State private var measuredBanner: CGFloat = 0
+
+    private static let spacing: CGFloat = 6
+
+    private var bannerHeight: CGFloat {
+        coordinator.updates.model.isBannerVisible ? measuredBanner : 0
+    }
+
+    private var stackedHeight: CGFloat {
+        let cards = [mediaHeight, bannerHeight].filter { $0 > 0 }
+        guard !cards.isEmpty else { return 0 }
+        return cards.reduce(0, +) + Self.spacing * CGFloat(cards.count - 1)
+    }
+
+    var body: some View {
+        VStack(spacing: Self.spacing) {
+            if coordinator.media.model.isActive {
+                MediaSidebarCard(
+                    media: coordinator.media,
+                    coordinator: coordinator,
+                    obscuredHeight: $mediaHeight
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            UpdateBanner(updates: coordinator.updates)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measuredBanner = $0 }
+        }
+        .frame(maxWidth: .infinity)
+        .zIndex(1)
+        .onAppear { obscuredHeight = stackedHeight }
+        .onChange(of: stackedHeight) { _, height in obscuredHeight = height }
         .onChange(of: coordinator.media.model.isActive) { _, isActive in
             if !isActive {
-                mediaObscuredHeight = 0
+                mediaHeight = 0
             }
         }
     }
@@ -162,76 +240,127 @@ struct SidebarTopRow: View {
     let newFolderDrop: SidebarNewFolderDrop
 
     @Environment(\.sidebarStyle) private var sidebarStyle
-    @Environment(\.windowControlsInset) private var windowControlsInset
 
     private var sidebar: SidebarLayout {
         coordinator.sidebar
-    }
-
-    private var toggleLeadingInset: CGFloat {
-        guard windowControlsInset > 0 else { return 0 }
-        return max(0, windowControlsInset + 1 - 12)
     }
 
     var body: some View {
         Group {
             if sidebarStyle == .icons {
                 VStack(spacing: 2) {
-                    otherButtons
+                    SidebarTopActions(
+                        browser: browser,
+                        coordinator: coordinator,
+                        selection: selection,
+                        newFolderDrop: newFolderDrop
+                    )
                 }
             } else {
                 HStack(spacing: 2) {
-                    sidebarToggle
-                        .padding(.leading, toggleLeadingInset)
                     Spacer(minLength: 0)
-                    otherButtons
+                    SidebarTopActions(
+                        browser: browser,
+                        coordinator: coordinator,
+                        selection: selection,
+                        newFolderDrop: newFolderDrop
+                    )
                 }
             }
         }
         .padding(.bottom, 2)
         .opacity(SidebarMetrics.topControlsOpacity(isShowing: sidebar.isShowing))
     }
+}
 
-    private var toggleHelp: LocalizedStringResource {
-        sidebar.isVisible ? "Hide Sidebar" : "Pin Sidebar"
+struct SidebarVisibilityToggle: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+
+    @Environment(\.windowControlsInset) private var windowControlsInset
+    @Environment(\.colorScheme) private var scheme
+
+    private var sidebar: SidebarLayout {
+        coordinator.sidebar
     }
 
-    private var sidebarToggle: some View {
-        QuietIconButton(
+    private var label: LocalizedStringResource {
+        sidebar.isVisible ? "Hide Sidebar" : "Show Sidebar"
+    }
+
+    private var barIsLight: Bool {
+        PageInk.isLight(
+            LoomChrome.sampledColor(
+                ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+                scheme: scheme
+            ),
+            scheme: scheme
+        )
+    }
+
+    var body: some View {
+        ToolbarButton(
             symbol: "sidebar.left",
-            isOn: false,
-            help: String(localized: toggleHelp)
+            enabled: true,
+            isOn: sidebar.isVisible,
+            highlightsWhenOn: false,
+            help: String(localized: label)
         ) {
             sidebar.toggleVisible()
         }
+        .onHover { if $0, !sidebar.isVisible { sidebar.isPeeking = true } }
         .contextMenu {
             SidebarStyleMenuItems(sidebar: sidebar)
         }
+        .accessibilityLabel(Text(label))
+        .padding(
+            .leading,
+            SidebarMetrics.permanentToggleLeading(windowControlsInset: windowControlsInset)
+        )
+        .frame(height: Theme.topBarHeight)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .environment(\.chromeIsLight, barIsLight)
+        .environment(\.colorScheme, barIsLight ? .light : .dark)
+        .animation(nil, value: barIsLight)
     }
+}
 
-    @ViewBuilder
-    private var otherButtons: some View {
-        QuietIconButton(symbol: "magnifyingglass", isOn: false, help: String(localized: "Search Everything (⌘K)")) {
-            coordinator.openPalette()
-        }
-        QuietIconButton(
-            symbol: "folder.badge.plus",
-            isOn: newFolderDrop.isArmed,
-            help: String(localized: "New Folder")
-        ) {
-            browser.createFolder(containing: selection.items.isEmpty
-                ? []
-                : browser.sidebarTree.normalized(selection.items))
-            selection.clear()
-        }
-        .overlay {
-            if newFolderDrop.isArmed {
-                RoundedRectangle(cornerRadius: Theme.Radius.hover)
-                    .strokeBorder(Theme.accent, lineWidth: 2)
-                    .frame(width: 28, height: 28)
+private struct SidebarTopActions: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+    let selection: SidebarSelection
+    let newFolderDrop: SidebarNewFolderDrop
+
+    var body: some View {
+        Group {
+            QuietIconButton(
+                symbol: "magnifyingglass",
+                isOn: false,
+                help: String(localized: "Search Everything (⌘K)")
+            ) {
+                coordinator.openPalette()
+            }
+            QuietIconButton(
+                symbol: "folder.badge.plus",
+                isOn: newFolderDrop.isArmed,
+                help: String(localized: "New Folder")
+            ) {
+                browser.createFolder(containing: selection.items.isEmpty
+                    ? []
+                    : browser.sidebarTree.normalized(selection.items))
+                selection.clear()
+            }
+            .overlay {
+                if newFolderDrop.isArmed {
+                    Circle()
+                        .strokeBorder(Theme.accent, lineWidth: 2)
+                        .frame(width: 28, height: 28)
+                }
+            }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+                newFolderDrop.frame = $0
             }
         }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { newFolderDrop.frame = $0 }
     }
 }
 
@@ -322,8 +451,9 @@ struct SidebarDownloadsButton: View {
                     .font(.system(size: downloads.activeCount > 0 ? 9 : 12, weight: .medium))
                     .foregroundStyle(isShowingDownloads ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             }
-            .frame(width: 32, height: 32)
-            .sidebarRowSelectionEffect(isSelected: false, isHovering: hovering)
+            .frame(maxWidth: SidebarMetrics.controlMaxWidth(style: sidebarStyle))
+            .frame(height: SidebarMetrics.controlHeight)
+            .sidebarRowSelectionEffect(isSelected: isShowingDownloads, isHovering: hovering)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -338,6 +468,7 @@ struct SidebarDownloadsButton: View {
 struct SidebarFeedbackRow: View {
     let coordinator: AppCoordinator
 
+    @Environment(\.sidebarStyle) private var sidebarStyle
     @State private var hovering = false
 
     var body: some View {
@@ -347,7 +478,8 @@ struct SidebarFeedbackRow: View {
             Image(systemName: "ladybug")
                 .font(Theme.Font.control)
                 .foregroundStyle(.secondary)
-                .frame(width: 32, height: 32)
+                .frame(maxWidth: SidebarMetrics.controlMaxWidth(style: sidebarStyle))
+                .frame(height: SidebarMetrics.controlHeight)
                 .sidebarRowSelectionEffect(isSelected: false, isHovering: hovering)
                 .contentShape(Rectangle())
         }
@@ -375,8 +507,8 @@ struct SidebarSettingsRow: View {
             Image(systemName: "gearshape")
                 .font(Theme.Font.control)
                 .foregroundStyle(isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                .frame(maxWidth: sidebarStyle == .full ? 32 : .infinity)
-                .frame(height: 32)
+                .frame(maxWidth: SidebarMetrics.controlMaxWidth(style: sidebarStyle))
+                .frame(height: SidebarMetrics.controlHeight)
                 .sidebarRowSelectionEffect(isSelected: isSelected, isHovering: hovering)
                 .contentShape(Rectangle())
         }

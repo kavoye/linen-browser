@@ -226,8 +226,8 @@ struct MediaSidebarCard: View {
                 }
                 .padding(.horizontal, Self.controlsInset(panelWidth: panelWidth))
                 .padding(.vertical, 8)
-                .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.card))
-                .contentShape(.rect(cornerRadius: Theme.Radius.card))
+                .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.card, style: .continuous))
+                .contentShape(.rect(cornerRadius: Theme.Radius.card, style: .continuous))
                 .transition(.scale(scale: 0.94, anchor: .bottom).combined(with: .opacity))
             }
         }

@@ -183,11 +183,10 @@ struct SplitViewModelTests {
 
     // MARK: - A page in the air
 
-    /// While one page is carried by its handle the other has the whole
-    /// column, so it stands under the band whichever half it was. Left
-    /// answering as the lower half of a stack, it spends the drag with the
-    /// toolbar covering its first 44 points.
-    @Test func carryingAPaneGivesTheOtherOneTheWholeColumn() {
+    /// Loom places the complete split canvas below its glass beam. Carrying a
+    /// pane can change the split geometry, but it must never reintroduce a
+    /// toolbar inset inside the remaining web page.
+    @Test func carryingAPaneKeepsTheOtherOneBelowTheBeam() {
         let model = makeModel()
         let top = model.newTab(url: URL(string: "https://a.example/"))
         let bottom = model.newTab(url: URL(string: "https://b.example/"))
@@ -196,7 +195,7 @@ struct SplitViewModelTests {
         #expect(!bottom.isUnderTopBar)
 
         model.paneInAir = top.id
-        #expect(bottom.isUnderTopBar)
+        #expect(!bottom.isUnderTopBar)
     }
 
     /// Putting the page down again restores every one of those answers. A
@@ -215,7 +214,7 @@ struct SplitViewModelTests {
 
         #expect(model.activeSplit?.leader == top.id)
         #expect(model.splitPanes?.map(\.id) == [top.id, bottom.id])
-        #expect(top.isUnderTopBar)
+        #expect(!top.isUnderTopBar)
         #expect(!bottom.isUnderTopBar)
     }
 

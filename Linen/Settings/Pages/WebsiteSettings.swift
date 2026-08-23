@@ -125,17 +125,9 @@ struct WebsiteSettings: View {
                     if index > 0 {
                         RowSeparator()
                     }
-                    Button {
+                    WebsiteSettingsEntryRow(host: entry.host, summary: entry.summary) {
                         destination = .site(entry.origin)
-                    } label: {
-                        SiteRow(host: entry.host, summary: entry.summary) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -158,6 +150,28 @@ struct WebsiteSettings: View {
     private func siteCount(for permission: WebPermission) -> LocalizedStringResource {
         let count = permissions.origins(for: permission).count
         return count == 0 ? "None" : "\(count) websites"
+    }
+}
+
+private struct WebsiteSettingsEntryRow: View {
+    let host: String
+    let summary: String
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            SiteRow(host: host, summary: summary) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .settingsRowHover(isActive: hovering)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
     }
 }
 

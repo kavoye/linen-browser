@@ -83,6 +83,17 @@ final class MentionTextField: NSTextField {
         }
         return super.performKeyEquivalent(with: event)
     }
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted, let editor = currentEditor() as? NSTextView {
+            editor.isContinuousSpellCheckingEnabled = false
+            editor.isGrammarCheckingEnabled = false
+            editor.isAutomaticSpellingCorrectionEnabled = false
+            editor.isAutomaticTextReplacementEnabled = false
+        }
+        return accepted
+    }
 }
 
 struct MentionField: NSViewRepresentable {
@@ -417,7 +428,12 @@ enum MentionFieldRendering {
             return cached
         }
         let renderer = ImageRenderer(
-            content: AskPageChip(title: chip.title, icon: icon, fontSize: (fontSize - 1.5).rounded())
+            content: AskPageChip(
+                title: chip.title,
+                icon: icon,
+                isRasterised: true,
+                fontSize: (fontSize - 1.5).rounded()
+            )
                 .environment(\.colorScheme, isDark ? .dark : .light)
         )
         renderer.scale = 2

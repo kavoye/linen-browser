@@ -14,8 +14,9 @@ enum AskContext {
     static func pages(browser: BrowserModel, mentionedTabIDs: [UUID]) -> [AskContextPage] {
         let onScreen = browser.splitPanes ?? [browser.activeTab].compactMap { $0 }
         var seen: Set<UUID> = []
-        var pages = onScreen.compactMap { tab in
-            seen.insert(tab.id).inserted ? page(tab, isAttached: false) : nil
+        var pages = onScreen.compactMap { tab -> AskContextPage? in
+            guard tab.isShowingRealPage, seen.insert(tab.id).inserted else { return nil }
+            return page(tab, isAttached: false)
         }
         pages += mentionedTabIDs.compactMap { id in
             guard let tab = browser.tabs.first(where: { $0.id == id }),

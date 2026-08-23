@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import Foundation
 import Testing
 import WebKit
@@ -86,6 +87,52 @@ struct PullToRefreshGateTests {
             ancestors: [ancestor(overflowY: "auto", scrollHeight: 900, clientHeight: 300)]
         ))
         #expect(PullStartProbe.decode("not json") == nil)
+    }
+}
+
+/// The second gate: which view the wheel landed on. A sidebar peeking over the
+/// page, and a side panel standing on top of it, both sit inside the page's
+/// rectangle, so the pointer being within those bounds proves nothing.
+@MainActor
+struct PullToRefreshOwnershipTests {
+    private func page() -> NSView {
+        NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+    }
+
+    @Test func theWheelOnThePageItselfIsAPull() {
+        let page = page()
+        #expect(PullToRefreshMonitor.pageOwnsScroll(hit: page, page: page))
+    }
+
+    /// WebKit hit-tests to its own inner content view, never the WKWebView.
+    @Test func theWheelOnAViewInsideThePageIsAPull() {
+        let page = page()
+        let content = NSView(frame: page.bounds)
+        page.addSubview(content)
+        #expect(PullToRefreshMonitor.pageOwnsScroll(hit: content, page: page))
+    }
+
+    /// The bug: chrome standing over the page kept the page's bounds check
+    /// true, so scrolling the sidebar or the side panel pulled the tab.
+    @Test func theWheelOnChromeOverThePageIsNot() {
+        let page = page()
+        let chrome = NSView(frame: NSRect(x: 0, y: 0, width: 268, height: 600))
+        #expect(!PullToRefreshMonitor.pageOwnsScroll(hit: chrome, page: page))
+    }
+
+    @Test func aWheelThatLandsOnNothingIsNot() {
+        #expect(!PullToRefreshMonitor.pageOwnsScroll(hit: nil, page: page()))
+    }
+
+    /// A split's other pane is a sibling, not an ancestor: only the active
+    /// tab's view may pull.
+    @Test func theWheelOnTheOtherSplitPaneIsNot() {
+        let host = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        let active = page()
+        let other = page()
+        host.addSubview(active)
+        host.addSubview(other)
+        #expect(!PullToRefreshMonitor.pageOwnsScroll(hit: other, page: active))
     }
 }
 

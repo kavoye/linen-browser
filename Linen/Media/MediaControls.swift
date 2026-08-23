@@ -27,9 +27,9 @@ struct MediaPlayerSurface: View {
             MediaCropSurface(webView: webView, crop: crop)
         }
         .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: cornerRadius)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(Color.black, lineWidth: 0.5)
         }
         .frame(height: isOut ? 0 : height, alignment: .top)
@@ -477,7 +477,7 @@ struct MediaButton: View {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .semibold))
                 .frame(width: (size * 1.5).rounded(), height: (size * 1.5).rounded())
-                .contentShape(Rectangle())
+                .hoverBackground(isActive: hovering)
         }
         .buttonStyle(.plain)
         .foregroundStyle(tint ?? (hovering ? Color.primary : Color.secondary))

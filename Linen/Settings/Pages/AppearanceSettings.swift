@@ -26,18 +26,30 @@ struct AppearanceSettings: View {
             RowSeparator()
 
             DetailRow(
+                title: "Match website color",
+                caption: "Tint the toolbar and sidebar to match the current website."
+            ) {
+                SettingsToggle($settings.matchesWebsiteColor)
+            }
+            .settingsAnchor("appearance.websiteColor")
+
+            RowSeparator()
+
+            DetailRow(
                 title: "Page zoom",
                 caption: "The default for every website. Individual tabs can still be zoomed."
             ) {
-                Picker("", selection: $settings.pageZoom) {
-                    ForEach(Self.sizes, id: \.self) { size in
-                        Text(size, format: .percent.precision(.fractionLength(0)))
-                            .tag(size)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .fixedSize()
+                SettingsMenu(
+                    options: Self.sizes.map {
+                        .init(
+                            value: $0,
+                            label: $0.formatted(
+                                .percent.precision(.fractionLength(0))
+                            )
+                        )
+                    },
+                    selection: $settings.pageZoom
+                )
             }
             .settingsAnchor("appearance.zoom")
         }
@@ -50,6 +62,16 @@ struct AppearanceSettings: View {
                 ))
             }
             .settingsAnchor("appearance.sidebar")
+
+            RowSeparator()
+
+            DetailRow(
+                title: "Refract tab color",
+                caption: "The selected tab takes the color of its website’s icon."
+            ) {
+                SettingsToggle($settings.refractsTabColor)
+            }
+            .settingsAnchor("appearance.refraction")
 
             RowSeparator()
 

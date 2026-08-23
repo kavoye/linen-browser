@@ -28,20 +28,9 @@ struct ContentNavBar: View {
 
     private static let buttonSlot: CGFloat = 36
 
-    private static let bandOpacity = 0.85
-
-    private var bandOpacity: Double {
-        browser.activeSplit == nil ? Self.bandOpacity : 1
-    }
-
     private var leadingReach: CGFloat {
-        let buttons: CGFloat = showsSidebarToggle ? 4 : 3
-        let cluster = buttons * Self.buttonSlot - 6
-        return windowControlsPadding + Self.barInset + cluster + Self.clusterGap
-    }
-
-    private var showsSidebarToggle: Bool {
-        SidebarTogglePlacement.inNavBar(isVisible: sidebar.isVisible, style: sidebar.style)
+        let cluster = 3 * Self.buttonSlot - 6
+        return toolbarLeadingPadding + Self.barInset + cluster + Self.clusterGap
     }
 
     private var trailingReach: CGFloat {
@@ -51,26 +40,33 @@ struct ContentNavBar: View {
 
     private var extensionBudget: CGFloat? {
         guard barWidth > 0 else { return nil }
-        let panelToggle: CGFloat = coordinator.sidePanel.isVisible ? 0 : Self.buttonSlot
         let sideRoom = (barWidth - Self.addressBarMinWidth) / 2
-        return max(0, sideRoom - Self.barInset - Self.clusterGap - panelToggle)
+        return max(0, sideRoom - Self.barInset - Self.clusterGap - Self.buttonSlot)
     }
 
-    private var windowControlsPadding: CGFloat {
-        SidebarMetrics.windowControlsPadding(
+    private var toolbarLeadingPadding: CGFloat {
+        SidebarMetrics.toolbarLeadingPadding(
             isVisible: sidebar.isVisible,
             style: sidebar.style,
-            windowControlsInset: windowControlsInset
+            windowControlsInset: windowControlsInset,
+            contentInset: Self.barInset
         )
     }
 
     private var barIsLight: Bool {
-        PageInk.isLight(ChromeBand.measuredColor(browser: browser, coordinator: coordinator), scheme: scheme)
+        PageInk.isLight(
+            LoomChrome.sampledColor(
+                ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+                scheme: scheme
+            ),
+            scheme: scheme
+        )
     }
 
     var body: some View {
         barContent
         .environment(\.chromeIsLight, barIsLight)
+        .environment(\.windowColorScheme, scheme)
         .environment(\.colorScheme, barIsLight ? .light : .dark)
         .animation(nil, value: barIsLight)
     }
@@ -92,18 +88,10 @@ struct ContentNavBar: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { trailingClusterWidth = $0 }
         }
         .padding(.horizontal, Self.barInset)
-        .padding(.leading, windowControlsPadding)
+        .padding(.leading, toolbarLeadingPadding)
         .frame(height: Theme.topBarHeight)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { barWidth = $0 }
-        .background {
-            ZStack {
-                ChromeBand.fill(browser: browser, coordinator: coordinator)
-                    .opacity(bandOpacity)
-
-                WindowDragArea()
-            }
-            .transaction { $0.animation = nil }
-        }
+        .background { WindowDragArea() }
         .onDrop(of: [.url, .fileURL], isTargeted: nil) { providers in
             guard let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -129,25 +117,8 @@ struct ContentNavBar: View {
         (browser.activeTab?.isLoading ?? false) ? "Stop" : "Reload"
     }
 
-    private var sidebarToggleHelp: LocalizedStringResource {
-        sidebar.isVisible ? "Hide Sidebar" : "Show Sidebar"
-    }
-
     private var navigationControls: some View {
         HStack(spacing: 6) {
-            if showsSidebarToggle {
-                ToolbarButton(symbol: "sidebar.left", enabled: true, help: String(localized: sidebarToggleHelp)) {
-                    if sidebar.isVisible {
-                        sidebar.toggleVisible()
-                    } else {
-                        sidebar.show()
-                    }
-                }
-                .onHover { if $0, !sidebar.isVisible { sidebar.isPeeking = true } }
-                .contextMenu {
-                    SidebarStyleMenuItems(sidebar: sidebar)
-                }
-            }
             ToolbarButton(
                 symbol: "chevron.left",
                 enabled: browser.activeTab?.canGoBack ?? false,
@@ -158,6 +129,7 @@ struct ContentNavBar: View {
                 }
             ) {
                 browser.activeTab?.goBack()
+                coordinator.showBrowserPage()
             }
             ToolbarButton(
                 symbol: "chevron.right",
@@ -169,6 +141,7 @@ struct ContentNavBar: View {
                 }
             ) {
                 browser.activeTab?.goForward()
+                coordinator.showBrowserPage()
             }
             ToolbarButton(
                 symbol: (browser.activeTab?.isLoading ?? false) ? "xmark" : "arrow.clockwise",
@@ -185,6 +158,7 @@ struct ContentNavBar: View {
                 } else {
                     tab.webView.reload()
                 }
+                coordinator.showBrowserPage()
             }
         }
     }
@@ -205,14 +179,10 @@ struct ContentNavBar: View {
 
 enum ChromeBand {
     static func measuredColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
+        guard coordinator.settings.matchesWebsiteColor else { return nil }
         guard coordinator.page == .browser, !showsStartPage(browser: browser) else { return nil }
         guard browser.activeSplit == nil else { return nil }
         return browser.activeTab?.pageColor
-    }
-
-    static func fill(browser: BrowserModel, coordinator: AppCoordinator) -> Color {
-        measuredColor(browser: browser, coordinator: coordinator)
-            .map(Color.init(nsColor:)) ?? Theme.windowBackground
     }
 
     static func showsStartPage(browser: BrowserModel) -> Bool {
@@ -231,7 +201,10 @@ enum PageInk {
         guard let rgb = color?.usingColorSpace(.sRGB), rgb.alphaComponent > 0.05 else {
             return scheme == .light
         }
-        return luminance(of: rgb) > 0.4
+        let ground = luminance(of: rgb) + 0.05
+        let againstBlack = ground / 0.05
+        let againstWhite = 1.05 / ground
+        return againstBlack > againstWhite
     }
 
     private static func luminance(of rgb: NSColor) -> CGFloat {

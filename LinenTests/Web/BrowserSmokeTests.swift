@@ -110,7 +110,7 @@ struct BrowserSmokeTests {
         original.saveBlocking()
 
         let relaunched = BrowserModel(database: database, sitePermissions: permissions("LaunchSmoke"))
-        relaunched.restoreSession(force: true)
+        relaunched.restoreSession()
         let restored = try #require(relaunched.tabs.first { $0.id == tab.id })
 
         #expect(relaunched.activeTabID == restored.id)
@@ -198,7 +198,7 @@ struct BrowserSmokeTests {
         let freshPermissions = permissions("PrivateSmoke")
         let browser = BrowserModel(database: fresh.database, sitePermissions: freshPermissions)
         browser.adopt(database: fresh.database, sitePermissions: freshPermissions, privately: true)
-        browser.restoreSession(force: true)
+        browser.restoreSession()
         #expect(browser.tabs.isEmpty)
         #expect(ConversationLog(database: fresh.database).traces.isEmpty)
 

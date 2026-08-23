@@ -12,21 +12,10 @@ import Testing
 /// has to survive being taken apart into three tables and put back together.
 @MainActor
 struct SessionRestoreTests {
-    /// `restoreSession` reads the startup setting, which lives on a shared
-    /// singleton. Every test that restores puts the old choice back.
-    private func restoring<T>(_ body: () throws -> T) rethrows -> T {
-        let previous = BrowserSettings.shared.startup
-        BrowserSettings.shared.startup = .restore
-        defer { BrowserSettings.shared.startup = previous }
-        return try body()
-    }
-
     private func reopen(_ database: AppDatabase) -> BrowserModel {
-        restoring {
-            let model = BrowserModel(database: database)
-            model.restoreSession()
-            return model
-        }
+        let model = BrowserModel(database: database)
+        model.restoreSession()
+        return model
     }
 
     // MARK: - The schema the session needs
@@ -364,34 +353,6 @@ struct SessionRestoreTests {
         }
         #expect(rows == ["https://kept.example/"])
         #expect(reopen(database).tabs.map(\.id) == [kept.id])
-    }
-
-    private func openingWithANewTab<T>(_ body: () throws -> T) rethrows -> T {
-        let previous = BrowserSettings.shared.startup
-        BrowserSettings.shared.startup = .newTab
-        defer { BrowserSettings.shared.startup = previous }
-        return try body()
-    }
-
-    /// The setting turns the restore off, and the caption beside it says so:
-    /// "Previous tabs aren't restored." Nothing opens, and nothing is deleted
-    /// on the way past either.
-    @Test func openingWithANewTabRestoresNothing() {
-        let database = AppDatabase.temporary()
-        let model = BrowserModel(database: database)
-        _ = model.newTab(url: URL(string: "https://example.com/"))
-        model.saveBlocking()
-
-        let reopened = openingWithANewTab {
-            let model = BrowserModel(database: database)
-            model.restoreSession()
-            return model
-        }
-        #expect(reopened.tabs.isEmpty)
-
-        // Untouched on disk until something is saved over them, so switching
-        // the setting back finds them.
-        #expect(reopen(database).tabs.count == 1)
     }
 
     /// The arrangement most easily lost by a table that only knows a top

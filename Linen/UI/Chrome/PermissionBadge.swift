@@ -118,7 +118,7 @@ private struct PermissionPopover: View {
                 Image(nsImage: favicon)
                     .resizable()
                     .frame(width: 18, height: 18)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: 13))

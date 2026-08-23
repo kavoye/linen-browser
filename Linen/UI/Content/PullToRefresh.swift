@@ -38,7 +38,6 @@ nonisolated struct PullStartProbe: Equatable, Codable {
 final class PullToRefreshMonitor {
     var onChange: ((PullState, Animation?) -> Void)?
     var webViewProvider: (() -> WKWebView?)?
-    /// Whether chrome of ours stands over the page and owns the wheel.
     var isCovered: (() -> Bool)?
 
     private var monitor: Any?
@@ -59,6 +58,11 @@ final class PullToRefreshMonitor {
     nonisolated static func canBeginPull(_ probe: PullStartProbe) -> Bool {
         probe.scrollY <= topSlack
             && !probe.ancestors.contains(where: \.consumesVerticalScroll)
+    }
+
+    static func pageOwnsScroll(hit: NSView?, page: NSView) -> Bool {
+        guard let hit else { return false }
+        return hit.isDescendant(of: page)
     }
 
     static func startProbeScript(x: CGFloat, y: CGFloat) -> String {
@@ -116,7 +120,10 @@ final class PullToRefreshMonitor {
         guard let webView = webViewProvider?(),
               let window = webView.window,
               event.window === window,
-              webView.bounds.contains(webView.convert(event.locationInWindow, from: nil)),
+              Self.pageOwnsScroll(
+                  hit: window.contentView?.hitTest(event.locationInWindow),
+                  page: webView
+              ),
               event.momentumPhase == []
         else { return }
 

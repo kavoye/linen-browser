@@ -30,11 +30,6 @@ struct AskSurfacePlacementTests {
         #expect(startPage.messageLineLimit > toolbar.messageLineLimit)
     }
 
-    @Test func theStartPageLiftsFurtherOffThePage() {
-        #expect(startPage.liftRadius > toolbar.liftRadius)
-        #expect(startPage.liftOffset > toolbar.liftOffset)
-    }
-
     // MARK: - Everything has to fit
 
     @Test func theOrbHasRoomInsideTheRow() {
@@ -91,10 +86,6 @@ struct AskSurfacePlacementTests {
         #expect(!toolbar.showsKeyHints)
     }
 
-    @Test func onlyTheToolbarFieldLetsTheGlassThrough() {
-        #expect(toolbar.usesMaterial)
-        #expect(!startPage.usesMaterial)
-    }
 }
 
 @MainActor

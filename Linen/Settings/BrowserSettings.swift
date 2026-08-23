@@ -15,9 +15,10 @@ final class BrowserSettings {
 
     private enum Key {
         static let appearance = "appearance.mode"
+        static let websiteColor = "appearance.websiteColor"
         static let pageZoom = "content.defaultZoom"
-        static let startup = "startup.behavior"
         static let newTab = "startup.newTab"
+        static let sleepsInactiveTabs = "tabs.sleep"
         static let homepage = "startup.homepage"
         static let searchEngine = "search.engine"
         static let customSearchName = "search.custom.name"
@@ -33,6 +34,7 @@ final class BrowserSettings {
         static let autoplay = "content.autoplay"
         static let mediaPlayer = "media.player"
         static let lyrics = "media.lyrics"
+        static let tabColorRefraction = "appearance.tabColorRefraction"
         static let automaticPiP = "media.automaticPiP"
         static let videoInPlayer = "experiments.videoInPlayer"
         static let downloadFolder = "downloads.folder"
@@ -48,7 +50,7 @@ final class BrowserSettings {
     }
 
     static let sessionKeys: [String] = [
-        Key.startup, Key.newTab, Key.homepage,
+        Key.newTab, Key.homepage,
         Key.searchEngine, Key.customSearchName, Key.customSearchTemplate,
         Key.suggestions, Key.agentOnlyInput,
         Key.historyRetention, Key.clearOnQuit, Key.certificateExceptions,
@@ -110,6 +112,13 @@ final class BrowserSettings {
         }
     }
 
+    var matchesWebsiteColor: Bool {
+        didSet {
+            guard matchesWebsiteColor != oldValue else { return }
+            write(matchesWebsiteColor, forKey: Key.websiteColor)
+        }
+    }
+
     var showsReportIssueButton: Bool {
         didSet {
             guard showsReportIssueButton != oldValue else { return }
@@ -151,6 +160,20 @@ final class BrowserSettings {
         }
     }
 
+    var sleepsInactiveTabs: Bool {
+        didSet {
+            guard sleepsInactiveTabs != oldValue else { return }
+            write(sleepsInactiveTabs, forKey: Key.sleepsInactiveTabs)
+        }
+    }
+
+    var refractsTabColor: Bool {
+        didSet {
+            guard refractsTabColor != oldValue else { return }
+            write(refractsTabColor, forKey: Key.tabColorRefraction)
+        }
+    }
+
     var automaticPictureInPicture: Bool {
         didSet {
             guard automaticPictureInPicture != oldValue else { return }
@@ -173,10 +196,6 @@ final class BrowserSettings {
     }
 
     // MARK: - Startup
-
-    var startup: StartupBehavior {
-        didSet { write(startup.rawValue, forKey: Key.startup) }
-    }
 
     var newTab: NewTabBehavior {
         didSet { write(newTab.rawValue, forKey: Key.newTab) }
@@ -438,9 +457,12 @@ final class BrowserSettings {
 
         appearance = string(Key.appearance)
             .flatMap(AppearanceMode.init(rawValue:)) ?? .system
+        matchesWebsiteColor = object(Key.websiteColor) as? Bool ?? true
         showsReportIssueButton = object(Key.reportIssueButton) as? Bool ?? true
         showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
         showsLyrics = object(Key.lyrics) as? Bool ?? true
+        refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? false
+        sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false
         automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
         showsVideoInPlayer = object(Key.videoInPlayer) as? Bool ?? false
         #if DEBUG
@@ -453,8 +475,6 @@ final class BrowserSettings {
         let storedZoom = double(Key.pageZoom)
         pageZoom = storedZoom > 0 ? storedZoom : 1
 
-        startup = string(Key.startup)
-            .flatMap(StartupBehavior.init(rawValue:)) ?? .restore
         self.newTab = string(Key.newTab)
             .flatMap(NewTabBehavior.init(rawValue:)) ?? .startPage
         homepage = string(Key.homepage) ?? ""
@@ -498,7 +518,6 @@ final class BrowserSettings {
         guard defaults !== sessionDefaults else { return }
         sessionDefaults = defaults
 
-        startup = string(Key.startup).flatMap(StartupBehavior.init(rawValue:)) ?? .restore
         newTab = string(Key.newTab).flatMap(NewTabBehavior.init(rawValue:)) ?? .startPage
         homepage = string(Key.homepage) ?? ""
 
@@ -562,8 +581,8 @@ final class BrowserSettings {
 
     func resetToDefaults() {
         appearance = .system
+        matchesWebsiteColor = true
         pageZoom = 1
-        startup = .restore
         newTab = .startPage
         homepage = ""
         searchEngineID = SearchEngine.duckDuckGo.id
@@ -604,7 +623,7 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     var label: LocalizedStringResource {
         switch self {
         case .system:
-            "System"
+            "Auto"
         case .light:
             "Light"
         case .dark:
@@ -620,33 +639,6 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
             NSAppearance(named: .aqua)
         case .dark:
             NSAppearance(named: .darkAqua)
-        }
-    }
-}
-
-enum StartupBehavior: String, CaseIterable, Identifiable {
-    case restore
-    case newTab
-
-    var id: String {
-        rawValue
-    }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .restore:
-            "Previous tabs"
-        case .newTab:
-            "A new tab"
-        }
-    }
-
-    var caption: LocalizedStringResource {
-        switch self {
-        case .restore:
-            "Restores the tabs from your last session, in the same order."
-        case .newTab:
-            "Opens one new tab. Previous tabs aren’t restored."
         }
     }
 }

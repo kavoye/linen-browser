@@ -17,16 +17,11 @@ struct QuietIconButton: View {
             Image(systemName: symbol)
                 .font(Theme.Font.rowTitle)
                 .frame(width: 28, height: 28)
-                .background(
-                    isOn ? Theme.Wash.selection : hovering ? Theme.Wash.hover : Theme.Wash.none,
-                    in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
-                )
-                .contentShape(Rectangle())
+                .hoverBackground(isActive: isOn || hovering)
         }
         .buttonStyle(.plain)
         .foregroundStyle(isOn ? .primary : .secondary)
         .onHover { hovering = $0 }
-        .hoverVerified($hovering)
         .animation(Theme.Motion.quick, value: hovering)
         .help(help)
     }
@@ -35,6 +30,8 @@ struct QuietIconButton: View {
 struct ToolbarButton: View {
     let symbol: String
     let enabled: Bool
+    var isOn = false
+    var highlightsWhenOn = true
     var help: String = ""
     var heldMenu: (() -> NSMenu?)?
     let action: () -> Void
@@ -47,13 +44,21 @@ struct ToolbarButton: View {
             Image(systemName: symbol)
                 .font(.system(size: 12, weight: .semibold))
                 .frame(width: 30, height: 28)
-                .chromeButtonPlate(isLit: hovering && enabled)
+                .hoverBackground(
+                    isActive: (hovering && enabled) || (isOn && highlightsWhenOn)
+                )
         }
         .buttonStyle(.plain)
-        .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight, enabled: enabled, hovering: hovering))
+        .foregroundStyle(
+            ChromeInk.glyph(
+                onLight: chromeIsLight,
+                enabled: enabled,
+                hovering: hovering || (isOn && highlightsWhenOn)
+            )
+        )
         .disabled(!enabled)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
         .onHover { hovering = $0 }
-        .hoverVerified($hovering)
         .overlay {
             if let heldMenu, enabled {
                 ToolbarHoldCatcher(hovering: $hovering, menu: heldMenu, action: action)
@@ -84,15 +89,11 @@ struct ToolbarChip: View {
             .foregroundStyle(isDestructive && hovering ? .red : .primary)
             .padding(.horizontal, 10)
             .frame(height: 28)
-            .background(
-                hovering ? Theme.Wash.hover : Theme.Wash.faint,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.control)
+            .controlGlassSurface(
+                isActive: hovering,
+                tint: isDestructive && hovering ? .red : nil,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.control)
-                    .strokeBorder(hovering ? Theme.Wash.strong : Theme.Wash.hover, lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.control))
             .opacity(isEnabled ? 1 : 0.4)
         }
         .buttonStyle(.plain)

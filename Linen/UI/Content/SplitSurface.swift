@@ -143,7 +143,7 @@ struct SplitSurface: View {
         return ZStack(alignment: .topLeading) {
             ForEach(panes) { tab in
                 if let rect = layout.slot(of: tab.id) {
-                    pane(tab, isUnderTopBar: restingGrid.isUnderTopBar(tab.id))
+                    pane(tab)
                         .frame(width: rect.width, height: rect.height)
                         .offset(x: rect.minX, y: rect.minY)
                 }
@@ -154,10 +154,11 @@ struct SplitSurface: View {
             if let aimed {
                 SplitLandingSlot(
                     outcome: outcome(of: aimed),
-                    topInset: aimed.slot.minY == 0 ? Theme.topBarHeight : 0
+                    topInset: 0
                 )
                 .frame(width: aimed.slot.width, height: aimed.slot.height)
                 .offset(x: aimed.slot.minX, y: aimed.slot.minY)
+                .transition(.identity)
                 .animation(Theme.Motion.quick, value: aimed)
             }
         }
@@ -224,12 +225,11 @@ struct SplitSurface: View {
         )
     }
 
-    private func pane(_ tab: BrowserTab, isUnderTopBar: Bool) -> some View {
+    private func pane(_ tab: BrowserTab) -> some View {
         WebPane(
             tab: tab,
             browser: browser,
             coordinator: coordinator,
-            isUnderTopBar: isUnderTopBar,
             pull: tab.id == browser.activeTabID ? pull : .idle
         )
         .id(tab.id)
@@ -259,7 +259,7 @@ struct SplitSurface: View {
 
     private func handleCentre(_ tab: BrowserTab, in layout: SplitLayout) -> CGPoint {
         guard let rect = layout.slot(of: tab.id) else { return CGPoint(x: -1000, y: -1000) }
-        let covered = (rect.minY == 0 ? Theme.topBarHeight : 0) + 10 + PaneHandle.size.height / 2
+        let covered = 10 + PaneHandle.size.height / 2
         return CGPoint(x: rect.midX, y: rect.minY + covered)
     }
 }
@@ -268,12 +268,7 @@ private struct WebPane: View {
     let tab: BrowserTab
     let browser: BrowserModel
     let coordinator: AppCoordinator
-    let isUnderTopBar: Bool
     let pull: PullState
-
-    private var coveredHeight: CGFloat {
-        isUnderTopBar ? Theme.topBarHeight : 0
-    }
 
     private var backdrop: Color {
         tab.pageColor.map(Color.init(nsColor:))
@@ -289,7 +284,6 @@ private struct WebPane: View {
         surface
             .overlay {
                 PaneEventCatcher(onPointerDown: { coordinator.focusPane(tab) })
-                    .padding(.top, coveredHeight)
             }
 
     }
@@ -299,32 +293,38 @@ private struct WebPane: View {
             .overlay {
                 if showsStartPage {
                     StartPage(browser: browser, coordinator: coordinator)
-                        .safeAreaPadding(.top, coveredHeight)
-                        .background(Theme.windowBackground)
                         .transition(.identity)
                 }
             }
     }
 
     private var page: some View {
-        WebViewRepresentable(webView: tab.webView, parksWhenIdle: true)
-            .background(tab.canvasColor.map(Color.init(nsColor:)) ?? Theme.windowBackground)
+        WebViewRepresentable(
+            webView: tab.webView,
+            parksWhenIdle: true,
+            onReady: { tab.webViewDidBecomeVisible() }
+        )
+            .opacity(showsStartPage ? 0 : 1)
+            .background(
+                showsStartPage
+                    ? Color.clear
+                    : (tab.canvasColor.map(Color.init(nsColor:)) ?? Theme.windowBackground)
+            )
             .overlay {
-                if !tab.hasPresentedContent {
-                    Theme.windowBackground
-                        .transition(.identity)
-                }
+                Theme.windowBackground
+                    .opacity(!showsStartPage && !tab.hasPresentedContent ? 1 : 0)
+                    .transition(.identity)
             }
             .offset(y: pull.offset)
             .overlay(alignment: .top) {
                 backdrop
-                    .frame(height: coveredHeight + pull.offset)
+                    .frame(height: pull.offset)
                     .allowsHitTesting(false)
             }
             .overlay(alignment: .top) {
                 if pull.offset > 0 {
                     PullIndicator(state: pull)
-                        .padding(.top, coveredHeight + pull.offset / 2 - PullIndicator.size / 2)
+                        .padding(.top, pull.offset / 2 - PullIndicator.size / 2)
                         .allowsHitTesting(false)
                 }
             }
@@ -355,14 +355,15 @@ struct SplitLandingSlot: View {
         }
     }
 
+    private static var radius: CGFloat {
+        Theme.Radius.nested(in: LoomChrome.canvasRadius, inset: inset)
+    }
+
     var body: some View {
-        let radius = Theme.Radius.nested(in: Theme.Radius.window, inset: Self.inset)
-        return RoundedRectangle(cornerRadius: radius)
-            .fill(Theme.windowBackground.opacity(0.85))
-            .overlay {
-                RoundedRectangle(cornerRadius: radius)
-                    .strokeBorder(Theme.Wash.outline, style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-            }
+        LoomPanelFill(
+            shape: RoundedRectangle(cornerRadius: Self.radius, style: .continuous),
+            emphasis: 2.2
+        )
             .overlay {
                 Text(caption)
                     .font(Theme.Font.title)
@@ -383,51 +384,35 @@ private struct SeamHandle: View {
     let onReset: () -> Void
 
     @State private var hovering = false
-    @State private var dwelled = false
     @State private var isDragging = false
-
-    private static let dwellDuration = Duration.milliseconds(220)
-
-    private var active: Bool {
-        dwelled || isDragging
-    }
 
     private var isSideBySide: Bool {
         axis == .sideBySide
     }
 
     var body: some View {
-        Theme.windowBackground
-            .overlay {
-                Rectangle()
-                    .fill(active
-                        ? AnyShapeStyle(Theme.edgeHandle(along: isSideBySide ? .vertical : .horizontal))
-                        : AnyShapeStyle(Theme.Wash.strong))
-                    .frame(width: isSideBySide ? 0.5 : nil, height: isSideBySide ? nil : 0.5)
+        ZStack {
+            Color.clear
+
+            LoomResizePill(
+                axis: isSideBySide ? .vertical : .horizontal,
+                isVisible: hovering || isDragging,
+                isDragging: isDragging
+            )
+        }
+        .contentShape(SeamHitBand(axis: axis))
+        .pointerStyle(isSideBySide ? .columnResize : .rowResize)
+        .onHover { hovering = $0 }
+        .gesture(drag)
+        .onTapGesture(count: 2) { onReset() }
+        .animation(Theme.Motion.quick, value: hovering)
+        .animation(Theme.Motion.quick, value: isDragging)
+        .help("Drag to resize · double-click to reset")
+        .onDisappear {
+            if hovering || isDragging {
+                NSCursor.arrow.set()
             }
-            .contentShape(SeamHitBand(axis: axis))
-            .pointerStyle(active ? (isSideBySide ? .columnResize : .rowResize) : nil)
-            .onHover { hovering = $0 }
-            .task(id: hovering) {
-                guard hovering else {
-                    dwelled = false
-                    return
-                }
-                guard !dwelled else { return }
-                try? await Task.sleep(for: Self.dwellDuration)
-                guard !Task.isCancelled else { return }
-                dwelled = true
-                (isSideBySide ? NSCursor.columnResize : NSCursor.rowResize).set()
-            }
-            .gesture(drag)
-            .onTapGesture(count: 2) { onReset() }
-            .animation(Theme.Motion.quick, value: active)
-            .help("Drag to resize · double-click to reset")
-            .onDisappear {
-                if active {
-                    NSCursor.arrow.set()
-                }
-            }
+        }
     }
 
     private struct SeamHitBand: Shape {
@@ -441,7 +426,6 @@ private struct SeamHandle: View {
     private var drag: some Gesture {
         DragGesture(minimumDistance: 1, coordinateSpace: .global)
             .onChanged { value in
-                dwelled = true
                 isDragging = true
                 withTransaction(Transaction(animation: nil)) {
                     onDragChanged(value.location)
@@ -461,14 +445,20 @@ nonisolated enum SplitPillVisibility {
     static let settleDelay = Duration.seconds(1.2)
     static let settleFade = 0.8
 
+    static func isEngaged(isHidden: Bool, isHovered: Bool, isDragging: Bool, isSettled: Bool) -> Bool {
+        !isHidden && (isHovered || isDragging || !isSettled)
+    }
+
     static func opacity(isHidden: Bool, isHovered: Bool, isDragging: Bool, isSettled: Bool) -> Double {
         if isHidden {
             return 0
         }
-        if isHovered || isDragging || !isSettled {
-            return 1
-        }
-        return resting
+        return isEngaged(
+            isHidden: isHidden,
+            isHovered: isHovered,
+            isDragging: isDragging,
+            isSettled: isSettled
+        ) ? 1 : resting
     }
 }
 
@@ -493,58 +483,77 @@ private struct PaneHandle: View {
         browser.splits.split(containing: tab.id)
     }
 
+    private var visibility: Double {
+        SplitPillVisibility.opacity(
+            isHidden: isHidden,
+            isHovered: hovering,
+            isDragging: dragging,
+            isSettled: settled
+        )
+    }
+
+    private var wearsGlass: Bool {
+        !isFocused && SplitPillVisibility.isEngaged(
+            isHidden: isHidden,
+            isHovered: hovering,
+            isDragging: dragging,
+            isSettled: settled
+        )
+    }
+
     var body: some View {
-        Capsule()
-            .fill(isFocused ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.windowBackground.opacity(0.92)))
-            .overlay {
-                Capsule().strokeBorder(isFocused ? .clear : Theme.Wash.strong, lineWidth: 0.5)
+        ZStack {
+            if isFocused {
+                Capsule().fill(Theme.accent)
+            } else {
+                LoomPanelFill(shape: Capsule(), isVisible: wearsGlass)
+                    .transaction { $0.animation = nil }
             }
-            .overlay {
-                HStack(spacing: 4) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        Circle()
-                            .fill(isFocused
-                                ? Color.white.opacity(hovering || dragging ? 1 : 0.8)
-                                : hovering || dragging ? Theme.Wash.scrim : Theme.chrome(0.35))
-                            .frame(width: 2.5, height: 2.5)
-                    }
+        }
+        .overlay {
+            Capsule().strokeBorder(isFocused ? .clear : Theme.Wash.strong, lineWidth: 0.5)
+        }
+        .overlay {
+            HStack(spacing: 4) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Circle()
+                        .fill(isFocused
+                            ? Color.white.opacity(hovering || dragging ? 1 : 0.8)
+                            : hovering || dragging ? Theme.Wash.scrim : Theme.chrome(0.35))
+                        .frame(width: 2.5, height: 2.5)
                 }
             }
-            .frame(width: Self.size.width, height: Self.size.height)
-            .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
-            .opacity(SplitPillVisibility.opacity(
-                isHidden: isHidden,
-                isHovered: hovering,
-                isDragging: dragging,
-                isSettled: settled
-            ))
-            .allowsHitTesting(!isHidden || dragging)
-            .pointerStyle(dragging ? .grabActive : .grabIdle)
-            .onHover { over in
-                hovering = over
-                if over {
-                    NSCursor.openHand.set()
-                }
+        }
+        .frame(width: Self.size.width, height: Self.size.height)
+        .shadow(color: .black.opacity(wearsGlass ? 0 : 0.18), radius: 5, y: 2)
+        .opacity(visibility)
+        .allowsHitTesting(!isHidden || dragging)
+        .pointerStyle(dragging ? .grabActive : .grabIdle)
+        .onHover { over in
+            hovering = over
+            if over {
+                NSCursor.openHand.set()
             }
-            .onDisappear {
-                if hovering || dragging {
-                    NSCursor.arrow.set()
-                }
-                guard dragging else { return }
-                model.clearDrop()
-                coordinator.movePane(tab, onto: nil, zone: .none, stayingOnThePage: true)
+        }
+        .onDisappear {
+            if hovering || dragging {
+                NSCursor.arrow.set()
             }
-            .gesture(drag)
-            .onTapGesture { popUpMenu() }
-            .contextMenu { menu }
-            .help("Click for options · drag to move this page")
-            .animation(Theme.Motion.quick, value: hovering)
-            .animation(.easeOut(duration: SplitPillVisibility.settleFade), value: settled)
-            .task {
-                settled = false
-                try? await Task.sleep(for: SplitPillVisibility.settleDelay)
-                settled = true
-            }
+            guard dragging else { return }
+            model.clearDrop()
+            coordinator.movePane(tab, onto: nil, zone: .none, stayingOnThePage: true)
+        }
+        .gesture(drag)
+        .onTapGesture { popUpMenu() }
+        .contextMenu { menu }
+        .help("Click for options · drag to move this page")
+        .animation(Theme.Motion.quick, value: hovering)
+        .animation(.easeOut(duration: SplitPillVisibility.settleFade), value: settled)
+        .task {
+            settled = false
+            try? await Task.sleep(for: SplitPillVisibility.settleDelay)
+            settled = true
+        }
     }
 
     private var drag: some Gesture {

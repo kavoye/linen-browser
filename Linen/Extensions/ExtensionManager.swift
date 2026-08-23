@@ -557,6 +557,15 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         confirmUninstall(id: id)
     }
 
+    func hasOptionsPage(id: String) -> Bool {
+        contexts[id]?.optionsPageURL != nil
+    }
+
+    func openOptionsPage(id: String) {
+        guard let url = contexts[id]?.optionsPageURL else { return }
+        _ = onOpenTab?(url)
+    }
+
     func confirmUninstall(id: String) {
         let name = installed.first { $0.id == id }?.displayName ?? id
         let alert = NSAlert()

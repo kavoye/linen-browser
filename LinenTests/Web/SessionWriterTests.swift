@@ -13,19 +13,10 @@ import Testing
 /// tabs that were themselves restored.
 @MainActor
 struct SessionWriterTests {
-    private func restoring<T>(_ body: () throws -> T) rethrows -> T {
-        let previous = BrowserSettings.shared.startup
-        BrowserSettings.shared.startup = .restore
-        defer { BrowserSettings.shared.startup = previous }
-        return try body()
-    }
-
     private func reopen(_ database: AppDatabase) -> BrowserModel {
-        restoring {
-            let model = BrowserModel(database: database)
-            model.restoreSession()
-            return model
-        }
+        let model = BrowserModel(database: database)
+        model.restoreSession()
+        return model
     }
 
     private func storedTabCount(in database: AppDatabase) throws -> Int {

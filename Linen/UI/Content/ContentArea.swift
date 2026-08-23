@@ -7,49 +7,32 @@ import SwiftUI
 struct ContentArea: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
+    let settingsWorkspace: SettingsWorkspace
+    let canvasTrailingInset: CGFloat
 
     @State private var pull = PullToRefreshMonitor()
     @State private var pullState = PullState.idle
-
-    @Environment(\.windowControlsInset) private var windowControlsInset
-
-    private var sidebar: SidebarLayout {
-        coordinator.sidebar
-    }
 
     private var showStartPage: Bool {
         ChromeBand.showsStartPage(browser: browser)
     }
 
-    private var hidesNavBar: Bool {
-        showStartPage && browser.activeSplit == nil
+    private var showsPagePanelFill: Bool {
+        if coordinator.page == .settings {
+            return true
+        }
+        if let panes = browser.splitPanes {
+            return panes.allSatisfy { ChromeBand.showsStartPage(for: $0) }
+        }
+        return showStartPage || browser.activeTab?.internalPage != nil
     }
-
-    private var showsSteering: Bool {
-        browser.activeTab?.isShowingStartPage == true
-    }
-
-    private static let barTrailingPadding: CGFloat = 10
 
     var body: some View {
-        ZStack(alignment: .top) {
+        LoomPageCanvas(
+            trailingInset: canvasTrailingInset,
+            showsPanelFill: showsPagePanelFill
+        ) {
             page
-                .zIndex(0)
-
-            if hidesNavBar {
-                Color.clear
-                    .frame(height: Theme.topBarHeight)
-                    .background { WindowDragArea() }
-                    .overlay(alignment: .leading) { bareBarControls }
-                    .overlay(alignment: .trailing) {
-                        SidePanelToggle(coordinator: coordinator)
-                            .padding(.trailing, Self.barTrailingPadding)
-                    }
-                    .zIndex(10)
-            } else {
-                ContentNavBar(browser: browser, coordinator: coordinator)
-                    .zIndex(10)
-            }
         }
         .onAppear {
             pull.webViewProvider = { browser.activeTab?.webView }
@@ -66,79 +49,7 @@ struct ContentArea: View {
         .onDisappear {
             pull.stop()
         }
-        // The bar leaves as a cut. Glass cannot fade out, and an animated removal
-        // ghosts grey across the page.
-        .animation(hidesNavBar ? nil : Theme.Motion.settle, value: hidesNavBar)
         .animation(Theme.Motion.settle, value: browser.activeTab?.find.isActive)
-    }
-
-    private var sidebarToggleHelp: LocalizedStringResource {
-        sidebar.isVisible ? "Hide Sidebar" : "Show Sidebar"
-    }
-
-    private var barLeadingPadding: CGFloat {
-        SidebarMetrics.windowControlsPadding(
-            isVisible: sidebar.isVisible,
-            style: sidebar.style,
-            windowControlsInset: windowControlsInset
-        ) + 10
-    }
-
-    @ViewBuilder
-    private var bareBarControls: some View {
-        let showsToggle = SidebarTogglePlacement.inNavBar(isVisible: sidebar.isVisible, style: sidebar.style)
-        if showsToggle || showsSteering {
-            HStack(spacing: 6) {
-                if showsToggle {
-                    sidebarReveal
-                }
-                if showsSteering {
-                    steering
-                }
-            }
-            .padding(.leading, barLeadingPadding)
-        }
-    }
-
-    private var sidebarReveal: some View {
-        ToolbarButton(symbol: "sidebar.left", enabled: true, help: String(localized: sidebarToggleHelp)) {
-            if sidebar.isVisible {
-                sidebar.toggleVisible()
-            } else {
-                sidebar.show()
-            }
-        }
-        .onHover { if $0, !sidebar.isVisible { sidebar.isPeeking = true } }
-        .contextMenu {
-            SidebarStyleMenuItems(sidebar: sidebar)
-        }
-    }
-
-    private var steering: some View {
-        HStack(spacing: 6) {
-            ToolbarButton(
-                symbol: "chevron.left",
-                enabled: browser.activeTab?.canGoBack ?? false,
-                help: String(localized: "Back"),
-                heldMenu: {
-                    guard let tab = browser.activeTab else { return nil }
-                    return NavigationHoldMenu.back(for: tab, coordinator: coordinator)
-                }
-            ) {
-                browser.activeTab?.goBack()
-            }
-            ToolbarButton(
-                symbol: "chevron.right",
-                enabled: browser.activeTab?.canGoForward ?? false,
-                help: String(localized: "Forward"),
-                heldMenu: {
-                    guard let tab = browser.activeTab else { return nil }
-                    return NavigationHoldMenu.forward(for: tab, coordinator: coordinator)
-                }
-            ) {
-                browser.activeTab?.goForward()
-            }
-        }
     }
 
     private func pullBackdrop(for tab: BrowserTab) -> Color {
@@ -148,11 +59,13 @@ struct ContentArea: View {
     }
 
     private var pullsAWebPage: Bool {
+        guard coordinator.page == .browser else { return false }
         guard let tab = browser.activeTab else { return false }
         return tab.internalPage == nil && !showStartPage && browser.activeSplit == nil
     }
 
     private var landing: SplitDropPlan.Target? {
+        guard coordinator.page == .browser else { return nil }
         guard browser.activeSplit == nil, coordinator.sidebarDrag.source == .row else { return nil }
         return coordinator.sidebarDrag.target
     }
@@ -162,7 +75,10 @@ struct ContentArea: View {
             KeptAliveTabs(browser: browser, media: coordinator.media)
 
             Group {
-                if let tab = browser.activeTab, let internalPage = tab.internalPage {
+                if coordinator.page == .settings {
+                    SettingsView(coordinator: coordinator, workspace: settingsWorkspace)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else if let tab = browser.activeTab, let internalPage = tab.internalPage {
                     Group {
                         switch internalPage {
                         case .history:
@@ -173,7 +89,6 @@ struct ContentArea: View {
                             ReleaseNotesView(browser: browser, notes: coordinator.releaseNotes)
                         }
                     }
-                    .safeAreaPadding(.top, Theme.topBarHeight)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if let split = browser.activeSplit, let panes = browser.splitPanes {
                     SplitSurface(
@@ -190,12 +105,11 @@ struct ContentArea: View {
                         .offset(y: pullState.offset)
                         .overlay(alignment: .top) {
                             pullBackdrop(for: tab)
-                                .frame(height: Theme.topBarHeight + pullState.offset)
+                                .frame(height: pullState.offset)
                                 .allowsHitTesting(false)
                         }
                 } else {
                     StartPage(browser: browser, coordinator: coordinator)
-                        .safeAreaPadding(.top, Theme.topBarHeight)
                         .transition(
                             .asymmetric(
                                 insertion: .opacity.animation(Theme.Motion.settle),
@@ -206,9 +120,9 @@ struct ContentArea: View {
             }
             .animation(.spring(response: 0.38, dampingFraction: 0.88), value: browser.internalPageMoves)
             .overlay(alignment: .top) {
-                if let tab = browser.activeTab, tab.isLoading {
+                if coordinator.page == .browser, let tab = browser.activeTab, tab.isLoading {
                     LoadingBar(progress: tab.progress)
-                        .padding(.top, Theme.topBarHeight + pullState.offset)
+                        .padding(.top, pullState.offset)
                         .transition(.opacity)
                 }
             }
@@ -216,7 +130,7 @@ struct ContentArea: View {
             if let landing {
                 SplitLandingSlot(
                     outcome: .arrives,
-                    topInset: landing.slot.minY == 0 ? Theme.topBarHeight : 0
+                    topInset: 0
                 )
                 .frame(width: landing.slot.width, height: landing.slot.height)
                 .offset(x: landing.slot.minX, y: landing.slot.minY)
@@ -224,13 +138,13 @@ struct ContentArea: View {
                 .zIndex(6)
             }
 
-            if let tab = browser.activeTab, tab.find.isActive {
+            if coordinator.page == .browser, let tab = browser.activeTab, tab.find.isActive {
                 HStack {
                     Spacer()
                     FindBar(session: tab.find)
                 }
                 .id(tab.id)
-                .padding(.top, Theme.topBarHeight + 10)
+                .padding(.top, 10)
                 .padding(.trailing, 14)
                 .zIndex(5)
                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -239,7 +153,7 @@ struct ContentArea: View {
             if pullsAWebPage {
                 PullIndicator(state: pullState)
                     .frame(maxWidth: .infinity)
-                    .offset(y: Theme.topBarHeight + pullState.offset / 2 - PullIndicator.size / 2)
+                    .offset(y: pullState.offset / 2 - PullIndicator.size / 2)
                     .zIndex(4)
                     .allowsHitTesting(false)
             }
@@ -278,7 +192,11 @@ private struct ActiveWebSurface: View {
     let tab: BrowserTab
 
     var body: some View {
-        WebViewRepresentable(webView: tab.webView, parksWhenIdle: true)
+        WebViewRepresentable(
+            webView: tab.webView,
+            parksWhenIdle: true,
+            onReady: { tab.webViewDidBecomeVisible() }
+        )
             .id(tab.id)
             .background(
                 tab.canvasColor.map(Color.init(nsColor:)) ?? Theme.windowBackground
@@ -295,14 +213,23 @@ private struct ActiveWebSurface: View {
 struct LoadingBar: View {
     let progress: Double
 
+    private static let thickness: CGFloat = 2
+    private static let minimumWidth: CGFloat = 18
+
     var body: some View {
         GeometryReader { proxy in
+            let fraction = min(max(progress, 0), 1)
+            let width = min(
+                proxy.size.width,
+                max(Self.minimumWidth, proxy.size.width * fraction)
+            )
             Capsule()
                 .fill(Theme.accent)
-                .frame(width: max(24, proxy.size.width * progress), height: 2.5)
+                .frame(width: width, height: Self.thickness)
                 .animation(Theme.Motion.drift, value: progress)
         }
-        .frame(height: 2.5)
+        .frame(height: Self.thickness)
+        .padding(.horizontal, LoomChrome.canvasRadius)
         .allowsHitTesting(false)
     }
 }

@@ -277,14 +277,13 @@ private struct SplitRowCell: View {
         }
         .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(answersAlone && hovering ? Theme.Wash.hover : Theme.Wash.none, in: shape)
+        .sidebarHoverFill(isHovering: answersAlone && hovering, in: shape)
         .contentShape(Rectangle())
         .onTapGesture { onTap(tab) }
         .onMiddleClick {
             coordinator.tabPreview.dismiss()
             browser.close(tab)
         }
-        .hoverVerified($hovering)
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
         }
@@ -311,6 +310,5 @@ private struct SplitRowPinReturn: View {
             withAnimation(Theme.Motion.quick) { hovering = over }
         }
         .help(Text(verbatim: help))
-        .toolTipText(help)
     }
 }

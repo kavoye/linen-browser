@@ -219,10 +219,6 @@ struct SidebarSelectionInvariantTests {
     // MARK: - Restore
 
     @Test func aRestoredSessionSelectsOnlyTheActiveTab() {
-        let previous = BrowserSettings.shared.startup
-        BrowserSettings.shared.startup = .restore
-        defer { BrowserSettings.shared.startup = previous }
-
         let database = AppDatabase.temporary()
         let first = BrowserModel(database: database)
         _ = first.newTab()

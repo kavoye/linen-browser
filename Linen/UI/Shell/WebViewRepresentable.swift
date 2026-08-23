@@ -7,15 +7,17 @@ import WebKit
 struct WebViewRepresentable: NSViewRepresentable {
     let webView: WKWebView
     var parksWhenIdle = false
+    var onReady: (() -> Void)?
 
     func makeNSView(context: Context) -> WebViewContainer {
-        let container = WebViewContainer(webView: webView)
+        let container = WebViewContainer(webView: webView, onReady: onReady)
         container.parksWhenIdle = parksWhenIdle
         return container
     }
 
     func updateNSView(_ nsView: WebViewContainer, context: Context) {
         nsView.parksWhenIdle = parksWhenIdle
+        nsView.onReady = onReady
         nsView.install(webView)
     }
 
@@ -83,14 +85,17 @@ final class WebViewParkingShelf: NSView {
 
 final class WebViewContainer: NSView {
     var parksWhenIdle = false
+    var onReady: (() -> Void)?
 
     private weak var installedWebView: WKWebView?
+    private var didReportReady = false
 
     override var preservesContentDuringLiveResize: Bool {
         true
     }
 
-    init(webView: WKWebView) {
+    init(webView: WKWebView, onReady: (() -> Void)? = nil) {
+        self.onReady = onReady
         super.init(frame: .zero)
         install(webView)
     }
@@ -101,6 +106,9 @@ final class WebViewContainer: NSView {
     }
 
     func install(_ webView: WKWebView) {
+        if installedWebView !== webView {
+            didReportReady = false
+        }
         if let installedWebView, installedWebView !== webView, installedWebView.superview === self {
             if parksWhenIdle {
                 WebViewParking.park(installedWebView)
@@ -110,6 +118,7 @@ final class WebViewContainer: NSView {
         }
         installedWebView = webView
         attachIfHosted()
+        reportReadyIfPossible()
     }
 
     private func attachIfHosted() {
@@ -120,11 +129,13 @@ final class WebViewContainer: NSView {
             webView.frame = bounds
         }
         addSubview(webView)
+        reportReadyIfPossible()
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         attachIfHosted()
+        reportReadyIfPossible()
     }
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
@@ -144,11 +155,21 @@ final class WebViewContainer: NSView {
             }
         }
         self.installedWebView = nil
+        didReportReady = false
     }
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         guard installedWebView?.superview === self else { return }
         installedWebView?.frame = bounds
+        reportReadyIfPossible()
+    }
+
+    private func reportReadyIfPossible() {
+        guard !didReportReady, window != nil, bounds.width > 0, bounds.height > 0,
+              installedWebView?.superview === self, let onReady
+        else { return }
+        didReportReady = true
+        onReady()
     }
 }

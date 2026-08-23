@@ -98,4 +98,26 @@ struct SplitPillVisibilityTests {
         #expect(SplitPillVisibility.opacity(isHidden: true, isHovered: false, isDragging: false, isSettled: true) == 0)
         #expect(SplitPillVisibility.opacity(isHidden: true, isHovered: true, isDragging: false, isSettled: false) == 0)
     }
+
+    /// The glass may only stand where the pill is already at full: a material
+    /// carried at a part opacity ghosts grey instead of fading.
+    @Test func onlyAFullyPresentPillMayWearGlass() {
+        for hidden in [true, false] {
+            for hovered in [true, false] {
+                for dragging in [true, false] {
+                    for settled in [true, false] {
+                        let engaged = SplitPillVisibility.isEngaged(
+                            isHidden: hidden, isHovered: hovered,
+                            isDragging: dragging, isSettled: settled
+                        )
+                        let opacity = SplitPillVisibility.opacity(
+                            isHidden: hidden, isHovered: hovered,
+                            isDragging: dragging, isSettled: settled
+                        )
+                        #expect(engaged == (opacity == 1))
+                    }
+                }
+            }
+        }
+    }
 }

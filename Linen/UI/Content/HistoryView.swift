@@ -14,7 +14,7 @@ struct HistoryView: View {
         DestinationPage {
             toolbar
         } content: {
-            LazyVStack(alignment: .leading, spacing: 2, pinnedViews: [.sectionHeaders]) {
+            LazyVStack(alignment: .leading, spacing: 2) {
                 if days.isEmpty {
                     emptyLine
                         .font(Theme.Font.row)
@@ -70,30 +70,23 @@ struct HistoryView: View {
                     .font(Theme.Font.row)
                     .focused($searchFocused)
                 if !query.isEmpty {
-                    Button {
+                    ChromeIcon(
+                        symbol: "xmark",
+                        size: 9,
+                        extent: 18,
+                        help: String(localized: "Clear Search")
+                    ) {
                         query = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(Theme.Font.label)
-                            .foregroundStyle(.tertiary)
+                        searchFocused = true
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 9)
             .frame(height: 28)
             .frame(maxWidth: 240)
-            .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.control)
-                    .strokeBorder(searchFocused ? Theme.chrome(0.2) : Theme.Wash.hover, lineWidth: 1)
+            .glassSurface(
+                in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
             )
-            .shadow(
-                color: .black.opacity(searchFocused ? 0.22 : 0),
-                radius: searchFocused ? 10 : 0,
-                y: searchFocused ? 3 : 0
-            )
-            .animation(Theme.Motion.settle, value: searchFocused)
 
             ToolbarChip(symbol: "trash", label: "Clear", isDestructive: true) {
                 Task { await clear() }
@@ -117,7 +110,6 @@ struct HistoryView: View {
             .padding(.top, 14)
             .padding(.bottom, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.windowBackground)
     }
 
     struct Row: Identifiable {

@@ -101,6 +101,19 @@ enum CommandPaletteProjection {
         commandQuery(in: query) == nil ? query : ""
     }
 
+    static func isAssistantQuery(_ query: String, hasMentions: Bool, agentOnly: Bool) -> Bool {
+        if hasMentions {
+            return true
+        }
+
+        let input = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !input.isEmpty else { return false }
+        if AskSurfaceInteraction.agentPrompt(in: input) != nil {
+            return true
+        }
+        return agentOnly && Omnibox.location(for: input) == nil
+    }
+
     static func commandQuery(in query: String) -> String? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.hasPrefix(commandPrefix) else { return nil }
@@ -386,7 +399,11 @@ final class CommandPaletteModel {
     }
 
     var contextPages: [AskContextPage] {
-        guard sections.contains(where: { $0.id == "ask" }) else { return [] }
+        guard CommandPaletteProjection.isAssistantQuery(
+            interaction.query,
+            hasMentions: !mentionedTabIDs.isEmpty,
+            agentOnly: Omnibox.isAgentOnly
+        ) else { return [] }
         return AskContext.pages(browser: browser, mentionedTabIDs: mentionedTabIDs)
     }
 

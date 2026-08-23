@@ -10,12 +10,19 @@ enum Theme {
         light: NSColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1)
     )
 
+    static let controlSurface = adaptive(
+        dark: NSColor(white: 0.34, alpha: 1),
+        light: NSColor(white: 1, alpha: 1)
+    )
+
     static let sidebarTint = adaptive(
         dark: NSColor(red: 0.05, green: 0.05, blue: 0.065, alpha: 1),
         light: NSColor(red: 0.91, green: 0.91, blue: 0.93, alpha: 1)
     )
 
     static let accent = Color.blue
+
+    static let systemAccent = Color(nsColor: .controlAccentColor)
     static let danger = Color(nsColor: .systemRed)
     static let success = Color(nsColor: .systemGreen)
 
@@ -28,20 +35,31 @@ enum Theme {
         static var window: CGFloat {
             SystemWindowShape.cornerRadius
         }
-        static let panel: CGFloat = 20
-        static let card: CGFloat = 14
-        static let control: CGFloat = 10
-        static let chip: CGFloat = 6
+
+        static var panel: CGFloat {
+            min(window, 14)
+        }
+        static var card: CGFloat {
+            min(window, 12)
+        }
+        static var control: CGFloat {
+            min(window, 10)
+        }
+        static var chip: CGFloat {
+            min(window, 8)
+        }
         static let tight: CGFloat = 4
 
         static func nested(in container: CGFloat, inset: CGFloat) -> CGFloat {
             max(tight, container - inset)
         }
 
-        static let hover: CGFloat = control
+        static var hover: CGFloat {
+            control
+        }
     }
 
-    static let topBarHeight: CGFloat = 44
+    nonisolated static let topBarHeight: CGFloat = 44
 
     static let addressBarMaxWidth: CGFloat = 620
 
@@ -65,15 +83,12 @@ enum Theme {
     }
 
     enum Wash {
-        static let none = chrome(0)
         static let faint = chrome(0.04)
         static let hairline = chrome(0.06)
         static let hover = chrome(0.08)
         static let selection = chrome(0.12)
         static let strong = chrome(0.16)
-        static let outline = chrome(0.22)
         static let emphasis = chrome(0.30)
-        static let mark = chrome(0.62)
         static let scrim = chrome(0.55)
     }
 

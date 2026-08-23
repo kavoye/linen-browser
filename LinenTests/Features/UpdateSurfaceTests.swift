@@ -108,19 +108,27 @@ struct UpdateSurfaceTests {
         #expect(prefixed.version != "0.1.2")
     }
 
+    /// The compact banner names the phase and nothing else. It carries no
+    /// version and no caption, so a wording that reaches for either is a
+    /// wording that cannot be shown.
     @Test func theBannerNamesEachPhase() {
-        let model = UpdateModel()
-        model.version = "2.0"
+        func title(_ phase: UpdateModel.Phase) -> String {
+            String(localized: UpdatePhrasing.title(for: phase))
+        }
 
-        model.phase = .available
-        #expect(UpdatePhrasing.title(model) == "Update to 2.0")
-        #expect(UpdatePhrasing.caption(model)?.contains("2.0") == true)
+        #expect(title(.available) == "Update Available")
+        #expect(title(.readyToInstall) == "Update Available")
+        #expect(title(.downloading) == "Downloading update")
+        #expect(title(.extracting) == "Preparing update")
+        #expect(title(.installing) == "Installing update")
+        #expect(title(.upToDate) == "Up to date")
+        #expect(title(.failed("No route to host")) == "Couldn’t check for updates")
+        #expect(title(.checking) == title(.idle))
 
-        model.phase = .readyToInstall
-        #expect(UpdatePhrasing.title(model) == "Update 2.0 ready")
-
-        model.phase = .failed("No route to host")
-        #expect(UpdatePhrasing.caption(model) == "No route to host")
+        for phase in [UpdateModel.Phase.available, .readyToInstall, .failed("boom")] {
+            #expect(!title(phase).contains("2.0"))
+            #expect(!title(phase).contains("%"))
+        }
     }
 
     /// Quiet until there is something worth saying, and quiet again once

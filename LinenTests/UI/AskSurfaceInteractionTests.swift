@@ -231,13 +231,31 @@ struct AskSurfaceInteractionTests {
         #expect(MentionText.appending(to: "which is cheaper @ni") == "which is cheaper \(MentionText.marker) ")
     }
 
-    @Test func aTrailingAtTokenComposesAMentionButALeadingAtDoesNot() {
+    /// The word being typed offers tabs whenever it opens with “@”, wherever
+    /// it sits. Requiring something before the “@” meant typing it first showed
+    /// nothing, and typing a space and then “@” showed the list.
+    @Test func anAtTokenComposesAMentionWhereverItSits() {
         #expect(AskSurfaceInteraction.mentionFragment(in: "which is cheaper @ni") == "ni")
         #expect(AskSurfaceInteraction.mentionFragment(in: "compare @") == "")
+        #expect(AskSurfaceInteraction.mentionFragment(in: "@ni") == "ni")
+        #expect(AskSurfaceInteraction.mentionFragment(in: "@") == "")
+
+        // The token has been left behind, so it no longer offers anything.
         #expect(AskSurfaceInteraction.mentionFragment(in: "@ask something") == nil)
-        #expect(AskSurfaceInteraction.mentionFragment(in: "@ni") == nil)
         #expect(AskSurfaceInteraction.mentionFragment(in: "which is cheaper @ni ") == nil)
         #expect(AskSurfaceInteraction.mentionFragment(in: "plain question") == nil)
+    }
+
+    /// Asking leads only while the “@” is the whole query. Reaching for a tab
+    /// part way through a question is not an attempt to ask something new.
+    @Test func onlyAnOpeningAtStillOffersToAsk() {
+        #expect(AskSurfaceInteraction.mentionOpensTheQuery("@"))
+        #expect(AskSurfaceInteraction.mentionOpensTheQuery("@ni"))
+
+        #expect(!AskSurfaceInteraction.mentionOpensTheQuery("@qweqwe qweqwe @"))
+        #expect(!AskSurfaceInteraction.mentionOpensTheQuery("which is cheaper @ni"))
+        #expect(!AskSurfaceInteraction.mentionOpensTheQuery("plain question"))
+        #expect(!AskSurfaceInteraction.mentionOpensTheQuery("@ask something"))
     }
 
     @Test func removingTheFragmentLeavesTheQuestion() {

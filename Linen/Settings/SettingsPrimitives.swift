@@ -15,21 +15,35 @@ enum SettingsMetrics {
     static let cardInset: CGFloat = 16
     static let cardInsetV: CGFloat = 2
     static let rowPaddingH: CGFloat = 0
+    static let rowContentInset: CGFloat = 8
+    static let rowHoverFrameInset: CGFloat = 6
+    static let pickerHorizontalInset: CGFloat = 4
+    static let pickerVerticalInset: CGFloat = 9
+    static let pickerItemPaddingV: CGFloat = 5
 
-    static let controlRadius = Theme.Radius.control
+    static var controlRadius: CGFloat {
+        Theme.Radius.control
+    }
+    static var rowRadius: CGFloat {
+        Theme.Radius.card
+    }
     static let controlHeight: CGFloat = 28
 
-    // MARK: - The greys
-
-    static let fill = Theme.Wash.faint
-    static let fillHover = Theme.Wash.hover
-    static let fillSelected = Theme.Wash.selection
-    static let border = Theme.Wash.hover
-    static let borderHover = Theme.Wash.strong
-    static let hairline = Theme.Wash.hairline
+    static let hairline = Color.primary.opacity(0.08)
 }
 
 // MARK: - Containers
+
+extension View {
+    func settingsSurface<S: InsettableShape>(
+        isActive: Bool = false,
+        tint: Color? = nil,
+        isLifted: Bool = false,
+        in shape: S
+    ) -> some View {
+        controlGlassSurface(isActive: isActive, tint: tint, isLifted: isLifted, in: shape)
+    }
+}
 
 struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
@@ -45,15 +59,51 @@ struct SettingsCard<Content: View>: View {
         .padding(.horizontal, SettingsMetrics.cardInset)
         .padding(.vertical, SettingsMetrics.cardInsetV)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            isLit ? Theme.Wash.hover : Theme.Wash.faint,
-            in: RoundedRectangle(cornerRadius: Theme.Radius.card)
+        .settingsSurface(
+            isActive: isLit,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
         )
         .animation(.easeOut(duration: 0.28), value: isLit)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.card)
-                .strokeBorder(Theme.Wash.hover, lineWidth: 1)
-        )
+    }
+}
+
+private struct RowHoverShape: Shape {
+    let radius: CGFloat
+    let verticalInset: CGFloat
+
+    nonisolated func path(in rect: CGRect) -> Path {
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
+            .path(in: rect.insetBy(dx: 0, dy: verticalInset))
+    }
+}
+
+private struct SettingsRowHover: ViewModifier {
+    let isActive: Bool
+    let tint: Color?
+
+    func body(content: Content) -> some View {
+        let hoverBleed = SettingsMetrics.cardInset - SettingsMetrics.rowHoverFrameInset
+        let verticalInset = SettingsMetrics.rowHoverFrameInset - SettingsMetrics.cardInsetV
+
+        content
+            .padding(.horizontal, hoverBleed + SettingsMetrics.rowContentInset)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .hoverBackground(
+                isActive: isActive,
+                tint: tint,
+                in: RowHoverShape(
+                    radius: SettingsMetrics.rowRadius,
+                    verticalInset: verticalInset
+                )
+            )
+            .padding(.horizontal, -hoverBleed)
+            .contentShape(Rectangle())
+    }
+}
+
+extension View {
+    func settingsRowHover(isActive: Bool, tint: Color? = nil) -> some View {
+        modifier(SettingsRowHover(isActive: isActive, tint: tint))
     }
 }
 
@@ -333,15 +383,14 @@ struct SettingsButton: View {
         return AnyShapeStyle(.primary)
     }
 
-    private var fill: Color {
-        guard isEnabled else { return SettingsMetrics.fill }
+    private var hoverGlassTint: Color? {
+        if isDestructive {
+            return Theme.danger
+        }
         if let tint {
-            return tint.opacity(hovering ? 0.24 : 0.16)
+            return tint
         }
-        if isProminent {
-            return Theme.chrome(hovering ? 0.17 : 0.13)
-        }
-        return hovering ? SettingsMetrics.fillHover : SettingsMetrics.fill
+        return nil
     }
 
     var body: some View {
@@ -358,20 +407,16 @@ struct SettingsButton: View {
             .padding(.horizontal, 12)
             .frame(minWidth: minWidth)
             .frame(height: SettingsMetrics.controlHeight)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-                shape
-                    .fill(fill)
-                    .overlay(
-                        shape.strokeBorder(
-                            hovering && isEnabled ? SettingsMetrics.borderHover : SettingsMetrics.border,
-                            lineWidth: 1
-                        )
-                    )
-            }
+            .settingsSurface(
+                isActive: hovering && isEnabled,
+                tint: hoverGlassTint,
+                isLifted: true,
+                in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.45)
         .onHover { hovering = isEnabled && $0 }
         .animation(Theme.Motion.quick, value: hovering)
     }
@@ -399,18 +444,7 @@ struct IconButton: View {
                 }
             }
             .frame(width: SettingsMetrics.controlHeight, height: SettingsMetrics.controlHeight)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-                shape
-                    .fill(hovering && isEnabled ? SettingsMetrics.fillHover : SettingsMetrics.fill)
-                    .overlay(
-                        shape.strokeBorder(
-                            hovering && isEnabled ? SettingsMetrics.borderHover : SettingsMetrics.border,
-                            lineWidth: 1
-                        )
-                    )
-            }
-            .contentShape(Rectangle())
+            .settingsSurface(isActive: hovering && isEnabled, isLifted: true, in: Circle())
         }
         .buttonStyle(.plain)
         .opacity(isEnabled ? 1 : 0.45)
@@ -436,8 +470,6 @@ struct SegmentedControl<Value: Hashable>: View {
     let selection: Value
     let onSelect: (Value) -> Void
 
-    @Namespace private var pill
-
     var body: some View {
         HStack(spacing: 2) {
             ForEach(items) { item in
@@ -452,13 +484,11 @@ struct SegmentedControl<Value: Hashable>: View {
                         .lineLimit(1)
                         .frame(maxWidth: .infinity)
                         .frame(height: 24)
-                        .background {
-                            if isSelected {
-                                RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius - 2)
-                                    .fill(SettingsMetrics.fillSelected)
-                                    .matchedGeometryEffect(id: "pill", in: pill)
-                            }
-                        }
+                        .selectionBackground(
+                            isSelected: isSelected,
+                            isHovering: false,
+                            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius - 2, style: .continuous)
+                        )
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -468,10 +498,8 @@ struct SegmentedControl<Value: Hashable>: View {
             }
         }
         .padding(2)
-        .background(SettingsMetrics.fill, in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-                .strokeBorder(SettingsMetrics.border, lineWidth: 1)
+        .settingsSurface(
+            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
         )
         .animation(.snappy(duration: 0.18), value: selection)
     }
@@ -487,19 +515,10 @@ struct FieldChrome<Content: View>: View {
         content
             .padding(.horizontal, 10)
             .frame(height: SettingsMetrics.controlHeight)
-            .background(SettingsMetrics.fill, in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-                    .strokeBorder(
-                        isFocused ? Theme.Wash.outline : SettingsMetrics.border,
-                        lineWidth: 1
-                    )
-            )
-            .compositingGroup()
-            .shadow(
-                color: .black.opacity(isFocused ? 0.22 : 0),
-                radius: isFocused ? 10 : 0,
-                y: isFocused ? 3 : 0
+            .settingsSurface(
+                isActive: isFocused,
+                isLifted: true,
+                in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
             )
             .animation(Theme.Motion.settle, value: isFocused)
     }
@@ -520,13 +539,10 @@ struct MenuChrome<Content: View>: View {
         }
         .padding(.horizontal, 10)
         .frame(height: SettingsMetrics.controlHeight)
-        .background(
-            hovering ? SettingsMetrics.fillHover : SettingsMetrics.fill,
-            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-                .strokeBorder(hovering ? SettingsMetrics.borderHover : SettingsMetrics.border, lineWidth: 1)
+        .settingsSurface(
+            isActive: hovering,
+            isLifted: true,
+            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
         )
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
@@ -665,7 +681,7 @@ struct Tag: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, 7)
             .padding(.vertical, 2.5)
-            .background(Theme.Wash.hairline, in: Capsule())
+            .settingsSurface(in: Capsule())
             .fixedSize()
     }
 }
@@ -683,10 +699,8 @@ struct KeyCap: View {
             .foregroundStyle(.primary)
             .padding(.horizontal, 6)
             .frame(height: 20)
-            .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.chip)
-                    .strokeBorder(Theme.Wash.hover, lineWidth: 1)
+            .settingsSurface(
+                in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
             )
     }
 }

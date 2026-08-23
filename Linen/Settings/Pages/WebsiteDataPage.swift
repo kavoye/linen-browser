@@ -122,10 +122,8 @@ struct WebsiteDataPage: View {
         }
         .padding(.horizontal, 8)
         .frame(height: 24)
-        .background(SettingsMetrics.fill, in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-                .strokeBorder(searchFocused ? Theme.Wash.outline : SettingsMetrics.border, lineWidth: 1)
+        .glassSurface(
+            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
         )
     }
 

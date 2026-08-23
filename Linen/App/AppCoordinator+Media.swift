@@ -273,6 +273,14 @@ extension AppCoordinator {
         settings.showsLyrics && lyricsTab != nil && !lyricsSource.isLive
     }
 
+    var hasLyrics: Bool {
+        guard showsLyrics else { return false }
+        if case .words = lyrics.phase {
+            return true
+        }
+        return false
+    }
+
     func toggleLyrics() {
         guard settings.showsLyrics else { return }
         if !browserVisible {

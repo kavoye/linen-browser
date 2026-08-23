@@ -54,7 +54,6 @@ private enum Metrics {
     static let gutter: CGFloat = 12
     static let cardInset: CGFloat = 10
     static let railIndent: CGFloat = 20
-    static let titleIndent: CGFloat = 18
     static let railWidth: CGFloat = 12
     static let traceGap: CGFloat = 8
 
@@ -160,9 +159,9 @@ private struct AgentTaskTraceView: View {
         }
         .padding(.horizontal, Metrics.cardInset)
         .padding(.vertical, 8)
-        .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
+        .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: Theme.Radius.control)
+            RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
                 .strokeBorder(Theme.Wash.hairline, lineWidth: 1)
         }
     }
@@ -281,7 +280,7 @@ private struct AgentActivityStepRow: View {
                                     .lineLimit(1)
                                     .padding(.horizontal, 5)
                                     .padding(.vertical, 1)
-                                    .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
+                                    .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
                             }
 
                             if canInspect {
@@ -416,7 +415,7 @@ private struct AgentStepInspection: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(8)
-                    .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
+                    .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
             }
 
             ForEach(links) { link in
@@ -456,7 +455,7 @@ private struct AgentActivityLinkRow: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
             .background {
-                RoundedRectangle(cornerRadius: Theme.Radius.control)
+                RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
                     .strokeBorder(Theme.Wash.hover, lineWidth: 1)
             }
             .contentShape(Rectangle())
@@ -537,7 +536,7 @@ private struct AgentOutcomeChip: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
+            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
     }
 }
 
@@ -549,11 +548,11 @@ private struct AgentInlineButtonStyle: ButtonStyle {
             .padding(.horizontal, 9)
             .padding(.vertical, 3)
             .background {
-                RoundedRectangle(cornerRadius: Theme.Radius.chip)
+                RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                     .strokeBorder(Theme.Wash.strong, lineWidth: 1)
                     .background(
                         Theme.accent.opacity(configuration.isPressed ? 0.12 : 0),
-                        in: RoundedRectangle(cornerRadius: Theme.Radius.chip)
+                        in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                     )
             }
             .contentShape(Rectangle())

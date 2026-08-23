@@ -80,13 +80,8 @@ extension BrowserModel {
     }
 
     func refreshTopBarCoverage() {
-        let split = paneInAir == nil ? activeSplit : nil
         for tab in tabs {
-            guard let split, split.contains(tab.id) else {
-                tab.isUnderTopBar = true
-                continue
-            }
-            tab.isUnderTopBar = split.isUnderTopBar(tab.id)
+            tab.isUnderTopBar = false
         }
     }
 
@@ -412,7 +407,6 @@ extension BrowserModel {
         }
     }
 
-    /// Every tab the selection reaches, folders included, in sidebar order.
     func tabs(under items: [SidebarItem]) -> [BrowserTab] {
         let wanted = sidebarTree.expanded(Set(items))
         return sidebarTree.walk().compactMap { item in

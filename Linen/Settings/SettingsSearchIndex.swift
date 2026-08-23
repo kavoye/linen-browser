@@ -50,12 +50,13 @@ enum SettingsIndex {
     }
 
     static let all: [SettingsEntry] = [
-        SettingsEntry("general.startup", .general, "When Linen opens", "Your previous tabs, or one new tab.",
-                      ["startup", "start up", "on startup", "restore", "reopen", "session", "boot", "launch", "tabs"]),
         SettingsEntry("general.newTab", .general, "New tabs", "The start page, your homepage, or nothing.",
                       ["new tab", "start page", "blank", "empty", "homepage"]),
         SettingsEntry("general.homepage", .general, "Homepage", "New tabs open with this page.",
                       ["home", "home page", "landing", "url"]),
+        SettingsEntry("general.sleepTabs", .general, "Sleep inactive tabs",
+                      "Frees memory when the Mac runs low. Tabs reload when you return to them.",
+                      ["sleep", "sleeping", "discard", "unload", "memory", "ram", "background tabs", "reload"]),
         SettingsEntry("general.mediaPlayer", .general, "Show media player",
                       "The sidebar shows what’s playing, so you can pause or skip from any tab.",
                       ["media", "player", "video", "audio", "dock", "sidebar", "picture in picture", "pip", "now playing"]),
@@ -94,10 +95,15 @@ enum SettingsIndex {
 
         SettingsEntry("appearance.theme", .appearance, "Theme", "Light, dark, or match your Mac.",
                       ["dark mode", "light mode", "theme", "appearance", "colour", "color", "night"]),
+        SettingsEntry("appearance.websiteColor", .appearance, "Match website color",
+                      "Tint the toolbar and sidebar to match the current website.",
+                      ["loom", "colour", "color", "tint", "website", "tab", "adaptive", "chrome"]),
         SettingsEntry("appearance.zoom", .appearance, "Page zoom", "The default for every website. Individual tabs can still be zoomed.",
                       ["zoom", "text size", "font size", "magnify", "bigger", "smaller", "scale"]),
         SettingsEntry("appearance.sidebar", .appearance, "Show sidebar", "Show or hide the list of tabs.",
                       ["sidebar", "tabs", "tab list", "column", "hide"]),
+        SettingsEntry("appearance.refraction", .appearance, "Refract tab color", "The selected tab takes the color of its website’s icon.",
+                      ["refract", "glass", "colour", "color", "tint", "selected tab", "favicon", "sidebar"]),
         SettingsEntry("appearance.sidebarStyle", .appearance, "Icons only", "Narrow the sidebar to its icons.",
                       ["sidebar", "icons", "narrow", "compact", "tabs"]),
         SettingsEntry("appearance.reportIssue", .appearance, "Show report button", "Opens the project’s issue page.",
@@ -262,6 +268,7 @@ private struct SettingsAnchorModifier: ViewModifier {
 
     @Environment(\.settingsHighlight) private var highlight
     @Environment(\.settingsCardInset) private var cardInset
+    @Environment(\.colorScheme) private var colorScheme
 
     private var isLit: Bool {
         highlight == anchor
@@ -277,8 +284,8 @@ private struct SettingsAnchorModifier: ViewModifier {
         content
             .background(alignment: .center) {
                 if isInCard {
-                    RoundedRectangle(cornerRadius: Theme.Radius.card - Self.gap)
-                        .fill(isLit ? Theme.Wash.hover : Theme.Wash.none)
+                    RoundedRectangle(cornerRadius: Theme.Radius.card - Self.gap, style: .continuous)
+                        .fill(isLit ? Theme.Wash.hover : .clear)
                         .padding(.horizontal, -(cardInset - Self.gap))
                         .padding(.vertical, Self.gap - SettingsMetrics.cardInsetV)
                 }

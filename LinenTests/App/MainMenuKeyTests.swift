@@ -102,6 +102,10 @@ struct MainMenuKeyTests {
         for key in ["z", "x", "c", "v", "a", "f", "g"] {
             #expect(!ShortcutPriority.menuAnswersFirst(try event(key, modifiers: .command)))
         }
+        for key in [NSLeftArrowFunctionKey, NSRightArrowFunctionKey] {
+            let arrow = String(UnicodeScalar(key)!)
+            #expect(!ShortcutPriority.menuAnswersFirst(try event(arrow, modifiers: .command)))
+        }
         #expect(!ShortcutPriority.menuAnswersFirst(try event("Z", modifiers: [.command, .shift])))
         #expect(!ShortcutPriority.menuAnswersFirst(try event("G", modifiers: [.command, .shift])))
     }

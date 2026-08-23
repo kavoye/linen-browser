@@ -39,7 +39,7 @@ struct MicButton: View {
                 orbSize: orbSize
             )
             .frame(width: max(20, orbSize + 2), height: max(20, orbSize + 2))
-            .contentShape(Rectangle())
+            .hoverBackground(isActive: hovering)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -110,7 +110,7 @@ struct VoiceGlyph: View {
     var body: some View {
         glyph
             .frame(width: max(14, orbSize))
-            .scaleEffect(pulsing && !isAgentTurn ? beat : 1.0)
+            .scaleEffect(pulsing ? beat : 1.0)
             .onChange(of: isBeating) { _, beating in
                 if beating {
                     withAnimation(.easeInOut(duration: pulseDuration).repeatForever(autoreverses: true)) {
@@ -123,7 +123,12 @@ struct VoiceGlyph: View {
     }
 
     private var isBeating: Bool {
-        state == .listening || state == .executing || isSpeakingReply
+        guard !showsStop else { return false }
+        return state == .listening || state == .executing || isSpeakingReply
+    }
+
+    private var showsStop: Bool {
+        isAgentTurn || (state == .listening && isHighlighted)
     }
 
     private var beat: CGFloat {
@@ -146,11 +151,10 @@ struct VoiceGlyph: View {
     }
 
     private var symbol: String {
-        if isAgentTurn {
+        if showsStop {
             return "stop.fill"
         }
-        guard state == .listening else { return "mic" }
-        return isHighlighted ? "stop.fill" : "mic.fill"
+        return state == .listening ? "mic.fill" : "mic"
     }
 
     static func showsAgentTurn(state: PipelineState, isSpeakingReply: Bool) -> Bool {

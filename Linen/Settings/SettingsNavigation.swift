@@ -128,7 +128,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
              "omnibox", "address bar", "ask", "query",
              ]
         case .appearance:
-            ["theme", "dark", "light", "zoom", "sidebar", "font size"]
+            ["theme", "dark", "light", "loom", "color", "zoom", "sidebar", "font size"]
         case .provider:
             ["model", "api key", "openai", "anthropic", "ollama", "endpoint", "reasoning", "llm", "engine",
              "intelligence", "provider", "voice", "speech", "spoken", "push to talk", "microphone",
@@ -265,13 +265,9 @@ struct SettingsNavigator: View {
                 .padding(.bottom, 14)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .scrollContentBackground(.hidden)
         }
-        .frame(width: SettingsMetrics.navWidth, alignment: .leading)
-        .overlay(alignment: .trailing) {
-            Rectangle()
-                .fill(SettingsMetrics.hairline)
-                .frame(width: 1)
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     // MARK: - Un-searched
@@ -363,34 +359,17 @@ struct SettingsNavigator: View {
                 }
 
             if !query.isEmpty {
-                Button {
+                ChromeIcon(symbol: "xmark", size: 9, extent: 18, help: String(localized: "Clear Search")) {
                     query = ""
                     searchFocused = true
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(Theme.Font.micro)
-                        .foregroundStyle(.tertiary)
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 9)
         .frame(height: SettingsMetrics.controlHeight)
-        .background(SettingsMetrics.fill, in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius))
-        .overlay(
-            RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
-                .strokeBorder(
-                    searchFocused ? Theme.Wash.outline : SettingsMetrics.border,
-                    lineWidth: 1
-                )
+        .glassSurface(
+            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
         )
-        .compositingGroup()
-        .shadow(
-            color: .black.opacity(searchFocused ? 0.22 : 0),
-            radius: searchFocused ? 10 : 0,
-            y: searchFocused ? 3 : 0
-        )
-        .animation(Theme.Motion.settle, value: searchFocused)
     }
 }
 
@@ -440,9 +419,10 @@ private struct NavigatorRow: View {
             }
             .padding(.horizontal, 7)
             .frame(height: 32)
-            .background(
-                isSelected ? Theme.Wash.selection : (hovering ? Theme.Wash.hairline : Theme.Wash.none),
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
+            .selectionBackground(
+                isSelected: isSelected,
+                isHovering: hovering,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
             )
             .contentShape(Rectangle())
         }
@@ -489,9 +469,10 @@ private struct NavigatorProfileBlock: View {
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 6)
-            .background(
-                isSelected ? Theme.Wash.selection : (hovering ? Theme.Wash.hairline : Theme.Wash.none),
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
+            .selectionBackground(
+                isSelected: isSelected,
+                isHovering: hovering,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
             )
             .contentShape(Rectangle())
         }
@@ -529,9 +510,9 @@ private struct ResultRow: View {
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(
-                hovering ? Theme.Wash.hairline : Theme.Wash.none,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
+            .hoverBackground(
+                isActive: hovering,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
             )
             .contentShape(Rectangle())
         }

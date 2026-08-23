@@ -256,7 +256,7 @@ private struct ProfileListRow: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(.vertical, 9)
-            .contentShape(Rectangle())
+            .settingsRowHover(isActive: hovering, tint: profile.color.tint)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -297,13 +297,9 @@ private struct ProfileListRow: View {
         }
         .padding(.horizontal, 12)
         .frame(width: max(width, 260), height: 44, alignment: .leading)
-        .background {
-            let shape = RoundedRectangle(cornerRadius: Theme.Radius.control)
-            shape
-                .fill(Color(nsColor: .controlBackgroundColor))
-                .overlay(shape.fill(SettingsMetrics.fill))
-                .overlay(shape.strokeBorder(SettingsMetrics.borderHover, lineWidth: 1))
-        }
+        .settingsSurface(
+            in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+        )
     }
 }
 
@@ -711,23 +707,12 @@ private struct ProfileLookEditor: View {
         DetailRow(title: "Color", layout: .stacked) {
             HStack(spacing: 8) {
                 ForEach(TabFolderColor.allCases) { swatch in
-                    Button {
+                    ProfileColorChoice(
+                        color: swatch,
+                        isSelected: swatch == color
+                    ) {
                         color = swatch
-                    } label: {
-                        Circle()
-                            .fill(swatch.tint.opacity(0.85))
-                            .frame(width: 20, height: 20)
-                            .overlay {
-                                if swatch == color {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(.white)
-                                }
-                            }
-                            .contentShape(Circle())
                     }
-                    .buttonStyle(.plain)
-                    .help(Text(swatch.title))
                 }
             }
         }
@@ -737,26 +722,78 @@ private struct ProfileLookEditor: View {
         DetailRow(title: "Symbol", layout: .stacked) {
             LazyVGrid(columns: Self.columns, alignment: .leading, spacing: 6) {
                 ForEach(ProfileAppearance.symbols, id: \.self) { candidate in
-                    Button {
+                    ProfileSymbolChoice(
+                        symbol: candidate,
+                        isSelected: candidate == symbol,
+                        tint: color.tint
+                    ) {
                         symbol = candidate
-                    } label: {
-                        Image(systemName: candidate)
-                            .font(.system(size: 14))
-                            .foregroundStyle(
-                                candidate == symbol
-                                    ? AnyShapeStyle(color.tint)
-                                    : AnyShapeStyle(.secondary)
-                            )
-                            .frame(width: 30, height: 30)
-                            .background(
-                                candidate == symbol ? Theme.Wash.selection : Theme.Wash.none,
-                                in: RoundedRectangle(cornerRadius: Theme.Radius.chip)
-                            )
-                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+}
+
+private struct ProfileColorChoice: View {
+    let color: TabFolderColor
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Circle()
+                .fill(color.tint.opacity(0.85))
+                .frame(width: 20, height: 20)
+                .padding(4)
+                .selectionBackground(
+                    isSelected: isSelected,
+                    isHovering: hovering,
+                    hoverTint: color.tint,
+                    in: Circle()
+                )
+                .overlay {
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
+        .help(Text(color.title))
+    }
+}
+
+private struct ProfileSymbolChoice: View {
+    let symbol: String
+    let isSelected: Bool
+    let tint: Color
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 14))
+                .foregroundStyle(isSelected ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
+                .frame(width: 30, height: 30)
+                .selectionBackground(
+                    isSelected: isSelected,
+                    isHovering: hovering,
+                    hoverTint: tint,
+                    in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
     }
 }

@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
-import AppKit
 import SwiftUI
 
 enum ChromeInk {
+    static let lightSelectionFillOpacity = 0.17
+    static let darkSelectionFillOpacity = 0.22
+
     static func glyphOpacity(onLight: Bool, enabled: Bool = true, hovering: Bool = false, subdued: Bool = false) -> Double {
         if !enabled {
             return onLight ? 0.25 : 0.3
@@ -27,72 +29,199 @@ enum ChromeInk {
     static func wash(onLight: Bool, opacity: Double) -> Color {
         (onLight ? Color.black : Color.white).opacity(opacity)
     }
+
+    static var hoverStyle: AnyShapeStyle {
+        AnyShapeStyle(Color.primary.opacity(0.10))
+    }
+
+    static func selectionTint(onLight: Bool) -> Color {
+        wash(
+            onLight: onLight,
+            opacity: onLight ? lightSelectionFillOpacity : darkSelectionFillOpacity
+        )
+    }
 }
 
-private struct ChromeButtonPlate: ViewModifier {
-    let isLit: Bool
+private struct GlassSurface<S: Shape>: ViewModifier {
+    let isActive: Bool
+    let isEnabled: Bool
+    let tint: Color?
+    let shape: S
 
-    @Environment(\.chromeIsLight) private var chromeIsLight
-
-    private static let litOpacity = 0.08
+    private var hoverFill: AnyShapeStyle {
+        isActive ? ChromeInk.hoverStyle : AnyShapeStyle(.clear)
+    }
 
     func body(content: Content) -> some View {
         content
-            .background(
-                ChromeInk.wash(onLight: chromeIsLight, opacity: isLit ? Self.litOpacity : 0),
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.hover))
-            .animation(Theme.Motion.quick, value: isLit)
+            .glassEffect(isEnabled ? .regular : .identity, in: shape)
+            .background { shape.fill(hoverFill) }
+            .contentShape(shape)
     }
 }
 
 extension View {
-    func chromeButtonPlate(isLit: Bool) -> some View {
-        modifier(ChromeButtonPlate(isLit: isLit))
+    func glassSurface<S: Shape>(
+        isActive: Bool = false,
+        isEnabled: Bool = true,
+        tint: Color? = nil,
+        in shape: S
+    ) -> some View {
+        modifier(GlassSurface(
+            isActive: isActive,
+            isEnabled: isEnabled,
+            tint: tint,
+            shape: shape
+        ))
     }
 }
 
-extension View {
-    func hoverVerified(_ hovering: Binding<Bool>, onClear: (() -> Void)? = nil) -> some View {
-        modifier(HoverVerification(hovering: hovering, onClear: onClear))
+private struct ControlGlassSurface<S: InsettableShape>: ViewModifier {
+    let isActive: Bool
+    let tint: Color?
+    let isLifted: Bool
+    let shape: S
+
+    private var glass: Glass {
+        if let tint {
+            return .clear.tint(tint.opacity(isActive ? 0.16 : 0.07))
+        }
+        if isLifted {
+            return .clear.tint(Theme.controlSurface.opacity(isActive ? 0.62 : 0.48))
+        }
+        return .clear.tint(Theme.windowBackground.opacity(isActive ? 0.34 : 0.26))
     }
-}
 
-private struct HoverVerification: ViewModifier {
-    @Binding var hovering: Bool
-    let onClear: (() -> Void)?
+    private var surfaceWash: Color {
+        if let tint {
+            return tint.opacity(isActive ? 0.10 : 0.045)
+        }
+        return Color.primary.opacity(isActive ? 0.06 : 0.04)
+    }
 
-    @State private var frame: CGRect = .zero
+    private var outline: Color {
+        if let tint {
+            return tint.opacity(isActive ? 0.24 : 0.13)
+        }
+        if isLifted {
+            return Color.primary.opacity(isActive ? 0.20 : 0.14)
+        }
+        return Color.primary.opacity(isActive ? 0.12 : 0.08)
+    }
 
     func body(content: Content) -> some View {
         content
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0 }
-            .task(id: hovering) {
-                guard hovering else { return }
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .milliseconds(150))
-                    guard !Task.isCancelled, hovering else { return }
-                    guard let pointer = PointerLocation.inGlobalSpace else { continue }
-                    if !frame.contains(pointer) {
-                        hovering = false
-                        onClear?()
-                        return
-                    }
+            .background {
+                ZStack {
+                    shape
+                        .fill(.clear)
+                        .glassEffect(glass, in: shape)
+
+                    shape.fill(surfaceWash)
                 }
             }
+            .overlay { shape.strokeBorder(outline, lineWidth: 1) }
+            .contentShape(shape)
     }
 }
 
-@MainActor
-enum PointerLocation {
-    static var inGlobalSpace: CGPoint? {
-        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
-              let content = window.contentView
-        else { return nil }
-        let contentInScreen = window.convertToScreen(content.convert(content.bounds, to: nil))
-        let mouse = NSEvent.mouseLocation
-        return CGPoint(x: mouse.x - contentInScreen.minX, y: contentInScreen.maxY - mouse.y)
+extension View {
+    func controlGlassSurface<S: InsettableShape>(
+        isActive: Bool = false,
+        tint: Color? = nil,
+        isLifted: Bool = false,
+        in shape: S
+    ) -> some View {
+        modifier(
+            ControlGlassSurface(isActive: isActive, tint: tint, isLifted: isLifted, shape: shape)
+        )
+    }
+}
+
+private struct HoverBackground<S: Shape>: ViewModifier {
+    let isActive: Bool
+    let tint: Color?
+    let shape: S
+
+    private var fill: AnyShapeStyle {
+        isActive ? ChromeInk.hoverStyle : AnyShapeStyle(.clear)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background { shape.fill(fill) }
+            .contentShape(shape)
+    }
+}
+
+extension View {
+    func hoverBackground<S: Shape>(
+        isActive: Bool,
+        tint: Color? = nil,
+        in shape: S
+    ) -> some View {
+        modifier(HoverBackground(isActive: isActive, tint: tint, shape: shape))
+    }
+
+    func hoverBackground(isActive: Bool) -> some View {
+        hoverBackground(isActive: isActive, in: Circle())
+    }
+}
+
+private struct SelectionBackground<S: Shape>: ViewModifier {
+    let isSelected: Bool
+    let isHovering: Bool
+    let hoverTint: Color?
+    let rests: Bool
+    let shape: S
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var onLight: Bool {
+        colorScheme == .light
+    }
+
+    private var glass: Glass {
+        if isSelected {
+            return .regular
+        }
+        if rests {
+            return .regular
+        }
+        return .identity
+    }
+
+    private var hoverFill: AnyShapeStyle {
+        isHovering && !isSelected
+            ? ChromeInk.hoverStyle
+            : AnyShapeStyle(.clear)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                shape
+                    .fill(hoverFill)
+            }
+            .glassEffect(glass, in: shape)
+    }
+}
+
+extension View {
+    func selectionBackground<S: Shape>(
+        isSelected: Bool,
+        isHovering: Bool,
+        hoverTint: Color? = nil,
+        rests: Bool = false,
+        in shape: S
+    ) -> some View {
+        modifier(SelectionBackground(
+            isSelected: isSelected,
+            isHovering: isHovering,
+            hoverTint: hoverTint,
+            rests: rests,
+            shape: shape
+        ))
     }
 }
 
@@ -103,12 +232,17 @@ struct ChromeIcon: View {
     var isEnabled = true
     var isSubdued = false
     var tint: Color?
-    var extent: CGFloat = 16
+    var extent: CGFloat?
     var help: String = ""
     let action: () -> Void
 
     @State private var hovering = false
     @Environment(\.chromeIsLight) private var chromeIsLight
+    @Environment(\.chromeIconExtent) private var inheritedExtent
+
+    private var side: CGFloat {
+        extent ?? inheritedExtent
+    }
 
     private var style: AnyShapeStyle {
         if let tint {
@@ -127,16 +261,14 @@ struct ChromeIcon: View {
             Image(systemName: symbol)
                 .font(.system(size: size, weight: weight))
                 .foregroundStyle(style)
-                .frame(width: extent, height: extent)
-                .contentShape(Rectangle())
+                .frame(width: side, height: side)
+                .hoverBackground(isActive: hovering)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .onHover { hovering = $0 }
-        .hoverVerified($hovering)
         .animation(Theme.Motion.quick, value: hovering)
         .help(help)
-        .toolTipText(help)
     }
 }
 
@@ -167,40 +299,9 @@ struct CloseButton: View {
     }
 }
 
-extension View {
-    /// An `NSView` tooltip, which the view under the pointer answers even when
-    /// an ancestor's `.help` rect covers it.
-    func toolTipText(_ text: String) -> some View {
-        overlay(ToolTipArea(text: text))
-    }
-}
-
-struct ToolTipArea: NSViewRepresentable {
-    let text: String
-
-    func makeNSView(context: Context) -> TipArea {
-        let view = TipArea()
-        apply(to: view)
-        return view
-    }
-
-    func updateNSView(_ nsView: TipArea, context: Context) {
-        apply(to: nsView)
-    }
-
-    func apply(to view: TipArea) {
-        let wanted = text.isEmpty ? nil : text
-        guard view.toolTip != wanted else { return }
-        view.toolTip = wanted
-    }
-
-    final class TipArea: NSView {
-        override func hitTest(_ point: NSPoint) -> NSView? {
-            nil
-        }
-    }
-}
-
 extension EnvironmentValues {
     @Entry var chromeIsLight: Bool = false
+    @Entry var chromeIconExtent: CGFloat = 16
+
+    @Entry var windowColorScheme: ColorScheme = .dark
 }

@@ -31,7 +31,7 @@ extension AppCoordinator {
         await extensions.adopt(profile: profile.isPrivate ? nil : profile)
         WebViewPool.shared.installExtensionController(extensions.controller)
 
-        browser.restoreSession(force: true)
+        browser.restoreSession()
         retainAgentMemory()
         browser.ensureActiveTab()
         showBrowserPage()

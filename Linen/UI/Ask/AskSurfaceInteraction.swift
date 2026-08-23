@@ -78,10 +78,14 @@ struct AskSurfaceInteraction: Equatable {
 
     static func mentionFragment(in text: String) -> String? {
         guard let last = text.split(separator: " ", omittingEmptySubsequences: false).last,
-              last.hasPrefix("@"),
-              text.count > last.count
+              last.hasPrefix("@")
         else { return nil }
         return String(last.dropFirst()).lowercased()
+    }
+
+    static func mentionOpensTheQuery(_ text: String) -> Bool {
+        guard mentionFragment(in: text) != nil else { return false }
+        return !text.contains(" ")
     }
 
     static func removingMentionFragment(from text: String) -> String {
@@ -200,14 +204,20 @@ enum AskSurfaceResults {
         }
 
         if let fragment = AskSurfaceInteraction.mentionFragment(in: query) {
-            let section = mentionSection(
-                fragment: fragment,
-                tabs: tabs,
-                mentions: mentions,
-                activeTabID: activeTabID,
-                mention: mention
-            )
-            return [section].compactMap { $0 }
+            let prompt = AskSurfaceInteraction.agentPrompt(in: input) ?? input
+            let sections = [
+                AskSurfaceInteraction.mentionOpensTheQuery(query)
+                    ? askSection(prompt, agentName: agentName, ask: ask)
+                    : nil,
+                mentionSection(
+                    fragment: fragment,
+                    tabs: tabs,
+                    mentions: mentions,
+                    activeTabID: activeTabID,
+                    mention: mention
+                ),
+            ]
+            return sections.compactMap { $0 }
         }
 
         if let prompt = AskSurfaceInteraction.agentPrompt(in: input) {
@@ -275,11 +285,17 @@ enum AskSurfaceResults {
         agentName: String,
         ask: @escaping (String) -> Void
     ) -> OmniboxSection {
-        OmniboxSection(
+        let waiting = prompt.isEmpty
+        return OmniboxSection(
             id: "ask",
             title: String(localized: "Ask \(agentName)"),
             items: [
-                OmniboxItem(id: "ask-agent", kind: .ask, title: prompt) {
+                OmniboxItem(
+                    id: "ask-agent",
+                    kind: .ask,
+                    title: waiting ? String(localized: "Type your question") : prompt
+                ) {
+                    guard !waiting else { return }
                     ask(prompt)
                 },
             ]

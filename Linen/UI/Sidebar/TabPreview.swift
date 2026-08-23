@@ -175,12 +175,10 @@ private struct TabPreviewCard: View {
             .padding(.vertical, 8)
         }
         .frame(width: Self.width)
-        .background(Theme.windowBackground)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: Theme.Radius.card)
-                .strokeBorder(Theme.Wash.selection, lineWidth: 0.5)
-        }
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .glassSurface(
+            in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+        )
         .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
         .task(id: tab.id) {
             while !Task.isCancelled {

@@ -25,6 +25,7 @@ struct StartPage: View {
                 .padding(.vertical, Self.verticalInset)
                 .frame(maxWidth: .infinity)
             }
+            .scrollContentBackground(.hidden)
             .onGeometryChange(for: CGFloat.self) { geometry in
                 geometry.size.height
                     - geometry.safeAreaInsets.top
@@ -34,13 +35,13 @@ struct StartPage: View {
                 availableHeight = max(0, height)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .scrollEdgeEffectHidden(for: .top)
+            .scrollEdgeEffectHidden(true, for: [.top, .bottom])
 
             EditStartPageButton(settings: coordinator.settings)
                 .padding(20)
         }
         .background(
-            Theme.windowBackground
+            Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture { NSApp.keyWindow?.makeFirstResponder(nil) }
         )

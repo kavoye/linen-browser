@@ -46,8 +46,8 @@ struct SidebarProfileButton: View {
                 }
             }
             .padding(.horizontal, showsName ? 9 : 0)
-            .frame(minWidth: 32, maxWidth: showsName ? .infinity : 32)
-            .frame(height: 32)
+            .frame(minWidth: SidebarMetrics.controlHeight, maxWidth: .infinity)
+            .frame(height: SidebarMetrics.controlHeight)
             .sidebarRowSelectionEffect(isSelected: switching, isHovering: hovering)
             .contentShape(Rectangle())
         }
@@ -86,7 +86,9 @@ private struct ProfileSwitcher: View {
     @Binding var isPresented: Bool
 
     static let inset: CGFloat = 6
-    static let rowRadius = Theme.Radius.nested(in: Theme.Radius.panel, inset: inset)
+    static var rowRadius: CGFloat {
+        Theme.Radius.nested(in: Theme.Radius.panel, inset: inset)
+    }
 
     private var profiles: ProfileStore {
         coordinator.profiles
@@ -188,9 +190,10 @@ private struct ProfileSwitcherRow: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 38)
-            .background(
-                hovering ? Theme.Wash.hover : Theme.Wash.none,
-                in: RoundedRectangle(cornerRadius: ProfileSwitcher.rowRadius)
+            .sidebarRowSelectionEffect(
+                isSelected: false,
+                isHovering: hovering,
+                radius: ProfileSwitcher.rowRadius
             )
             .contentShape(Rectangle())
         }
@@ -225,9 +228,10 @@ private struct ProfileActionRow: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 30)
-            .background(
-                hovering ? Theme.Wash.hover : Theme.Wash.none,
-                in: RoundedRectangle(cornerRadius: ProfileSwitcher.rowRadius)
+            .sidebarRowSelectionEffect(
+                isSelected: false,
+                isHovering: hovering,
+                radius: ProfileSwitcher.rowRadius
             )
             .contentShape(Rectangle())
         }

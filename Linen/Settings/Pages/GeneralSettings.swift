@@ -29,17 +29,6 @@ struct GeneralSettings: View {
     var body: some View {
         SettingsPageHeader(title: "General")
 
-        SettingsSection(title: "When Linen opens", symbol: "power") {
-            OptionList(
-                options: StartupBehavior.allCases.map {
-                    .init(value: $0, label: $0.label, caption: $0.caption)
-                },
-                selection: settings.startup,
-                onSelect: { settings.startup = $0 }
-            )
-        }
-        .settingsAnchor("general.startup")
-
         SettingsSection(title: "New tabs", symbol: "rectangle.badge.plus") {
             OptionList(
                 options: NewTabBehavior.allCases.map {
@@ -55,6 +44,15 @@ struct GeneralSettings: View {
                 HomepageRow(coordinator: coordinator, settings: settings)
                     .settingsAnchor("general.homepage")
             }
+            RowSeparator()
+
+            DetailRow(
+                title: "Sleep inactive tabs",
+                caption: "Frees memory when the Mac runs low. Tabs reload when you return to them."
+            ) {
+                SettingsToggle($settings.sleepsInactiveTabs)
+            }
+            .settingsAnchor("general.sleepTabs")
         }
         .settingsAnchor("general.newTab")
 
@@ -93,6 +91,8 @@ struct GeneralSettings: View {
             }
             .settingsAnchor("general.mediaPlayer")
 
+            RowSeparator()
+
             DetailRow(
                 title: "Automatic Picture in Picture",
                 caption: "Video moves into a floating window when you leave its tab or switch to another app."
@@ -101,6 +101,8 @@ struct GeneralSettings: View {
             }
             .settingsAnchor("general.automaticPiP")
             .disabled(settings.showsVideoInPlayer)
+
+            RowSeparator()
 
             DetailRow(
                 title: "Show lyrics",

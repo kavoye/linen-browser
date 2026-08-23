@@ -57,7 +57,7 @@ struct CommandPalette: View {
             AskContextStrip(pages: model.contextPages)
         }
         .frame(width: layout.panelWidth)
-        .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.panel))
+        .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.panel, style: .continuous))
         .shadow(color: .black.opacity(0.4), radius: 44, y: 18)
         .padding(.top, layout.topInset)
         .onAppear {

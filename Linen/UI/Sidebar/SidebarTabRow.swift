@@ -151,6 +151,23 @@ struct SidebarTabRow: View {
         }
     }
 
+    @ViewBuilder private var leadingIcon: some View {
+        if sidebarStyle == .full {
+            Group {
+                if tab.isPlayingAudio || tab.isMuted {
+                    SidebarTabMuteButton(isMuted: tab.isMuted) {
+                        coordinator.toggleMute(tab: tab)
+                    }
+                } else {
+                    TabIcon(tab: tab)
+                }
+            }
+            .frame(width: SidebarMetrics.rowIconSize)
+        } else {
+            TabIcon(tab: tab)
+        }
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             if showsPinSegment {
@@ -165,13 +182,7 @@ struct SidebarTabRow: View {
             }
 
             HStack(spacing: SidebarMetrics.rowIconSpacing) {
-                if sidebarStyle == .full, tab.isPlayingAudio || tab.isMuted {
-                    SidebarTabMuteButton(isMuted: tab.isMuted) {
-                        coordinator.toggleMute(tab: tab)
-                    }
-                } else {
-                    TabIcon(tab: tab)
-                }
+                leadingIcon
 
                 if sidebarStyle == .full {
                     Text(verbatim: tab.title)
@@ -191,12 +202,16 @@ struct SidebarTabRow: View {
             .frame(maxWidth: .infinity)
         }
         .frame(height: 32)
+        .environment(\.chromeIconExtent, SidebarMetrics.rowControlExtent)
         .help(Text(verbatim: helpText))
         .sidebarRowSelectionEffect(
             isSelected: isActive || isSelected,
             isHovering: hovering,
             isDropTarget: isArmed,
             isDropCandidate: context.isFoldCandidate(item),
+            glassTint: context.refractsTabColor
+                ? FaviconTint.of(tab.favicon, heldBy: tab.id)
+                : nil,
             radius: depth == 0 ? Theme.Radius.hover : FolderSection.rowRadius(depth: depth - 1)
         )
         .overlay {
@@ -217,7 +232,6 @@ struct SidebarTabRow: View {
             windowFrame = frame
             coordinator.tabPreview.moved(tab.id, anchor: frame)
         }
-        .hoverVerified($hovering) { coordinator.tabPreview.unhover(tab.id) }
         .onTapGesture { tapped() }
         .onMiddleClick {
             coordinator.tabPreview.dismiss()
@@ -314,7 +328,7 @@ private struct PinReturnSegment: View {
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 14, height: 14)
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
                         .opacity(hovering ? 0 : 1)
                 }
                 Image(systemName: "arrow.uturn.backward")
@@ -326,18 +340,17 @@ private struct PinReturnSegment: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(
-            UnevenRoundedRectangle(
+        .sidebarHoverFill(
+            isHovering: hovering,
+            in: UnevenRoundedRectangle(
                 topLeadingRadius: Theme.Radius.hover,
                 bottomLeadingRadius: Theme.Radius.hover
             )
-            .fill(hovering ? Theme.Wash.hover : Theme.Wash.none)
         )
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
         }
         .help(Text(verbatim: help))
-        .toolTipText(help)
         .task(id: tab.pinnedURL) {
             pinnedFavicon = nil
             guard let host = tab.pinnedURL?.host() else { return }
@@ -412,7 +425,7 @@ struct PinBadge: View {
         }
         let help: LocalizedStringResource = tab.isShowingPin
             ? "Remove Bookmark"
-            : "Bookmark This Page in the Tab"
+            : "Add Bookmark"
         return String(localized: help)
     }
 }
@@ -446,7 +459,7 @@ struct TabIcon: View {
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
                     .frame(width: size - 1, height: size - 1)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: size * 0.69))

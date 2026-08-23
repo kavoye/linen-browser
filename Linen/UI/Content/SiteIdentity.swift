@@ -42,7 +42,7 @@ struct RemoteSiteBadge: View {
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: size / 5))
+                    .clipShape(RoundedRectangle(cornerRadius: size / 5, style: .continuous))
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: size * 0.75))

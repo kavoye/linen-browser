@@ -4,10 +4,138 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 import Testing
 import WebKit
 
 @testable import Linen
+
+@MainActor
+struct LoomChromeTests {
+    @Test func siteColourIsPresentButConstrained() throws {
+        let source = NSColor(srgbRed: 1, green: 0.16, blue: 0, alpha: 1)
+        let sampled = try #require(
+            LoomChrome.sampledColor(source, scheme: .light).usingColorSpace(.sRGB)
+        )
+
+        #expect(sampled.redComponent > sampled.greenComponent)
+        #expect(sampled.greenComponent > source.greenComponent)
+        #expect(sampled.redComponent < 1)
+    }
+
+    @Test func anAchromaticPageStillSetsTheLoomsTone() throws {
+        let black = try #require(
+            LoomChrome.sampledColor(.black, scheme: .light).usingColorSpace(.sRGB)
+        )
+        let white = try #require(
+            LoomChrome.sampledColor(.white, scheme: .dark).usingColorSpace(.sRGB)
+        )
+
+        #expect(black.brightnessComponent < 0.2)
+        #expect(white.brightnessComponent > 0.8)
+    }
+
+    @Test func aDarkColouredPageCanSetADarkAppearance() throws {
+        let navy = NSColor(srgbRed: 0.02, green: 0.05, blue: 0.35, alpha: 1)
+        let tinted = try #require(
+            LoomChrome.sampledColor(navy, scheme: .light).usingColorSpace(.sRGB)
+        )
+        let plain = try #require(
+            LoomChrome.sampledColor(nil, scheme: .light).usingColorSpace(.sRGB)
+        )
+
+        #expect(tinted.blueComponent > tinted.redComponent)
+        #expect(tinted.brightnessComponent < plain.brightnessComponent)
+        #expect(tinted.brightnessComponent < 0.4)
+    }
+
+    @Test func canvasUsesOneTightGapAfterTheToolbar() {
+        #expect(LoomChrome.canvasTop == Theme.topBarHeight + 3)
+        #expect(LoomChrome.canvasGap < LoomChrome.canvasInset)
+    }
+
+    /// One radius on every corner, and the same shape for the lens as for the
+    /// clip: glass returns a straight edge for any rectangle it cannot name,
+    /// which an uneven one is.
+    @Test func theCanvasCarriesOneRadiusAllRound() {
+        #expect(LoomChrome.canvasShape.cornerSize.width == LoomChrome.canvasRadius)
+        #expect(LoomChrome.canvasShape.cornerSize.height == LoomChrome.canvasRadius)
+        #expect(LoomChrome.canvasShape.style == .continuous)
+    }
+
+    /// A page only reflows to its narrow layout when the view it is in gets
+    /// narrow. The window's own floor is what decides whether it ever can.
+    @Test func theWindowNarrowsFarEnoughForAPageToReflow() {
+        let commonNarrowBreakpoint: CGFloat = 768
+        let barestCanvas = BrowserWindowMetrics.minWidth - LoomChrome.canvasInset * 2
+
+        #expect(barestCanvas < commonNarrowBreakpoint)
+        #expect(BrowserWindowMetrics.minWidth - SidebarMetrics.minWidth > 0)
+    }
+
+    @Test func theCanvasRunsParallelToTheWindow() {
+        #expect(LoomChrome.canvasRadius == Theme.Radius.window - LoomChrome.canvasInset)
+    }
+
+    @Test func sidePanelAndResizeGutterShareShellGeometry() {
+        let shell = LoomShellGeometry(
+            containerWidth: 1_200,
+            sidebarWidth: 268,
+            preferredPanelWidth: 320,
+            isSidebarVisible: true,
+            isPanelVisible: true,
+            isPanelExpanded: false
+        )
+
+        #expect(shell.panelWidth == 320)
+        #expect(shell.canvasTrailingInset == 320 + LoomChrome.canvasInset)
+        let resizeCenter = shell.sidebarResizeLeading + LoomChrome.resizeGrabWidth / 2
+        #expect(resizeCenter == 268 + LoomChrome.canvasInset / 2)
+    }
+
+    /// The bug: WebKit's tracking areas do not hit-test against what covers
+    /// them, so a page reaching under the panel kept answering the pointer.
+    @Test func aPageReachingUnderThePanelIsCovered() {
+        let shell = LoomShellGeometry(
+            containerWidth: 1_200,
+            sidebarWidth: 0,
+            preferredPanelWidth: 320,
+            isSidebarVisible: false,
+            isPanelVisible: true,
+            isPanelExpanded: false
+        )
+
+        #expect(!shell.panelCoversPage(viewMaxX: shell.panelLeading - LoomChrome.canvasInset))
+        #expect(shell.panelCoversPage(viewMaxX: 1_200))
+    }
+
+    @Test func aClosedPanelCoversNothing() {
+        let shell = LoomShellGeometry(
+            containerWidth: 1_200,
+            sidebarWidth: 0,
+            preferredPanelWidth: 320,
+            isSidebarVisible: false,
+            isPanelVisible: false,
+            isPanelExpanded: false
+        )
+
+        #expect(!shell.panelCoversPage(viewMaxX: 1_200))
+    }
+
+    @Test func expandedPanelStaysInsideBothCanvasEdges() {
+        let shell = LoomShellGeometry(
+            containerWidth: 1_200,
+            sidebarWidth: 268,
+            preferredPanelWidth: 320,
+            isSidebarVisible: true,
+            isPanelVisible: true,
+            isPanelExpanded: true
+        )
+
+        #expect(shell.panelWidth == 1_200 - 268 - LoomChrome.canvasInset * 2)
+        #expect(shell.canvasTrailingInset == 0)
+    }
+}
 
 /// A sleeping tab says so on its favicon - dimmed, moon in the corner -
 /// rather than with a second glyph beside the title.
@@ -42,58 +170,62 @@ struct SidebarSleepIndicatorTests {
     }
 }
 
-/// The compact column is narrower than the traffic lights, so its collapse
-/// toggle lives in the nav bar beside Back and Forward - the same place the
-/// hidden sidebar's copy already stands.
+/// The sidebar toggle belongs to the window beam, never to the sidebar or a
+/// particular toolbar variant. Content controls only reserve its fixed slot.
 @MainActor
-struct SidebarTogglePlacementTests {
-    @Test func aHiddenSidebarPutsTheToggleInTheNavBar() {
-        #expect(SidebarTogglePlacement.inNavBar(isVisible: false, style: .full))
-        #expect(SidebarTogglePlacement.inNavBar(isVisible: false, style: .icons))
-    }
-
-    @Test func theIconsColumnHandsItsToggleToTheNavBar() {
-        #expect(SidebarTogglePlacement.inNavBar(isVisible: true, style: .icons))
-        #expect(!SidebarTogglePlacement.inSidebarTop(style: .icons))
-    }
-
-    @Test func theFullSidebarKeepsItsOwnToggle() {
-        #expect(!SidebarTogglePlacement.inNavBar(isVisible: true, style: .full))
-        #expect(SidebarTogglePlacement.inSidebarTop(style: .full))
-    }
-}
-
-/// The nav bar's toggle must stand still when clicking it docks or hides the
-/// icons column: the content edge moves by the column plus its divider, and
-/// the padding has to give back exactly that.
-@MainActor
-struct SidebarTogglePositionTests {
+struct SidebarPermanentToggleTests {
     private let inset: CGFloat = 84
+    private let contentInset: CGFloat = 10
 
-    private func toggleLeadingEdge(isVisible: Bool, style: SidebarStyle) -> CGFloat {
-        let contentStart: CGFloat = isVisible ? SidebarMetrics.iconsWidth + 1 : 0
-        let padding = SidebarMetrics.windowControlsPadding(
+    private func firstContentControl(
+        isVisible: Bool,
+        style: SidebarStyle,
+        sidebarWidth: CGFloat = SidebarMetrics.defaultWidth
+    ) -> CGFloat {
+        let contentStart: CGFloat
+        if !isVisible {
+            contentStart = 0
+        } else {
+            contentStart = style == .icons ? SidebarMetrics.iconsWidth : sidebarWidth
+        }
+        let padding = SidebarMetrics.toolbarLeadingPadding(
             isVisible: isVisible,
             style: style,
-            windowControlsInset: inset
+            windowControlsInset: inset,
+            contentInset: contentInset
         )
-        return contentStart + padding + 10
+        return contentStart + padding + contentInset
     }
 
-    @Test func togglingTheIconsColumnLeavesTheButtonInPlace() {
-        let docked = toggleLeadingEdge(isVisible: true, style: .icons)
-        let hidden = toggleLeadingEdge(isVisible: false, style: .icons)
-        #expect(docked == hidden)
-        #expect(docked == inset)
+    @Test func theWindowOwnedToggleHasOneStableLeadingEdge() {
+        #expect(SidebarMetrics.permanentToggleLeading(windowControlsInset: inset) == inset)
+        #expect(SidebarMetrics.permanentToggleLeading(windowControlsInset: 0) == 10)
+    }
+
+    @Test func hiddenAndIconsLayoutsClearTheSamePermanentControl() {
+        let hidden = firstContentControl(isVisible: false, style: .full)
+        let icons = firstContentControl(isVisible: true, style: .icons)
+        let toggleTrailing = inset + SidebarMetrics.permanentToggleSlot
+
+        #expect(hidden == toggleTrailing)
+        #expect(icons == toggleTrailing)
+    }
+
+    @Test func aFullSidebarAlreadyPlacesContentPastTheToggle() {
+        let leading = firstContentControl(isVisible: true, style: .full)
+
+        #expect(leading == SidebarMetrics.defaultWidth + contentInset)
+        #expect(leading > inset + SidebarMetrics.permanentToggleSlot)
     }
 
     @Test func thePaddingNeverGoesNegative() {
         for style in [SidebarStyle.full, .icons] {
             for isVisible in [true, false] {
-                #expect(SidebarMetrics.windowControlsPadding(
+                #expect(SidebarMetrics.toolbarLeadingPadding(
                     isVisible: isVisible,
                     style: style,
-                    windowControlsInset: 40
+                    windowControlsInset: 40,
+                    contentInset: contentInset
                 ) >= 0)
             }
         }
@@ -291,5 +423,29 @@ struct SplitFoldCommitTests {
         #expect(SidebarMetrics.rowContentPadding(style: .icons) == 0)
         #expect(SidebarMetrics.rowIconSize == 16)
         #expect(SidebarMetrics.rowIconSpacing == 8)
+    }
+}
+
+/// The bug: profile, downloads and the bug report were pinned to a square in
+/// the compact column while tabs and Settings filled it, so their hover shape
+/// and click target were narrower than everything above them.
+@MainActor
+struct SidebarTrayControlWidthTests {
+    private var compactContentWidth: CGFloat {
+        SidebarMetrics.iconsWidth - SidebarMetrics.contentInset(style: .icons) * 2
+    }
+
+    @Test func everyCompactControlFillsTheColumn() {
+        #expect(SidebarMetrics.controlMaxWidth(style: .icons) == .infinity)
+    }
+
+    /// A full sidebar lays them out side by side, where filling would give the
+    /// first control the whole row.
+    @Test func aFullSidebarKeepsThemSquare() {
+        #expect(SidebarMetrics.controlMaxWidth(style: .full) == SidebarMetrics.controlHeight)
+    }
+
+    @Test func theCompactColumnIsWiderThanTheSquareTheyHeldTo() {
+        #expect(compactContentWidth > SidebarMetrics.controlHeight)
     }
 }

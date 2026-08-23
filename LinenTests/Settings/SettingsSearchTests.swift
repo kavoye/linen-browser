@@ -39,7 +39,6 @@ struct SettingsSearchTests {
     }
 
     @Test func theOldRowNamesStillFindTheirRows() {
-        #expect(SettingsIndex.search("on startup").contains { $0.id == "general.startup" })
         #expect(SettingsIndex.search("provider").contains { $0.id == "provider.model" })
         #expect(SettingsIndex.search("default browser").contains { $0.id == "general.defaultBrowser" })
         #expect(SettingsIndex.search("ask instead of search").contains { $0.id == "general.agentOnly" })

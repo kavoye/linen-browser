@@ -18,79 +18,46 @@ struct OptionList<Value: Hashable>: View {
     let selection: Value
     let onSelect: (Value) -> Void
 
+    private var selectionBinding: Binding<Value> {
+        Binding(get: { selection }, set: { onSelect($0) })
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
-                if index > 0 {
-                    RowSeparator()
-                }
-                OptionRow(
-                    label: option.label,
-                    caption: option.caption,
-                    isSelected: option.value == selection
-                ) {
-                    onSelect(option.value)
-                }
+        Picker(selection: selectionBinding) {
+            ForEach(options) { option in
+                OptionPickerLabel(label: option.label, caption: option.caption)
+                    .tag(option.value)
             }
+        } label: {
+            EmptyView()
         }
+        .labelsHidden()
+        .pickerStyle(.radioGroup)
+        .controlSize(.small)
+        .padding(.horizontal, SettingsMetrics.pickerHorizontalInset)
+        .padding(.vertical, SettingsMetrics.pickerVerticalInset)
     }
 }
 
-private struct OptionRow: View {
+private struct OptionPickerLabel: View {
     let label: LocalizedStringResource
     let caption: LocalizedStringResource?
-    let isSelected: Bool
-    let action: () -> Void
-
-    @State private var hovering = false
 
     var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 10) {
-                SelectionMark(isSelected: isSelected)
-                    .padding(.top, 1)
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(Theme.Font.rowTitle)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(label)
-                        .font(Theme.Font.rowTitle)
-
-                    if let caption {
-                        Text(caption)
-                            .font(Theme.Font.secondary)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-    }
-}
-
-struct SelectionMark: View {
-    let isSelected: Bool
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .strokeBorder(isSelected ? Theme.Wash.mark : Theme.Wash.outline, lineWidth: 1)
-                .frame(width: 14, height: 14)
-
-            if isSelected {
-                Circle()
-                    .fill(Theme.Wash.mark)
-                    .frame(width: 6, height: 6)
+            if let caption {
+                Text(caption)
+                    .font(Theme.Font.secondary)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
         }
-        .accessibilityHidden(true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, SettingsMetrics.pickerItemPaddingV)
     }
 }
 
@@ -105,8 +72,14 @@ struct SiteIcon: View {
                     .resizable()
                     .interpolation(.high)
             } else {
-                RoundedRectangle(cornerRadius: Theme.Radius.tight)
-                    .fill(Theme.Wash.faint)
+                RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous)
+                    .fill(.clear)
+                    .settingsSurface(
+                        in: RoundedRectangle(
+                            cornerRadius: Theme.Radius.tight,
+                            style: .continuous
+                        )
+                    )
                     .overlay {
                         Image(systemName: "globe")
                             .font(.system(size: size * 0.62))
@@ -115,7 +88,7 @@ struct SiteIcon: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
         .accessibilityHidden(true)
     }
 }
@@ -192,7 +165,7 @@ struct DrillInRow: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(.vertical, 10)
-            .contentShape(Rectangle())
+            .settingsRowHover(isActive: hovering, tint: tint)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -210,7 +183,10 @@ struct AddRow: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 26 * 0.32, style: .continuous)
-                    .strokeBorder(Theme.Wash.outline, style: StrokeStyle(lineWidth: 1, dash: [3, 2.5]))
+                    .strokeBorder(
+                        Color.primary.opacity(0.22),
+                        style: StrokeStyle(lineWidth: 1, dash: [3, 2.5])
+                    )
                     .frame(width: 26, height: 26)
                     .overlay {
                         Image(systemName: "plus")
@@ -226,7 +202,7 @@ struct AddRow: View {
                 Spacer(minLength: 8)
             }
             .padding(.vertical, 9)
-            .contentShape(Rectangle())
+            .settingsRowHover(isActive: hovering)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -383,10 +359,11 @@ struct ChipList: View {
                     .font(Theme.Font.secondary)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 4)
-                    .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.chip)
-                            .strokeBorder(Theme.Wash.hover, lineWidth: 1)
+                    .settingsSurface(
+                        in: RoundedRectangle(
+                            cornerRadius: Theme.Radius.chip,
+                            style: .continuous
+                        )
                     )
             }
         }

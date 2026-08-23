@@ -4,18 +4,43 @@
 import AppKit
 import SwiftUI
 
-struct WorkspaceList: View {
+private enum WorkspaceListCoordinateSpace {
+    static let name = "sidebar-workspace"
+}
+
+private struct WorkspaceListFadeMask: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(.black)
+
+            LinearGradient(
+                stops: [
+                    .init(color: .black, location: 0),
+                    .init(color: .black.opacity(0.45), location: 0.68),
+                    .init(color: .clear, location: 1),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 42)
+        }
+    }
+}
+
+struct WorkspaceList<TopBar: View, BottomBar: View>: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
     let selection: SidebarSelection
     let newFolderDrop: SidebarNewFolderDrop
     let frames: SidebarFrames
     let bottomClearance: CGFloat
+    let topBar: TopBar
+    let bottomBar: BottomBar
+    let contentInsets: EdgeInsets
 
     @State private var armed: SidebarDropIntent?
     @State private var armCandidate: (intent: SidebarDropIntent, since: Date)?
-
-    private static let space = "sidebar-workspace"
 
     private var model: SidebarDragModel {
         coordinator.sidebarDrag
@@ -36,7 +61,7 @@ struct WorkspaceList: View {
             armed: armed,
             candidate: armCandidate?.intent,
             offersSplit: model.carriedTabID != nil,
-            space: Self.space,
+            space: WorkspaceListCoordinateSpace.name,
             frames: frames
         )
     }
@@ -52,14 +77,31 @@ struct WorkspaceList: View {
                     .onTapGesture { selection.takeKeyboard() }
                     .animation(Theme.Motion.drift, value: bottomClearance)
             }
+            .padding(.leading, contentInsets.leading)
+            .padding(.trailing, contentInsets.trailing)
         }
         .scrollIndicators(.never)
-        .coordinateSpace(.named(Self.space))
+        .scrollEdgeEffectHidden(true, for: .bottom)
+        .mask {
+            WorkspaceListFadeMask()
+        }
+        .safeAreaBar(edge: .top, spacing: 6) {
+            topBar
+                .padding(.leading, contentInsets.leading)
+                .padding(.trailing, contentInsets.trailing)
+        }
+        .safeAreaBar(edge: .bottom, spacing: 6) {
+            bottomBar
+                .padding(.leading, contentInsets.leading)
+                .padding(.trailing, contentInsets.trailing)
+                .zIndex(1)
+        }
+        .coordinateSpace(.named(WorkspaceListCoordinateSpace.name))
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { model.listOriginInWindow = $0.origin }
         // The gesture belongs to the container. A reorder rebuilds the dragged
         // row, and a rebuilt view never delivers `.onEnded`.
         .gesture(
-            DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
+            DragGesture(minimumDistance: 4, coordinateSpace: .named(WorkspaceListCoordinateSpace.name))
                 .onChanged(dragChanged)
                 .onEnded(dragEnded)
         )
@@ -393,10 +435,10 @@ struct SidebarDragChip: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 Theme.windowBackground.opacity(SidebarDragGhost.chipFillOpacity),
-                in: RoundedRectangle(cornerRadius: Theme.Radius.control)
+                in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: Theme.Radius.control)
+                RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
                     .strokeBorder(Theme.Wash.hover, lineWidth: 0.5)
             }
             .shadow(color: .black.opacity(0.3), radius: 11, y: 5)

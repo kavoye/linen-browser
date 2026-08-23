@@ -135,9 +135,9 @@ private struct DownloadFileRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            hovering ? Theme.Wash.hairline : Theme.Wash.none,
-            in: RoundedRectangle(cornerRadius: Theme.Radius.hover)
+        .hoverBackground(
+            isActive: hovering,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
         )
         .contentShape(Rectangle())
         .help(item.stoppedReason ?? "")

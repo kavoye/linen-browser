@@ -7,14 +7,9 @@ struct UpdateBanner: View {
     let updates: UpdateController
 
     @Environment(\.sidebarStyle) private var sidebarStyle
-    @State private var hovering = false
 
     private var model: UpdateModel {
         updates.model
-    }
-
-    private var isOpen: Bool {
-        hovering || isTransferring
     }
 
     var body: some View {
@@ -32,132 +27,80 @@ struct UpdateBanner: View {
     // MARK: - The card
 
     private var card: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(tint)
-                    .frame(width: 9, height: 9)
+        HStack(spacing: 8) {
+            Text(bannerTitle)
+                .font(Theme.Font.control.weight(.semibold))
+                .lineLimit(1)
 
-                Text(title)
-                    .font(Theme.Font.control)
-                    .lineLimit(1)
+            Spacer(minLength: 4)
 
-                Spacer(minLength: 6)
-
-                if isOpen {
-                    dismiss
-                }
-            }
-
-            if isOpen, caption != nil || actionTitle != nil {
-                // The sidebar goes down to 190pt, where a caption and a button cannot share a line.
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .center, spacing: 8) {
-                        captionText
-                        Spacer(minLength: 8)
-                        actionButton
-                    }
-
-                    VStack(alignment: .leading, spacing: 9) {
-                        captionText
-                        actionButton
-                    }
-                }
-                .padding(.top, 5)
-                .padding(.leading, 17)
-            }
-
-            if isTransferring {
-                ProgressBar(value: model.isProgressKnown ? model.progress : nil, tint: tint)
-                    .padding(.top, 9)
-            }
+            cardAccessory
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 9)
-        .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.card))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.card)
-                .strokeBorder(tint.opacity(isOpen ? 0.45 : 0.3), lineWidth: 1)
+        .padding(.leading, 10)
+        .padding(.trailing, 5)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity)
+        .glassEffect(
+            .regular.tint(Theme.accent.opacity(0.38)),
+            in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
         )
-        .onHover { hovering = $0 }
-        .animation(.snappy(duration: 0.24), value: isOpen)
         .transition(.identity)
+    }
+
+    @ViewBuilder
+    private var cardAccessory: some View {
+        switch model.phase {
+        case .available, .readyToInstall:
+            SettingsButton(
+                title: LocalizedStringResource("update.banner.install", defaultValue: "Install"),
+                isProminent: true,
+                action: act
+            )
+        case .failed:
+            SettingsButton(title: "Try Again", action: act)
+        case .downloading, .extracting, .installing:
+            ProgressView()
+                .controlSize(.small)
+                .tint(Theme.accent)
+                .frame(width: SettingsMetrics.controlHeight, height: SettingsMetrics.controlHeight)
+        case .idle, .checking, .upToDate:
+            EmptyView()
+        }
     }
 
     private var badge: some View {
         Button(action: act) {
             Image(systemName: glyph)
                 .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .frame(width: 22, height: 22)
-                .background(tint, in: Circle())
+                .glassEffect(.regular.tint(Theme.accent.opacity(0.38)), in: Circle())
                 .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!hasAction)
-        .help(title)
+        .disabled(!isActionable)
+        .help(Text(bannerTitle))
         .transition(.identity)
     }
 
-    @ViewBuilder
-    private var captionText: some View {
-        if let caption {
-            Text(caption)
-                .font(.system(size: 10.5, design: captionIsVersions ? .monospaced : .default))
-                .foregroundStyle(.tertiary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    @ViewBuilder
-    private var actionButton: some View {
-        if let actionTitle {
-            SettingsButton(title: actionTitle, isProminent: isPrimaryAction) {
-                act()
-            }
-            .layoutPriority(1)
-        }
-    }
-
-    private var dismiss: some View {
-        CloseButton(help: String(localized: "Dismiss")) {
-            updates.dismiss()
-        }
-    }
-
     private func act() {
-        if isFailure {
-            updates.checkNow()
-        } else {
+        if model.phase == .available || model.phase == .readyToInstall {
             updates.proceed()
+        } else {
+            updates.checkNow()
         }
     }
 
-    // MARK: - Wording and colour
+    // MARK: - Wording
 
-    private var isFailure: Bool {
-        if case .failed = model.phase {
-            return true
+    private var isActionable: Bool {
+        switch model.phase {
+        case .downloading, .extracting, .installing:
+            false
+        default:
+            true
         }
-        return false
-    }
-
-    private var isTransferring: Bool {
-        model.phase == .downloading || model.phase == .extracting || model.phase == .installing
-    }
-
-    private var hasAction: Bool {
-        actionTitle != nil
-    }
-
-    private var isPrimaryAction: Bool {
-        model.phase == .available || model.phase == .readyToInstall
-    }
-
-    private var tint: Color {
-        isFailure ? .orange : Theme.accent
     }
 
     private var glyph: String {
@@ -173,26 +116,28 @@ struct UpdateBanner: View {
         }
     }
 
-    private var title: String {
-        UpdatePhrasing.title(model)
+    private var bannerTitle: LocalizedStringResource {
+        UpdatePhrasing.title(for: model.phase)
     }
+}
 
-    private var captionIsVersions: Bool {
-        model.phase == .available || model.phase == .upToDate
-    }
-
-    private var caption: String? {
-        UpdatePhrasing.caption(model)
-    }
-
-    private var actionTitle: LocalizedStringResource? {
-        switch model.phase {
+nonisolated enum UpdatePhrasing {
+    static func title(for phase: UpdateModel.Phase) -> LocalizedStringResource {
+        switch phase {
         case .available, .readyToInstall:
-            LocalizedStringResource("update.banner.install", defaultValue: "Install")
+            "Update Available"
+        case .downloading:
+            "Downloading update"
+        case .extracting:
+            "Preparing update"
+        case .installing:
+            "Installing update"
+        case .upToDate:
+            "Up to date"
         case .failed:
-            "Try Again"
-        default:
-            nil
+            "Couldn’t check for updates"
+        case .checking, .idle:
+            "Checking for updates"
         }
     }
 }
@@ -322,9 +267,14 @@ private struct UpdateActionButton: View {
     }
 
     private var background: some View {
-        let shape = RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius)
+        let shape = RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
         return ZStack(alignment: .leading) {
-            shape.fill(baseFill)
+            Color.clear
+                .settingsSurface(
+                    isActive: hovering && isActionable,
+                    tint: surfaceTint,
+                    in: shape
+                )
 
             if let progress {
                 GeometryReader { proxy in
@@ -336,7 +286,6 @@ private struct UpdateActionButton: View {
             }
         }
         .clipShape(shape)
-        .overlay(shape.strokeBorder(border, lineWidth: 1))
     }
 
     // MARK: - What the phase makes of it
@@ -387,27 +336,14 @@ private struct UpdateActionButton: View {
         isFailure ? .orange : Theme.accent
     }
 
-    private var baseFill: Color {
+    private var surfaceTint: Color? {
         if isFailure {
-            return Theme.warning.opacity(hovering ? 0.16 : 0.1)
+            return Theme.warning
         }
         if isProminent {
-            return Theme.chrome(hovering ? 0.17 : 0.13)
+            return Theme.accent
         }
-        if isBusy {
-            return SettingsMetrics.fill
-        }
-        return hovering ? SettingsMetrics.fillHover : SettingsMetrics.fill
-    }
-
-    private var border: Color {
-        if isFailure {
-            return Theme.warning.opacity(0.5)
-        }
-        if isProminent {
-            return Theme.accent.opacity(hovering ? 0.6 : 0.4)
-        }
-        return hovering ? SettingsMetrics.borderHover : SettingsMetrics.border
+        return nil
     }
 
     private var label: AnyShapeStyle {
@@ -480,81 +416,5 @@ private struct Sweep: View {
                 slide = true
             }
         }
-    }
-}
-
-enum UpdatePhrasing {
-    static func title(_ model: UpdateModel, idle: String = "") -> String {
-        switch model.phase {
-        case .available:
-            String(localized: "Update to \(model.version)")
-        case .downloading:
-            String(localized: "Downloading \(model.version)")
-        case .extracting:
-            String(localized: "Preparing \(model.version)")
-        case .readyToInstall:
-            String(localized: "Update \(model.version) ready")
-        case .installing:
-            String(localized: "Installing")
-        case .upToDate:
-            String(localized: "Up to date")
-        case .failed:
-            String(localized: "Couldn’t check for updates")
-        case .checking:
-            String(localized: "Checking…")
-        case .idle:
-            idle
-        }
-    }
-
-    static func caption(_ model: UpdateModel) -> String? {
-        switch model.phase {
-        case .available:
-            "\(UpdateFeed.currentVersion) → \(model.version)"
-        case .readyToInstall:
-            String(localized: "Installing restarts Linen")
-        case .failed(let message):
-            message
-        default:
-            nil
-        }
-    }
-}
-
-private struct ProgressBar: View {
-    let value: Double?
-    let tint: Color
-
-    @State private var slide = false
-
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Theme.Wash.hover)
-
-                Capsule()
-                    .fill(tint)
-                    .frame(width: fillWidth(in: proxy.size.width))
-                    .offset(x: value == nil ? slideOffset(in: proxy.size.width) : 0)
-            }
-        }
-        .frame(height: 3)
-        .clipShape(Capsule())
-        .onAppear {
-            guard value == nil else { return }
-            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
-                slide = true
-            }
-        }
-    }
-
-    private func fillWidth(in width: CGFloat) -> CGFloat {
-        guard let value else { return width * 0.35 }
-        return max(0, min(1, value)) * width
-    }
-
-    private func slideOffset(in width: CGFloat) -> CGFloat {
-        slide ? width * 0.65 : 0
     }
 }

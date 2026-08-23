@@ -7,7 +7,6 @@ import SwiftUI
 struct SidePanelSurface: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
-    let containerWidth: CGFloat
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -16,34 +15,26 @@ struct SidePanelSurface: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SidePanelHeader(coordinator: coordinator)
-            content
-        }
-        .background {
-            ZStack {
-                if panel.selectedKind?.paintsThePanel == true {
-                    LyricsBackdrop(artwork: coordinator.lyricsSource.artworkURL)
-                } else {
-                    VisualEffectView(material: .sidebar)
-                    Theme.sidebarTint.opacity(0.55)
-                }
-                WindowDragArea()
+        let shape = LoomChrome.canvasShape
+        ZStack {
+            if panel.selectedKind?.usesImmersiveBackdrop == true {
+                LyricsBackdrop(artwork: coordinator.lyricsSource.artworkURL)
+            } else {
+                LoomPanelFill(shape: shape)
+            }
+
+            SidePanelInteractionBoundary()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            VStack(spacing: 0) {
+                SidePanelHeader(coordinator: coordinator)
+                content
             }
         }
-        .colorScheme(panel.selectedKind?.paintsThePanel == true ? .dark : colorScheme)
-        .overlay(alignment: .leading) {
-            if !panel.isExpanded {
-                ColumnEdgeHandle(
-                    edge: .leading,
-                    grabWidth: SidePanelMetrics.grabWidth,
-                    isDragging: panel.isDragging,
-                    onDragChanged: { panel.dragChanged(translation: $0, container: containerWidth) },
-                    onDragEnded: { panel.dragEnded(translation: $0, container: containerWidth) },
-                    onReset: { panel.resetWidth() }
-                )
-            }
-        }
+        .contentShape(shape)
+        .clipShape(shape)
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .colorScheme(panel.selectedKind?.usesImmersiveBackdrop == true ? .dark : colorScheme)
     }
 
     @ViewBuilder
@@ -55,6 +46,37 @@ struct SidePanelSurface: View {
             LyricsSurface(coordinator: coordinator)
         case nil:
             Spacer(minLength: 0)
+        }
+    }
+}
+
+/// A panel is an interaction boundary even where its SwiftUI content is
+/// visually empty. The native view sits behind the panel's controls, so their
+/// buttons and scroll views win hit testing while otherwise-empty regions no
+/// longer fall through to the web view underneath.
+private struct SidePanelInteractionBoundary: NSViewRepresentable {
+    func makeNSView(context: Context) -> BoundaryView {
+        BoundaryView()
+    }
+
+    func updateNSView(_ nsView: BoundaryView, context: Context) {}
+
+    final class BoundaryView: NSView {
+        override var acceptsFirstResponder: Bool {
+            false
+        }
+
+        override func scrollWheel(with event: NSEvent) {}
+
+        override func mouseDown(with event: NSEvent) {}
+
+        override func rightMouseDown(with event: NSEvent) {}
+
+        override func otherMouseDown(with event: NSEvent) {}
+
+        override func resetCursorRects() {
+            super.resetCursorRects()
+            addCursorRect(bounds, cursor: .arrow)
         }
     }
 }
@@ -92,16 +114,8 @@ private struct SidePanelHeader: View {
             ) {
                 panel.isExpanded.toggle()
             }
-
-            QuietIconButton(
-                symbol: "xmark",
-                isOn: false,
-                help: String(localized: "Hide Side Panel")
-            ) {
-                panel.hide()
-            }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, SidePanelMetrics.controlInset)
         .frame(height: SidePanelMetrics.headerHeight)
     }
 }
@@ -113,31 +127,40 @@ struct SidePanelToggle: View {
         coordinator.sidePanel
     }
 
-    /// One mark at a time: what the panel would show you right now. The agent
-    /// outranks the music, because only the agent's mark can mean "look at this".
     private var status: SidePanelStatus? {
         if let mark = coordinator.agentMark {
             return .agent(mark)
         }
-        return coordinator.showsLyrics ? .lyrics : nil
+        return coordinator.hasLyrics ? .lyrics : nil
+    }
+
+    private var accessibilityLabel: LocalizedStringResource {
+        panel.isVisible ? "Hide Side Panel" : "Show Side Panel"
     }
 
     var body: some View {
-        if !panel.isVisible {
-            ToolbarButton(
-                symbol: "sidebar.right",
-                enabled: true,
-                help: String(localized: "Show Side Panel (⌥⌘A)")
-            ) {
-                panel.show(seeding: coordinator.showsLyrics ? .lyrics : .activity)
-            }
-            .overlay(alignment: .topTrailing) {
+        ToolbarButton(
+            symbol: "sidebar.right",
+            enabled: true,
+            isOn: panel.isVisible,
+            highlightsWhenOn: false,
+            help: String(
+                localized: panel.isVisible
+                    ? "Hide Side Panel (⌥⌘A)"
+                    : "Show Side Panel (⌥⌘A)"
+            )
+        ) {
+            panel.toggleVisibility(seeding: coordinator.showsLyrics ? .lyrics : .activity)
+        }
+        .overlay(alignment: .topTrailing) {
+            if !panel.isVisible {
                 SidePanelStatusMark(status: status)
                     .frame(width: 12, height: 12)
                     .offset(x: -3, y: 3)
                     .allowsHitTesting(false)
             }
         }
+        .accessibilityLabel(Text(accessibilityLabel))
     }
 }
 
@@ -151,7 +174,7 @@ private struct SidePanelStatusMark: View {
 
     var body: some View {
         switch status {
-        case let .agent(dot):
+        case .agent(let dot):
             AgentStateMarker(
                 isRunning: true,
                 tint: dot == .attention ? Theme.warning : Theme.accent
@@ -208,14 +231,8 @@ private struct SidePanelTabChip: View {
 
     @State private var hovering = false
 
-    private var background: Color {
-        if isSelected {
-            return Theme.Wash.selection
-        }
-        return hovering ? Theme.Wash.hover : Theme.Wash.none
-    }
-
     var body: some View {
+        let shape = Capsule()
         HStack(spacing: 5) {
             if let mark {
                 AgentStateMarker(isRunning: true, tint: mark == .attention ? Theme.warning : Theme.accent)
@@ -232,8 +249,8 @@ private struct SidePanelTabChip: View {
         .foregroundStyle(isSelected ? Color.primary : Color.secondary)
         .padding(.horizontal, 9)
         .frame(height: 24)
-        .background(background, in: .rect(cornerRadius: Theme.Radius.chip))
-        .contentShape(.rect(cornerRadius: Theme.Radius.chip))
+        .selectionBackground(isSelected: isSelected, isHovering: hovering, in: shape)
+        .contentShape(shape)
         .onTapGesture(perform: onSelect)
         .onHover { hovering = $0 }
         .accessibilityAddTraits(isSelected ? .isSelected : [])

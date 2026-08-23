@@ -13,39 +13,6 @@ struct ChromeInkTests {
         NSColor(color).usingColorSpace(.sRGB) ?? NSColor(color)
     }
 
-    // MARK: - Tooltips on the controls inside a row
-
-    /// A sidebar row carries its own `.help`, whose rect covers the controls
-    /// sitting in it, so the control's own text never surfaced. An `NSView`
-    /// tooltip is answered by the view under the pointer instead.
-    @MainActor
-    @Test func aControlCarriesItsOwnTooltip() {
-        let view = ToolTipArea.TipArea()
-        ToolTipArea(text: "Remove Bookmark").apply(to: view)
-
-        #expect(view.toolTip == "Remove Bookmark")
-    }
-
-    @MainActor
-    @Test func noTextMeansNoTooltip() {
-        let view = ToolTipArea.TipArea()
-        ToolTipArea(text: "Close Tab").apply(to: view)
-        ToolTipArea(text: "").apply(to: view)
-
-        #expect(view.toolTip == nil)
-    }
-
-    /// The area sits over the button it speaks for, so it must never take the
-    /// click. Tracking, and with it the tooltip, runs whatever hit testing says.
-    @MainActor
-    @Test func theTooltipAreaNeverTakesTheClick() {
-        let view = ToolTipArea.TipArea()
-        ToolTipArea(text: "Close Tab").apply(to: view)
-        view.frame = NSRect(x: 0, y: 0, width: 20, height: 20)
-
-        #expect(view.hitTest(NSPoint(x: 10, y: 10)) == nil)
-    }
-
     // MARK: - Which way the ink points
 
     @Test func aLightBandTakesDarkerInkAsItGetsMoreEmphatic() {
@@ -150,14 +117,46 @@ struct ThemeRadiusTests {
         }
     }
 
-    @Test func theRadiiRunFromWidestToTightest() {
-        #expect(Theme.Radius.panel > Theme.Radius.card)
+    @Test func radiiBecomeTighterAsSurfacesBecomeSmaller() {
+        #expect(Theme.Radius.panel >= Theme.Radius.card)
         #expect(Theme.Radius.card > Theme.Radius.control)
         #expect(Theme.Radius.control > Theme.Radius.chip)
         #expect(Theme.Radius.chip > Theme.Radius.tight)
+        #expect(Theme.Radius.hover == Theme.Radius.control)
+        #expect(Theme.Radius.panel <= Theme.Radius.window)
     }
 
-    @Test func hoverPlatesMatchTheControlsTheySitUnder() {
-        #expect(Theme.Radius.hover == Theme.Radius.control)
+}
+
+/// Chrome ink follows the constrained Loom colour, including when the page's
+/// appearance differs from the system appearance.
+@MainActor
+struct PageInkContrastTests {
+    private func ground(_ page: NSColor, dark: Bool) -> NSColor {
+        LoomChrome.sampledColor(page, scheme: dark ? .dark : .light)
+    }
+
+    @Test func aDarkBlueGroundTakesLightInk() {
+        let hero = NSColor(srgbRed: 0.016, green: 0.016, blue: 0.227, alpha: 1)
+        #expect(!PageInk.isLight(ground(hero, dark: false), scheme: .light))
+        #expect(!PageInk.isLight(ground(hero, dark: true), scheme: .dark))
+    }
+
+    @Test func aDarkPageTakesLightInkInEitherWindowAppearance() {
+        let pages = [
+            NSColor(srgbRed: 0.05, green: 0.067, blue: 0.09, alpha: 1),
+            NSColor(srgbRed: 0.016, green: 0.016, blue: 0.227, alpha: 1),
+            NSColor(srgbRed: 0.6, green: 0, blue: 0, alpha: 1),
+            NSColor(srgbRed: 0, green: 0.35, blue: 0, alpha: 1),
+        ]
+        for page in pages {
+            #expect(!PageInk.isLight(ground(page, dark: false), scheme: .light))
+            #expect(!PageInk.isLight(ground(page, dark: true), scheme: .dark))
+        }
+    }
+
+    @Test func blackAndWhiteStillLandWhereTheyShould() {
+        #expect(PageInk.isLight(.white, scheme: .light))
+        #expect(!PageInk.isLight(.black, scheme: .dark))
     }
 }

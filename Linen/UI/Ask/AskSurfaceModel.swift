@@ -201,8 +201,7 @@ final class AskSurfaceModel {
         case .ask(let prompt):
             ask(prompt)
         case .navigate(let input):
-            browser.handleAddressInput(input)
-            finishEditing()
+            navigate(input)
         }
     }
 
@@ -241,11 +240,13 @@ final class AskSurfaceModel {
 
     func open(_ url: URL) {
         browser.ensureActiveTab().load(url)
+        coordinator.showBrowserPage()
         finishEditing()
     }
 
     func navigate(_ input: String) {
         browser.handleAddressInput(input)
+        coordinator.showBrowserPage()
         finishEditing()
     }
 

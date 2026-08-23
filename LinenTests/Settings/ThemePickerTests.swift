@@ -36,4 +36,13 @@ struct ThemePickerTests {
             #expect(BrowserSettings(defaults: suite).appearance == mode)
         }
     }
+
+    @Test func matchingWebsiteColorDefaultsOnAndPersists() throws {
+        let suite = try #require(UserDefaults(suiteName: "WebsiteColorTests.\(UUID().uuidString)"))
+        defer { suite.removePersistentDomain(forName: suite.description) }
+
+        #expect(BrowserSettings(defaults: suite).matchesWebsiteColor)
+        BrowserSettings(defaults: suite).matchesWebsiteColor = false
+        #expect(!BrowserSettings(defaults: suite).matchesWebsiteColor)
+    }
 }

@@ -24,7 +24,7 @@ struct ProfileSettingsTests {
         ] {
             #expect(!session.contains(key))
         }
-        for key in ["search.engine", "startup.behavior", "content.javaScript",
+        for key in ["search.engine", "startup.newTab", "content.javaScript",
                     "privacy.clearOnQuit", "content.autoplay", "startPage.order",
         ] {
             #expect(session.contains(key))

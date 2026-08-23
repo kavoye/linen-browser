@@ -79,16 +79,12 @@ struct ShortcutRecorder: View {
             }
             .padding(.horizontal, 6)
             .frame(height: 28)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: Theme.Radius.hover)
-                if isRecording {
-                    shape
-                        .fill(Theme.danger.opacity(0.1))
-                        .overlay(shape.strokeBorder(Theme.danger.opacity(0.5), lineWidth: 1))
-                } else {
-                    shape.fill(hovering ? Theme.Wash.hairline : Theme.Wash.none)
-                }
-            }
+            .settingsSurface(
+                isActive: hovering || isRecording,
+                tint: isRecording ? Theme.danger : nil,
+                isLifted: true,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -42,6 +42,10 @@ struct ScratchWakeTests {
         let sleeper = model.newTab(url: a)
         let keeper = model.newTab(url: b)
         let win = window()
+        defer {
+            win.orderOut(nil)
+            win.contentView?.subviews.forEach { $0.removeFromSuperview() }
+        }
         host(sleeper.webView, in: win)
         #expect(await PageSettle.untilIdle(sleeper.webView, timeout: .seconds(30)))
         #expect(await waitUntil { sleeper.urlString == a.absoluteString })

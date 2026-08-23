@@ -8,6 +8,14 @@ struct BrowserView: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
 
+    @State private var settingsWorkspace: SettingsWorkspace
+
+    init(browser: BrowserModel, coordinator: AppCoordinator) {
+        self.browser = browser
+        self.coordinator = coordinator
+        _settingsWorkspace = State(initialValue: SettingsWorkspace(coordinator: coordinator))
+    }
+
     private var sidebar: SidebarLayout {
         coordinator.sidebar
     }
@@ -18,56 +26,110 @@ struct BrowserView: View {
         coordinator.sidePanel
     }
     private var showsPanel: Bool {
-        panel.isVisible && coordinator.page == .browser
+        panel.isVisible
     }
 
     var body: some View {
         let width = sidebar.openWidth(in: containerWidth)
         let isExpanded = showsPanel && panel.isExpanded
-        let panelWidth = isExpanded ? containerWidth : panel.openWidth(in: containerWidth)
-        let panelReach = showsPanel && !isExpanded ? panelWidth : 0
+        let shell = LoomShellGeometry(
+            containerWidth: containerWidth,
+            sidebarWidth: width,
+            preferredPanelWidth: panel.openWidth(in: containerWidth),
+            isSidebarVisible: sidebar.isVisible,
+            isPanelVisible: showsPanel,
+            isPanelExpanded: isExpanded
+        )
 
         ZStack(alignment: .leading) {
-            Group {
-                if coordinator.page == .settings {
-                    SettingsView(coordinator: coordinator)
-                } else {
-                    ContentArea(browser: browser, coordinator: coordinator)
-                }
-            }
+            LoomAmbientBackdrop(
+                sampledPageColor: ChromeBand.measuredColor(
+                    browser: browser,
+                    coordinator: coordinator
+                )
+            )
+
+            ContentArea(
+                browser: browser,
+                coordinator: coordinator,
+                settingsWorkspace: settingsWorkspace,
+                canvasTrailingInset: shell.canvasTrailingInset
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.leading, sidebar.isVisible ? width : 0)
-            .padding(.trailing, panelReach)
 
             SidePanelSurface(
                 browser: browser,
-                coordinator: coordinator,
-                containerWidth: containerWidth
+                coordinator: coordinator
             )
-            .frame(width: isExpanded ? max(containerWidth - (sidebar.isVisible ? width : 0), 0) : panelWidth)
+            .frame(width: shell.panelWidth)
+            .padding(.top, LoomChrome.canvasTop)
+            .padding(.trailing, LoomChrome.canvasInset)
+            .padding(.bottom, LoomChrome.canvasInset)
             .frame(maxWidth: .infinity, alignment: .trailing)
-            .offset(x: showsPanel ? 0 : panelWidth + 24)
+            .offset(x: showsPanel ? 0 : shell.panelWidth + LoomChrome.canvasInset + 24)
+
+            if showsPanel && !isExpanded {
+                LoomColumnResizeHandle(
+                    grabWidth: LoomChrome.resizeGrabWidth,
+                    isDragging: panel.isDragging,
+                    onDragChanged: {
+                        panel.dragChanged(translation: $0, container: containerWidth)
+                    },
+                    onDragEnded: {
+                        panel.dragEnded(translation: $0, container: containerWidth)
+                    },
+                    onReset: { panel.resetWidth() }
+                )
+                .padding(.top, LoomChrome.canvasTop)
+                .padding(.bottom, LoomChrome.canvasInset)
+                .offset(x: shell.panelResizeLeading)
+            }
+
+            ContentNavBar(browser: browser, coordinator: coordinator)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.leading, sidebar.isVisible ? width : 0)
 
             Sidebar(
                 browser: browser,
-                coordinator: coordinator,
-                containerWidth: containerWidth
+                coordinator: coordinator
             )
-                .frame(width: width)
-                .environment(\.sidebarStyle, sidebar.style)
-                .environment(\.sidebarWidth, width)
-                .compositingGroup()
-                .shadow(
-                    color: .black.opacity(sidebar.isPeeking && !sidebar.isVisible ? 0.45 : 0),
-                    radius: 22,
-                    x: 6
-                )
-                .offset(x: sidebar.isShowing ? 0 : -(width + 24))
-                .onHover { inside in
-                    if !sidebar.isVisible, !inside {
-                        sidebar.isPeeking = false
-                    }
+            .frame(width: width)
+            .environment(\.sidebarStyle, sidebar.style)
+            .environment(\.sidebarWidth, width)
+            .compositingGroup()
+            .shadow(
+                color: .black.opacity(sidebar.isFloating ? 0.45 : 0),
+                radius: 22,
+                x: 6
+            )
+            .offset(x: sidebar.isShowing ? 0 : -(width + 24))
+            .onHover { inside in
+                if !sidebar.isVisible, !inside {
+                    sidebar.isPeeking = false
                 }
+            }
+
+            if sidebar.isShowing {
+                LoomColumnResizeHandle(
+                    grabWidth: LoomChrome.resizeGrabWidth,
+                    isDragging: sidebar.isDragging,
+                    onDragChanged: {
+                        sidebar.dragChanged(translation: $0, container: containerWidth)
+                    },
+                    onDragEnded: {
+                        sidebar.dragEnded(translation: $0, container: containerWidth)
+                    },
+                    onReset: { sidebar.resetWidth() }
+                )
+                .padding(.top, LoomChrome.canvasTop)
+                .padding(.bottom, LoomChrome.canvasInset)
+                .offset(
+                    x: shell.sidebarResizeLeading
+                )
+            }
+
+            SidebarVisibilityToggle(browser: browser, coordinator: coordinator)
 
             TabPreviewOverlay(browser: browser, model: coordinator.tabPreview)
 
@@ -110,14 +172,20 @@ struct BrowserView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { containerWidth = $0 }
-        .background(Theme.windowBackground)
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
+        } action: {
+            containerWidth = $0
+        }
+        .background(Color.clear)
         .environment(\.chromeIsLight, scheme == .light)
         .animation(Theme.Motion.settle, value: sidebar.isVisible)
         .animation(nil, value: sidebar.isPeeking)
         .animation(Theme.Motion.settle, value: showsPanel)
         .animation(Theme.Motion.settle, value: panel.isExpanded)
-        .animation(coordinator.isPaletteOpen ? Theme.Motion.quick : nil, value: coordinator.isPaletteOpen)
+        .animation(
+            coordinator.isPaletteOpen ? Theme.Motion.quick : nil, value: coordinator.isPaletteOpen
+        )
         .animation(nil, value: coordinator.onboarding.isPresented)
     }
 }

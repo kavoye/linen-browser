@@ -127,7 +127,7 @@ final class BrowserTab: Identifiable {
         webView.goForward()
     }
 
-    var isUnderTopBar = true {
+    var isUnderTopBar = false {
         didSet {
             guard isUnderTopBar != oldValue else { return }
             Self.applyObscuredInsets(to: webView, isUnderTopBar: isUnderTopBar)
@@ -425,7 +425,7 @@ final class BrowserTab: Identifiable {
 
     private static func applyObscuredInsets(
         to webView: WKWebView,
-        isUnderTopBar: Bool = true
+        isUnderTopBar: Bool = false
     ) {
         let isFullscreen = switch webView.fullscreenState {
         case .enteringFullscreen, .inFullscreen:
@@ -490,12 +490,20 @@ final class BrowserTab: Identifiable {
     }
 
     private var isMeasuringBand = false
+    private var needsBandRemeasure = false
 
     func measureBandUnderBar() {
         guard isShowingRealPage, hasPresentedContent, webView.window != nil,
-              isUnderTopBar,
-              webView.bounds.height > 0, !isMeasuringBand else { return }
+              webView.bounds.height > 0 else { return }
+        guard !isMeasuringBand else {
+            // The first presentation can still contain the old/blank frame.
+            // Keep the didFinish request instead of dropping it behind that
+            // early snapshot.
+            needsBandRemeasure = true
+            return
+        }
         isMeasuringBand = true
+        needsBandRemeasure = false
         let requestedURL = urlString
         let bandFraction = Theme.topBarHeight / webView.bounds.height
         let configuration = WKSnapshotConfiguration()
@@ -504,6 +512,13 @@ final class BrowserTab: Identifiable {
         webView.takeSnapshot(with: configuration) { [weak self] image, _ in
             guard let self else { return }
             isMeasuringBand = false
+            let shouldRemeasure = needsBandRemeasure
+            needsBandRemeasure = false
+            defer {
+                if shouldRemeasure {
+                    measureBandUnderBar()
+                }
+            }
             guard urlString == requestedURL, provisionalNavigation == nil,
                   hasPresentedContent,
                   let image,
@@ -511,6 +526,11 @@ final class BrowserTab: Identifiable {
             else { return }
             setPageColor(average)
         }
+    }
+
+    func webViewDidBecomeVisible() {
+        refreshCanvas(from: webView)
+        refreshPageColor(from: webView)
     }
 
     static func averageOfTopBand(of image: NSImage, fraction: CGFloat) -> NSColor? {
@@ -562,6 +582,11 @@ final class BrowserTab: Identifiable {
     // MARK: - Zoom
 
     private(set) var zoomChanges = 0
+
+    var zoomLevel: CGFloat {
+        _ = zoomChanges
+        return webView.pageZoom
+    }
 
     var isZoomed: Bool {
         _ = zoomChanges

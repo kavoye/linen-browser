@@ -197,7 +197,10 @@ struct MentionFieldTests {
         let field = MentionTextField(frame: CGRect(x: 0, y: 0, width: 400, height: 24))
         var text = ""
         lazy var coordinator = MentionField.Coordinator(
-            text: Binding(get: { self.text }, set: { self.text = $0 })
+            text: Binding(
+                get: { MainActor.assumeIsolated { self.text } },
+                set: { value in MainActor.assumeIsolated { self.text = value } }
+            )
         )
 
         init() {

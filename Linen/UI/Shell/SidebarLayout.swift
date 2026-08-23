@@ -21,17 +21,29 @@ enum SidebarMetrics {
     }
 
     static let rowIconSize: CGFloat = 16
+    static let rowControlExtent: CGFloat = 20
+
     static let rowIconSpacing: CGFloat = 8
+    static let fullContentInset: CGFloat = 12
+    static let iconsContentInset: CGFloat = 8
 
     static func rowContentPadding(style: SidebarStyle) -> CGFloat {
         style == .icons ? 0 : 9
+    }
+
+    static func contentInset(style: SidebarStyle) -> CGFloat {
+        style == .icons ? iconsContentInset : fullContentInset
+    }
+
+    static let controlHeight: CGFloat = 32
+
+    static func controlMaxWidth(style: SidebarStyle) -> CGFloat {
+        style == .icons ? .infinity : controlHeight
     }
     static let defaultWidth: CGFloat = 268
     static let defaultSnapDistance: CGFloat = 8
 
     static let iconsSnap: CGFloat = 150
-
-    static let grabWidth: CGFloat = 8
 
     static func clampWidth(_ width: CGFloat, container: CGFloat) -> CGFloat {
         let ceiling = container > 0
@@ -44,30 +56,27 @@ enum SidebarMetrics {
         isShowing ? 1 : 0
     }
 
-    static func windowControlsPadding(
+    static let permanentToggleSlot: CGFloat = 36
+
+    static func permanentToggleLeading(windowControlsInset: CGFloat) -> CGFloat {
+        windowControlsInset > 0 ? windowControlsInset : 10
+    }
+
+    static func toolbarLeadingPadding(
         isVisible: Bool,
         style: SidebarStyle,
-        windowControlsInset: CGFloat
+        windowControlsInset: CGFloat,
+        contentInset: CGFloat
     ) -> CGFloat {
-        let occupiedLeadingWidth: CGFloat
-        if !isVisible {
-            occupiedLeadingWidth = 0
-        } else if style == .icons {
-            occupiedLeadingWidth = iconsWidth + 1
-        } else {
-            occupiedLeadingWidth = windowControlsInset
-        }
-        return max(0, windowControlsInset - occupiedLeadingWidth - 10)
-    }
-}
-
-enum SidebarTogglePlacement {
-    static func inNavBar(isVisible: Bool, style: SidebarStyle) -> Bool {
-        !isVisible || style == .icons
-    }
-
-    static func inSidebarTop(style: SidebarStyle) -> Bool {
-        style == .full
+        guard !isVisible || style == .icons else { return 0 }
+        let occupiedLeadingWidth = isVisible ? iconsWidth : 0
+        return max(
+            0,
+            permanentToggleLeading(windowControlsInset: windowControlsInset)
+                + permanentToggleSlot
+                - occupiedLeadingWidth
+                - contentInset
+        )
     }
 }
 
@@ -125,6 +134,9 @@ final class SidebarLayout {
 
     var isShowing: Bool {
         isVisible || isPeeking
+    }
+    var isFloating: Bool {
+        isPeeking && !isVisible
     }
     var isDragging: Bool {
         dragOrigin != nil
@@ -255,8 +267,7 @@ extension EnvironmentValues {
     @Entry var sidebarWidth: CGFloat = SidebarMetrics.defaultWidth
 }
 
-struct ColumnEdgeHandle: View {
-    let edge: HorizontalEdge
+struct LoomColumnResizeHandle: View {
     let grabWidth: CGFloat
     let isDragging: Bool
     let onDragChanged: (CGFloat) -> Void
@@ -264,53 +275,30 @@ struct ColumnEdgeHandle: View {
     let onReset: () -> Void
 
     @State private var isHovering = false
-    @State private var isArmed = false
-
-    private static let lineThickness: CGFloat = 2
-
-    static let armDelay: Duration = .milliseconds(260)
-
-    private var active: Bool {
-        isArmed || isDragging
-    }
-
-    private var reach: CGFloat {
-        edge == .leading ? -1 : 1
-    }
-
-    private var alignment: Alignment {
-        edge == .leading ? .leading : .trailing
-    }
 
     var body: some View {
-        Capsule()
-            .fill(Theme.edgeHandle)
-            .opacity(active ? 1 : 0)
-            .frame(width: Self.lineThickness)
-            .frame(width: grabWidth, alignment: alignment)
-            .contentShape(Rectangle())
-            .pointerStyle(active ? .columnResize : nil)
-            .overlay {
-                ColumnEdgeCursorArea(isActive: active)
-                    .allowsHitTesting(false)
-            }
-            .onHover { inside in
-                isHovering = inside
-                if !inside {
-                    isArmed = false
-                }
-            }
-            .task(id: isHovering) {
-                guard isHovering else { return }
-                try? await Task.sleep(for: Self.armDelay)
-                guard !Task.isCancelled else { return }
-                isArmed = true
-            }
-            .gesture(drag)
-            .onTapGesture(count: 2) { onReset() }
-            .animation(Theme.Motion.quick, value: active)
-            .help("Drag to resize · double-click to reset")
-            .offset(x: reach)
+        ZStack {
+            Color.clear
+
+            LoomResizePill(
+                axis: .vertical,
+                isVisible: isDragging || isHovering,
+                isDragging: isDragging,
+                thickness: LoomChrome.canvasInset - 1
+            )
+        }
+        .frame(width: grabWidth)
+        .frame(maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .pointerStyle(.columnResize)
+        .onHover { inside in
+            isHovering = inside
+        }
+        .gesture(drag)
+        .onTapGesture(count: 2) { onReset() }
+        .animation(Theme.Motion.quick, value: isHovering)
+        .animation(Theme.Motion.quick, value: isDragging)
+        .help("Drag to resize · double-click to reset")
     }
 
     private var drag: some Gesture {
@@ -326,73 +314,5 @@ struct ColumnEdgeHandle: View {
                     onDragEnded(value.translation.width)
                 }
             }
-    }
-}
-
-private struct ColumnEdgeCursorArea: NSViewRepresentable {
-    let isActive: Bool
-
-    func makeNSView(context: Context) -> CursorArea {
-        let view = CursorArea()
-        view.isActive = isActive
-        return view
-    }
-
-    func updateNSView(_ nsView: CursorArea, context: Context) {
-        nsView.isActive = isActive
-    }
-
-    final class CursorArea: NSView {
-        var isActive = false {
-            didSet {
-                guard isActive != oldValue, window != nil else { return }
-                if isActive {
-                    NSCursor.columnResize.set()
-                } else {
-                    NSCursor.arrow.set()
-                }
-            }
-        }
-
-        private var area: NSTrackingArea?
-
-        override func hitTest(_ point: NSPoint) -> NSView? {
-            nil
-        }
-
-        override func updateTrackingAreas() {
-            super.updateTrackingAreas()
-            if let area {
-                removeTrackingArea(area)
-            }
-            let added = NSTrackingArea(
-                rect: .zero,
-                options: [.mouseMoved, .activeInKeyWindow, .inVisibleRect],
-                owner: self
-            )
-            addTrackingArea(added)
-            area = added
-        }
-
-        override func mouseMoved(with event: NSEvent) {
-            guard isActive else { return }
-            NSCursor.columnResize.set()
-        }
-    }
-}
-
-struct SidebarDivider: View {
-    let layout: SidebarLayout
-    let containerWidth: CGFloat
-
-    var body: some View {
-        ColumnEdgeHandle(
-            edge: .trailing,
-            grabWidth: SidebarMetrics.grabWidth,
-            isDragging: layout.isDragging,
-            onDragChanged: { layout.dragChanged(translation: $0, container: containerWidth) },
-            onDragEnded: { layout.dragEnded(translation: $0, container: containerWidth) },
-            onReset: { layout.resetWidth() }
-        )
     }
 }

@@ -107,4 +107,58 @@ enum TrackerList {
         let escapedPath = path.replacingOccurrences(of: ".", with: "\\.")
         return "^https?://([^/]+\\.)?\(escapedHost)\(escapedPath)"
     }
+
+    static func matchingDomains(
+        in resourceURLs: [String],
+        topLevelURL: URL?
+    ) -> [String] {
+        let rules = domains.map(ruleParts)
+        var matches = Set<String>()
+
+        for rawURL in resourceURLs {
+            guard let url = URL(string: rawURL),
+                  let scheme = url.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https",
+                  let host = url.host?.lowercased(),
+                  !isSameOrigin(url, topLevelURL)
+            else { continue }
+
+            for rule in rules where host == rule.host || host.hasSuffix(".\(rule.host)") {
+                guard rule.path.isEmpty || url.path.hasPrefix(rule.path) else { continue }
+                matches.insert(rule.host)
+                break
+            }
+        }
+
+        return matches.sorted()
+    }
+
+    private static func ruleParts(_ rule: String) -> (host: String, path: String) {
+        let parts = rule.split(separator: "/", maxSplits: 1, omittingEmptySubsequences: false)
+        return (
+            String(parts[0]).lowercased(),
+            parts.count > 1 ? "/" + String(parts[1]) : ""
+        )
+    }
+
+    private static func isSameOrigin(_ resourceURL: URL, _ topLevelURL: URL?) -> Bool {
+        guard let topLevelURL else { return false }
+        return resourceURL.scheme?.lowercased() == topLevelURL.scheme?.lowercased()
+            && resourceURL.host?.lowercased() == topLevelURL.host?.lowercased()
+            && effectivePort(of: resourceURL) == effectivePort(of: topLevelURL)
+    }
+
+    private static func effectivePort(of url: URL) -> Int? {
+        if let port = url.port {
+            return port
+        }
+        return switch url.scheme?.lowercased() {
+        case "http":
+            80
+        case "https":
+            443
+        default:
+            nil
+        }
+    }
 }

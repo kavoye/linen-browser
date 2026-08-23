@@ -99,6 +99,18 @@ struct SidePanelTests {
         #expect(panel.isShowing(.lyrics))
     }
 
+    @Test func thePermanentToolbarButtonTogglesWithoutLosingItsTab() {
+        let panel = panel()
+        panel.show(.lyrics)
+
+        panel.toggleVisibility(seeding: .activity)
+        #expect(!panel.isVisible)
+        #expect(panel.selectedKind == .lyrics)
+
+        panel.toggleVisibility(seeding: .activity)
+        #expect(panel.isShowing(.lyrics))
+    }
+
     @Test func escapeClosesThePanelOnceAndThenLetsTheKeyThrough() {
         let panel = panel()
         panel.show(.activity)

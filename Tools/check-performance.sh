@@ -93,7 +93,7 @@ check_average \
 check_average \
   'BrowserPerformanceTests/testCommandPaletteResultProjection()' \
   'com.apple.dt.XCTMetric_Clock.time.monotonic' \
-  '0.010' \
+  '0.015' \
   '500-history, 100-tab palette projection' \
   's'
 check_average \

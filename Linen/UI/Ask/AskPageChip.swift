@@ -8,7 +8,15 @@ struct AskPageChip: View {
     let title: String
     let icon: NSImage?
     var isAttached = false
+    var isRasterised = false
     let fontSize: CGFloat
+
+    @Environment(\.colorScheme) private var scheme
+
+    private var ink: Color {
+        guard isRasterised else { return .primary }
+        return scheme == .dark ? .white : .black
+    }
 
     private var iconSize: CGFloat {
         (fontSize * 1.15).rounded()
@@ -32,7 +40,7 @@ struct AskPageChip: View {
                         .resizable()
                         .interpolation(.high)
                         .aspectRatio(contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: iconRadius))
+                        .clipShape(RoundedRectangle(cornerRadius: iconRadius, style: .continuous))
                 } else {
                     Image(systemName: "globe")
                         .font(.system(size: iconSize * 0.8))
@@ -43,14 +51,25 @@ struct AskPageChip: View {
 
             Text(verbatim: title)
                 .font(.system(size: fontSize))
+                .foregroundStyle(ink)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(maxWidth: fontSize * 14, alignment: .leading)
         }
         .padding(.horizontal, (fontSize * 0.55).rounded())
         .padding(.vertical, (fontSize * 0.24).rounded())
-        .background(Theme.Wash.faint, in: Capsule())
-        .overlay(Capsule().strokeBorder(Theme.Wash.hover, lineWidth: 1))
+        .background(rasterisedFill, in: Capsule())
+        .overlay {
+            if isRasterised {
+                Capsule().strokeBorder(Theme.Wash.strong, lineWidth: 0.5)
+            }
+        }
+        .glassSurface(isEnabled: !isRasterised, in: Capsule())
+    }
+
+    private var rasterisedFill: AnyShapeStyle {
+        guard isRasterised else { return AnyShapeStyle(.clear) }
+        return AnyShapeStyle(ink.opacity(scheme == .dark ? 0.16 : 0.10))
     }
 }
 

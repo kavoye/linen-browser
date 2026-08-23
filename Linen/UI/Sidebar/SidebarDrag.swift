@@ -74,11 +74,7 @@ final class SidebarDragModel {
     var contentFrameInWindow: CGRect = .zero
 
     var dropFrameInWindow: CGRect {
-        var frame = contentFrameInWindow
-        let bar = min(Theme.topBarHeight, frame.height)
-        frame.origin.y += bar
-        frame.size.height -= bar
-        return frame
+        contentFrameInWindow
     }
 
     var dropPlan: SplitDropPlan {
@@ -167,6 +163,10 @@ struct SidebarRowContext {
     let offersSplit: Bool
     let space: String
     let frames: SidebarFrames
+
+    var refractsTabColor: Bool {
+        coordinator.settings.refractsTabColor
+    }
 
     func isLifted(_ item: SidebarItem) -> Bool {
         drag?.items.contains(item) == true

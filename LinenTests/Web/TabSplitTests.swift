@@ -202,7 +202,7 @@ struct TabSplitTests {
             .removing(b)
         let shares = shares(splits, containing: a)
         #expect(shape(splits, containing: a) == "(a c)")
-        #expect((shares?.reduce(0, +) ?? 0).isApproximately(1))
+        #expect((shares?.reduce(0, +) ?? 0).isApproximately(1) == true)
     }
 
     /// A grid of one is not a grid.

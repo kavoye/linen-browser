@@ -239,7 +239,7 @@ private struct OmniboxRow: View {
         .frame(height: density.rowHeight(for: item))
         .background(
             isSelected ? AnyShapeStyle(Theme.Wash.hover) : AnyShapeStyle(.clear),
-            in: RoundedRectangle(cornerRadius: cornerRadius)
+            in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         )
     }
 

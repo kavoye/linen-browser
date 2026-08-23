@@ -23,18 +23,12 @@ enum AskSurfaceStatus: Equatable {
 struct AskSurfaceBackdrop: View {
     let placement: AskSurface.Placement
     let status: AskSurfaceStatus?
-    let isPrivate: Bool
-    let isFocused: Bool
-    let hasResults: Bool
-    let overhangs: Bool
     let isThinking: Bool
     let isRunning: Bool
 
-    @Environment(\.colorScheme) private var scheme
-
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: placement.cornerRadius)
+            RoundedRectangle(cornerRadius: placement.cornerRadius, style: .continuous)
                 .fill(fillStyle)
 
             if let status {
@@ -42,19 +36,13 @@ struct AskSurfaceBackdrop: View {
                     .opacity(isThinking ? 0.7 : (isRunning || status == .listening ? 0.62 : 0.3))
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: placement.cornerRadius))
+        .clipShape(RoundedRectangle(cornerRadius: placement.cornerRadius, style: .continuous))
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
     private var fillStyle: AnyShapeStyle {
-        if hasResults || overhangs {
-            return AnyShapeStyle(scheme == .dark ? Color(white: 0.20) : .white)
-        }
-        if placement.usesMaterial {
-            return AnyShapeStyle(Color.clear)
-        }
-        return AnyShapeStyle(isFocused ? Theme.Wash.hairline : Theme.Wash.faint)
+        AnyShapeStyle(Color.clear)
     }
 
     private var waveMotion: FluidWaves.Motion {
@@ -76,13 +64,13 @@ struct AskSurfaceBorder: View {
 
     var body: some View {
         if isPrivate {
-            RoundedRectangle(cornerRadius: cornerRadius)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(
                     status == .listening ? Theme.danger.opacity(0.55) : Color.white.opacity(0.35),
                     style: StrokeStyle(lineWidth: 1, dash: [4, 3])
                 )
         } else {
-            RoundedRectangle(cornerRadius: cornerRadius)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(borderColor, lineWidth: 1)
         }
     }
@@ -94,7 +82,7 @@ struct AskSurfaceBorder: View {
         if status == .warning {
             return Theme.warning.opacity(0.45)
         }
-        return isFocused ? Theme.chrome(0.2) : Theme.Wash.hover
+        return .clear
     }
 }
 
@@ -106,30 +94,23 @@ struct AskSurfaceMaterial: ViewModifier {
 
     @Environment(\.colorScheme) private var scheme
 
-    private var fill: Color {
+    /// macOS cross-fades a material's own `.tint` below SwiftUI, so the glass is
+    /// held constant and every colour is painted over it instead.
+    private var wash: Color {
         if isPrivate {
-            return Color(red: 0.12, green: 0.11, blue: 0.15).opacity(0.92)
+            return Color(red: 0.12, green: 0.11, blue: 0.15).opacity(0.94)
         }
-        return scheme == .dark ? Color.white.opacity(0.13) : Color.white.opacity(0.80)
+        guard let tint else { return .clear }
+        return tint.opacity(scheme == .dark ? 0.24 : 0.18)
     }
 
     func body(content: Content) -> some View {
-        if placement.usesMaterial {
-            content.background {
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(fill)
-                    .overlay {
-                        if let tint {
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .fill(tint.opacity(0.22))
-                        }
-                    }
-                    .id(scheme)
-                    .transition(.identity)
+        content
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(wash)
             }
-        } else {
-            content
-        }
+            .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
@@ -299,7 +280,7 @@ private struct AskKeyHint: View {
             }
             .padding(.horizontal, 4)
             .frame(height: 22)
-            .background(hovering ? Theme.Wash.hairline : Theme.Wash.none, in: Capsule())
+            .hoverBackground(isActive: hovering, in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

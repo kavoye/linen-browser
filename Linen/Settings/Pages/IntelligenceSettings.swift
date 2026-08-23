@@ -269,7 +269,7 @@ private struct ProviderRow: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(.vertical, 9)
-            .contentShape(Rectangle())
+            .settingsRowHover(isActive: hovering)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

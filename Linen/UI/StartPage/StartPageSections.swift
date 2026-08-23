@@ -174,7 +174,7 @@ private struct StartPageSectionGroup<Content: View>: View {
                     .font(.system(size: 11.5, weight: .semibold))
                     .kerning(0.4)
             }
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(.secondary.opacity(0.82))
 
             content
         }
