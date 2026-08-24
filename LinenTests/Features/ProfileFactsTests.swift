@@ -21,10 +21,15 @@ struct ProfileFactsTests {
         return root
     }
 
-    private func sources(in root: URL, database: URL? = nil) -> ProfileFacts.Sources {
+    private func sources(
+        in root: URL,
+        database: URL? = nil,
+        profileID: UUID = Profile.originalID
+    ) -> ProfileFacts.Sources {
         ProfileFacts.Sources(
             database: database,
-            extensions: root.appending(path: "Extensions", directoryHint: .isDirectory),
+            profileID: profileID,
+            extensionLibrary: root.appending(path: "Extensions", directoryHint: .isDirectory),
             permissions: root.appending(path: "SitePermissions.json"),
             support: root,
             holdsOtherProfiles: false

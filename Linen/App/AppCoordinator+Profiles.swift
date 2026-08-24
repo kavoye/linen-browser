@@ -30,7 +30,7 @@ extension AppCoordinator {
         applyProfileStores(profile)
         profiles.markCurrent(profile)
 
-        await extensions.adopt(profile: profile.isPrivate ? nil : profile)
+        await extensions.adopt(profile: profile)
         WebViewPool.shared.installExtensionController(extensions.controller)
 
         browser.restoreSession()

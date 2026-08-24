@@ -40,11 +40,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     @ObservationIgnored private var lastDismissedPopupID: String?
     @ObservationIgnored private var lastPopupDismissal = Date.distantPast
     @ObservationIgnored private var reloadedForEmptyPopup: Set<String> = []
+    @ObservationIgnored private var backgroundStarts: [String: Task<Void, Never>] = [:]
 
     init(browser: BrowserModel, library: ExtensionLibrary = ExtensionLibrary()) {
         self.browser = browser
         self.library = library
-        controller = WKWebExtensionController(configuration: Self.controllerConfiguration())
+        controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: nil))
         super.init()
         controller.delegate = self
 
@@ -93,11 +94,61 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     // MARK: - Lifecycle
 
     func useLibrary(for profile: Profile) {
-        library = ExtensionLibrary(baseDirectory: profile.extensionsDirectory)
+        library = ExtensionLibrary(profile: profile)
+        controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: profile))
+        controller.delegate = self
     }
 
-    private static func controllerConfiguration() -> WKWebExtensionController.Configuration {
-        let configuration = WKWebExtensionController.Configuration.default()
+    enum Storage: Equatable {
+        case shared
+        case persistent(UUID)
+        case ephemeral
+    }
+
+    static func storageIdentifier(for profile: Profile?) -> Storage {
+        guard let profile else { return .shared }
+        if profile.isPrivate {
+            return .ephemeral
+        }
+        return profile.isOriginal ? .shared : .persistent(profile.id)
+    }
+
+    static func eraseData(for profile: Profile) async {
+        guard !profile.isOriginal, !profile.isPrivate else { return }
+        let library = ExtensionLibrary(profile: profile)
+        library.load()
+        let ids = library.records.map(\.id)
+        library.forgetThisProfile()
+        guard !ids.isEmpty else { return }
+
+        let controller = WKWebExtensionController(configuration: controllerConfiguration(for: profile))
+        let types: Set<WKWebExtension.DataType> = [.local, .session, .synchronized]
+        var cleared = 0
+        for id in ids {
+            guard let webExtension = try? await WKWebExtension(
+                resourceBaseURL: library.packageURL(for: id)
+            ) else { continue }
+            let context = WKWebExtensionContext(for: webExtension)
+            context.uniqueIdentifier = id
+            guard let record = await controller.dataRecord(ofTypes: types, for: context) else { continue }
+            await controller.removeData(ofTypes: types, from: [record])
+            cleared += 1
+        }
+        Pipeline.log.notice("ext: cleared \(cleared, privacy: .public) stores for a removed profile")
+    }
+
+    private static func controllerConfiguration(
+        for profile: Profile?
+    ) -> WKWebExtensionController.Configuration {
+        let configuration: WKWebExtensionController.Configuration
+        switch storageIdentifier(for: profile) {
+        case .shared:
+            configuration = .default()
+        case .persistent(let identifier):
+            configuration = .init(identifier: identifier)
+        case .ephemeral:
+            configuration = .nonPersistent()
+        }
         configuration.webViewConfiguration.applicationNameForUserAgent = WebViewPool.safariApplicationName
         return configuration
     }
@@ -115,10 +166,10 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         presentedPopup = nil
         presentedPopupID = nil
 
-        controller = WKWebExtensionController(configuration: Self.controllerConfiguration())
+        controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: profile))
         controller.delegate = self
         guard let profile else { return }
-        library = ExtensionLibrary(baseDirectory: profile.extensionsDirectory)
+        library = ExtensionLibrary(profile: profile)
         await start()
     }
 
@@ -136,13 +187,17 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
     }
 
+
+    private func record(for id: String) -> InstalledExtension? {
+        installed.first { $0.id == id }
+    }
+
     private func load(_ record: InstalledExtension) async {
         guard contexts[record.id] == nil else { return }
         let state = Pipeline.signposter.beginInterval("ext.load")
         let started = ContinuousClock.now
         do {
-            let package = library.packageURL(for: record.id)
-            let webExtension = try await WKWebExtension(resourceBaseURL: package)
+            let webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: record.id))
             if let icon = webExtension.icon(for: CGSize(width: 32, height: 32)) {
                 iconCache[record.id] = icon
             }
@@ -178,18 +233,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             Pipeline.log.notice("ext: loaded \(name, privacy: .public) in \(ms) ms")
 
             if webExtension.hasBackgroundContent {
-                do {
-                    try await context.loadBackgroundContent()
-                    Pipeline.log.notice("""
-                        ext: \(name, privacy: .public) background ready \
-                        (blocking rules: \(context.hasContentModificationRules, privacy: .public))
-                        """)
-                } catch {
-                    Pipeline.log.error("""
-                        ext: \(name, privacy: .public) background failed: \
-                        \(error, privacy: .public)
-                        """)
-                }
+                startBackgroundContent(of: context, id: record.id, name: name)
             }
             logErrors(of: context, id: record.id)
         } catch {
@@ -198,7 +242,35 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         Pipeline.signposter.endInterval("ext.load", state)
     }
 
+    private func startBackgroundContent(of context: WKWebExtensionContext, id: String, name: String) {
+        backgroundStarts.removeValue(forKey: id)?.cancel()
+        let watchdog = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled else { return }
+            Pipeline.log.error("ext: \(name, privacy: .public) background never started")
+            self?.logErrors(of: context, id: id)
+        }
+        backgroundStarts[id] = Task { @MainActor [weak self] in
+            defer { watchdog.cancel() }
+            do {
+                try await context.loadBackgroundContent()
+                Pipeline.log.notice("""
+                    ext: \(name, privacy: .public) background ready \
+                    (blocking rules: \(context.hasContentModificationRules, privacy: .public))
+                    """)
+            } catch {
+                Pipeline.log.error("""
+                    ext: \(name, privacy: .public) background failed: \
+                    \(error, privacy: .public)
+                    """)
+            }
+            self?.logErrors(of: context, id: id)
+        }
+    }
+
+
     private func unload(id: String) {
+        backgroundStarts.removeValue(forKey: id)?.cancel()
         guard let context = contexts.removeValue(forKey: id) else { return }
         do {
             try controller.unload(context)
@@ -237,7 +309,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             return icon
         }
 
-        guard installed.contains(where: { $0.id == id }) else { return nil }
+        guard let known = record(for: id) else { return nil }
 
         do {
             let webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: id))
@@ -265,7 +337,13 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             try await library.unpack(package, id: id)
             library.recordInstall(id: id)
             installed = library.records
-            guard let record = installed.first(where: { $0.id == id }) else { return }
+            guard let record = installed.first(where: { $0.id == id }) else {
+                installState = .failed(
+                    id: id,
+                    message: String(localized: "This extension couldn’t be added to your library")
+                )
+                return
+            }
             await load(record)
             guard contexts[id] != nil else {
                 uninstall(id: id)
@@ -303,12 +381,13 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         library.setEnabled(enabled, id: id)
         installed = library.records
         if enabled {
-            guard let record = installed.first(where: { $0.id == id }) else { return }
+            guard let record = record(for: id) else { return }
             Task { await load(record) }
         } else {
             unload(id: id)
         }
     }
+
 
     func uninstall(id: String) {
         unload(id: id)
@@ -576,7 +655,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         let name = installed.first { $0.id == id }?.displayName ?? id
         let alert = NSAlert()
         alert.messageText = String(localized: "Remove “\(name)”?")
-        alert.informativeText = String(localized: "Its settings and data are removed too.")
+        alert.informativeText = String(localized: "It is removed from every profile, along with its settings and data.")
         if let icon = loadedIcon(for: id, size: 64) {
             alert.icon = icon
         }

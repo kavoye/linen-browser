@@ -45,7 +45,28 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
 
 @MainActor
 final class ExtensionLibrary {
-    private struct Index: Codable {
+    private nonisolated struct CatalogueEntry: Codable, Equatable {
+        var id: String
+        var displayName: String
+        var version: String
+        var installedAt: Date
+    }
+
+    private nonisolated struct Placement: Codable, Equatable {
+        var enabled: Bool
+        var isPinned: Bool
+        var toolbarOrder: Int
+    }
+
+    private nonisolated struct Catalogue: Codable {
+        var entries: [CatalogueEntry] = []
+    }
+
+    private nonisolated struct Placements: Codable {
+        var profiles: [String: [String: Placement]] = [:]
+    }
+
+    private nonisolated struct LegacyIndex: Codable {
         var records: [InstalledExtension] = []
     }
 
@@ -63,24 +84,61 @@ final class ExtensionLibrary {
         }
     }
 
-    private var index = Index()
+    private var catalogue = Catalogue()
+    private var placements = Placements()
     private nonisolated let baseDirectory: URL
+    private let profileKey: String
 
     var records: [InstalledExtension] {
-        index.records
+        arranged(forProfile: profileKey)
     }
 
-    init(baseDirectory: URL = ExtensionLibrary.defaultBaseDirectory) {
+    private func arranged(forProfile key: String) -> [InstalledExtension] {
+        let mine = placements.profiles[key] ?? [:]
+        var listed: [(record: InstalledExtension, offset: Int)] = []
+        listed.reserveCapacity(catalogue.entries.count)
+        for (offset, entry) in catalogue.entries.enumerated() {
+            let placement = mine[entry.id]
+            let record = InstalledExtension(
+                id: entry.id,
+                displayName: entry.displayName,
+                version: entry.version,
+                enabled: placement?.enabled ?? false,
+                installedAt: entry.installedAt,
+                isPinned: placement?.isPinned ?? true,
+                toolbarOrder: placement?.toolbarOrder ?? offset
+            )
+            listed.append((record, offset))
+        }
+        listed.sort { left, right in
+            left.record.toolbarOrder == right.record.toolbarOrder
+                ? left.offset < right.offset
+                : left.record.toolbarOrder < right.record.toolbarOrder
+        }
+        return listed.map(\.record)
+    }
+
+    init(
+        baseDirectory: URL = ExtensionLibrary.defaultBaseDirectory,
+        profile: Profile = .original()
+    ) {
         self.baseDirectory = baseDirectory
+        profileKey = profile.id.uuidString
     }
 
     static var defaultBaseDirectory: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Linen", isDirectory: true)
-            .appendingPathComponent("Extensions", isDirectory: true)
+        AppDatabase.supportDirectory.appendingPathComponent("Extensions", isDirectory: true)
     }
 
-    private var indexURL: URL {
+    private var catalogueURL: URL {
+        baseDirectory.appendingPathComponent("library.json")
+    }
+
+    private var placementsURL: URL {
+        baseDirectory.appendingPathComponent("profiles.json")
+    }
+
+    private var legacyIndexURL: URL {
         baseDirectory.appendingPathComponent("installed.json")
     }
 
@@ -89,11 +147,48 @@ final class ExtensionLibrary {
     }
 
     func load() {
-        guard let data = try? Data(contentsOf: indexURL),
-              let decoded = try? JSONDecoder().decode(Index.self, from: data) else { return }
-        index = decoded
-        normalizeOrder()
+        if let data = try? Data(contentsOf: catalogueURL),
+           let decoded = try? JSONDecoder().decode(Catalogue.self, from: data) {
+            catalogue = decoded
+        }
+        if let data = try? Data(contentsOf: placementsURL),
+           let decoded = try? JSONDecoder().decode(Placements.self, from: data) {
+            placements = decoded
+        }
+        adoptLegacyIndexIfPresent()
+        if renumberEveryProfile() {
+            save()
+        }
         sweep(includingStaging: true)
+    }
+
+    private func adoptLegacyIndexIfPresent() {
+        let files = FileManager.default
+        guard catalogue.entries.isEmpty, files.fileExists(atPath: legacyIndexURL.path),
+              let data = try? Data(contentsOf: legacyIndexURL),
+              let legacy = try? JSONDecoder().decode(LegacyIndex.self, from: data)
+        else { return }
+
+        catalogue.entries = legacy.records.map {
+            CatalogueEntry(
+                id: $0.id,
+                displayName: $0.displayName,
+                version: $0.version,
+                installedAt: $0.installedAt
+            )
+        }
+        placements.profiles[Profile.originalID.uuidString] = Dictionary(
+            uniqueKeysWithValues: legacy.records.map { record in
+                (record.id, Placement(
+                    enabled: record.enabled,
+                    isPinned: record.isPinned,
+                    toolbarOrder: record.toolbarOrder
+                ))
+            }
+        )
+        save()
+        try? files.removeItem(at: legacyIndexURL)
+        Pipeline.log.notice("ext: moved \(legacy.records.count) installs into the shared library")
     }
 
     private func sweep(includingStaging: Bool = false) {
@@ -104,7 +199,10 @@ final class ExtensionLibrary {
             options: [.skipsHiddenFiles]
         ) else { return }
 
-        let keep = Set(index.records.map(\.id)).union([indexURL.lastPathComponent])
+        let keep = Set(catalogue.entries.map(\.id)).union([
+            catalogueURL.lastPathComponent,
+            placementsURL.lastPathComponent,
+        ])
         for item in contents {
             let name = item.lastPathComponent
             guard !keep.contains(name) else { continue }
@@ -141,7 +239,21 @@ final class ExtensionLibrary {
     }
 
     func recordInstall(id: String) {
-        upsertRecord(id: id, name: id, version: "")
+        if !catalogue.entries.contains(where: { $0.id == id }) {
+            catalogue.entries.append(CatalogueEntry(
+                id: id,
+                displayName: id,
+                version: "",
+                installedAt: Date()
+            ))
+        }
+        var mine = placements.profiles[profileKey] ?? [:]
+        mine[id] = Placement(
+            enabled: true,
+            isPinned: mine[id]?.isPinned ?? true,
+            toolbarOrder: mine[id]?.toolbarOrder ?? mine.count
+        )
+        placements.profiles[profileKey] = mine
         save()
         sweep()
     }
@@ -166,88 +278,117 @@ final class ExtensionLibrary {
     }
 
     func updateMetadata(id: String, name: String?, version: String?) {
-        guard let at = index.records.firstIndex(where: { $0.id == id }) else { return }
+        guard let at = catalogue.entries.firstIndex(where: { $0.id == id }) else { return }
         if let name, !name.isEmpty {
-            index.records[at].displayName = name
+            catalogue.entries[at].displayName = name
         }
         if let version, !version.isEmpty {
-            index.records[at].version = version
+            catalogue.entries[at].version = version
         }
         save()
     }
 
     func setEnabled(_ enabled: Bool, id: String) {
-        guard let at = index.records.firstIndex(where: { $0.id == id }) else { return }
-        index.records[at].enabled = enabled
-        save()
+        updatePlacement(id: id) { $0.enabled = enabled }
+    }
+
+    func placement(for id: String) -> (enabled: Bool, isPinned: Bool, toolbarOrder: Int) {
+        let mine = placements.profiles[profileKey]?[id]
+        return (mine?.enabled ?? false, mine?.isPinned ?? true, mine?.toolbarOrder ?? .max)
     }
 
     func setPinned(_ pinned: Bool, id: String) {
-        guard let at = index.records.firstIndex(where: { $0.id == id }),
-              index.records[at].isPinned != pinned else { return }
-        index.records[at].isPinned = pinned
-        save()
+        updatePlacement(id: id) { $0.isPinned = pinned }
     }
 
     func move(_ id: String, before anchor: String?) {
-        guard let from = index.records.firstIndex(where: { $0.id == id }) else { return }
-        let record = index.records.remove(at: from)
-        let to = anchor.flatMap { id in index.records.firstIndex { $0.id == id } }
-            ?? index.records.count
-        index.records.insert(record, at: to)
-        renumber()
+        var ordered = records
+        guard let from = ordered.firstIndex(where: { $0.id == id }) else { return }
+        let record = ordered.remove(at: from)
+        let to = anchor.flatMap { anchor in ordered.firstIndex { $0.id == anchor } } ?? ordered.count
+        ordered.insert(record, at: to)
+
+        var mine = placements.profiles[profileKey] ?? [:]
+        for (offset, entry) in ordered.enumerated() {
+            mine[entry.id] = Placement(
+                enabled: mine[entry.id]?.enabled ?? entry.enabled,
+                isPinned: mine[entry.id]?.isPinned ?? entry.isPinned,
+                toolbarOrder: offset
+            )
+        }
+        placements.profiles[profileKey] = mine
         save()
     }
 
     func uninstall(id: String) {
-        index.records.removeAll { $0.id == id }
+        catalogue.entries.removeAll { $0.id == id }
+        for key in placements.profiles.keys {
+            placements.profiles[key]?.removeValue(forKey: id)
+        }
         try? FileManager.default.removeItem(at: packageURL(for: id))
-        renumber()
+        _ = renumberEveryProfile()
         save()
         sweep()
     }
 
-    private func upsertRecord(id: String, name: String, version: String) {
-        if let at = index.records.firstIndex(where: { $0.id == id }) {
-            index.records[at].displayName = name
-            index.records[at].version = version
-        } else {
-            index.records.append(InstalledExtension(
-                id: id,
-                displayName: name,
-                version: version,
-                enabled: true,
-                installedAt: Date(),
-                toolbarOrder: index.records.count
-            ))
-        }
-    }
-
-    private func renumber() {
-        for at in index.records.indices {
-            index.records[at].toolbarOrder = at
-        }
-    }
-
-    private func normalizeOrder() {
-        let sorted = index.records.enumerated()
-            .sorted { left, right in
-                left.element.toolbarOrder == right.element.toolbarOrder
-                    ? left.offset < right.offset
-                    : left.element.toolbarOrder < right.element.toolbarOrder
+    @discardableResult
+    private func renumberEveryProfile() -> Bool {
+        var changed = false
+        for key in placements.profiles.keys {
+            guard var mine = placements.profiles[key] else { continue }
+            for (offset, record) in arranged(forProfile: key).enumerated() {
+                guard mine[record.id] != nil, mine[record.id]?.toolbarOrder != offset else { continue }
+                mine[record.id]?.toolbarOrder = offset
+                changed = true
             }
-            .map(\.element)
-        let alreadyInOrder = sorted.enumerated().allSatisfy { $0.element.toolbarOrder == $0.offset }
-        index.records = sorted
-        renumber()
-        if !alreadyInOrder {
-            save()
+            placements.profiles[key] = mine
         }
+        return changed
+    }
+
+    private func updatePlacement(id: String, _ change: (inout Placement) -> Void) {
+        let known = placement(for: id)
+        var mine = placements.profiles[profileKey] ?? [:]
+        var placement = mine[id] ?? Placement(
+            enabled: known.enabled,
+            isPinned: known.isPinned,
+            toolbarOrder: known.toolbarOrder
+        )
+        change(&placement)
+        mine[id] = placement
+        placements.profiles[profileKey] = mine
+        save()
+    }
+
+    func forgetThisProfile() {
+        guard placements.profiles.removeValue(forKey: profileKey) != nil else { return }
+        savePlacements()
+    }
+
+    nonisolated static func enabledCount(forProfile id: UUID, in baseDirectory: URL) -> Int {
+        let url = baseDirectory.appendingPathComponent("profiles.json")
+        guard let data = try? Data(contentsOf: url),
+              let stored = try? JSONDecoder().decode(Placements.self, from: data)
+        else { return 0 }
+        return stored.profiles[id.uuidString]?.values.count { $0.enabled } ?? 0
     }
 
     private func save() {
+        saveCatalogue()
+        savePlacements()
+    }
+
+    private func saveCatalogue() {
+        write(catalogue, to: catalogueURL)
+    }
+
+    private func savePlacements() {
+        write(placements, to: placementsURL)
+    }
+
+    private func write(_ value: some Encodable, to url: URL) {
         try? FileManager.default.createDirectory(at: baseDirectory, withIntermediateDirectories: true)
-        guard let data = try? JSONEncoder().encode(index) else { return }
-        try? data.write(to: indexURL, options: .atomic)
+        guard let data = try? JSONEncoder().encode(value) else { return }
+        try? data.write(to: url, options: .atomic)
     }
 }

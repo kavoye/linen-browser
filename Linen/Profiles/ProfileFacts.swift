@@ -19,7 +19,8 @@ nonisolated struct ProfileFacts: Equatable, Sendable {
 extension ProfileFacts {
     nonisolated struct Sources: Sendable {
         var database: URL?
-        var extensions: URL
+        var profileID: UUID
+        var extensionLibrary: URL
         var permissions: URL
         var support: URL
         var holdsOtherProfiles: Bool
@@ -30,7 +31,8 @@ extension ProfileFacts {
         guard !profile.isPrivate else { return nil }
         return Sources(
             database: profile.databaseURL,
-            extensions: profile.extensionsDirectory,
+            profileID: profile.id,
+            extensionLibrary: ExtensionLibrary.defaultBaseDirectory,
             permissions: profile.permissionsFile,
             support: profile.supportDirectory,
             holdsOtherProfiles: profile.isOriginal
@@ -51,7 +53,10 @@ extension ProfileFacts {
             facts.pages = counts.pages
             facts.firstVisit = counts.firstVisit
         }
-        facts.extensions = extensionCount(in: sources.extensions)
+        facts.extensions = ExtensionLibrary.enabledCount(
+            forProfile: sources.profileID,
+            in: sources.extensionLibrary
+        )
         facts.permissionSites = SitePermissions.changedSiteCount(in: sources.permissions)
         facts.bytes = size(of: sources.support, skippingProfiles: sources.holdsOtherProfiles)
         return facts
@@ -84,17 +89,6 @@ extension ProfileFacts {
 
     nonisolated private static func count(_ db: Database, table: String) -> Int {
         (try? Int.fetchOne(db, sql: "SELECT COUNT(*) FROM \(table)")) ?? 0
-    }
-
-    nonisolated private static func extensionCount(in directory: URL) -> Int {
-        let contents = try? FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        )
-        return contents?.count { url in
-            (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-        } ?? 0
     }
 
     nonisolated private static func size(of root: URL, skippingProfiles: Bool) -> Int64 {

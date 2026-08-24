@@ -75,7 +75,7 @@ final class BrowserModel {
         let privately = opensPrivately
         let tab = BrowserTab(
             id: id,
-            extensionHost: adopting == nil && !privately ? url.flatMap { extensionPageHost?($0) } : nil,
+            extensionHost: adopting == nil ? url.flatMap { extensionPageHost?($0) } : nil,
             adopting: adopting,
             restoring: restoring,
             opensBlank: url == nil,

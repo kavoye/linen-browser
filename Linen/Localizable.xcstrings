@@ -1681,6 +1681,9 @@
     "Issued to: %@" : {
 
     },
+    "It is removed from every profile, along with its settings and data." : {
+      "comment" : "Message in the dialog that confirms removing an extension, warning that the removal is not limited to the profile the person is in. Full sentence."
+    },
     "Its %lld pages of history are removed, along with the start page tiles. Other profiles are not affected." : {
       "comment" : "Message in the dialog that confirms clearing one profile’s history. %lld is the number of pages in that profile’s history.",
       "localizations" : {
@@ -1752,9 +1755,6 @@
     },
     "Its name and URL are removed. The server itself isn’t affected." : {
       "comment" : "Explanatory text in the confirmation sheet for removing a custom provider endpoint. “Its” refers to that endpoint; the machine it points at is untouched. Curly apostrophe."
-    },
-    "Its settings and data are removed too." : {
-      "comment" : "Explanatory text in the confirmation sheet for removing an installed extension, shown both in Settings and in the alert raised from the extension's toolbar menu. “Its” refers to the extension. Curly apostrophe."
     },
     "JavaScript" : {
       "comment" : "Title of the switch on the Websites settings page, and the title of that same row in Settings search. Name of the technology — leave as is."

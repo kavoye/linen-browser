@@ -32,7 +32,6 @@ struct ProfileTests {
         _ = profile.databaseURL
         _ = profile.zoomFile
         _ = profile.permissionsFile
-        _ = profile.extensionsDirectory
         _ = AppDatabase.url(forProfile: profile.id)
 
         #expect(!files.fileExists(atPath: profile.supportDirectory.path))
@@ -56,7 +55,6 @@ struct ProfileTests {
         #expect(original.supportDirectory == AppDatabase.supportDirectory)
         #expect(original.zoomFile.lastPathComponent == "page-zoom.json")
         #expect(original.permissionsFile.lastPathComponent == "SitePermissions.json")
-        #expect(original.extensionsDirectory.lastPathComponent == "Extensions")
         // Which is where they already are, not under a Profiles folder.
         #expect(original.databaseURL?.path.contains("/Profiles/") == false)
     }
@@ -71,7 +69,6 @@ struct ProfileTests {
         // And its stores sit under it rather than beside everyone else's.
         #expect(work.zoomFile.path.contains(work.id.uuidString))
         #expect(work.permissionsFile.path.contains(work.id.uuidString))
-        #expect(work.extensionsDirectory.path.contains(work.id.uuidString))
     }
 
     @Test func twoProfilesNeverShareAStore() {
@@ -82,7 +79,6 @@ struct ProfileTests {
         #expect(work.databaseURL != school.databaseURL)
         #expect(work.zoomFile != school.zoomFile)
         #expect(work.permissionsFile != school.permissionsFile)
-        #expect(work.extensionsDirectory != school.extensionsDirectory)
     }
 
     @Test func addingAProfileMakesTheSwitcherWorthShowing() {
@@ -269,7 +265,6 @@ struct ProfileTests {
         #expect(priv.supportDirectory != AppDatabase.supportDirectory)
         #expect(priv.zoomFile != Profile.original().zoomFile)
         #expect(priv.permissionsFile != Profile.original().permissionsFile)
-        #expect(priv.extensionsDirectory != Profile.original().extensionsDirectory)
     }
 
     /// A browser that relaunched into private browsing because that is where

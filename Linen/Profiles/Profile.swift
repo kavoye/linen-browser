@@ -79,10 +79,6 @@ extension Profile {
         supportDirectory.appendingPathComponent("SitePermissions.json")
     }
 
-    var extensionsDirectory: URL {
-        supportDirectory.appendingPathComponent("Extensions", isDirectory: true)
-    }
-
     @MainActor
     func makeDataStore() -> WKWebsiteDataStore {
         if isPrivate {
@@ -102,6 +98,7 @@ extension Profile {
         if !profile.isPrivate {
             try? await WKWebsiteDataStore.remove(forIdentifier: profile.id)
         }
+        await ExtensionManager.eraseData(for: profile)
         try? FileManager.default.removeItem(at: profile.supportDirectory)
         try? FileManager.default.removeItem(at: FaviconLoader.cacheDirectory(for: profile))
         ProfileSettingsStore.forget(profile.id)
