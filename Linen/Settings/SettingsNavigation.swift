@@ -5,8 +5,8 @@ import SwiftUI
 
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case general
-    case search
     case appearance
+    case search
     case provider
     case profiles
     case privacy
