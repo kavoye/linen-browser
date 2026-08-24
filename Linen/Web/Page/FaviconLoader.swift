@@ -20,11 +20,18 @@ final class FaviconLoader {
     func use(cacheDirectory: URL) {
         guard cacheDirectory != self.cacheDirectory else { return }
         self.cacheDirectory = cacheDirectory
+        profileGeneration &+= 1
         cache.removeAll()
+        for task in inFlight.values {
+            task.cancel()
+        }
         inFlight.removeAll()
         sessionOnly.removeAll()
+        guessed.removeAll()
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
+
+    private var profileGeneration = 0
 
     static func cacheDirectory(for profile: Profile) -> URL {
         let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -128,6 +135,8 @@ final class FaviconLoader {
     }
 
     private func fetchDeclared(from webView: WKWebView, pageURL: URL, host: String) async -> NSImage? {
+        let beganPrivately = !persistsToDisk
+        let beganInGeneration = profileGeneration
         var candidates: [URL] = []
         var mask: URL?
         let script = """
@@ -195,11 +204,13 @@ final class FaviconLoader {
 
         for candidate in candidates {
             guard let data = await fetch(candidate) else { continue }
+            guard beganInGeneration == profileGeneration else { return nil }
+            let sessionOnly = beganPrivately || !persistsToDisk
             if let inked = await inked(data, mask: mask),
-               let image = store(inked, forHost: host, sessionOnly: !persistsToDisk, isGuess: false) {
+               let image = store(inked, forHost: host, sessionOnly: sessionOnly, isGuess: false) {
                 return image
             }
-            if let image = store(data, forHost: host, sessionOnly: !persistsToDisk, isGuess: false) {
+            if let image = store(data, forHost: host, sessionOnly: sessionOnly, isGuess: false) {
                 return image
             }
         }
@@ -341,7 +352,9 @@ final class FaviconLoader {
 
     private func fetchAndCache(_ url: URL, forHost host: String, isGuess: Bool = false) async -> NSImage? {
         let beganPrivately = !persistsToDisk
+        let beganInGeneration = profileGeneration
         guard let data = await fetch(url) else { return nil }
+        guard beganInGeneration == profileGeneration else { return nil }
         return store(
             data,
             forHost: host,
