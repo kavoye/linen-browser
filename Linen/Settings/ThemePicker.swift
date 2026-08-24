@@ -3,6 +3,12 @@
 
 import SwiftUI
 
+enum AppearanceThumbnailMetrics {
+    static let width: CGFloat = 108
+    static let height: CGFloat = 68
+    static let spacing: CGFloat = 12
+}
+
 struct ThemeThumbnailPalette: Equatable {
     enum Identifier: Hashable {
         case light
@@ -57,7 +63,7 @@ struct ThemePicker: View {
     let onSelect: (AppearanceMode) -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppearanceThumbnailMetrics.spacing) {
             ForEach(AppearanceMode.allCases) { mode in
                 ThemeThumbnailCard(
                     mode: mode,
@@ -78,9 +84,6 @@ private struct ThemeThumbnailCard: View {
 
     @State private var hovering = false
 
-    private static let width: CGFloat = 108
-    private static let height: CGFloat = 68
-
     var body: some View {
         Button(action: action) {
             VStack(spacing: 10) {
@@ -88,7 +91,7 @@ private struct ThemeThumbnailCard: View {
 
                 Text(mode.label)
                     .font(.system(size: 11.5, weight: isSelected ? .semibold : .regular))
-                    .frame(width: Self.width, alignment: .center)
+                    .frame(width: AppearanceThumbnailMetrics.width, alignment: .center)
             }
             .contentShape(Rectangle())
         }
@@ -104,7 +107,10 @@ private struct ThemeThumbnailCard: View {
         return ZStack(alignment: .leading) {
             ForEach(Array(palettes.enumerated()), id: \.element.id) { index, palette in
                 ThemeThumbnailWindow(palette: palette)
-                    .frame(width: Self.width, height: Self.height)
+                    .frame(
+                        width: AppearanceThumbnailMetrics.width,
+                        height: AppearanceThumbnailMetrics.height
+                    )
                     .clipShape(
                         Slice(
                             start: CGFloat(index) / CGFloat(palettes.count),
@@ -113,7 +119,10 @@ private struct ThemeThumbnailCard: View {
                     )
             }
         }
-        .frame(width: Self.width, height: Self.height)
+        .frame(
+            width: AppearanceThumbnailMetrics.width,
+            height: AppearanceThumbnailMetrics.height
+        )
         .clipShape(shape)
         .overlay {
             shape.strokeBorder(
@@ -154,151 +163,216 @@ private struct ThemeThumbnailWindow: View {
     let palette: ThemeThumbnailPalette
 
     var body: some View {
-        ZStack {
-            palette.backdrop
+        AppearanceBrowserThumbnail(palette: palette, chromeInk: palette.primary) {
+            ZStack {
+                palette.backdrop
 
-            LinearGradient(
-                colors: [
-                    palette.accent.opacity(0.16),
-                    Color.white.opacity(0.055),
-                    Color.black.opacity(0.08),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            HStack(spacing: 4) {
-                ThemeThumbnailSidebar(palette: palette)
-                    .frame(width: 27)
-
-                ThemeThumbnailContent(palette: palette)
+                LinearGradient(
+                    colors: [
+                        palette.accent.opacity(0.12),
+                        Color.white.opacity(0.055),
+                        Color.black.opacity(0.08),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
-            .padding(5)
+        }
+    }
+}
+
+struct AppearanceBrowserThumbnail<Backdrop: View>: View {
+    let palette: ThemeThumbnailPalette
+    let chromeInk: Color
+    let tintsSelectedTab: Bool
+    let backdrop: Backdrop
+
+    init(
+        palette: ThemeThumbnailPalette,
+        chromeInk: Color,
+        tintsSelectedTab: Bool = false,
+        @ViewBuilder backdrop: () -> Backdrop
+    ) {
+        self.palette = palette
+        self.chromeInk = chromeInk
+        self.tintsSelectedTab = tintsSelectedTab
+        self.backdrop = backdrop()
+    }
+
+    var body: some View {
+        ZStack {
+            backdrop
+
+            AppearanceBrowserPage(palette: palette)
+                .padding(.top, 14)
+                .padding(.leading, 29)
+                .padding(.trailing, 5)
+                .padding(.bottom, 5)
+
+            AppearanceBrowserChrome(
+                ink: chromeInk,
+                secondaryInk: palette.secondary,
+                accent: palette.accent,
+                tintsSelectedTab: tintsSelectedTab
+            )
         }
         .overlay(alignment: .top) {
             LinearGradient(
-                colors: [Color.white.opacity(0.16), .clear],
+                colors: [Color.white.opacity(0.13), .clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 16)
+            .frame(height: 13)
             .allowsHitTesting(false)
         }
     }
 }
 
-private struct ThemeThumbnailSidebar: View {
+private struct AppearanceBrowserPage: View {
     let palette: ThemeThumbnailPalette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 2) {
-                Circle().fill(Color.red.opacity(0.82))
-                Circle().fill(Color.yellow.opacity(0.82))
-                Circle().fill(Color.green.opacity(0.82))
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .fill(palette.canvas)
+            .overlay {
+                VStack(alignment: .leading, spacing: 4) {
+                    Capsule()
+                        .fill(palette.primary.opacity(0.72))
+                        .frame(width: 28, height: 3)
+
+                    Capsule()
+                        .fill(palette.secondary.opacity(0.55))
+                        .frame(width: 38, height: 2)
+
+                    HStack(spacing: 3) {
+                        ForEach(0..<3, id: \.self) { index in
+                            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                                .fill(index == 0 ? palette.accent.opacity(0.34) : palette.surface)
+                                .frame(height: 11)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                        .fill(palette.surface.opacity(0.92))
+                        .frame(height: 8)
+                }
+                .padding(6)
             }
-            .frame(width: 13, height: 3)
+            .shadow(color: .black.opacity(0.23), radius: 3, y: 1)
+    }
+}
+
+private struct AppearanceBrowserChrome: View {
+    let ink: Color
+    let secondaryInk: Color
+    let accent: Color
+    let tintsSelectedTab: Bool
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            AppearanceBrowserSidebar(
+                ink: ink,
+                secondaryInk: secondaryInk,
+                accent: accent,
+                tintsSelectedTab: tintsSelectedTab
+            )
+                .padding(.leading, 6)
+                .padding(.top, 17)
+
+            AppearanceTrafficLights()
+                .frame(width: 13, height: 3)
+                .padding(.leading, 6)
+                .padding(.top, 6)
+
+            HStack(spacing: 3) {
+                Image(systemName: "chevron.left")
+                Image(systemName: "chevron.right")
+            }
+            .font(.system(size: 4, weight: .bold))
+            .foregroundStyle(ink.opacity(0.64))
+            .frame(width: 12, height: 7)
+            .padding(.leading, 31.5)
+            .padding(.top, 4)
 
             Capsule()
-                .fill(palette.secondary.opacity(0.70))
+                .fill(ink.opacity(0.18))
+                .overlay {
+                    Capsule().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
+                }
+                .frame(width: 40, height: 7)
+                .padding(.top, 4)
+                .padding(.leading, 46)
+
+            Circle()
+                .fill(ink.opacity(0.20))
+                .frame(width: 7, height: 7)
+                .padding(.top, 4)
+                .padding(.leading, 95)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+private struct AppearanceBrowserSidebar: View {
+    let ink: Color
+    let secondaryInk: Color
+    let accent: Color
+    let tintsSelectedTab: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Capsule()
+                .fill(ink.opacity(0.60))
                 .frame(width: 15, height: 2)
 
-            ForEach(0..<3, id: \.self) { index in
+            ForEach(0..<4, id: \.self) { index in
                 HStack(spacing: 2) {
                     Circle()
-                        .fill(index == 1 ? palette.accent : palette.secondary)
+                        .fill(
+                            index == 1 && tintsSelectedTab
+                                ? accent
+                                : secondaryInk.opacity(0.76)
+                        )
                         .frame(width: 3, height: 3)
                     Capsule()
-                        .fill(palette.secondary.opacity(index == 1 ? 0.82 : 0.52))
-                        .frame(height: 2)
+                        .fill(ink.opacity(index == 1 ? 0.78 : 0.43))
+                        .frame(width: index == 1 ? 10 : 12, height: 2)
                 }
-            }
-
-            Spacer(minLength: 0)
-
-            Capsule()
-                .fill(palette.secondary.opacity(0.55))
-                .frame(width: 12, height: 2)
-        }
-        .padding(5)
-        .background {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(palette.chrome.opacity(0.94))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
-                }
-        }
-        .shadow(color: .black.opacity(0.15), radius: 2, x: 1, y: 1)
-    }
-}
-
-private struct ThemeThumbnailContent: View {
-    let palette: ThemeThumbnailPalette
-
-    var body: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 3) {
-                Capsule()
-                    .fill(palette.surface.opacity(0.92))
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
-                    }
-                    .frame(height: 8)
-
-                Circle()
-                    .fill(palette.surface)
-                    .frame(width: 8, height: 8)
-            }
-
-            HStack(spacing: 3) {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(palette.canvas)
-                    .overlay { ThemeThumbnailPage(palette: palette) }
-                    .shadow(color: .black.opacity(0.18), radius: 3, y: 1)
-
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(palette.chrome.opacity(0.90))
-                    .frame(width: 13)
-                    .overlay(alignment: .top) {
-                        Capsule()
-                            .fill(palette.primary.opacity(0.50))
-                            .frame(width: 7, height: 2)
-                            .padding(.top, 5)
-                    }
-            }
-        }
-    }
-}
-
-private struct ThemeThumbnailPage: View {
-    let palette: ThemeThumbnailPalette
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Capsule()
-                .fill(palette.primary.opacity(0.72))
-                .frame(width: 28, height: 3)
-
-            Capsule()
-                .fill(palette.secondary.opacity(0.55))
-                .frame(width: 38, height: 2)
-
-            HStack(spacing: 3) {
-                ForEach(0..<3, id: \.self) { index in
+                .padding(.horizontal, 1.5)
+                .frame(height: 6)
+                .background {
                     RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                        .fill(index == 0 ? palette.accent.opacity(0.34) : palette.surface)
-                        .frame(height: 11)
+                        .fill(
+                            index == 1
+                                ? (tintsSelectedTab ? accent.opacity(0.58) : ink.opacity(0.10))
+                                : Color.clear
+                        )
                 }
             }
 
             Spacer(minLength: 0)
 
-            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                .fill(palette.surface.opacity(0.92))
-                .frame(height: 8)
+            HStack(spacing: 2) {
+                Circle()
+                    .strokeBorder(ink.opacity(0.48), lineWidth: 1)
+                    .frame(width: 4, height: 4)
+                Capsule()
+                    .fill(ink.opacity(0.48))
+                    .frame(width: 11, height: 2)
+            }
         }
-        .padding(6)
+        .frame(width: 20, height: 45, alignment: .topLeading)
+    }
+}
+
+private struct AppearanceTrafficLights: View {
+    var body: some View {
+        HStack(spacing: 2) {
+            Circle().fill(Color.red.opacity(0.86))
+            Circle().fill(Color.yellow.opacity(0.86))
+            Circle().fill(Color.green.opacity(0.86))
+        }
     }
 }

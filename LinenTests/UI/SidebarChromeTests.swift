@@ -50,8 +50,7 @@ struct LoomChromeTests {
     }
 
     @Test func canvasUsesOneTightGapAfterTheToolbar() {
-        #expect(LoomChrome.canvasTop == Theme.topBarHeight + 3)
-        #expect(LoomChrome.canvasGap < LoomChrome.canvasInset)
+        #expect(LoomChrome.canvasTop == Theme.topBarHeight)
     }
 
     /// One radius on every corner, and the same shape for the lens as for the

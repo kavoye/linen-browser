@@ -37,12 +37,35 @@ struct ThemePickerTests {
         }
     }
 
-    @Test func matchingWebsiteColorDefaultsOnAndPersists() throws {
+    @Test func windowStyleDefaultsToStandardAndPersists() throws {
         let suite = try #require(UserDefaults(suiteName: "WebsiteColorTests.\(UUID().uuidString)"))
         defer { suite.removePersistentDomain(forName: suite.description) }
 
-        #expect(BrowserSettings(defaults: suite).matchesWebsiteColor)
-        BrowserSettings(defaults: suite).matchesWebsiteColor = false
-        #expect(!BrowserSettings(defaults: suite).matchesWebsiteColor)
+        #expect(BrowserSettings(defaults: suite).loomStyle == .standard)
+        BrowserSettings(defaults: suite).loomStyle = .liquidGlass
+        #expect(BrowserSettings(defaults: suite).loomStyle == .liquidGlass)
+    }
+
+    @Test func websiteTintPersistsIndependentlyOfWindowStyle() throws {
+        let suite = try #require(UserDefaults(suiteName: "WebsiteTintTests.\(UUID().uuidString)"))
+        defer { suite.removePersistentDomain(forName: suite.description) }
+
+        let settings = BrowserSettings(defaults: suite)
+        settings.loomStyle = .liquidGlass
+        settings.matchesWebsiteColor = true
+
+        let restored = BrowserSettings(defaults: suite)
+        #expect(restored.loomStyle == .liquidGlass)
+        #expect(restored.matchesWebsiteColor)
+    }
+
+    @Test func legacyWebsiteTintStyleMigratesToStandardWithTintEnabled() throws {
+        let suite = try #require(UserDefaults(suiteName: "WebsiteTintMigrationTests.\(UUID().uuidString)"))
+        defer { suite.removePersistentDomain(forName: suite.description) }
+        suite.set("websiteTint", forKey: "appearance.loomStyle")
+
+        let settings = BrowserSettings(defaults: suite)
+        #expect(settings.loomStyle == .standard)
+        #expect(settings.matchesWebsiteColor)
     }
 }

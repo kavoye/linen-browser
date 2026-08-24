@@ -675,6 +675,11 @@ private struct NewProfilePage: View {
 // MARK: - Symbol and color
 
 enum ProfileAppearance {
+    struct SymbolRow: Identifiable {
+        let id: String
+        let symbols: [String]
+    }
+
     static let defaultSymbol = "person"
 
     static let symbols = [
@@ -695,13 +700,16 @@ enum ProfileAppearance {
         "gift", "cup.and.saucer", "fork.knife", "dumbbell",
         "star", "sparkles", "crown", "puzzlepiece",
     ]
+
+    static let symbolRows: [SymbolRow] = stride(from: 0, to: symbols.count, by: 16).map { start in
+        let end = min(start + 16, symbols.count)
+        return SymbolRow(id: symbols[start], symbols: Array(symbols[start ..< end]))
+    }
 }
 
 private struct ProfileLookEditor: View {
     @Binding var symbol: String
     @Binding var color: TabFolderColor
-
-    private static let columns = Array(repeating: GridItem(.fixed(30), spacing: 6), count: 16)
 
     var body: some View {
         DetailRow(title: "Color", layout: .stacked) {
@@ -720,18 +728,52 @@ private struct ProfileLookEditor: View {
         RowSeparator()
 
         DetailRow(title: "Symbol", layout: .stacked) {
-            LazyVGrid(columns: Self.columns, alignment: .leading, spacing: 6) {
-                ForEach(ProfileAppearance.symbols, id: \.self) { candidate in
-                    ProfileSymbolChoice(
-                        symbol: candidate,
-                        isSelected: candidate == symbol,
-                        tint: color.tint
-                    ) {
-                        symbol = candidate
+            Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 6) {
+                ForEach(ProfileAppearance.symbolRows) { row in
+                    GridRow {
+                        ForEach(row.symbols, id: \.self) { candidate in
+                            ProfileSymbolChoice(
+                                symbol: candidate,
+                                isSelected: candidate == symbol,
+                                tint: color.tint
+                            ) {
+                                symbol = candidate
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+private struct ProfileChoiceBackground<S: Shape>: ViewModifier {
+    let isSelected: Bool
+    let tint: Color
+    let shape: S
+
+    private var fill: Color {
+        isSelected ? tint.opacity(0.18) : .clear
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background { shape.fill(fill) }
+            .contentShape(shape)
+    }
+}
+
+private extension View {
+    func profileChoiceBackground<S: Shape>(
+        isSelected: Bool,
+        tint: Color,
+        in shape: S
+    ) -> some View {
+        modifier(ProfileChoiceBackground(
+            isSelected: isSelected,
+            tint: tint,
+            shape: shape
+        ))
     }
 }
 
@@ -740,18 +782,15 @@ private struct ProfileColorChoice: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @State private var hovering = false
-
     var body: some View {
         Button(action: action) {
             Circle()
                 .fill(color.tint.opacity(0.85))
                 .frame(width: 20, height: 20)
                 .padding(4)
-                .selectionBackground(
+                .profileChoiceBackground(
                     isSelected: isSelected,
-                    isHovering: hovering,
-                    hoverTint: color.tint,
+                    tint: color.tint,
                     in: Circle()
                 )
                 .overlay {
@@ -761,11 +800,8 @@ private struct ProfileColorChoice: View {
                             .foregroundStyle(.white)
                     }
                 }
-                .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
         .help(Text(color.title))
     }
 }
@@ -776,24 +812,18 @@ private struct ProfileSymbolChoice: View {
     let tint: Color
     let action: () -> Void
 
-    @State private var hovering = false
-
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 14))
                 .foregroundStyle(isSelected ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
                 .frame(width: 30, height: 30)
-                .selectionBackground(
+                .profileChoiceBackground(
                     isSelected: isSelected,
-                    isHovering: hovering,
-                    hoverTint: tint,
+                    tint: tint,
                     in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                 )
-                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
     }
 }

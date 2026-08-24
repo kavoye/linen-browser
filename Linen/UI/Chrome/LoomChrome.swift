@@ -17,10 +17,8 @@ enum LoomChrome {
         canvasInset / 2
     }
 
-    nonisolated static let canvasGap: CGFloat = 3
-
     nonisolated static var canvasTop: CGFloat {
-        Theme.topBarHeight + canvasGap
+        Theme.topBarHeight
     }
 
     static var canvasRadius: CGFloat {
@@ -136,47 +134,96 @@ nonisolated struct LoomShellGeometry {
 
 struct LoomAmbientBackdrop: View {
     let sampledPageColor: NSColor?
+    let settings: BrowserSettings
+
+    var body: some View {
+        switch settings.loomStyle {
+        case .standard:
+            LoomTintedBackdrop(sampledPageColor: websiteTint, isFloating: false)
+        case .liquidGlass:
+            LoomLiquidGlassBackdrop(
+                sampledPageColor: websiteTint,
+                opacity: settings.liquidGlassOpacity,
+                isFloating: false
+            )
+        }
+    }
+
+    private var websiteTint: NSColor? {
+        settings.matchesWebsiteColor ? sampledPageColor : nil
+    }
+}
+
+struct LoomFloatingFill: View {
+    let sampledPageColor: NSColor?
+    let settings: BrowserSettings
+
+    var body: some View {
+        switch settings.loomStyle {
+        case .standard:
+            LoomTintedBackdrop(sampledPageColor: websiteTint, isFloating: true)
+        case .liquidGlass:
+            LoomLiquidGlassBackdrop(
+                sampledPageColor: websiteTint,
+                opacity: settings.liquidGlassOpacity,
+                isFloating: true
+            )
+        }
+    }
+
+    private var websiteTint: NSColor? {
+        settings.matchesWebsiteColor ? sampledPageColor : nil
+    }
+}
+
+private struct LoomTintedBackdrop: View {
+    let sampledPageColor: NSColor?
+    let isFloating: Bool
 
     @Environment(\.colorScheme) private var scheme
 
-    /// Every page state runs the same recipe; only the colour feeding it moves,
-    /// and `sampledColor` answers a neutral where there is no page colour. A
-    /// window whose material changed between a site, the start page and Settings
-    /// read as three different apps.
     private var sampled: NSColor {
         LoomChrome.sampledColor(sampledPageColor, scheme: scheme)
     }
 
-    private var sampledIsLight: Bool {
-        PageInk.isLight(sampled, scheme: scheme)
-    }
-
     var body: some View {
         ZStack {
-            // Keep the window tied to macOS desktop translucency. Nothing that
-            // stands on this may use `glassEffect`: SwiftUI's glass sampler
-            // cannot see an AppKit view, so it finds no backdrop and goes grey.
-            VisualEffectView(material: .sidebar, blending: .behindWindow)
-
-            Color(nsColor: sampled).opacity(sampledIsLight ? 0.44 : 0.62)
-
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(sampledIsLight ? 0.075 : 0.025),
-                    Color.clear,
-                    Color.black.opacity(sampledIsLight ? 0.018 : 0.075),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+            VisualEffectView(
+                material: .sidebar,
+                blending: isFloating ? .withinWindow : .behindWindow
             )
+
+            Color(nsColor: sampled).opacity(
+                PageInk.isLight(sampled, scheme: scheme)
+                    ? (isFloating ? 0.30 : 0.44)
+                    : (isFloating ? 0.38 : 0.62)
+            )
+
+            if !isFloating {
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(
+                            PageInk.isLight(sampled, scheme: scheme) ? 0.075 : 0.025
+                        ),
+                        Color.clear,
+                        Color.black.opacity(
+                            PageInk.isLight(sampled, scheme: scheme) ? 0.018 : 0.075
+                        ),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 }
 
-struct LoomFloatingFill: View {
+private struct LoomLiquidGlassBackdrop: View {
     let sampledPageColor: NSColor?
+    let opacity: Double
+    let isFloating: Bool
 
     @Environment(\.colorScheme) private var scheme
 
@@ -184,12 +231,47 @@ struct LoomFloatingFill: View {
         LoomChrome.sampledColor(sampledPageColor, scheme: scheme)
     }
 
+    private var isLight: Bool {
+        PageInk.isLight(sampled, scheme: scheme)
+    }
+
+    private var level: CGFloat {
+        let sliderLevel = CGFloat(min(max(opacity, 0), 1))
+        return 0.82 + 0.18 * sliderLevel
+    }
+
+    private var intensity: CGFloat {
+        level * level * level
+    }
+
+    private var substrateOpacity: CGFloat {
+        0.12 + 0.82 * intensity
+    }
+
+    private var glassTintOpacity: CGFloat {
+        let resting = isFloating ? (isLight ? 0.025 : 0.035) : (isLight ? 0.02 : 0.03)
+        let maximum: CGFloat = isLight ? 0.32 : 0.38
+        return resting + (maximum - resting) * intensity
+    }
+
+    private var tintWashOpacity: CGFloat {
+        (isLight ? 0.34 : 0.42) * intensity
+    }
+
     var body: some View {
         ZStack {
-            VisualEffectView(material: .sidebar, blending: .withinWindow)
+            VisualEffectView(
+                material: .underWindowBackground,
+                blending: .behindWindow,
+                materialOpacity: substrateOpacity
+            )
 
-            Color(nsColor: sampled)
-                .opacity(PageInk.isLight(sampled, scheme: scheme) ? 0.30 : 0.38)
+            AppKitGlassEffectView(
+                style: .clear,
+                tintColor: sampled.withAlphaComponent(glassTintOpacity)
+            )
+
+            Color(nsColor: sampled).opacity(tintWashOpacity)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)

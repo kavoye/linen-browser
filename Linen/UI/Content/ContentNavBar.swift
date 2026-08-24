@@ -180,6 +180,10 @@ struct ContentNavBar: View {
 enum ChromeBand {
     static func measuredColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
         guard coordinator.settings.matchesWebsiteColor else { return nil }
+        return pageColor(browser: browser, coordinator: coordinator)
+    }
+
+    static func pageColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
         guard coordinator.page == .browser, !showsStartPage(browser: browser) else { return nil }
         guard browser.activeSplit == nil else { return nil }
         return browser.activeTab?.pageColor

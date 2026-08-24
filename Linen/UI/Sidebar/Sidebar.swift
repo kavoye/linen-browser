@@ -93,10 +93,11 @@ struct Sidebar: View {
             ZStack {
                 if sidebar.isFloating {
                     LoomFloatingFill(
-                        sampledPageColor: ChromeBand.measuredColor(
+                        sampledPageColor: ChromeBand.pageColor(
                             browser: browser,
                             coordinator: coordinator
-                        )
+                        ),
+                        settings: coordinator.settings
                     )
                 }
                 WindowDragArea()

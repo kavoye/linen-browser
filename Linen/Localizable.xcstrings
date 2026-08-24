@@ -957,6 +957,9 @@
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
+    "Choose Standard or Liquid Glass." : {
+      "comment" : "Caption below Window style in Appearance settings and the same wording in Settings search. Standard and Liquid Glass are the exact names of the two choices."
+    },
     "Choose Site Settings in the toolbar to change one." : {
       "comment" : "Guidance under No websites changed, saying where per-website settings are made. Site Settings is the name of a menu in the browser toolbar — translate it the same way there. Imperative."
     },
@@ -1015,6 +1018,9 @@
       "comment" : "Title of the switch that empties cookies, site data and caches every time Linen closes, and the title of that same row in Settings search. Sentence case; “Clear” is a verb and “quit” means closing the app."
     },
     "Clear Search" : {
+
+    },
+    "Clear shows more of what’s behind Linen. Tinted adds contrast to content and controls." : {
 
     },
     "Clear the download list?" : {
@@ -1253,11 +1259,11 @@
     "Deny" : {
       "comment" : "The saved policy that refuses a permission for a website; an option in the pop-up menus on the Websites settings page. A verb."
     },
-    "Disabled for this website" : {
-      "comment" : "Status under Tracker Blocking in the website information popover when this website is exempt. Sentence fragment."
-    },
     "Disable Voice" : {
       "comment" : "Command in the ⌘K palette that stops the assistant reading its replies aloud; its detail line reads “agent speech”. Title Case; pairs with “Enable Voice”."
+    },
+    "Disabled for this website" : {
+      "comment" : "Status under Tracker Blocking in the website information popover when this website is exempt. Sentence fragment."
     },
     "Do you want to allow this page to open “%@”?" : {
       "comment" : "Heading of the alert asking whether a web page may launch another app on the Mac. %@ is that app's name as macOS displays it, inside curly quotes."
@@ -1330,11 +1336,11 @@
     "empty" : {
       "comment" : "Badge shown in place of the tab count on a sidebar folder row that holds no tabs. A single adjective in a tiny capsule — deliberately lowercase and as short as possible; follow your own language's capitalisation rather than copying the English lowercase if that would look wrong."
     },
-    "Enabled for this website" : {
-      "comment" : "Status under Tracker Blocking in the website information popover when protection applies to this website. Sentence fragment."
-    },
     "Enable Voice" : {
       "comment" : "Command in the ⌘K palette that turns the assistant's spoken replies back on; its detail line reads “agent speech”. Title Case; pairs with “Disable Voice”."
+    },
+    "Enabled for this website" : {
+      "comment" : "Status under Tracker Blocking in the website information popover when protection applies to this website. Sentence fragment."
     },
     "End" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the End navigation key, which jumps to the end."
@@ -1491,6 +1497,9 @@
     },
     "Get a Key" : {
       "comment" : "Button in the API key row in Settings > Provider that opens the provider's own website, where a key can be obtained. A command; “key” means API key."
+    },
+    "Glass transparency" : {
+
     },
     "go" : {
       "comment" : "Hint word printed beside a ↩ key cap under the address field, reading “↩ go”, shown when what is typed looks like an address: pressing Return loads it. One lowercase verb, tiny type."
@@ -1813,6 +1822,9 @@
     "left ⌥" : {
       "comment" : "Name of one physical modifier key in the shortcut recorder in Settings, where the two sides of the keyboard have to be told apart. Only the side word is translated — the symbol is the glyph macOS prints on the key, so keep it exactly and keep it beside the word. Very tight: this is a key cap. The glyph is Option."
     },
+    "Less transparent" : {
+
+    },
     "Library" : {
       "comment" : "Heading of the commands in the ⌘K command palette that open one of the browser’s own pages or panels: history, downloads, settings, extensions. Title Case."
     },
@@ -1872,6 +1884,12 @@
     },
     "Links you click still open." : {
       "comment" : "Caption under Block pop-ups in Websites settings, and its settings search caption."
+    },
+    "Liquid Glass" : {
+
+    },
+    "Liquid Glass transparency" : {
+
     },
     "Listening…" : {
       "comment" : "Line shown in the address field while the microphone is on and nothing has been heard yet; the user's own words replace it as they speak. Real ellipsis character (…) — keep it, not three periods."
@@ -1944,9 +1962,6 @@
     },
     "Manage your other extensions" : {
       "comment" : "One line in the bulleted list of what an extension will be able to do, in the install confirmation sheet. It completes “It will also be able to:”."
-    },
-    "Match website color" : {
-
     },
     "Media" : {
       "comment" : "Section title on the Tools settings page."
@@ -2024,6 +2039,9 @@
     },
     "More tools than recommended" : {
       "comment" : "Title of the warning row on the Tools settings page."
+    },
+    "More transparent" : {
+
     },
     "most capable" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the strongest of the group. Lowercase, and the space is very tight."
@@ -2637,9 +2655,6 @@
     "Redo" : {
       "comment" : "Standard macOS Edit menu command, shortcut ⇧⌘Z. Use Apple’s own wording for it in the target language."
     },
-    "Refract tab color" : {
-      "comment" : "Title of the Appearance settings switch that lets the selected tab in the sidebar take on the color of that website’s icon, and the same row in Settings search. Sentence case; “Refract” is a verb, describing light bending through the glass at the tab’s edges."
-    },
     "Regular" : {
       "comment" : "Second of the four sizes in the lyrics text-size menu, and the one Linen starts with. Use the word macOS itself uses for a default type size. Title Case."
     },
@@ -3140,6 +3155,9 @@
     "Stack Pages" : {
       "comment" : "Menu command that rearranges two pages shown at once from side by side into one above the other. Title Case. Its opposite is Place Side by Side, and the menu shows whichever one is available."
     },
+    "Standard" : {
+      "comment" : "Name of the conventional non-Liquid Glass window style in Appearance settings. It follows the selected light or dark theme and can optionally use Website tint."
+    },
     "Start it with `ollama serve`, then pull a tool-capable model such as `qwen3.5` or `llama3.1`." : {
       "comment" : "Setup hint shown when Ollama is installed but not reachable. Everything inside backticks is literal and must be kept exactly: ollama serve is a command the user types, and qwen3.5 and llama3.1 are model names. Pull is Ollama’s word for downloading a model; tool-capable means the model can call the browser’s tools."
     },
@@ -3376,8 +3394,8 @@
     "the research page" : {
       "comment" : "Last-resort stand-in for a host name, dropped into “Browsing %@…” and “Finished on %@” in the agent activity column when the page the assistant is on has no host to show. Deliberately lowercase with an article because it lands mid-sentence."
     },
-    "The selected tab takes the color of its website’s icon." : {
-      "comment" : "Caption under the “Refract tab color” switch on the Appearance settings page, and the same wording in Settings search. One full sentence."
+    "The selected tab uses the website icon’s color." : {
+      "comment" : "Caption under the “Tint selected tab” switch on the Appearance settings page, and the same wording in Settings search. One full sentence."
     },
     "The server accepted the connection but never replied." : {
       "comment" : "Explanation on the error page shown when a website timed out, below the headline."
@@ -3481,14 +3499,14 @@
     "This website’s identity can’t be verified" : {
 
     },
-    "Tint the toolbar and sidebar to match the current website." : {
-
-    },
     "to skip" : {
 
     },
     "to speak" : {
       "comment" : "Second half of the hint under the empty address field: “hold ⌥Space to speak”, with the recorded shortcut drawn as key caps between “hold” and this string. A purpose clause, deliberately lowercase and very short; it must read as one phrase with the “hold” entry."
+    },
+    "Tint selected tab" : {
+      "comment" : "Title of the Appearance settings switch that colors the selected sidebar tab using the website icon, and the same row in Settings search. Sentence case; tint is a verb."
     },
     "Today" : {
       "comment" : "Heading over the group of history entries from today. Sits in a list where the next heading is “Yesterday” and older ones are weekday and date names written by the system, so it should match those in tone."
@@ -3652,6 +3670,9 @@
     "Use your microphone?" : {
       "comment" : "Question in the permission panel when a website asks for the microphone. The website is named in the header just above, so the question deliberately has no subject."
     },
+    "Use the current website’s color in the toolbar and sidebar." : {
+      "comment" : "Caption for the Website tint toggle in Appearance settings and the same wording in Settings search. Curly apostrophe."
+    },
     "Used when you or the assistant search the web." : {
       "comment" : "Settings search caption for Search engine. The page caption names the chosen model instead."
     },
@@ -3711,6 +3732,9 @@
     },
     "Website Settings" : {
       "comment" : "Tooltip on the sliders button at the trailing edge of the address field. Opens settings for the current website. Title Case."
+    },
+    "Website tint" : {
+      "comment" : "Title of a toggle in Appearance settings that colors the browser toolbar and sidebar using the current website. Sentence case."
     },
     "Websites" : {
       "comment" : "Title of the Websites page in Settings and its name in the Settings sidebar. Plural noun; a narrow sidebar row, so keep it short."
@@ -3795,6 +3819,9 @@
     },
     "Window" : {
       "comment" : "Title of one of the menus in the menu bar. Use Apple’s own wording for the standard Window menu in the target language."
+    },
+    "Window style" : {
+
     },
     "Working…" : {
       "comment" : "Status line under the assistant’s reply for any action that has no wording of its own. Real ellipsis."

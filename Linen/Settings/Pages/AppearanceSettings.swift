@@ -26,16 +26,6 @@ struct AppearanceSettings: View {
             RowSeparator()
 
             DetailRow(
-                title: "Match website color",
-                caption: "Tint the toolbar and sidebar to match the current website."
-            ) {
-                SettingsToggle($settings.matchesWebsiteColor)
-            }
-            .settingsAnchor("appearance.websiteColor")
-
-            RowSeparator()
-
-            DetailRow(
                 title: "Page zoom",
                 caption: "The default for every website. Individual tabs can still be zoomed."
             ) {
@@ -54,6 +44,8 @@ struct AppearanceSettings: View {
             .settingsAnchor("appearance.zoom")
         }
 
+        WindowStyleSettingsSection(settings: settings)
+
         SettingsSection(title: "Sidebar", symbol: "sidebar.left") {
             DetailRow(title: "Show sidebar") {
                 SettingsToggle(Binding(
@@ -62,16 +54,6 @@ struct AppearanceSettings: View {
                 ))
             }
             .settingsAnchor("appearance.sidebar")
-
-            RowSeparator()
-
-            DetailRow(
-                title: "Refract tab color",
-                caption: "The selected tab takes the color of its website’s icon."
-            ) {
-                SettingsToggle($settings.refractsTabColor)
-            }
-            .settingsAnchor("appearance.refraction")
 
             RowSeparator()
 
@@ -93,5 +75,67 @@ struct AppearanceSettings: View {
             }
             .settingsAnchor("appearance.reportIssue")
         }
+    }
+}
+
+private struct WindowStyleSettingsSection: View {
+    @Bindable var settings: BrowserSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: SettingsMetrics.headerGap) {
+            SettingsCard {
+                DetailRow(title: "Window style", layout: .stacked) {
+                    LoomStylePicker(
+                        selection: settings.loomStyle,
+                        usesWebsiteTint: settings.matchesWebsiteColor,
+                        tintsSelectedTab: settings.refractsTabColor
+                    ) {
+                        settings.loomStyle = $0
+                    }
+                }
+                .settingsAnchor("appearance.windowStyle")
+
+                RowSeparator()
+
+                DetailRow(
+                    title: "Website tint",
+                    caption: "Use the current website’s color in the toolbar and sidebar."
+                ) {
+                    SettingsToggle($settings.matchesWebsiteColor)
+                }
+                .settingsAnchor("appearance.websiteTint")
+
+                RowSeparator()
+
+                DetailRow(
+                    title: "Tint selected tab",
+                    caption: "The selected tab uses the website icon’s color."
+                ) {
+                    SettingsToggle($settings.refractsTabColor)
+                }
+                .settingsAnchor("appearance.refraction")
+
+                if settings.loomStyle == .liquidGlass {
+                    RowSeparator()
+
+                    DetailRow(
+                        title: "Glass transparency",
+                        caption: "Clear shows more of what’s behind Linen. Tinted adds contrast to content and controls.",
+                        layout: .stacked
+                    ) {
+                        LiquidGlassTransparencyControl(opacity: $settings.liquidGlassOpacity)
+                    }
+                    .settingsAnchor("appearance.liquidGlassOpacity")
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+
+            Text("Choose Standard or Liquid Glass.")
+                .font(Theme.Font.label)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 1)
+        }
+        .animation(Theme.Motion.settle, value: settings.loomStyle)
     }
 }

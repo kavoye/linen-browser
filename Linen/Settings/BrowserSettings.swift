@@ -15,7 +15,10 @@ final class BrowserSettings {
 
     private enum Key {
         static let appearance = "appearance.mode"
+        static let websiteTint = "appearance.websiteTint"
         static let websiteColor = "appearance.websiteColor"
+        static let loomStyle = "appearance.loomStyle"
+        static let liquidGlassOpacity = "appearance.liquidGlassOpacity"
         static let pageZoom = "content.defaultZoom"
         static let newTab = "startup.newTab"
         static let sleepsInactiveTabs = "tabs.sleep"
@@ -112,10 +115,24 @@ final class BrowserSettings {
         }
     }
 
+    var loomStyle: LoomStyle {
+        didSet {
+            guard loomStyle != oldValue else { return }
+            write(loomStyle.rawValue, forKey: Key.loomStyle)
+        }
+    }
+
+    var liquidGlassOpacity: Double {
+        didSet {
+            guard liquidGlassOpacity != oldValue else { return }
+            write(liquidGlassOpacity, forKey: Key.liquidGlassOpacity)
+        }
+    }
+
     var matchesWebsiteColor: Bool {
         didSet {
             guard matchesWebsiteColor != oldValue else { return }
-            write(matchesWebsiteColor, forKey: Key.websiteColor)
+            write(matchesWebsiteColor, forKey: Key.websiteTint)
         }
     }
 
@@ -457,7 +474,20 @@ final class BrowserSettings {
 
         appearance = string(Key.appearance)
             .flatMap(AppearanceMode.init(rawValue:)) ?? .system
-        matchesWebsiteColor = object(Key.websiteColor) as? Bool ?? true
+        let storedLoomStyle = string(Key.loomStyle)
+        loomStyle = storedLoomStyle == LoomStyle.liquidGlass.rawValue ? .liquidGlass : .standard
+        if let storedWebsiteTint = object(Key.websiteTint) as? Bool {
+            matchesWebsiteColor = storedWebsiteTint
+        } else if storedLoomStyle == "websiteTint" {
+            matchesWebsiteColor = true
+        } else if storedLoomStyle == nil {
+            matchesWebsiteColor = object(Key.websiteColor) as? Bool ?? false
+        } else {
+            matchesWebsiteColor = false
+        }
+        liquidGlassOpacity = object(Key.liquidGlassOpacity) == nil
+            ? 0.5
+            : min(max(double(Key.liquidGlassOpacity), 0), 1)
         showsReportIssueButton = object(Key.reportIssueButton) as? Bool ?? true
         showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
         showsLyrics = object(Key.lyrics) as? Bool ?? true
@@ -581,7 +611,10 @@ final class BrowserSettings {
 
     func resetToDefaults() {
         appearance = .system
-        matchesWebsiteColor = true
+        loomStyle = .standard
+        matchesWebsiteColor = false
+        liquidGlassOpacity = 0.5
+        refractsTabColor = false
         pageZoom = 1
         newTab = .startPage
         homepage = ""
@@ -606,40 +639,6 @@ final class BrowserSettings {
         hiddenStartPageSections = []
         hiddenFrequentHosts = []
         onWebPreferencesChanged?()
-    }
-}
-
-// MARK: - Choices
-
-enum AppearanceMode: String, CaseIterable, Identifiable {
-    case system
-    case light
-    case dark
-
-    var id: String {
-        rawValue
-    }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .system:
-            "Auto"
-        case .light:
-            "Light"
-        case .dark:
-            "Dark"
-        }
-    }
-
-    var nsAppearance: NSAppearance? {
-        switch self {
-        case .system:
-            nil
-        case .light:
-            NSAppearance(named: .aqua)
-        case .dark:
-            NSAppearance(named: .darkAqua)
-        }
     }
 }
 

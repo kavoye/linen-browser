@@ -102,7 +102,8 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         created.toolbar = frameToolbar
         created.toolbarStyle = .unified
         created.titlebarSeparatorStyle = .none
-        created.backgroundColor = .windowBackgroundColor
+        created.isOpaque = false
+        created.backgroundColor = .clear
         created.minSize = NSSize(width: BrowserWindowMetrics.minWidth, height: 580)
         created.preservesContentDuringLiveResize = true
         created.collectionBehavior = [.fullScreenPrimary, .moveToActiveSpace]

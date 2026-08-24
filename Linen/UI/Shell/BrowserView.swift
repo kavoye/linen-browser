@@ -43,10 +43,11 @@ struct BrowserView: View {
 
         ZStack(alignment: .leading) {
             LoomAmbientBackdrop(
-                sampledPageColor: ChromeBand.measuredColor(
+                sampledPageColor: ChromeBand.pageColor(
                     browser: browser,
                     coordinator: coordinator
-                )
+                ),
+                settings: coordinator.settings
             )
 
             ContentArea(

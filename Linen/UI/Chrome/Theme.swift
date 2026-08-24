@@ -121,11 +121,13 @@ enum Theme {
 struct VisualEffectView: NSViewRepresentable {
     var material: NSVisualEffectView.Material = .sidebar
     var blending: NSVisualEffectView.BlendingMode = .behindWindow
+    var materialOpacity: CGFloat = 1
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.material = material
         view.blendingMode = blending
+        view.alphaValue = materialOpacity
         view.state = .active
         return view
     }
@@ -133,5 +135,29 @@ struct VisualEffectView: NSViewRepresentable {
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
         nsView.material = material
         nsView.blendingMode = blending
+        nsView.alphaValue = materialOpacity
+    }
+}
+
+struct AppKitGlassEffectView: NSViewRepresentable {
+    var style: NSGlassEffectView.Style = .clear
+    var cornerRadius: CGFloat = 0
+    var tintColor: NSColor?
+
+    func makeNSView(context: Context) -> NSGlassEffectView {
+        let view = NSGlassEffectView()
+        view.contentView = NSView()
+        configure(view)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSGlassEffectView, context: Context) {
+        configure(nsView)
+    }
+
+    private func configure(_ view: NSGlassEffectView) {
+        view.style = style
+        view.cornerRadius = cornerRadius
+        view.tintColor = tintColor
     }
 }
