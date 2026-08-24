@@ -233,6 +233,11 @@ final class WebViewPool {
 
     nonisolated static let safariUserAgent = makeSafariUserAgent()
 
+    nonisolated static var safariApplicationName: String {
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        return "Version/\(os.majorVersion).\(os.minorVersion) Safari/605.1.15"
+    }
+
     nonisolated static func makeSafariUserAgent(
         osVersion: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
     ) -> String {

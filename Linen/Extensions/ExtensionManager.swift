@@ -44,7 +44,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     init(browser: BrowserModel, library: ExtensionLibrary = ExtensionLibrary()) {
         self.browser = browser
         self.library = library
-        controller = WKWebExtensionController(configuration: .default())
+        controller = WKWebExtensionController(configuration: Self.controllerConfiguration())
         super.init()
         controller.delegate = self
 
@@ -96,6 +96,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         library = ExtensionLibrary(baseDirectory: profile.extensionsDirectory)
     }
 
+    private static func controllerConfiguration() -> WKWebExtensionController.Configuration {
+        let configuration = WKWebExtensionController.Configuration.default()
+        configuration.webViewConfiguration.applicationNameForUserAgent = WebViewPool.safariApplicationName
+        return configuration
+    }
+
     func adopt(profile: Profile?) async {
         for (_, context) in contexts {
             try? controller.unload(context)
@@ -109,7 +115,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         presentedPopup = nil
         presentedPopupID = nil
 
-        controller = WKWebExtensionController(configuration: .default())
+        controller = WKWebExtensionController(configuration: Self.controllerConfiguration())
         controller.delegate = self
         guard let profile else { return }
         library = ExtensionLibrary(baseDirectory: profile.extensionsDirectory)
