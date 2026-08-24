@@ -19,6 +19,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     private(set) var controller: WKWebExtensionController
 
     private(set) var installed: [InstalledExtension] = []
+    private(set) var systemExtensions: [InstalledExtension] = []
     private(set) var contexts: [String: WKWebExtensionContext] = [:]
     private(set) var actionRevision = 0
     var installState: StoreInstallState = .idle
@@ -178,19 +179,40 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     func start() async {
         library.load()
         installed = library.records
+        await discoverSystemExtensions()
 
         if let windowAdapter {
             controller.didOpenWindow(windowAdapter)
             controller.didFocusWindow(windowAdapter)
         }
 
-        for record in installed where record.enabled {
+        for record in installed + systemExtensions where record.enabled {
             await load(record)
         }
     }
 
+    func discoverSystemExtensions() async {
+        let found = await Task.detached(priority: .utility) {
+            SafariExtensionCatalog.installed()
+        }.value
+        systemExtensions = found.map { extensionBundle in
+            let placement = library.placement(for: extensionBundle.id)
+            return InstalledExtension(
+                id: extensionBundle.id,
+                displayName: extensionBundle.displayName,
+                version: extensionBundle.version,
+                enabled: placement.enabled,
+                installedAt: Date(timeIntervalSinceReferenceDate: 0),
+                isPinned: placement.isPinned,
+                toolbarOrder: placement.toolbarOrder,
+                bundlePath: extensionBundle.bundlePath
+            )
+        }
+        Pipeline.log.notice("ext: found \(found.count, privacy: .public) Safari extensions on this Mac")
+    }
+
     private func record(for id: String) -> InstalledExtension? {
-        installed.first { $0.id == id }
+        installed.first { $0.id == id } ?? systemExtensions.first { $0.id == id }
     }
 
     private func load(_ record: InstalledExtension) async {
@@ -198,7 +220,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         let state = Pipeline.signposter.beginInterval("ext.load")
         let started = ContinuousClock.now
         do {
-            let webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: record.id))
+            let webExtension: WKWebExtension
+            if let path = record.bundlePath, let bundle = Bundle(path: path) {
+                webExtension = try await WKWebExtension(appExtensionBundle: bundle)
+            } else {
+                webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: record.id))
+            }
             if let icon = webExtension.icon(for: CGSize(width: 32, height: 32)) {
                 iconCache[record.id] = icon
             }
@@ -222,12 +249,14 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
 
             try controller.load(context)
             contexts[record.id] = context
-            library.updateMetadata(
-                id: record.id,
-                name: webExtension.displayName,
-                version: webExtension.version
-            )
-            installed = library.records
+            if !record.isSystem {
+                library.updateMetadata(
+                    id: record.id,
+                    name: webExtension.displayName,
+                    version: webExtension.version
+                )
+                installed = library.records
+            }
 
             let name = webExtension.displayName ?? record.displayName
             let ms = (ContinuousClock.now - started).milliseconds
@@ -351,7 +380,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         guard let known = record(for: id) else { return nil }
 
         do {
-            let webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: id))
+            let webExtension: WKWebExtension
+            if let path = known.bundlePath, let bundle = Bundle(path: path) {
+                webExtension = try await WKWebExtension(appExtensionBundle: bundle)
+            } else {
+                webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: id))
+            }
             let icon = webExtension.icon(for: CGSize(width: 32, height: 32))
             if let icon {
                 iconCache[id] = icon
@@ -430,6 +464,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     func setEnabled(_ enabled: Bool, id: String) {
         library.setEnabled(enabled, id: id)
         installed = library.records
+        applyPlacementsToSystemExtensions()
         if enabled {
             guard let record = record(for: id) else { return }
             Task { await load(record) }
@@ -438,8 +473,19 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
     }
 
+    private func applyPlacementsToSystemExtensions() {
+        systemExtensions = systemExtensions.map { record in
+            var updated = record
+            let placement = library.placement(for: record.id)
+            updated.enabled = placement.enabled
+            updated.isPinned = placement.isPinned
+            updated.toolbarOrder = placement.toolbarOrder
+            return updated
+        }
+    }
 
     func uninstall(id: String) {
+        guard record(for: id)?.isSystem != true else { return }
         unload(id: id)
         library.uninstall(id: id)
         installed = library.records
@@ -455,7 +501,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     // MARK: - Actions and popups
 
     var actionableExtensions: [InstalledExtension] {
-        installed.filter { $0.enabled && contexts[$0.id] != nil }
+        (installed + systemExtensions).filter { $0.enabled && contexts[$0.id] != nil }
     }
 
     var pinnedExtensions: [InstalledExtension] {

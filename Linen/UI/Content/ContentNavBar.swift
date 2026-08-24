@@ -165,7 +165,9 @@ struct ContentNavBar: View {
 
     private var trailingControls: some View {
         HStack(spacing: 6) {
-            StoreInstallButton(manager: coordinator.extensions, browser: browser)
+            if coordinator.page == .browser {
+                StoreInstallButton(manager: coordinator.extensions, browser: browser)
+            }
             ExtensionActionsCluster(
                 manager: coordinator.extensions,
                 browser: browser,

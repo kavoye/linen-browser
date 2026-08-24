@@ -171,32 +171,38 @@ private struct ExtensionsSettings: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            SettingsPageHeader(
-                title: "Extensions",
-                caption: summary
-            )
+        SettingsPageHeader(title: "Extensions", caption: summary)
 
-            SettingsButton(title: "Chrome Web Store", symbol: "arrow.up.forward") {
-                coordinator.openNewTab(url: URL(string: "https://chromewebstore.google.com/category/extensions"))
+        SettingsSection(
+            title: "Chrome extensions",
+            symbol: "puzzlepiece.extension",
+            accessory: {
+                SettingsButton(title: "Chrome Web Store", symbol: "arrow.up.forward") {
+                    coordinator.openNewTab(
+                        url: URL(string: "https://chromewebstore.google.com/category/extensions")
+                    )
+                }
+                .help("Browse extensions to install")
+            },
+            content: {
+                ExtensionsSettingsCard(coordinator: coordinator)
             }
-            .help("Browse extensions to install")
-        }
+        )
+        .settingsAnchor("extensions.installed")
 
-        ExtensionsSettingsCard(coordinator: coordinator)
-            .settingsAnchor("extensions.installed")
-
-        Footnote("On an extension’s page in the store, an Install button appears in the toolbar.")
+        SafariExtensionsSettingsCard(coordinator: coordinator)
     }
 
     private var summary: LocalizedStringResource {
-        if installed.isEmpty {
-            return "No extensions installed yet."
+        let total = installed.count + coordinator.extensions.systemExtensions.count
+        let running = enabled + coordinator.extensions.systemExtensions.count(where: \.enabled)
+        if total == 0 {
+            return "No extensions yet."
         }
-        if enabled == installed.count {
-            return "\(installed.count) installed, all running."
+        if running == total {
+            return "\(total) extensions, all running."
         }
-        return "\(installed.count) installed, \(enabled) running."
+        return "\(total) extensions, \(running) running."
     }
 }
 

@@ -11,7 +11,7 @@ struct ExtensionsSettingsCard: View {
     }
 
     var body: some View {
-        SettingsCard {
+        Group {
             if manager.installed.isEmpty {
                 Text("No extensions installed yet.")
                     .font(Theme.Font.body)
@@ -27,6 +27,34 @@ struct ExtensionsSettingsCard: View {
                 ExtensionRow(manager: manager, record: record)
             }
         }
+    }
+}
+
+struct SafariExtensionsSettingsCard: View {
+    let coordinator: AppCoordinator
+
+    private var manager: ExtensionManager {
+        coordinator.extensions
+    }
+
+    var body: some View {
+        Group {
+            if !manager.systemExtensions.isEmpty {
+                SettingsSection(
+                    title: "Safari extensions",
+                    symbol: "safari",
+                    footnote: "Turn on any Safari extension you already have. The App Store keeps it up to date."
+                ) {
+                    ForEach(manager.systemExtensions.enumerated(), id: \.element.id) { index, record in
+                        if index > 0 {
+                            RowSeparator()
+                        }
+                        ExtensionRow(manager: manager, record: record)
+                    }
+                }
+            }
+        }
+        .task { await manager.discoverSystemExtensions() }
     }
 }
 
@@ -75,6 +103,7 @@ private struct ExtensionRow: View {
 
     @State private var icon: NSImage?
     @State private var showingIssues = false
+    @State private var hovering = false
 
     private var errorCount: Int {
         manager.errorCount(for: record.id)
@@ -83,6 +112,7 @@ private struct ExtensionRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ExtensionIcon(image: icon)
+                .opacity(record.enabled ? 1 : 0.55)
 
             HStack(spacing: 6) {
                 Text(verbatim: record.displayName)
@@ -103,11 +133,21 @@ private struct ExtensionRow: View {
                     }
                 }
 
+                if hovering, !record.version.isEmpty {
+                    Text(verbatim: record.version)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .transition(.opacity)
+                }
+
                 Spacer(minLength: 8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            ExtensionRowMenu(manager: manager, record: record)
+            if !record.isSystem {
+                ExtensionRowMenu(manager: manager, record: record)
+            }
 
             SettingsToggle(Binding(
                 get: { record.enabled },
@@ -116,7 +156,9 @@ private struct ExtensionRow: View {
         }
         .padding(.horizontal, SettingsMetrics.rowPaddingH)
         .padding(.vertical, SettingsMetrics.rowPaddingV)
-        .opacity(record.enabled ? 1 : 0.6)
+        .contentShape(.rect)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
         .task(id: record.id) {
             icon = await manager.icon(for: record.id)
         }

@@ -285,7 +285,7 @@ struct ExtensionOverflowButton: View {
         Button {
             isPresented.toggle()
         } label: {
-            Image(systemName: "ellipsis")
+            Image(systemName: "puzzlepiece.extension")
                 .font(.system(size: 12, weight: .semibold))
                 .frame(width: 30, height: 28)
                 .overlay(alignment: .bottomTrailing) { marker }

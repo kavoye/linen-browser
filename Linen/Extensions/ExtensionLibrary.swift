@@ -12,6 +12,11 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
     var installedAt: Date
     var isPinned: Bool
     var toolbarOrder: Int
+    var bundlePath: String?
+
+    var isSystem: Bool {
+        bundlePath != nil
+    }
 
     init(
         id: String,
@@ -20,7 +25,8 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
         enabled: Bool,
         installedAt: Date,
         isPinned: Bool = true,
-        toolbarOrder: Int = 0
+        toolbarOrder: Int = 0,
+        bundlePath: String? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -29,6 +35,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
         self.installedAt = installedAt
         self.isPinned = isPinned
         self.toolbarOrder = toolbarOrder
+        self.bundlePath = bundlePath
     }
 
     init(from decoder: any Decoder) throws {
@@ -40,6 +47,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
         installedAt = try container.decode(Date.self, forKey: .installedAt)
         isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? true
         toolbarOrder = try container.decodeIfPresent(Int.self, forKey: .toolbarOrder) ?? .max
+        bundlePath = try container.decodeIfPresent(String.self, forKey: .bundlePath)
     }
 }
 

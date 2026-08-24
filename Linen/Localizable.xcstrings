@@ -155,6 +155,12 @@
         }
       }
     },
+    "%lld extensions, %lld running." : {
+      "comment" : "Caption under the Extensions settings title. The first %lld is the total number of extensions available, the second is how many are switched on in this profile."
+    },
+    "%lld extensions, all running." : {
+      "comment" : "Caption under the Extensions settings title. %lld is the total of extensions installed in Linen plus Safari extensions found on the Mac, and every one of them is switched on."
+    },
     "%lld folders" : {
       "comment" : "How many tab folders a profile has, shown after “%lld tabs” and joined to it by “ · ”. A fragment, not a sentence. %lld is the number of folders.",
       "localizations" : {
@@ -200,12 +206,6 @@
           }
         }
       }
-    },
-    "%lld installed, %lld running." : {
-      "comment" : "Caption under the Extensions heading in Settings. The first %lld is how many extensions are installed, the second how many of those are switched on; the order may be changed with positional specifiers."
-    },
-    "%lld installed, all running." : {
-      "comment" : "Caption under the Extensions heading in Settings, used when every installed extension is switched on. %lld is how many are installed."
     },
     "%lld issues" : {
       "comment" : "Small orange badge beside an extension's name on the Extensions settings page; clicking it lists the errors. %lld is how many errors that extension reported. Space is very tight — keep it to two words.",
@@ -931,7 +931,7 @@
       "comment" : "Settings → Assistant → a provider page. Tooltip on the refresh button beside the readiness status."
     },
     "Checking for updates" : {
-      "comment" : "Status line in the update row on the About settings page while a check is running."
+
     },
     "Checking for updates…" : {
       "comment" : "Status line in the update row on the About settings page while a check is running."
@@ -986,6 +986,9 @@
     },
     "Choosing an option…" : {
       "comment" : "Line in the assistant’s live activity feed while it picks from a menu whose option text is unknown. Present participle; real ellipsis."
+    },
+    "Chrome extensions" : {
+      "comment" : "Title of the Extensions settings section listing extensions installed from the Chrome Web Store. Chrome is a product name and is never translated."
     },
     "Chrome extensions running in Linen." : {
 
@@ -2155,7 +2158,10 @@
       "comment" : "Shown under “Size on disk” when a profile is holding nothing."
     },
     "No extensions installed yet." : {
-      "comment" : "Empty state for extensions, used both as the caption under the Extensions heading and as the placeholder inside the empty list."
+
+    },
+    "No extensions yet." : {
+      "comment" : "Caption under the Extensions settings title when neither Linen nor any app on the Mac supplies an extension."
     },
     "No history" : {
       "comment" : "Shown under “History” when a profile has visited no pages."
@@ -2294,9 +2300,6 @@
     },
     "on %@" : {
       "comment" : "Fragment inserted into the dialog asking the user to approve an action the assistant wants to take, giving the place: The assistant wants to click “Pay now” on example.com. %@ is the website’s hostname. The alternative fragment, used when there is no hostname, is on this page."
-    },
-    "On an extension’s page in the store, an Install button appears in the toolbar." : {
-      "comment" : "Explanatory footnote under the Extensions section in Settings. The store is the Chrome Web Store, and Install names the button that appears in the browser toolbar, so keep it matching the translation of that button. Curly apostrophe."
     },
     "On Device" : {
       "comment" : "Chip above the Apple Intelligence card on the model-choice onboarding screen, saying where that model runs. It pairs with “API key required” on the card beside it: both state a plain fact about the choice rather than recommending it. Title Case, and only a few characters wide."
@@ -2887,6 +2890,9 @@
     },
     "Safari" : {
       "comment" : "Apple’s browser, offered as one choice of what Linen reports itself as to websites. Product name — leave exactly as is."
+    },
+    "Safari extensions" : {
+      "comment" : "Title of the Extensions settings section listing web extensions that arrived with apps installed on the Mac. Safari is a product name and is never translated."
     },
     "Save" : {
       "comment" : "Button that stores the typed API key, and the button that saves an edited user-added endpoint. Imperative verb."
@@ -3531,6 +3537,9 @@
     },
     "Try Again" : {
       "comment" : "Button that retries a failed agent turn or a failed update check."
+    },
+    "Turn on any Safari extension you already have. The App Store keeps it up to date." : {
+      "comment" : "Footnote under the Safari extensions section on the Extensions settings page. The first sentence invites the person to switch on an extension that arrived with an app they installed; the second says updates come through the App Store rather than through Linen. Safari and App Store are product names and are never translated."
     },
     "Turn on Apple Intelligence in System Settings." : {
       "comment" : "Setup hint shown when the Apple Intelligence provider is chosen but not enabled on the Mac. Apple Intelligence and System Settings are Apple’s names — use Apple’s own translations, since the user has to find them on screen."
