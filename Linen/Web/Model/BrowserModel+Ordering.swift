@@ -191,6 +191,7 @@ extension BrowserModel {
         scheduleSave()
 
         tab.webView.stopLoading()
+        tab.detach()
         tab.webView.load(URLRequest(url: URL(string: "about:blank")!))
         tab.webView.removeFromSuperview()
     }

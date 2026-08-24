@@ -461,7 +461,32 @@ final class BrowserTab: Identifiable {
 
     var onContentProcessTerminated: (() -> Void)?
 
+    private(set) var isClosed = false
+
+    func detach() {
+        guard !isClosed else { return }
+        isClosed = true
+        onNavigationFinished = nil
+        onNavigationOutsideExtension = nil
+        onNewWindow = nil
+        onOpenInNewTab = nil
+        onOpenInSplit = nil
+        onCloseRequested = nil
+        onPictureInPictureChanged = nil
+        onPictureReturnExpected = nil
+        onDownload = nil
+        onSameDocumentNavigation = nil
+        onContentProcessTerminated = nil
+        onLocationRevoked = nil
+        webView.navigationDelegate = nil
+        webView.uiDelegate = nil
+        navigationDelegate = nil
+        (webView as? TabWebView)?.onContextDownload = nil
+        (webView as? TabWebView)?.onZoomChanged = nil
+    }
+
     func contentProcessDidTerminate() {
+        guard !isClosed else { return }
         isPlayingAudio = false
         onContentProcessTerminated?()
         if !processState.shouldReloadAfterUnexpectedTermination() {

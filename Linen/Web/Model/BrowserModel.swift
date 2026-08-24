@@ -145,7 +145,7 @@ final class BrowserModel {
     var lastVisitID: [UUID: Int64] = [:]
 
     private func recordVisit(for tab: BrowserTab) {
-        guard !tab.isPrivate else { return }
+        guard !tab.isPrivate, !tab.isClosed, tabsByID[tab.id] === tab else { return }
         let visitID = history.record(
             url: tab.urlString,
             title: tab.title,
