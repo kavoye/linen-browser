@@ -933,6 +933,9 @@
     "Checking for updates" : {
       "comment" : "Status line in the update row on the About settings page while a check is running."
     },
+    "Checking for updates…" : {
+      "comment" : "Status line in the update row on the About settings page while a check is running."
+    },
     "Checking this page…" : {
 
     },
@@ -957,11 +960,11 @@
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
-    "Choose Standard or Liquid Glass." : {
-      "comment" : "Caption below Window style in Appearance settings and the same wording in Settings search. Standard and Liquid Glass are the exact names of the two choices."
-    },
     "Choose Site Settings in the toolbar to change one." : {
       "comment" : "Guidance under No websites changed, saying where per-website settings are made. Site Settings is the name of a menu in the browser toolbar — translate it the same way there. Imperative."
+    },
+    "Choose Standard or Liquid Glass." : {
+      "comment" : "Caption below Window style in Appearance settings and the same wording in Settings search. Standard and Liquid Glass are the exact names of the two choices."
     },
     "Choose the bookmarks file you exported from another browser." : {
       "comment" : "Message at the top of the macOS file panel that Choose File… opens. It tells the user which file to pick."
@@ -3499,14 +3502,14 @@
     "This website’s identity can’t be verified" : {
 
     },
+    "Tint selected tab" : {
+      "comment" : "Title of the Appearance settings switch that colors the selected sidebar tab using the website icon, and the same row in Settings search. Sentence case; tint is a verb."
+    },
     "to skip" : {
 
     },
     "to speak" : {
       "comment" : "Second half of the hint under the empty address field: “hold ⌥Space to speak”, with the recorded shortcut drawn as key caps between “hold” and this string. A purpose clause, deliberately lowercase and very short; it must read as one phrase with the “hold” entry."
-    },
-    "Tint selected tab" : {
-      "comment" : "Title of the Appearance settings switch that colors the selected sidebar tab using the website icon, and the same row in Settings search. Sentence case; tint is a verb."
     },
     "Today" : {
       "comment" : "Heading over the group of history entries from today. Sits in a list where the next heading is “Yesterday” and older ones are weekday and date names written by the system, so it should match those in tone."
@@ -3658,6 +3661,9 @@
     "Use Recommended" : {
       "comment" : "Button in the warning row on the Tools settings page."
     },
+    "Use the current website’s color in the toolbar and sidebar." : {
+      "comment" : "Caption for the Website tint toggle in Appearance settings and the same wording in Settings search. Curly apostrophe."
+    },
     "Use This Page" : {
       "comment" : "Button that sets the homepage to the page currently open. Title Case, imperative verb; This Page means the page in the front tab."
     },
@@ -3669,9 +3675,6 @@
     },
     "Use your microphone?" : {
       "comment" : "Question in the permission panel when a website asks for the microphone. The website is named in the header just above, so the question deliberately has no subject."
-    },
-    "Use the current website’s color in the toolbar and sidebar." : {
-      "comment" : "Caption for the Website tint toggle in Appearance settings and the same wording in Settings search. Curly apostrophe."
     },
     "Used when you or the assistant search the web." : {
       "comment" : "Settings search caption for Search engine. The page caption names the chosen model instead."

@@ -131,14 +131,13 @@ struct UpdateSurfaceTests {
         }
     }
 
-    /// Quiet until there is something worth saying, and quiet again once
-    /// dismissed - except that a dismissal must not swallow a later phase.
+    /// Quiet while idle, and quiet again once dismissed.
     @Test func theBannerKnowsWhenToAppear() {
         let model = UpdateModel()
 
         #expect(!model.isBannerVisible)
         model.phase = .checking
-        #expect(!model.isBannerVisible)
+        #expect(model.isBannerVisible)
 
         model.phase = .available
         #expect(model.isBannerVisible)

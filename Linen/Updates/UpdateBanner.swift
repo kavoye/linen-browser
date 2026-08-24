@@ -36,6 +36,7 @@ struct UpdateBanner: View {
 
             cardAccessory
         }
+        .frame(minHeight: SettingsMetrics.controlHeight)
         .padding(.leading, 10)
         .padding(.trailing, 5)
         .padding(.vertical, 5)
@@ -58,12 +59,10 @@ struct UpdateBanner: View {
             )
         case .failed:
             SettingsButton(title: "Try Again", action: act)
-        case .downloading, .extracting, .installing:
-            ProgressView()
-                .controlSize(.small)
-                .tint(Theme.accent)
+        case .checking, .downloading, .extracting, .installing:
+            Spinner(size: 13)
                 .frame(width: SettingsMetrics.controlHeight, height: SettingsMetrics.controlHeight)
-        case .idle, .checking, .upToDate:
+        case .idle, .upToDate:
             EmptyView()
         }
     }
@@ -137,7 +136,7 @@ nonisolated enum UpdatePhrasing {
         case .failed:
             "Couldn’t check for updates"
         case .checking, .idle:
-            "Checking for updates"
+            "Checking for updates…"
         }
     }
 }

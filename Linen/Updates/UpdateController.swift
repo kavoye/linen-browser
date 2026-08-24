@@ -31,7 +31,7 @@ final class UpdateModel {
     var isBannerVisible: Bool {
         guard !isDismissed, !isShownInSettings else { return false }
         return switch phase {
-        case .idle, .checking:
+        case .idle:
             false
         default:
             true
@@ -54,6 +54,10 @@ final class UpdateController: NSObject {
 
     private var isUserInitiated = false
     private var transientTask: Task<Void, Never>?
+    private var checkTask: Task<Void, Never>?
+    private var wantsCheckAfterDismissal = false
+    private var retryTask: Task<Void, Never>?
+    private var checkDidStart = false
 
     // MARK: - Lifecycle
 
@@ -95,10 +99,53 @@ final class UpdateController: NSObject {
     }
 
     func checkNow() {
-        guard let updater, updater.canCheckForUpdates else { return }
         transientTask?.cancel()
         model.isDismissed = false
+
+        if let stale = pendingChoice {
+            pendingChoice = nil
+            model.phase = .checking
+            watchCheck()
+            wantsCheckAfterDismissal = true
+            stale(.dismiss)
+            return
+        }
+
+        startCheck()
+    }
+
+    private func insistOnCheck() async {
+        for _ in 1...12 {
+            guard !Task.isCancelled, model.phase == .checking else { return }
+            checkDidStart = false
+            startCheck()
+            try? await Task.sleep(for: .milliseconds(250))
+            if checkDidStart {
+                return
+            }
+        }
+        Pipeline.log.error("updater: the check would not start after the last one closed")
+    }
+
+    private func startCheck() {
+        guard let updater, updater.canCheckForUpdates else {
+            Pipeline.log.error("updater: not ready to check; leaving the banner alone")
+            model.phase = .idle
+            return
+        }
+        model.phase = .checking
+        watchCheck()
         updater.checkForUpdates()
+    }
+
+    private func watchCheck() {
+        checkTask?.cancel()
+        checkTask = Task {
+            try? await Task.sleep(for: .seconds(20))
+            guard !Task.isCancelled, model.phase == .checking else { return }
+            Pipeline.log.error("updater: the check never answered; letting the banner go")
+            model.phase = .idle
+        }
     }
 
     func proceed() {
@@ -115,6 +162,7 @@ final class UpdateController: NSObject {
     }
 
     private func showTransiently(_ phase: UpdateModel.Phase) {
+        checkTask?.cancel()
         model.isDismissed = false
         model.phase = phase
         transientTask?.cancel()
@@ -148,6 +196,7 @@ extension UpdateController: SPUUserDriver {
     }
 
     func showUserInitiatedUpdateCheck(cancellation: @escaping () -> Void) {
+        checkDidStart = true
         isUserInitiated = true
         model.phase = .checking
     }
@@ -157,6 +206,7 @@ extension UpdateController: SPUUserDriver {
         state: SPUUserUpdateState,
         reply: @escaping (SPUUserUpdateChoice) -> Void
     ) {
+        checkTask?.cancel()
         model.version = appcastItem.displayVersionString
         model.isDismissed = false
         pendingChoice = reply
@@ -187,6 +237,7 @@ extension UpdateController: SPUUserDriver {
 
     func showUpdaterError(_ error: any Error, acknowledgement: @escaping () -> Void) {
         Pipeline.log.error("updater: \(error, privacy: .public)")
+        checkTask?.cancel()
         pendingChoice = nil
         if isUserInitiated {
             model.isDismissed = false
@@ -256,12 +307,17 @@ extension UpdateController: SPUUserDriver {
         pendingChoice = nil
         isUserInitiated = false
         switch model.phase {
-        case .installing, .upToDate, .failed:
+        case .checking, .installing, .upToDate, .failed:
             break
         default:
             model.phase = .idle
         }
         resetTransfer()
+
+        guard wantsCheckAfterDismissal else { return }
+        wantsCheckAfterDismissal = false
+        retryTask?.cancel()
+        retryTask = Task { @MainActor in await insistOnCheck() }
     }
 }
 

@@ -239,7 +239,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     }
 
     @objc private func checkForUpdates() {
-        coordinator.openSettings(.about)
         coordinator.updates.checkNow()
     }
     @objc private func showReleaseNotes() {

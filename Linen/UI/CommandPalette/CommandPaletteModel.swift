@@ -593,7 +593,6 @@ final class CommandPaletteModel {
         case .extensions:
             coordinator.openSettings(.extensions)
         case .checkForUpdates:
-            coordinator.openSettings(.about)
             coordinator.updates.checkNow()
         case .releaseNotes:
             coordinator.showReleaseNotes()
