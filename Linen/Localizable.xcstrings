@@ -3451,8 +3451,14 @@
     "This connection isn’t private" : {
       "comment" : "Headline on the error page shown when a website’s security certificate could not be verified. A short sentence in sentence case, displayed large above a longer explanation. Curly apostrophe."
     },
+    "This extension asked to talk to its own app. Linen can’t reach it, so the parts that need it won’t work." : {
+      "comment" : "Shown in the issues popover beside an extension in settings, and to the extension itself when it calls runtime.sendNativeMessage. Some extensions keep their data in a companion app that only Safari can reach. Two sentences; curly apostrophes."
+    },
     "This extension asks for no special access." : {
       "comment" : "Body of the extension install confirmation dialog when the extension requests no permissions and no website access at all, shown in place of the bulleted lists."
+    },
+    "This extension couldn’t be added to your library" : {
+
     },
     "This extension isn’t supported by WebKit" : {
       "comment" : "Error shown when an extension cannot be installed because the browser engine will not load it. WebKit is Apple’s browser engine — leave as is. Curly apostrophe, no final full stop."

@@ -41,6 +41,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     @ObservationIgnored private var lastPopupDismissal = Date.distantPast
     @ObservationIgnored private var reloadedForEmptyPopup: Set<String> = []
     @ObservationIgnored private var backgroundStarts: [String: Task<Void, Never>] = [:]
+    private(set) var appsOutOfReach: Set<String> = []
 
     init(browser: BrowserModel, library: ExtensionLibrary = ExtensionLibrary()) {
         self.browser = browser
@@ -159,6 +160,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
         contexts = [:]
         installed = []
+        appsOutOfReach = []
         iconCache = [:]
         anchors = [:]
         reloadedForEmptyPopup = []
@@ -186,7 +188,6 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             await load(record)
         }
     }
-
 
     private func record(for id: String) -> InstalledExtension? {
         installed.first { $0.id == id }
@@ -268,6 +269,36 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
     }
 
+    private func refuseReachingApp(for context: WKWebExtensionContext) -> NSError {
+        let id = context.uniqueIdentifier
+        if appsOutOfReach.insert(id).inserted {
+            Pipeline.log.notice("ext: \(id, privacy: .public) wanted its own app, which Linen cannot reach")
+        }
+        return NSError(
+            domain: WKWebExtensionContext.errorDomain,
+            code: WKWebExtensionContext.Error.unknown.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: Self.appOutOfReachReason]
+        )
+    }
+
+    func webExtensionController(
+        _ controller: WKWebExtensionController,
+        sendMessage message: Any,
+        toApplicationWithIdentifier applicationIdentifier: String?,
+        for context: WKWebExtensionContext,
+        replyHandler: @escaping (Any?, (any Error)?) -> Void
+    ) {
+        replyHandler(nil, refuseReachingApp(for: context))
+    }
+
+    func webExtensionController(
+        _ controller: WKWebExtensionController,
+        connectUsing port: WKWebExtension.MessagePort,
+        for context: WKWebExtensionContext,
+        completionHandler: @escaping ((any Error)?) -> Void
+    ) {
+        completionHandler(refuseReachingApp(for: context))
+    }
 
     private func unload(id: String) {
         backgroundStarts.removeValue(forKey: id)?.cancel()
@@ -287,12 +318,20 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     func errorCount(for id: String) -> Int {
-        contexts[id]?.errors.count ?? 0
+        errors(for: id).count
     }
 
     func errors(for id: String) -> [String] {
-        (contexts[id]?.errors ?? []).map(\.localizedDescription)
+        var found = (contexts[id]?.errors ?? []).map(\.localizedDescription)
+        if appsOutOfReach.contains(id) {
+            found.append(Self.appOutOfReachReason)
+        }
+        return found
     }
+
+    static let appOutOfReachReason = String(
+        localized: "This extension asked to talk to its own app. Linen can’t reach it, so the parts that need it won’t work."
+    )
 
     func loadedIcon(for id: String, size: CGFloat) -> NSImage? {
         contexts[id]?.webExtension.icon(for: CGSize(width: size, height: size))
