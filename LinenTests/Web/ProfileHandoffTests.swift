@@ -65,6 +65,33 @@ struct ProfileHandoffTests {
         #expect(model.history.count == 0)
     }
 
+    @Test func endingPrivateBrowsingTakesItsDownloadsWithIt() {
+        let downloads = DownloadManager()
+        downloads.beginItem(source: URL(string: "https://example.com/report.pdf"), privately: false)
+        downloads.beginItem(source: URL(string: "https://example.com/secret.pdf"), privately: true)
+        #expect(downloads.items.count == 2)
+
+        downloads.forgetPrivateDownloads()
+
+        #expect(downloads.items.map(\.filename) == ["report.pdf"])
+    }
+
+    @Test func aTabInAPrivateProfileMarksItsDownloadsPrivate() {
+        let model = makeModel(.temporary())
+        model.adopt(database: .temporary(), sitePermissions: makePermissions(), privately: true)
+        let tab = model.newTab()
+
+        #expect(tab.isPrivate)
+        model.downloads.beginItem(
+            source: URL(string: "https://example.com/secret.pdf"),
+            sourceTabID: tab.id,
+            privately: tab.isPrivate
+        )
+        model.downloads.forgetPrivateDownloads()
+
+        #expect(model.downloads.items.isEmpty)
+    }
+
     @Test func theResearchGlimpseDoesNotFollowYouIntoTheNextProfile() {
         let preview = ResearchPreview()
         preview.begin(inSpace: UUID())

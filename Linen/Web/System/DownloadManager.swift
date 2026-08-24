@@ -21,6 +21,7 @@ final class DownloadManager: NSObject {
         var filename: String
         var source: String
         let sourceTabID: UUID?
+        var isPrivate = false
         var destination: URL?
         var bytesReceived: Int64 = 0
         var bytesExpected: Int64 = 0
@@ -80,23 +81,30 @@ final class DownloadManager: NSObject {
 
     // MARK: - Taking a download
 
-    func adopt(_ download: WKDownload, suggestedSource: URL?, sourceTabID: UUID? = nil) {
+    func adopt(
+        _ download: WKDownload,
+        suggestedSource: URL?,
+        sourceTabID: UUID? = nil,
+        privately: Bool = false
+    ) {
         let id = beginItem(
             source: suggestedSource ?? download.originalRequest?.url,
-            sourceTabID: sourceTabID
+            sourceTabID: sourceTabID,
+            privately: privately
         )
         attach(download, to: id)
     }
 
     @discardableResult
-    func beginItem(source: URL?, sourceTabID: UUID? = nil) -> UUID {
+    func beginItem(source: URL?, sourceTabID: UUID? = nil, privately: Bool = false) -> UUID {
         let id = UUID()
         items.insert(
             Item(
                 id: id,
                 filename: source?.lastPathComponent ?? "Download",
                 source: source?.host() ?? "",
-                sourceTabID: sourceTabID
+                sourceTabID: sourceTabID,
+                isPrivate: privately
             ),
             at: 0
         )
@@ -233,6 +241,16 @@ final class DownloadManager: NSObject {
         guard !item.isRunning else { return }
         finish(item.id)
         items.removeAll { $0.id == item.id }
+    }
+
+    func forgetPrivateDownloads() {
+        for item in items where item.isPrivate {
+            if item.isRunning {
+                cancel(item)
+            }
+            finish(item.id)
+        }
+        items.removeAll(where: \.isPrivate)
     }
 
     func clearFinished() {

@@ -136,7 +136,12 @@ final class BrowserModel {
             self?.onPictureReturnExpected?(tab)
         }
         tab.onDownload = { [weak self, weak tab] download, source in
-            self?.downloads.adopt(download, suggestedSource: source, sourceTabID: tab?.id)
+            self?.downloads.adopt(
+                download,
+                suggestedSource: source,
+                sourceTabID: tab?.id,
+                privately: tab?.isPrivate ?? false
+            )
         }
         BrowserSettings.shared.apply(to: tab.webView)
         return tab

@@ -101,6 +101,7 @@ extension AppCoordinator {
     private func endPrivateSession() async {
         guard privateSession != nil else { return }
         privateSession = nil
+        browser.downloads.forgetPrivateDownloads()
         FaviconLoader.shared.forgetSessionOnlyIcons()
         await Profile.erase(profiles.privateBrowsing)
         Pipeline.log.notice("profile: private session ended")
