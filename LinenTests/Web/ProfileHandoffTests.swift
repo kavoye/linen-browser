@@ -65,6 +65,19 @@ struct ProfileHandoffTests {
         #expect(model.history.count == 0)
     }
 
+    @Test func theResearchGlimpseDoesNotFollowYouIntoTheNextProfile() {
+        let preview = ResearchPreview()
+        preview.begin(inSpace: UUID())
+        #expect(preview.isLive)
+
+        preview.forget()
+
+        #expect(!preview.isLive)
+        #expect(preview.snapshot == nil)
+        #expect(preview.host == nil)
+        #expect(preview.spaceID == nil)
+    }
+
     @Test func aLiveTabStillWritesHistory() {
         let model = makeModel(.temporary())
         let tab = model.newTab()

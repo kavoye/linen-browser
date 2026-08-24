@@ -376,6 +376,8 @@ private final class SpaceRunner: AgentRunner {
     func prepare() {}
     func discardSession(forTab tabID: UUID) {}
 
+    func discardAllSessions() {}
+
     func transferSession(from tabID: UUID, to newTabID: UUID) {
         transferred.append(SpaceLog.Moved(from: tabID, to: newTabID))
     }

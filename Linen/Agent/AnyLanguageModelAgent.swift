@@ -67,6 +67,12 @@ final class AnyLanguageModelAgent: AgentRunner {
         sessions.removeValue(forKey: tabID)
     }
 
+    func discardAllSessions() {
+        sessions.removeAll()
+        discardedTabIDs = RecentIDs()
+        prewarmedSession = nil
+    }
+
     func transferSession(from tabID: UUID, to newTabID: UUID) {
         guard tabID != newTabID,
               sessions[newTabID] == nil,
@@ -131,7 +137,7 @@ final class AnyLanguageModelAgent: AgentRunner {
             log.failTask(task.id, reason: message)
         }
 
-        if !discardedTabIDs.contains(task.spaceID) {
+        if !Task.isCancelled, !discardedTabIDs.contains(task.spaceID) {
             let compacted = compactedSession(from: session)
             sessions[task.spaceID] = compacted
             log.recordContextEstimate(

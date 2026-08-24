@@ -280,6 +280,7 @@ private final class FakeScopeRunner: AgentRunner {
 
     func prepare() {}
     func discardSession(forTab tabID: UUID) {}
+    func discardAllSessions() {}
     func transferSession(from tabID: UUID, to newTabID: UUID) {}
 
     func run(

@@ -9,6 +9,15 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct AgentTurnModelTests {
+    @Test func switchingProfilesForgetsEveryConversation() {
+        let fixture = Fixture()
+        fixture.model.use(fixture.runner)
+
+        fixture.model.forgetEveryConversation()
+
+        #expect(fixture.runner.discardedEverything)
+    }
+
     @Test func runnerAvailabilityAndNameStayTogether() {
         let fixture = Fixture()
 
@@ -290,6 +299,7 @@ private final class FakeAgentRunner: AgentRunner {
     private(set) var runs: [Run] = []
     private(set) var released: Set<UUID> = []
     private(set) var discardedTabs: [UUID] = []
+    private(set) var discardedEverything = false
     private(set) var transferred: [FakeAgentTurnLog.Moved] = []
     private var continuations: [UUID: CheckedContinuation<Void, Never>] = [:]
 
@@ -297,6 +307,10 @@ private final class FakeAgentRunner: AgentRunner {
 
     func discardSession(forTab tabID: UUID) {
         discardedTabs.append(tabID)
+    }
+
+    func discardAllSessions() {
+        discardedEverything = true
     }
 
     func transferSession(from tabID: UUID, to newTabID: UUID) {

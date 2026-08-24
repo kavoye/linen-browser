@@ -172,6 +172,10 @@ final class AgentTurnModel {
         }
     }
 
+    func forgetEveryConversation() {
+        runner?.discardAllSessions()
+    }
+
     @discardableResult
     func closeTab(_ tabID: UUID) -> Bool {
         let endedActiveTurn = activeTask?.tabID == tabID || activeTask?.spaceID == tabID

@@ -39,6 +39,13 @@ final class ResearchPreview {
         isLive = false
     }
 
+    func forget() {
+        end()
+        snapshot = nil
+        host = nil
+        spaceID = nil
+    }
+
     private func tick() async {
         guard let webView = source?(), webView.url != nil else { return }
         guard let image = await Self.capture(webView) else { return }

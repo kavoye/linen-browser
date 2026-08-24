@@ -90,6 +90,7 @@ private final class TestAgentRunner: AgentRunner {
 
     func prepare() {}
     func discardSession(forTab tabID: UUID) {}
+    func discardAllSessions() {}
     func transferSession(from tabID: UUID, to newTabID: UUID) {}
 
     func run(
