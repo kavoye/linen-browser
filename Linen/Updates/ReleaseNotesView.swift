@@ -178,27 +178,45 @@ struct MarkdownText: View {
 
     private var blocks: [Block] {
         var kinds: [Kind] = []
+        var open: Kind?
+
+        func close() {
+            if let open {
+                kinds.append(open)
+            }
+            open = nil
+        }
+
         for rawLine in source.replacingOccurrences(of: "\r\n", with: "\n").split(
             separator: "\n",
             omittingEmptySubsequences: false
         ) {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             if line.isEmpty {
+                close()
                 continue
             }
 
             if line == "---" || line == "***" || line == "___" {
+                close()
                 kinds.append(.rule)
             } else if line.hasPrefix("#") {
+                close()
                 let level = line.prefix(while: { $0 == "#" }).count
                 let text = line.dropFirst(level).trimmingCharacters(in: .whitespaces)
                 kinds.append(.heading(text, level: level))
             } else if line.hasPrefix("- ") || line.hasPrefix("* ") || line.hasPrefix("+ ") {
-                kinds.append(.bullet(String(line.dropFirst(2))))
+                close()
+                open = .bullet(String(line.dropFirst(2)))
+            } else if case .bullet(let started)? = open {
+                open = .bullet(started + " " + line)
+            } else if case .paragraph(let started)? = open {
+                open = .paragraph(started + " " + line)
             } else {
-                kinds.append(.paragraph(line))
+                open = .paragraph(line)
             }
         }
+        close()
         return kinds.enumerated().map { Block(id: $0.offset, kind: $0.element) }
     }
 }
