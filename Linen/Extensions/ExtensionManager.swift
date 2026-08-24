@@ -369,11 +369,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         installState = .installing(id: id)
         do {
             let package = try await ChromeWebStore.downloadPackage(id: id)
+            try await library.unpack(package, id: id)
             guard try await confirm(package, id: id) else {
+                library.discardPackage(id: id)
                 installState = .idle
                 return
             }
-            try await library.unpack(package, id: id)
             library.recordInstall(id: id)
             installed = library.records
             guard let record = installed.first(where: { $0.id == id }) else {
@@ -408,10 +409,20 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         defer { try? FileManager.default.removeItem(at: scratch) }
 
         let webExtension = try await WKWebExtension(resourceBaseURL: scratch)
+        let unpacked = library.packageURL(for: id)
+        let accepted = Set(webExtension.requestedPermissions.map(\.rawValue))
+        let unsupported = await Task.detached(priority: .userInitiated) {
+            ExtensionCompatibility.report(forPackageAt: unpacked, accepting: accepted)
+        }.value
+        if !unsupported.isEmpty {
+            let names = unsupported.names.joined(separator: ", ")
+            Pipeline.log.notice("ext: \(id, privacy: .public) needs \(names, privacy: .public)")
+        }
         return await ExtensionConsent.confirmInstall(
             name: webExtension.displayName ?? id,
             permissions: webExtension.requestedPermissions,
             matchPatterns: webExtension.allRequestedMatchPatterns,
+            unsupported: unsupported,
             in: NSApp.keyWindow ?? NSApp.mainWindow
         )
     }

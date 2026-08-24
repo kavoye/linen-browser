@@ -49,13 +49,15 @@ enum ExtensionConsent {
         name: String,
         permissions: Set<WKWebExtension.Permission>,
         matchPatterns: Set<WKWebExtension.MatchPattern>,
+        unsupported: ExtensionCompatibility.Report = ExtensionCompatibility.Report(),
         in window: NSWindow?
     ) async -> Bool {
         await present(
             title: String(localized: "Install “\(name)”?"),
             body: body(
                 hosts: hostSummary(for: matchPatterns),
-                abilities: permissionSummary(for: permissions)
+                abilities: permissionSummary(for: permissions),
+                unsupported: unsupported
             ),
             confirmTitle: String(localized: "Install"),
             in: window
@@ -102,6 +104,7 @@ enum ExtensionConsent {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = body
+        alert.accessoryView = widthGuide()
         alert.addButton(withTitle: confirmTitle)
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.buttons.last?.keyEquivalent = "\u{1b}"
@@ -113,7 +116,15 @@ enum ExtensionConsent {
         return response == .alertFirstButtonReturn
     }
 
-    static func body(hosts: [String], abilities: [String]) -> String {
+    private static func widthGuide() -> NSView {
+        NSView(frame: NSRect(x: 0, y: 0, width: 380, height: 0))
+    }
+
+    static func body(
+        hosts: [String],
+        abilities: [String],
+        unsupported: ExtensionCompatibility.Report = ExtensionCompatibility.Report()
+    ) -> String {
         var lines: [String] = []
         if !hosts.isEmpty {
             lines.append(String(localized: "Read and change your data on:"))
@@ -132,6 +143,16 @@ enum ExtensionConsent {
         }
         if lines.isEmpty {
             lines.append(String(localized: "This extension asks for no special access."))
+        }
+        if !unsupported.isEmpty {
+            let summaries = unsupported.summaries
+            lines.append("")
+            lines.append(String(localized: "WebKit doesn’t provide some of what this extension uses, so parts of it may not work:"))
+            lines.append(contentsOf: summaries.prefix(5).map { "  • \($0)" })
+            if summaries.count > 5 {
+                let remainder = summaries.count - 5
+                lines.append("  • " + String(localized: "and \(remainder) more"))
+            }
         }
         return lines.joined(separator: "\n")
     }

@@ -3727,6 +3727,9 @@
     "Web Inspector" : {
       "comment" : "Title of the System settings row that turns on web developer tools, and the same wording in the Settings search index. Web Inspector is established platform terminology."
     },
+    "WebKit doesn’t provide some of what this extension uses, so parts of it may not work:" : {
+      "comment" : "Heading above a bulleted list in the sheet that confirms installing a browser extension. WebKit is the name of the engine Linen runs extensions on and is never translated. The list items are API names and stay in English. Ends in a colon."
+    },
     "Webpages can carry hidden instructions aimed at the assistant. Allow this only if it’s what you asked for." : {
 
     },

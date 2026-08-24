@@ -238,6 +238,11 @@ final class ExtensionLibrary {
         }
     }
 
+    func discardPackage(id: String) {
+        guard !catalogue.entries.contains(where: { $0.id == id }) else { return }
+        try? FileManager.default.removeItem(at: packageURL(for: id))
+    }
+
     func recordInstall(id: String) {
         if !catalogue.entries.contains(where: { $0.id == id }) {
             catalogue.entries.append(CatalogueEntry(
