@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.3.1
+
+### New
+
+- **Window style** in **Settings > Appearance** sets how the toolbar and the
+  sidebar are drawn. Standard keeps them solid. Liquid Glass makes them clear,
+  so the window takes on whatever sits behind it. When you choose Liquid Glass,
+  **Glass transparency** decides how far it goes: clear shows more of your
+  desktop, tinted gives text and controls more contrast.
+
+### Improved
+
+- **Match website color** is now **Website tint**, and **Refract tab color** is
+  now **Tint selected tab**. Both are off to begin with, so Linen keeps its own
+  look on every website until you ask for the website’s color.
+- Appearance now comes before Search in Settings.
+
+### Fixed
+
+- Fixes an issue where the pages you had open in one profile were added to
+  another profile’s history when you switched profiles.
+- Fixes an issue where files you downloaded in a private tab stayed in your
+  downloads after private browsing ended. A download that is still going now
+  stops when you leave private browsing.
+- Fixes an issue where a website’s icon could be saved in the wrong profile.
+- Fixes an issue where the assistant still remembered what you asked it in the
+  profile you left.
+
 ## 0.3.0
 
 ### New
