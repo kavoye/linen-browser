@@ -92,6 +92,15 @@ struct HoldToTalkMonitorTests {
         #expect(log.presses == 0)
     }
 
+    @Test func aBareSpaceReachesThePageBothWays() {
+        let (subject, log) = monitor(Self.combination)
+
+        #expect(subject.handle(key(.keyDown, Self.spaceKeyCode, [])) == .ignored)
+        #expect(subject.handle(key(.keyUp, Self.spaceKeyCode, [])) == .ignored)
+        #expect(log.presses == 0)
+        #expect(log.releases == 0)
+    }
+
     @Test func theKeyGoingUpEndsTheHoldEvenIfTheModifierWentFirst() {
         let (subject, log) = monitor(Self.combination)
         _ = subject.handle(key(.keyDown, Self.spaceKeyCode, [.option]))
@@ -104,7 +113,7 @@ struct HoldToTalkMonitorTests {
     @Test func aKeyGoingUpWithoutHavingGoneDownReleasesNothing() {
         let (subject, log) = monitor(Self.combination)
 
-        _ = subject.handle(key(.keyUp, Self.spaceKeyCode, [.option]))
+        #expect(subject.handle(key(.keyUp, Self.spaceKeyCode, [.option])) == .ignored)
 
         #expect(log.releases == 0)
     }

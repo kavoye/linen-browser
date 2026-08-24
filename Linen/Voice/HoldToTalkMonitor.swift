@@ -94,7 +94,9 @@ final class HoldToTalkMonitor: ActivationSource {
             return .consumed
 
         case .keyUp:
-            guard !talk.isModifierOnly, event.keyCode == talk.keyCode else { return .ignored }
+            guard !talk.isModifierOnly, event.keyCode == talk.keyCode, isHolding else {
+                return .ignored
+            }
             talkChanged(isDown: false)
             return .consumed
 
