@@ -45,7 +45,7 @@ struct SidebarProfileButton: View {
                     Spacer(minLength: 0)
                 }
             }
-            .padding(.horizontal, showsName ? 9 : 0)
+            .padding(.horizontal, SidebarMetrics.rowContentPadding(style: showsName ? .full : .icons))
             .frame(minWidth: SidebarMetrics.controlHeight, maxWidth: .infinity)
             .frame(height: SidebarMetrics.controlHeight)
             .sidebarRowSelectionEffect(isSelected: switching, isHovering: hovering)

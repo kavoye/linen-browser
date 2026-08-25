@@ -24,7 +24,10 @@ enum SidebarMetrics {
     static let rowControlExtent: CGFloat = 20
 
     static let rowIconSpacing: CGFloat = 8
-    static let fullContentInset: CGFloat = 12
+    static var fullContentInset: CGFloat {
+        LoomChrome.canvasInset - LoomChrome.sidebarContentBalanceOffset
+    }
+
     static let iconsContentInset: CGFloat = 8
 
     static func rowContentPadding(style: SidebarStyle) -> CGFloat {

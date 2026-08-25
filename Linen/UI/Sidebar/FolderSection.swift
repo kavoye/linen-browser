@@ -122,7 +122,7 @@ struct FolderSection: View {
                         .background(Theme.Wash.hairline, in: Capsule())
                 }
             }
-            .padding(.horizontal, sidebarStyle == .icons ? 0 : 9)
+            .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
             .frame(maxWidth: .infinity)
             .frame(height: 30)
             .sidebarRowSelectionEffect(

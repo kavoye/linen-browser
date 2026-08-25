@@ -431,7 +431,7 @@ struct SidebarDragChip: View {
 
     var body: some View {
         content
-            .padding(.horizontal, sidebarStyle == .icons ? 0 : 9)
+            .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 Theme.windowBackground.opacity(SidebarDragGhost.chipFillOpacity),
