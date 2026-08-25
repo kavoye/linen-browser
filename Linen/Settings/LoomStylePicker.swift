@@ -11,18 +11,31 @@ struct LoomStylePicker: View {
     let onSelect: (LoomStyle) -> Void
 
     var body: some View {
-        HStack(spacing: AppearanceThumbnailMetrics.spacing) {
-            ForEach(LoomStyle.allCases) { style in
-                LoomStyleCard(
-                    style: style,
-                    usesWebsiteTint: usesWebsiteTint,
-                    tintsSelectedTab: tintsSelectedTab,
-                    isSelected: style == selection,
-                    action: { onSelect(style) }
-                )
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppearanceThumbnailMetrics.spacing) {
+                cards
+            }
+            LazyVGrid(
+                columns: AppearanceThumbnailMetrics.columns,
+                spacing: AppearanceThumbnailMetrics.spacing
+            ) {
+                cards
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var cards: some View {
+        ForEach(LoomStyle.allCases) { style in
+            LoomStyleCard(
+                style: style,
+                usesWebsiteTint: usesWebsiteTint,
+                tintsSelectedTab: tintsSelectedTab,
+                isSelected: style == selection,
+                action: { onSelect(style) }
+            )
+        }
     }
 }
 

@@ -257,6 +257,7 @@ enum SettingsIndex {
 
 extension EnvironmentValues {
     @Entry var settingsHighlight: String?
+    @Entry var settingsIsCompact = false
 
     @Entry var settingsCardInset: CGFloat = 0
 

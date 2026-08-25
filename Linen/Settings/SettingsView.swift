@@ -55,6 +55,12 @@ struct SettingsView: View {
     let coordinator: AppCoordinator
     let workspace: SettingsWorkspace
 
+    @State private var surfaceWidth: CGFloat = SettingsMetrics.twoColumnMinWidth
+
+    private var showsNamedNavigator: Bool {
+        surfaceWidth >= SettingsMetrics.twoColumnMinWidth
+    }
+
     private var address: String {
         coordinator.browser.tabs.first { $0.internalPage == .settings }?.urlString ?? ""
     }
@@ -86,9 +92,12 @@ struct SettingsView: View {
                 profileSymbol: coordinator.profiles.current.symbol,
                 profileTint: coordinator.profiles.current.color.tint,
                 badges: badges,
+                showsNames: showsNamedNavigator,
                 onOpen: workspace.open
             )
-            .frame(width: SettingsMetrics.navWidth)
+            .frame(width: showsNamedNavigator
+                ? SettingsMetrics.navWidth
+                : SettingsMetrics.navIconsWidth)
             .overlay(alignment: .trailing) {
                 Rectangle()
                     .fill(SettingsMetrics.hairline)
@@ -99,10 +108,14 @@ struct SettingsView: View {
                 category: workspace.category,
                 coordinator: coordinator,
                 intelligence: workspace.intelligence,
-                highlight: workspace.highlight
+                highlight: workspace.highlight,
+                isCompact: !showsNamedNavigator
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+            surfaceWidth = width
+        }
         .onChange(of: address, initial: true) { _, _ in
             workspace.adopt(SystemPages.settingsCategory(of: address) ?? .general)
         }
@@ -114,6 +127,7 @@ private struct SettingsDetail: View {
     let coordinator: AppCoordinator
     let intelligence: IntelligenceViewModel
     let highlight: String?
+    let isCompact: Bool
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -150,13 +164,16 @@ private struct SettingsDetail: View {
                     }
                 }
                 .frame(maxWidth: SettingsMetrics.detailWidth, alignment: .leading)
-                .padding(.horizontal, SettingsMetrics.pageInset)
+                .padding(.horizontal, isCompact
+                    ? SettingsMetrics.compactPageInset
+                    : SettingsMetrics.pageInset)
                 .padding(.top, 34)
                 .padding(.bottom, 64)
                 .frame(maxWidth: .infinity)
             }
             .scrollContentBackground(.hidden)
             .environment(\.settingsHighlight, highlight)
+            .environment(\.settingsIsCompact, isCompact)
             .onChange(of: highlight) { _, anchor in
                 guard let anchor else { return }
                 Task {

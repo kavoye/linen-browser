@@ -7,6 +7,10 @@ enum AppearanceThumbnailMetrics {
     static let width: CGFloat = 108
     static let height: CGFloat = 68
     static let spacing: CGFloat = 12
+
+    static var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: width, maximum: width), spacing: spacing, alignment: .top)]
+    }
 }
 
 struct ThemeThumbnailPalette: Equatable {
@@ -63,17 +67,30 @@ struct ThemePicker: View {
     let onSelect: (AppearanceMode) -> Void
 
     var body: some View {
-        HStack(spacing: AppearanceThumbnailMetrics.spacing) {
-            ForEach(AppearanceMode.allCases) { mode in
-                ThemeThumbnailCard(
-                    mode: mode,
-                    isSelected: mode == selection
-                ) {
-                    onSelect(mode)
-                }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: AppearanceThumbnailMetrics.spacing) {
+                cards
+            }
+            LazyVGrid(
+                columns: AppearanceThumbnailMetrics.columns,
+                spacing: AppearanceThumbnailMetrics.spacing
+            ) {
+                cards
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var cards: some View {
+        ForEach(AppearanceMode.allCases) { mode in
+            ThemeThumbnailCard(
+                mode: mode,
+                isSelected: mode == selection
+            ) {
+                onSelect(mode)
+            }
+        }
     }
 }
 

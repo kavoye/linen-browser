@@ -212,6 +212,7 @@ struct SettingsNavigator: View {
     var profileSymbol: String
     var profileTint: Color
     var badges: [SettingsCategory: String] = [:]
+    var showsNames = true
     var onOpen: (SettingsEntry) -> Void = { _ in }
 
     @FocusState private var searchFocused: Bool
@@ -236,6 +237,48 @@ struct SettingsNavigator: View {
     }
 
     var body: some View {
+        if showsNames {
+            named
+        } else {
+            iconsOnly
+        }
+    }
+
+    private var iconsOnly: some View {
+        ScrollView {
+            VStack(spacing: 4) {
+                NavigatorIcon(
+                    symbol: profileSymbol,
+                    tint: profileTint,
+                    title: profileName,
+                    isSelected: selection == .profiles
+                ) {
+                    selection = .profiles
+                }
+
+                Divider()
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+
+                ForEach(SettingsCategory.allCases.filter { $0 != .profiles }) { category in
+                    NavigatorIcon(
+                        symbol: category.symbol,
+                        tint: category.tint,
+                        title: String(localized: category.title),
+                        isSelected: category == selection
+                    ) {
+                        selection = category
+                    }
+                }
+            }
+            .padding(.vertical, 10)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollContentBackground(.hidden)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var named: some View {
         VStack(alignment: .leading, spacing: 0) {
             NavigatorProfileBlock(
                 name: profileName,
@@ -389,6 +432,34 @@ private struct CategoryTile: View {
                     .foregroundStyle(.white)
             }
             .accessibilityHidden(true)
+    }
+}
+
+private struct NavigatorIcon: View {
+    let symbol: String
+    let tint: Color
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            CategoryTile(symbol: symbol, tint: tint)
+                .frame(width: 32, height: 32)
+                .selectionBackground(
+                    isSelected: isSelected,
+                    isHovering: hovering,
+                    in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
+        .help(Text(verbatim: title))
+        .accessibilityLabel(Text(verbatim: title))
     }
 }
 

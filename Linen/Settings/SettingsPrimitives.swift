@@ -5,14 +5,22 @@ import SwiftUI
 
 enum SettingsMetrics {
     static let navWidth: CGFloat = 220
+    static let navIconsWidth: CGFloat = 46
+
+    static let twoColumnMinWidth: CGFloat = 520
     static let detailWidth: CGFloat = 660
     static let pageInset: CGFloat = 32
+    static let compactPageInset: CGFloat = 10
     static let sectionSpacing: CGFloat = 28
     static let headerGap: CGFloat = 7
 
     static let controlWidth: CGFloat = 250
     static let rowPaddingV: CGFloat = 14
     static let cardInset: CGFloat = 16
+    static var separatorInset: CGFloat {
+        rowContentInset
+    }
+    static let compactCardInset: CGFloat = 10
     static let cardInsetV: CGFloat = 2
     static let rowPaddingH: CGFloat = 0
     static let rowContentInset: CGFloat = 8
@@ -49,14 +57,19 @@ struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     @Environment(\.settingsSectionLit) private var isLit
+    @Environment(\.settingsIsCompact) private var isCompact
+
+    private var inset: CGFloat {
+        isCompact ? SettingsMetrics.compactCardInset : SettingsMetrics.cardInset
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             content
         }
-        .environment(\.settingsCardInset, SettingsMetrics.cardInset)
+        .environment(\.settingsCardInset, inset)
         .environment(\.settingsSectionLit, false)
-        .padding(.horizontal, SettingsMetrics.cardInset)
+        .padding(.horizontal, inset)
         .padding(.vertical, SettingsMetrics.cardInsetV)
         .frame(maxWidth: .infinity, alignment: .leading)
         .settingsSurface(
@@ -175,6 +188,8 @@ struct SettingsSection<Content: View, Accessory: View>: View {
     @ViewBuilder let accessory: Accessory
     @ViewBuilder let content: Content
 
+    @Environment(\.settingsIsCompact) private var isCompact
+
     init(
         title: LocalizedStringResource,
         symbol: String,
@@ -204,16 +219,19 @@ struct SettingsSection<Content: View, Accessory: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsMetrics.headerGap) {
-            HStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(Theme.Font.caption)
-                Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .kerning(0.3)
-
-                Spacer(minLength: 8)
-
-                accessory
+            Group {
+                if isCompact, Accessory.self != EmptyView.self {
+                    VStack(alignment: .leading, spacing: 8) {
+                        heading
+                        accessory
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        heading
+                        Spacer(minLength: 8)
+                        accessory
+                    }
+                }
             }
             .foregroundStyle(.secondary)
 
@@ -226,6 +244,20 @@ struct SettingsSection<Content: View, Accessory: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 1)
             }
+        }
+    }
+}
+
+extension SettingsSection {
+    @ViewBuilder
+    fileprivate var heading: some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol)
+                .font(Theme.Font.caption)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .kerning(0.3)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -243,6 +275,7 @@ struct DetailRow<Content: View>: View {
     @ViewBuilder let content: Content
 
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.settingsIsCompact) private var isCompact
 
     init(
         title: LocalizedStringResource? = nil,
@@ -270,7 +303,7 @@ struct DetailRow<Content: View>: View {
 
     var body: some View {
         Group {
-            switch layout {
+            switch isCompact ? .stacked : layout {
             case .trailing:
                 HStack(alignment: .center, spacing: 24) {
                     label
@@ -313,10 +346,13 @@ struct DetailRow<Content: View>: View {
 }
 
 struct RowSeparator: View {
+    var inset: CGFloat = SettingsMetrics.separatorInset
+
     var body: some View {
         Rectangle()
             .fill(SettingsMetrics.hairline)
             .frame(height: 1)
+            .padding(.horizontal, inset)
     }
 }
 

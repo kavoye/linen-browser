@@ -103,6 +103,7 @@ private struct ExtensionRow: View {
 
     @State private var icon: NSImage?
     @State private var showingIssues = false
+    @Environment(\.settingsIsCompact) private var isCompact
     @State private var hovering = false
 
     private var errorCount: Int {
@@ -110,6 +111,34 @@ private struct ExtensionRow: View {
     }
 
     var body: some View {
+        Group {
+            if isCompact {
+                VStack(alignment: .leading, spacing: 10) {
+                    name
+                    HStack(spacing: 12) {
+                        Spacer(minLength: 0)
+                        controls
+                    }
+                }
+            } else {
+                HStack(spacing: 12) {
+                    name
+                    controls
+                }
+            }
+        }
+        .padding(.horizontal, SettingsMetrics.rowPaddingH)
+        .padding(.vertical, SettingsMetrics.rowPaddingV)
+        .contentShape(.rect)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
+        .task(id: record.id) {
+            icon = await manager.icon(for: record.id)
+        }
+    }
+
+    @ViewBuilder
+    private var name: some View {
         HStack(spacing: 12) {
             ExtensionIcon(image: icon)
                 .opacity(record.enabled ? 1 : 0.55)
@@ -117,7 +146,8 @@ private struct ExtensionRow: View {
             HStack(spacing: 6) {
                 Text(verbatim: record.displayName)
                     .font(Theme.Font.title)
-                    .lineLimit(1)
+                    .lineLimit(isCompact ? 2 : 1)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if record.enabled, errorCount > 0 {
                     Button {
@@ -144,24 +174,19 @@ private struct ExtensionRow: View {
                 Spacer(minLength: 8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-
-            if !record.isSystem {
-                ExtensionRowMenu(manager: manager, record: record)
-            }
-
-            SettingsToggle(Binding(
-                get: { record.enabled },
-                set: { manager.setEnabled($0, id: record.id) }
-            ))
         }
-        .padding(.horizontal, SettingsMetrics.rowPaddingH)
-        .padding(.vertical, SettingsMetrics.rowPaddingV)
-        .contentShape(.rect)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .task(id: record.id) {
-            icon = await manager.icon(for: record.id)
+    }
+
+    @ViewBuilder
+    private var controls: some View {
+        if !record.isSystem {
+            ExtensionRowMenu(manager: manager, record: record)
         }
+
+        SettingsToggle(Binding(
+            get: { record.enabled },
+            set: { manager.setEnabled($0, id: record.id) }
+        ))
     }
 }
 

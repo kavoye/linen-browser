@@ -458,7 +458,7 @@ private struct ProfileDetailPage: View {
                         .textFieldStyle(.plain)
                         .font(Theme.Font.row)
                         .focused($editing)
-                        .frame(width: 190)
+                        .frame(maxWidth: 190)
                         .onSubmit { commit(profile) }
                 }
             }
@@ -649,7 +649,7 @@ private struct NewProfilePage: View {
                         .textFieldStyle(.plain)
                         .font(Theme.Font.row)
                         .focused($naming)
-                        .frame(width: 190)
+                        .frame(maxWidth: 190)
                         .onSubmit(add)
                 }
             }
@@ -675,11 +675,6 @@ private struct NewProfilePage: View {
 // MARK: - Symbol and color
 
 enum ProfileAppearance {
-    struct SymbolRow: Identifiable {
-        let id: String
-        let symbols: [String]
-    }
-
     static let defaultSymbol = "person"
 
     static let symbols = [
@@ -701,19 +696,25 @@ enum ProfileAppearance {
         "star", "sparkles", "crown", "puzzlepiece",
     ]
 
-    static let symbolRows: [SymbolRow] = stride(from: 0, to: symbols.count, by: 16).map { start in
-        let end = min(start + 16, symbols.count)
-        return SymbolRow(id: symbols[start], symbols: Array(symbols[start ..< end]))
-    }
+    static let swatchSize: CGFloat = 28
+    static let symbolSize: CGFloat = 30
 }
 
 private struct ProfileLookEditor: View {
     @Binding var symbol: String
     @Binding var color: TabFolderColor
 
+    private static func columns(of size: CGFloat, spacing: CGFloat) -> [GridItem] {
+        [GridItem(.adaptive(minimum: size, maximum: size), spacing: spacing, alignment: .leading)]
+    }
+
     var body: some View {
         DetailRow(title: "Color", layout: .stacked) {
-            HStack(spacing: 8) {
+            LazyVGrid(
+                columns: Self.columns(of: ProfileAppearance.swatchSize, spacing: 8),
+                alignment: .leading,
+                spacing: 8
+            ) {
                 ForEach(TabFolderColor.allCases) { swatch in
                     ProfileColorChoice(
                         color: swatch,
@@ -728,18 +729,18 @@ private struct ProfileLookEditor: View {
         RowSeparator()
 
         DetailRow(title: "Symbol", layout: .stacked) {
-            Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 6) {
-                ForEach(ProfileAppearance.symbolRows) { row in
-                    GridRow {
-                        ForEach(row.symbols, id: \.self) { candidate in
-                            ProfileSymbolChoice(
-                                symbol: candidate,
-                                isSelected: candidate == symbol,
-                                tint: color.tint
-                            ) {
-                                symbol = candidate
-                            }
-                        }
+            LazyVGrid(
+                columns: Self.columns(of: ProfileAppearance.symbolSize, spacing: 6),
+                alignment: .leading,
+                spacing: 6
+            ) {
+                ForEach(ProfileAppearance.symbols, id: \.self) { candidate in
+                    ProfileSymbolChoice(
+                        symbol: candidate,
+                        isSelected: candidate == symbol,
+                        tint: color.tint
+                    ) {
+                        symbol = candidate
                     }
                 }
             }
