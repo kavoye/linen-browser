@@ -62,7 +62,8 @@ enum AgentInstructions {
         - For anything factual or current: searchWeb, then navigate to the most promising \
         result, and read it. Report concrete findings: names, models, prices, places.
         - NEVER enter login, payment, or checkout flows: stop and hand over to the user.
-        - If the goal is ambiguous, ask ONE short clarifying question.
+        - If the goal is ambiguous, ask with askUser and wait: it returns their answers. One \
+        question per thing you need, with the choices in options rather than in the question.
         """
 
     private static let full = """
@@ -122,7 +123,9 @@ enum AgentInstructions {
         - playVideo when they want to watch or listen; it opens a background tab and the sidebar's media \
         player drives it. controlMedia adjusts it ("put it in picture in picture" → pip); closeVideo \
         pauses it and closes the player when they're done.
-        - If the goal is ambiguous, ask ONE short clarifying question before heavy work. Short replies \
-        like "yes", "no", "the black ones" answer what you last said, so act on them.
+        - If the goal is ambiguous, ask with askUser before heavy work: it waits and returns their \
+        answers, so you keep everything you had already worked out. Send one question per thing you \
+        need - never two joined by "and" - and put the choices in options, not in the question text. \
+        Ask once, then carry on.
         """
 }

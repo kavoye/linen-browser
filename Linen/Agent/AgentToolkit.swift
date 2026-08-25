@@ -12,6 +12,7 @@ final class AgentToolkit {
     private let services: Services
     private let extensionController: WKWebExtensionController?
     private let preview: ResearchPreview?
+    private let questions: AgentQuestionModel?
     private var task: AgentTaskContext?
     private var researchWebView: WKWebView?
     private var finalResearchURL: URL?
@@ -27,6 +28,7 @@ final class AgentToolkit {
         log: ConversationLog,
         extensionController: WKWebExtensionController? = nil,
         preview: ResearchPreview? = nil,
+        questions: AgentQuestionModel? = nil,
         services: Services = .live
     ) {
         self.browser = browser
@@ -35,6 +37,7 @@ final class AgentToolkit {
         self.services = services
         self.extensionController = extensionController
         self.preview = preview
+        self.questions = questions
         preview?.source = { [weak self] in self?.researchWebView }
     }
 
@@ -852,6 +855,64 @@ final class AgentToolkit {
     private func updateFinalResearchURL(from webView: WKWebView) {
         guard webView === researchWebView, let url = webView.url.flatMap(Self.webURL) else { return }
         finalResearchURL = url
+    }
+}
+
+extension AgentToolkit {
+    func askUser(_ asked: [(question: String, options: [String])]) async -> String {
+        let put = asked.compactMap { entry -> AgentQuestionModel.Question? in
+            let text = entry.question.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return nil }
+            return AgentQuestionModel.Question(text: text, options: entry.options)
+        }
+        guard !put.isEmpty, let questions else {
+            return "No one is there to answer. Carry on with what you have."
+        }
+        let title = put.count == 1
+            ? put[0].text
+            : String(localized: "\(put.count) questions")
+        let step = beginTool(name: "askUser", title: title)
+        if let output = cancellationOutput(for: step) {
+            return output
+        }
+        let answers = await questions.put(put, inSpace: task?.spaceID)
+        let trimmed = answers.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            let output = "Nothing was answered. Carry on with what you have."
+            completeTool(step, output: output, failed: true)
+            return output
+        }
+        completeTool(step, output: trimmed)
+        return trimmed
+    }
+
+    func listTabs() -> String {
+        let step = beginTool(name: "listTabs", title: "List the open tabs")
+        if let output = cancellationOutput(for: step) {
+            return output
+        }
+        let readable = contextTabIDs
+        let tabs = browser.tabs.filter { $0.assistantAccess.effectivePolicy != .deny }
+        guard !tabs.isEmpty else {
+            let output = "No tabs are open."
+            completeTool(step, output: output)
+            return output
+        }
+        let lines = tabs.enumerated().map { index, tab -> String in
+            let place = URL(string: tab.urlString)?.displayHost
+                ?? tab.internalPage?.title
+                ?? "blank"
+            let active = tab.id == browser.activeTabID ? " ← ACTIVE" : ""
+            let reach = readable.contains(tab.id) ? "" : " — title only"
+            return "\(index + 1). \(tab.title) (\(place))\(active)\(reach)"
+        }
+        let note = tabs.contains { !readable.contains($0.id) }
+            ? "\nOnly the tabs without “title only” can be read. To read one of the others, "
+                + "switch to it, or ask the person to attach it with @."
+            : ""
+        let output = "\(tabs.count) tabs open:\n" + lines.joined(separator: "\n") + note
+        completeTool(step, output: output)
+        return output
     }
 }
 

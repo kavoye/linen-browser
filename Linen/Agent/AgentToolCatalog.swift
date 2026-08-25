@@ -97,6 +97,13 @@ nonisolated enum AgentToolCatalog {
             isCore: false
         ),
         AgentToolDescriptor(
+            id: "listTabs",
+            title: "List Tabs",
+            summary: "See the titles of every tab in the window.",
+            category: .tabs,
+            isCore: false
+        ),
+        AgentToolDescriptor(
             id: "switchTab",
             title: "Switch Tabs",
             summary: "Move between the tabs in the conversation.",

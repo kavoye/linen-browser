@@ -52,6 +52,44 @@ nonisolated struct NewTabTool: Tool {
     }
 }
 
+nonisolated struct AskUserTool: Tool {
+    static let toolName = "askUser"
+    let name = AskUserTool.toolName
+    let description = AgentToolkit.Descriptions.askUser
+    let toolkit: AgentToolkit
+
+    @Generable
+    nonisolated struct Question {
+        @Guide(description: "One short question, in the second person")
+        var question: String
+        @Guide(description: "Answers to offer, or empty when the answer is open")
+        var options: [String]
+    }
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Everything you need to know, asked one question at a time")
+        var questions: [Question]
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.askUser(arguments.questions.map { ($0.question, $0.options) })
+    }
+}
+
+nonisolated struct ListTabsTool: Tool {
+    let name = "listTabs"
+    let description = AgentToolkit.Descriptions.listTabs
+    let toolkit: AgentToolkit
+
+    @Generable
+    struct Arguments {}
+
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.listTabs()
+    }
+}
+
 nonisolated struct SwitchTabTool: Tool {
     let name = "switchTab"
     let description = AgentToolkit.Descriptions.switchTab
@@ -254,12 +292,15 @@ nonisolated enum AgentToolTier: Hashable, Sendable {
 
 @MainActor
 func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>) -> [any Tool] {
-    makeAgentTools(toolkit: toolkit, tier: .full).filter { enabledIDs.contains($0.name) }
+    makeAgentTools(toolkit: toolkit, tier: .full).filter {
+        $0.name == AskUserTool.toolName || enabledIDs.contains($0.name)
+    }
 }
 
 @MainActor
 func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any Tool] {
     let core: [any Tool] = [
+        AskUserTool(toolkit: toolkit),
         WebSearchTool(toolkit: toolkit),
         NavigateTool(toolkit: toolkit),
         ReadPageTool(toolkit: toolkit),
@@ -274,6 +315,7 @@ func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any 
     case .full:
         return core + [
             NewTabTool(toolkit: toolkit),
+            ListTabsTool(toolkit: toolkit),
             SwitchTabTool(toolkit: toolkit),
             CloseTabTool(toolkit: toolkit),
             SelectOptionTool(toolkit: toolkit),

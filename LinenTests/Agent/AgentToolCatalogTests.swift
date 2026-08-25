@@ -17,27 +17,29 @@ struct AgentToolCatalogTests {
         )
     }
 
-    @Test func theCatalogNamesEveryRegisteredTool() {
+    @Test func theCatalogNamesEveryRegisteredToolBarAsking() {
         let registered = Set(makeAgentTools(toolkit: toolkit()).map(\.name))
         let described = Set(AgentToolCatalog.all.map(\.id))
 
-        #expect(registered == described)
-        #expect(AgentToolCatalog.all.count == registered.count)
+        #expect(registered.subtracting([AskUserTool.toolName]) == described)
+        #expect(!described.contains(AskUserTool.toolName))
+        #expect(AgentToolCatalog.all.count == registered.count - 1)
     }
 
     @Test func theCoreDefaultsMatchTheCoreTier() {
         let coreTier = Set(makeAgentTools(toolkit: toolkit(), tier: .core).map(\.name))
+            .subtracting([AskUserTool.toolName])
 
         #expect(AgentToolCatalog.defaultIDs(for: .core) == coreTier)
         #expect(AgentToolCatalog.defaultIDs(for: .full).count == AgentToolCatalog.all.count)
     }
 
-    @Test func anEnabledSetFiltersTheSessionTools() {
+    @Test func anEnabledSetFiltersTheSessionToolsButNeverAsking() {
         let enabled: Set<String> = ["searchWeb", "readPage", "playVideo"]
         let names = makeAgentTools(toolkit: toolkit(), enabledIDs: enabled).map(\.name)
 
-        #expect(Set(names) == enabled)
-        #expect(names == ["searchWeb", "readPage", "playVideo"])
+        #expect(Set(names) == enabled.union([AskUserTool.toolName]))
+        #expect(names == ["askUser", "searchWeb", "readPage", "playVideo"])
     }
 
     @Test func everyCategoryListsItsToolsInCatalogOrder() {

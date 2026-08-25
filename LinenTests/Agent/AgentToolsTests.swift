@@ -45,11 +45,13 @@ struct AgentToolsTests {
         }
     }
 
-    @Test func theTableIsExactlyTheseFourteenTools() {
+    @Test func theTableIsExactlyTheseSixteenTools() {
         #expect(Set(tools().map(\.name)) == [
+            "askUser",
             "searchWeb",
             "navigate",
             "newTab",
+            "listTabs",
             "switchTab",
             "closeTab",
             "readPage",

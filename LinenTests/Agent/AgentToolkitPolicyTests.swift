@@ -50,8 +50,8 @@ struct AgentToolkitPolicyTests {
         let names = makeAgentTools(toolkit: toolkit()).map(\.name)
 
         #expect(names == [
-            "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
-            "scrollPage", "goBack", "newTab", "switchTab", "closeTab",
+            "askUser", "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
+            "scrollPage", "goBack", "newTab", "listTabs", "switchTab", "closeTab",
             "selectOption", "playVideo", "closeVideo", "controlMedia",
         ])
     }
@@ -60,7 +60,7 @@ struct AgentToolkitPolicyTests {
         let names = makeAgentTools(toolkit: toolkit(), tier: .core).map(\.name)
 
         #expect(names == [
-            "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
+            "askUser", "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
             "scrollPage", "goBack",
         ])
     }
