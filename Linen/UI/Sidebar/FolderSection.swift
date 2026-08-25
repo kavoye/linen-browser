@@ -16,6 +16,7 @@ struct FolderSection: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.windowColorScheme) private var windowColorScheme
     @State private var hovering = false
+    @State private var windowFrame: CGRect = .zero
 
     private var browser: BrowserModel {
         context.browser
@@ -31,6 +32,10 @@ struct FolderSection: View {
     }
 
     static let outlineInset: CGFloat = 2
+
+    static let tintOpacity: Double = 0.11
+    static let fillOpacity: Double = 0.03
+    static let edgeOpacity: Double = 0.14
 
     static func outlineRadius(depth: Int) -> CGFloat {
         var radius = Theme.Radius.control
@@ -134,10 +139,24 @@ struct FolderSection: View {
                 radius: showsOutline ? Self.rowRadius(depth: depth) : Theme.Radius.hover
             )
             .contentShape(Rectangle())
-            .help(Text(verbatim: sidebarStyle == .icons ? folder.name : ""))
-            .onHover { hovering = $0 }
+            .onHover { over in
+                hovering = over
+                if over {
+                    context.coordinator.tabPreview.hover(
+                        .folder(folder, browser.tabs(in: folder)),
+                        anchor: windowFrame
+                    )
+                } else {
+                    context.coordinator.tabPreview.unhover(folder.id)
+                }
+            }
+            .onDisappear { context.coordinator.tabPreview.unhover(folder.id) }
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
                 context.frames.record(item, at: $0)
+            }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                windowFrame = frame
+                context.coordinator.tabPreview.moved(folder.id, anchor: frame)
             }
             .onTapGesture { tapped() }
             .overlay {
@@ -164,9 +183,15 @@ struct FolderSection: View {
                 let shape = RoundedRectangle(cornerRadius: outlineRadius, style: .continuous)
                 ZStack {
                     Color.clear
-                        .glassEffect(.clear.tint(folder.color.tint.opacity(0.22)), in: shape)
-                    shape.fill(folder.color.tint.opacity(0.05))
-                    shape.strokeBorder(folder.color.tint.opacity(0.18), lineWidth: 1)
+                        .glassEffect(
+                            .clear.tint(folder.color.tint.opacity(Self.tintOpacity)),
+                            in: shape
+                        )
+                    shape.fill(folder.color.tint.opacity(Self.fillOpacity))
+                    shape.strokeBorder(
+                        folder.color.tint.opacity(Self.edgeOpacity),
+                        lineWidth: 1
+                    )
                 }
                 .environment(\.colorScheme, windowColorScheme)
             }
@@ -509,7 +534,7 @@ extension TabFolderColor {
     var nsTint: NSColor {
         switch self {
         case .gray:
-            .secondaryLabelColor
+            .systemGray
         case .blue:
             .systemBlue
         case .purple:
@@ -534,11 +559,12 @@ extension TabFolderColor {
     }
 
     func menuSwatch(isSelected: Bool) -> NSImage {
+        let solid = nsTint.usingColorSpace(.sRGB) ?? nsTint
         let image = NSImage(size: NSSize(width: 14, height: 14), flipped: false) { rect in
             let circle = NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
-            self.nsTint.withAlphaComponent(0.72).setFill()
+            solid.withAlphaComponent(0.9).setFill()
             circle.fill()
-            self.nsTint.setStroke()
+            solid.withAlphaComponent(0.55).setStroke()
             circle.lineWidth = 1
             circle.stroke()
 

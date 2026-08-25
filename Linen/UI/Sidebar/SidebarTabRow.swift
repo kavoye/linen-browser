@@ -58,18 +58,6 @@ struct SidebarTabRow: View {
         String(localized: "Back to \(pinnedPageName(of: tab))")
     }
 
-    private var showsHoverPreview: Bool {
-        tab.internalPage == nil && !tab.urlString.isEmpty
-    }
-
-    private var helpText: String {
-        if isActive, tab.isAwayFromPin, !showsPinSegment {
-            return returnHelp
-        }
-        guard sidebarStyle == .icons, isActive || !showsHoverPreview else { return "" }
-        return tab.title
-    }
-
     private func tapped() {
         let modifiers = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if modifiers.contains(.shift) {
@@ -195,14 +183,14 @@ struct SidebarTabRow: View {
             .overlay(alignment: .trailing) {
                 if sidebarStyle == .full {
                     trailingControls
+                        .padding(.trailing, SidebarMetrics.rowControlEdgeOffset(style: sidebarStyle))
                 }
             }
             .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 32)
+        .frame(height: SidebarMetrics.rowHeight)
         .environment(\.chromeIconExtent, SidebarMetrics.rowControlExtent)
-        .help(Text(verbatim: helpText))
         .sidebarRowSelectionEffect(
             isSelected: isActive || isSelected,
             isHovering: hovering,
@@ -238,7 +226,7 @@ struct SidebarTabRow: View {
         }
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
-            if over, !isActive, showsHoverPreview {
+            if over {
                 coordinator.tabPreview.hover(tab, anchor: windowFrame)
             } else {
                 coordinator.tabPreview.unhover(tab.id)
@@ -451,6 +439,10 @@ struct TabIcon: View {
                     .foregroundStyle(.secondary)
             } else if tab.isLoading, !tab.isRestoring {
                 Spinner(size: size * 0.8)
+                    .foregroundStyle(.secondary)
+            } else if SystemPages.showsStartFace(tab) {
+                Image(systemName: SystemPages.startSymbol)
+                    .font(.system(size: size * 0.66, weight: .medium))
                     .foregroundStyle(.secondary)
             } else if let favicon = tab.favicon {
                 Image(nsImage: favicon)

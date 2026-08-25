@@ -43,6 +43,7 @@ struct SidebarSplitRow: View {
     }
 
     @State private var hoveringRow = false
+    @State private var windowFrame: CGRect = .zero
 
     private var interaction: SplitRowInteraction {
         .mode(isOnScreen: isOnScreen)
@@ -108,10 +109,20 @@ struct SidebarSplitRow: View {
         .contentShape(Rectangle())
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hoveringRow = over }
+            if over {
+                coordinator.tabPreview.hover(.split(split, panes), anchor: windowFrame)
+            } else {
+                coordinator.tabPreview.unhover(panes.first?.id ?? leading.id)
+            }
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
             context.frames.record(item, at: $0)
         }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            windowFrame = frame
+            coordinator.tabPreview.moved(panes.first?.id ?? leading.id, anchor: frame)
+        }
+        .onDisappear { coordinator.tabPreview.unhover(panes.first?.id ?? leading.id) }
         .contextMenu { menu }
     }
 
@@ -214,6 +225,7 @@ private struct SplitRowCell: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @State private var hovering = false
     @State private var controlsWidth: CGFloat = 0
+    @State private var windowFrame: CGRect = .zero
 
     private var browser: BrowserModel {
         context.browser
@@ -283,10 +295,19 @@ private struct SplitRowCell: View {
             coordinator.tabPreview.dismiss()
             browser.close(tab)
         }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            windowFrame = frame
+            coordinator.tabPreview.moved(tab.id, anchor: frame)
+        }
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
+            if over {
+                coordinator.tabPreview.hover(tab, anchor: windowFrame)
+            } else {
+                coordinator.tabPreview.unhover(tab.id)
+            }
         }
-        .help(Text(verbatim: tab.title))
+        .onDisappear { coordinator.tabPreview.unhover(tab.id) }
     }
 }
 

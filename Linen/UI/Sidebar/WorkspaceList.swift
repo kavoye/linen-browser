@@ -157,8 +157,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             return
         }
 
-        if model.carriedTabID != nil, !coordinator.isShowingSettings,
-           model.dropFrameInWindow.contains(inWindow) {
+        if model.carriedTabID != nil, model.dropFrameInWindow.contains(inWindow) {
             model.aim(at: inWindow)
         } else if model.target != nil {
             model.target = nil
