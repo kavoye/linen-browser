@@ -62,6 +62,7 @@ struct ToolbarButton: View {
         .overlay {
             if let heldMenu, enabled {
                 ToolbarHoldCatcher(hovering: $hovering, menu: heldMenu, action: action)
+                    .holdsWindowStillOnHover()
             }
         }
         .animation(Theme.Motion.quick, value: hovering)
