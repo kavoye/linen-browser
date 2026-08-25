@@ -31,6 +31,10 @@ final class AnyLanguageModelAgent: AgentRunner {
     private let toolkit: AgentToolkit
     private let log: ConversationLog
 
+    /// Every hosted adapter drops tool calls while streaming; Apple's own
+    /// session runs them inside it.
+    private lazy var streamsAnswers: Bool = model is SystemLanguageModel || tools().isEmpty
+
     private var sessions: [UUID: LanguageModelSession] = [:]
     private var discardedTabIDs = RecentIDs()
     private var prewarmedSession: LanguageModelSession?
@@ -107,6 +111,7 @@ final class AnyLanguageModelAgent: AgentRunner {
                 completion = try await completeTurn(
                     utterance: utterance,
                     startingWith: session,
+                    task: task,
                     reply: reply
                 )
             } catch {
@@ -115,6 +120,7 @@ final class AnyLanguageModelAgent: AgentRunner {
                 completion = try await completeTurn(
                     utterance: utterance,
                     startingWith: makeSession(),
+                    task: task,
                     reply: reply
                 )
             }
@@ -159,6 +165,7 @@ final class AnyLanguageModelAgent: AgentRunner {
     private func completeTurn(
         utterance: String,
         startingWith initialSession: LanguageModelSession,
+        task: AgentTaskContext,
         reply: AgentReplyModel
     ) async throws -> Completion {
         let observer = AgentToolExecutionObserver(reply: reply, maxToolCalls: budget.maxToolCalls)
@@ -177,9 +184,15 @@ final class AnyLanguageModelAgent: AgentRunner {
             session.toolExecutionDelegate = observer
             var expectedPrefixCount = session.transcript.count + 1
 
-            let response: LanguageModelSession.Response<String>
+            let answer: String
             do {
-                response = try await session.respond(to: prompt, options: turnOptions)
+                answer = try await respond(
+                    with: session,
+                    to: prompt,
+                    options: turnOptions,
+                    task: task,
+                    reply: reply
+                )
             } catch {
                 guard Self.isContextWindowError(error), !hasRecoveredFromOverflow else { throw error }
                 hasRecoveredFromOverflow = true
@@ -187,7 +200,13 @@ final class AnyLanguageModelAgent: AgentRunner {
                 session = overflowCompacted(from: session)
                 session.toolExecutionDelegate = observer
                 expectedPrefixCount = session.transcript.count + 1
-                response = try await session.respond(to: prompt, options: turnOptions)
+                answer = try await respond(
+                    with: session,
+                    to: prompt,
+                    options: turnOptions,
+                    task: task,
+                    reply: reply
+                )
             }
 
             hasRecoveredFromOverflow = false
@@ -197,7 +216,7 @@ final class AnyLanguageModelAgent: AgentRunner {
             )
             session.toolExecutionDelegate = observer
 
-            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = answer.trimmingCharacters(in: .whitespacesAndNewlines)
             if !text.isEmpty {
                 return Completion(text: text, session: session)
             }
@@ -222,6 +241,40 @@ final class AnyLanguageModelAgent: AgentRunner {
         }
 
         return Completion(text: Self.giveUpReply, session: session)
+    }
+
+    private func respond(
+        with session: LanguageModelSession,
+        to prompt: String,
+        options: GenerationOptions,
+        task: AgentTaskContext,
+        reply: AgentReplyModel
+    ) async throws -> String {
+        guard streamsAnswers else {
+            return try await session.respond(to: prompt, options: options).content
+        }
+
+        var answer = ""
+        var lastPublished = ContinuousClock.now
+        for try await snapshot in session.streamResponse(to: prompt, options: options) {
+            try Task.checkCancellation()
+            answer = snapshot.content
+            guard !answer.isEmpty else { continue }
+            let now = ContinuousClock.now
+            guard now - lastPublished > .milliseconds(200) else { continue }
+            lastPublished = now
+            publish(answer, task: task, reply: reply)
+        }
+        if !answer.isEmpty {
+            publish(answer, task: task, reply: reply)
+        }
+        return answer
+    }
+
+    private func publish(_ text: String, task: AgentTaskContext, reply: AgentReplyModel) {
+        reply.setActivity(nil)
+        reply.update(text: text)
+        log.updateResponse(text, taskID: task.id, closingSteps: false)
     }
 
     private func preparedSession(
@@ -423,13 +476,15 @@ final class AnyLanguageModelAgent: AgentRunner {
         return session
     }
 
-    private func makeSession(transcript: Transcript? = nil) -> LanguageModelSession {
-        let tools: [any Tool]
+    private func tools() -> [any Tool] {
         if let enabledToolIDs {
-            tools = makeAgentTools(toolkit: toolkit, enabledIDs: enabledToolIDs)
-        } else {
-            tools = makeAgentTools(toolkit: toolkit, tier: budget.toolTier)
+            return makeAgentTools(toolkit: toolkit, enabledIDs: enabledToolIDs)
         }
+        return makeAgentTools(toolkit: toolkit, tier: budget.toolTier)
+    }
+
+    private func makeSession(transcript: Transcript? = nil) -> LanguageModelSession {
+        let tools = tools()
         if let transcript {
             return LanguageModelSession(model: model, tools: tools, transcript: transcript)
         }
