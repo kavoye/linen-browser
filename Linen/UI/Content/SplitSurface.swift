@@ -77,6 +77,7 @@ final class FrameGate {
 struct SplitSurface: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
+    let settingsWorkspace: SettingsWorkspace
     let split: TabSplit
     let panes: [BrowserTab]
 
@@ -248,6 +249,7 @@ struct SplitSurface: View {
             tab: tab,
             browser: browser,
             coordinator: coordinator,
+            settingsWorkspace: settingsWorkspace,
             pull: tab.id == browser.activeTabID ? pull : .idle
         )
         .id(tab.id)
@@ -286,6 +288,7 @@ private struct WebPane: View {
     let tab: BrowserTab
     let browser: BrowserModel
     let coordinator: AppCoordinator
+    let settingsWorkspace: SettingsWorkspace
     let pull: PullState
 
     private var backdrop: Color {
@@ -306,14 +309,25 @@ private struct WebPane: View {
 
     }
 
+    @ViewBuilder
     private var surface: some View {
-        page
-            .overlay {
-                if showsStartPage {
-                    StartPage(browser: browser, coordinator: coordinator)
-                        .transition(.identity)
+        if let internalPage = tab.internalPage {
+            InternalPageSurface(
+                page: internalPage,
+                browser: browser,
+                coordinator: coordinator,
+                settingsWorkspace: settingsWorkspace
+            )
+            .background(Theme.windowBackground)
+        } else {
+            page
+                .overlay {
+                    if showsStartPage {
+                        StartPage(browser: browser, coordinator: coordinator)
+                            .transition(.identity)
+                    }
                 }
-            }
+        }
     }
 
     private var page: some View {
@@ -532,16 +546,17 @@ private struct PaneHandle: View {
 
     var body: some View {
         ZStack {
-            if wearsGlass {
-                LoomPanelFill(
-                    shape: Capsule(),
-                    emphasis: isFocused ? 2.6 : 1,
-                    tint: isFocused ? Theme.accent : nil
-                )
-                .transaction { $0.animation = nil }
-            } else if isFocused {
+            if isFocused, !wearsGlass {
                 Capsule().fill(Theme.accent)
             }
+            LoomPanelFill(
+                shape: Capsule(),
+                isVisible: wearsGlass,
+                emphasis: isFocused ? 2.6 : 1,
+                tint: isFocused ? Theme.accent : nil,
+                isInteractive: true
+            )
+            .transaction { $0.animation = nil }
         }
         .overlay {
             Capsule().strokeBorder(Theme.Wash.strong, lineWidth: 0.5)
@@ -558,7 +573,9 @@ private struct PaneHandle: View {
         .frame(width: Self.size.width, height: Self.size.height)
         .shadow(color: .black.opacity(wearsGlass ? 0 : 0.18), radius: 5, y: 2)
         .opacity(visibility)
+        .contentShape(Capsule())
         .allowsHitTesting(!isHidden || dragging)
+        .holdsWindowStillOnHover()
         .pointerStyle(dragging ? .grabActive : .grabIdle)
         .onHover { over in
             hovering = over

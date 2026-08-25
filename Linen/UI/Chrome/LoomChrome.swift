@@ -297,15 +297,17 @@ struct LoomPanelFill<S: Shape>: View {
     var isVisible = true
     var emphasis: Double = 1
     var tint: Color?
+    var isInteractive = false
 
     @Environment(\.colorScheme) private var colorScheme
 
     private var glass: Glass {
         guard isVisible else { return .identity }
         let resting = colorScheme == .dark ? 0.18 : 0.10
-        return .regular.tint(
+        let tinted = Glass.regular.tint(
             (tint ?? Theme.sidebarTint).opacity(min(1, resting * emphasis))
         )
+        return isInteractive ? tinted.interactive() : tinted
     }
 
     var body: some View {

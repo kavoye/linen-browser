@@ -5,6 +5,10 @@ import AppKit
 import SwiftUI
 import WebKit
 
+nonisolated enum SiteControlsMetrics {
+    static let inset: CGFloat = 14
+}
+
 struct SiteControlsMenu: View {
     let browser: BrowserModel
 
@@ -18,7 +22,8 @@ struct SiteControlsMenu: View {
         browser.activeTab
     }
     private var hasPage: Bool {
-        !(tab?.urlString.isEmpty ?? true)
+        guard let tab, !tab.urlString.isEmpty else { return false }
+        return !tab.isShowingSystemPage
     }
 
     var body: some View {
@@ -54,21 +59,25 @@ private struct SiteControlsPanel: View {
         VStack(spacing: 0) {
             SiteControlsHeader(tab: tab)
 
-            Divider()
+            sectionRule
 
             SiteZoomSection(tab: tab)
 
-            Divider()
+            sectionRule
 
             SiteBehaviorSection(browser: browser, tab: tab)
 
             if !tab.permissions.origin.isEmpty {
-                Divider()
+                sectionRule
                 SitePermissionsSection(tab: tab)
             }
         }
         .frame(width: 340)
         .background(.ultraThickMaterial)
+    }
+
+    private var sectionRule: some View {
+        Divider().padding(.horizontal, SiteControlsMetrics.inset)
     }
 }
 
@@ -112,7 +121,7 @@ private struct SiteControlsHeader: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, SiteControlsMetrics.inset)
         .padding(.vertical, 12)
     }
 }
@@ -160,7 +169,7 @@ private struct SiteZoomSection: View {
             }
             .background(.quaternary, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, SiteControlsMetrics.inset)
         .padding(.vertical, 10)
     }
 
@@ -279,7 +288,7 @@ private struct TrackerInfoPopover: View {
         VStack(alignment: .leading, spacing: 0) {
             TrackerInfoHeader(isBlocking: isBlocking)
 
-            Divider()
+            Divider().padding(.horizontal, SiteControlsMetrics.inset)
 
             if let domains {
                 TrackerDomainList(domains: domains, isBlocking: isBlocking)
@@ -294,7 +303,7 @@ private struct TrackerInfoPopover: View {
                 .frame(maxWidth: .infinity, minHeight: 74)
             }
 
-            Divider()
+            Divider().padding(.horizontal, SiteControlsMetrics.inset)
 
             TrackerInfoCaption()
         }
@@ -390,7 +399,7 @@ private struct TrackerDomainList: View {
                 .frame(height: listHeight)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, SiteControlsMetrics.inset)
         .padding(.vertical, 11)
     }
 }
@@ -446,7 +455,7 @@ private struct SitePermissionsSection: View {
             Text("Permissions")
                 .font(Theme.Font.caption)
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, SiteControlsMetrics.inset)
                 .padding(.top, 9)
                 .padding(.bottom, 3)
 
@@ -525,7 +534,7 @@ private struct SiteControlRow<Accessory: View>: View {
 
             accessory
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, SiteControlsMetrics.inset)
         .frame(minHeight: 36)
     }
 }

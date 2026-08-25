@@ -62,7 +62,6 @@ struct ContentArea: View {
     }
 
     private var landing: SplitDropPlan.Target? {
-        guard !coordinator.isShowingSettings else { return nil }
         guard browser.activeSplit == nil, coordinator.sidebarDrag.source == .row else { return nil }
         return coordinator.sidebarDrag.target
     }
@@ -72,29 +71,24 @@ struct ContentArea: View {
             KeptAliveTabs(browser: browser, media: coordinator.media)
 
             Group {
-                if let tab = browser.activeTab, let internalPage = tab.internalPage {
-                    Group {
-                        switch internalPage {
-                        case .settings:
-                            SettingsView(coordinator: coordinator, workspace: settingsWorkspace)
-                        case .history:
-                            HistoryView(browser: browser)
-                        case .downloads:
-                            DownloadsView(browser: browser)
-                        case .releaseNotes:
-                            ReleaseNotesView(browser: browser, notes: coordinator.releaseNotes)
-                        }
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if let split = browser.activeSplit, let panes = browser.splitPanes {
+                if let split = browser.activeSplit, let panes = browser.splitPanes {
                     SplitSurface(
                         browser: browser,
                         coordinator: coordinator,
+                        settingsWorkspace: settingsWorkspace,
                         split: split,
                         panes: panes,
                         pull: pullState
                     )
                     .transition(.identity)
+                } else if let tab = browser.activeTab, let internalPage = tab.internalPage {
+                    InternalPageSurface(
+                        page: internalPage,
+                        browser: browser,
+                        coordinator: coordinator,
+                        settingsWorkspace: settingsWorkspace
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else if let tab = browser.activeTab, !showStartPage {
                     ActiveWebSurface(tab: tab)
                         .transition(.identity)

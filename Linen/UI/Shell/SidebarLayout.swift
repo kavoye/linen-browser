@@ -30,8 +30,14 @@ enum SidebarMetrics {
 
     static let iconsContentInset: CGFloat = 8
 
+    static let rowHeight: CGFloat = 32
+
     static func rowContentPadding(style: SidebarStyle) -> CGFloat {
         style == .icons ? 0 : 9
+    }
+
+    static func rowControlEdgeOffset(style: SidebarStyle) -> CGFloat {
+        (rowHeight - rowControlExtent) / 2 - rowContentPadding(style: style)
     }
 
     static func contentInset(style: SidebarStyle) -> CGFloat {

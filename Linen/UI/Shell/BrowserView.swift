@@ -42,11 +42,12 @@ struct BrowserView: View {
 
     var body: some View {
         let width = sidebar.openWidth(in: containerWidth)
+        let roomBesideSidebar = containerWidth - (sidebar.isVisible ? width : 0)
         let isExpanded = showsPanel && panel.isExpanded
         let shell = LoomShellGeometry(
             containerWidth: containerWidth,
             sidebarWidth: width,
-            preferredPanelWidth: panel.openWidth(in: containerWidth),
+            preferredPanelWidth: panel.openWidth(in: roomBesideSidebar),
             isSidebarVisible: sidebar.isVisible,
             isPanelVisible: showsPanel,
             isPanelExpanded: isExpanded
@@ -87,10 +88,10 @@ struct BrowserView: View {
                     onLightPage: chromeSitsOnALightPage,
                     isDragging: panel.isDragging,
                     onDragChanged: {
-                        panel.dragChanged(translation: $0, container: containerWidth)
+                        panel.dragChanged(translation: $0, available: roomBesideSidebar)
                     },
                     onDragEnded: {
-                        panel.dragEnded(translation: $0, container: containerWidth)
+                        panel.dragEnded(translation: $0, available: roomBesideSidebar)
                     },
                     onReset: { panel.resetWidth() }
                 )
@@ -145,7 +146,11 @@ struct BrowserView: View {
 
             SidebarVisibilityToggle(browser: browser, coordinator: coordinator)
 
-            TabPreviewOverlay(browser: browser, model: coordinator.tabPreview)
+            TabPreviewOverlay(
+                browser: browser,
+                model: coordinator.tabPreview,
+                sidebarEdge: sidebar.isShowing ? width : 0
+            )
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
                 .environment(\.sidebarStyle, sidebar.style)

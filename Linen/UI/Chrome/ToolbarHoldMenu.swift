@@ -78,7 +78,7 @@ enum NavigationHoldMenu {
             return symbol(page.symbol)
         }
         if SystemPages.isStart(item.url) {
-            return symbol("square.grid.2x2")
+            return symbol(SystemPages.startSymbol)
         }
         guard let host = item.url.host(),
               let cached = FaviconLoader.shared.cached(for: host),

@@ -6,7 +6,7 @@ import SwiftUI
 
 private enum DestinationLayout {
     static let maxWidth: CGFloat = 780
-    static let headerVerticalPadding: CGFloat = 12
+    static let headerVerticalPadding: CGFloat = 20
 }
 
 struct DestinationPage<Toolbar: View, Content: View>: View {

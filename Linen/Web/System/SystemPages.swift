@@ -13,6 +13,12 @@ nonisolated enum SystemPages {
 
     static let start = URL(string: "\(scheme)://\(startHost)")!
 
+    static let startSymbol = "square.grid.2x2"
+
+    @MainActor static func showsStartFace(_ tab: BrowserTab) -> Bool {
+        tab.isShowingStartPage || tab.hasNoPageYet
+    }
+
     static func isSystem(_ url: URL?) -> Bool {
         url?.scheme?.lowercased() == scheme
     }
@@ -67,7 +73,7 @@ extension BrowserTab.InternalPage {
 }
 
 final class SystemPageSchemeHandler: NSObject, WKURLSchemeHandler {
-    private static let document = Data("""
+    private nonisolated static let document = Data("""
         <!doctype html><html><head><meta charset="utf-8">\
         <meta name="color-scheme" content="light dark">\
         <title></title></head><body></body></html>

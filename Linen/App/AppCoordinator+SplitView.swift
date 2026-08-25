@@ -32,7 +32,7 @@ extension AppCoordinator {
     }
 
     func dropOnPage(_ tab: BrowserTab, onto anchorID: UUID?, zone: SplitDropZone) {
-        guard !isShowingSettings, zone != .none else { return }
+        guard zone != .none else { return }
         let anchor = anchorID.flatMap { browser.tab(id: $0) } ?? browser.activeTab
         guard let anchor, anchor !== tab else { return }
 

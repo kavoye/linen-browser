@@ -17,6 +17,7 @@ struct ExtensionPageHost {
 
 enum PageSecurity: Equatable {
     case secure
+    case pending
     case mixed
     case insecure
     case none
@@ -857,7 +858,11 @@ final class BrowserTab: Identifiable {
         }
         switch scheme {
         case "https":
-            security = webView.hasOnlySecureContent ? .secure : .mixed
+            if webView.isLoading {
+                security = .pending
+            } else {
+                security = webView.hasOnlySecureContent ? .secure : .mixed
+            }
         case "http":
             security = .insecure
         default:

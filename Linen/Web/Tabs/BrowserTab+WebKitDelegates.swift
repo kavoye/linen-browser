@@ -28,10 +28,8 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         }
         if let url = navigationAction.request.url, !ExternalApp.staysInWebView(url) {
             decisionHandler(.cancel)
-            if navigationAction.targetFrame?.isMainFrame != false {
-                let window = webView.window
-                Task { await ExternalApp.offerToOpen(url, in: window) }
-            }
+            let window = webView.window
+            Task { await ExternalApp.offerToOpen(url, in: window) }
             return
         }
         if let tab, let onOpenInNewTab = tab.onOpenInNewTab,
