@@ -4,8 +4,15 @@
 import AppKit
 import Foundation
 
+nonisolated struct ExternalAppMatch: Sendable {
+    let url: URL
+    let name: String
+}
+
 @MainActor
 enum ExternalApp {
+    typealias Match = ExternalAppMatch
+
     private nonisolated static let webSchemes: Set<String> = [
         "http", "https", "about", "blob", "data", "file", "javascript", "webkit-extension",
     ]
@@ -15,30 +22,51 @@ enum ExternalApp {
         return webSchemes.contains(scheme)
     }
 
+    static var openerForTesting: ((URL) -> Void)?
+
+    private static var isAsking = false
+
     static func offerToOpen(_ url: URL, in window: NSWindow?) async {
-        guard let window else { return }
+        if let openerForTesting {
+            openerForTesting(url)
+            return
+        }
+        guard let host = window, !isAsking else { return }
+        isAsking = true
+        defer { isAsking = false }
+        let match = await application(toOpen: url)
         let alert = NSAlert()
 
-        guard let app = NSWorkspace.shared.urlForApplication(toOpen: url) else {
+        guard let match else {
             alert.messageText = String(localized: "No app can open this link.")
             alert.informativeText = String(
                 localized: "Nothing installed on this Mac handles “\(url.scheme ?? "")” links."
             )
             alert.addButton(withTitle: String(localized: "OK"))
-            _ = await present(alert, in: window)
+            _ = await present(alert, in: host)
             return
         }
 
-        let name = FileManager.default.displayName(atPath: app.path)
-        alert.messageText = String(localized: "Do you want to allow this page to open “\(name)”?")
+        alert.messageText = String(localized: "Do you want to allow this page to open “\(match.name)”?")
         alert.addButton(withTitle: String(localized: "Allow"))
         alert.addButton(withTitle: String(localized: "Cancel"))
-        guard await present(alert, in: window) == .alertFirstButtonReturn else { return }
+        guard await present(alert, in: host) == .alertFirstButtonReturn else { return }
         NSWorkspace.shared.open(url)
     }
 
-    private static func present(_ alert: NSAlert, in window: NSWindow) async -> NSApplication.ModalResponse {
-        await withCheckedContinuation { continuation in
+    private nonisolated static func application(toOpen url: URL) async -> Match? {
+        await Task.detached(priority: .userInitiated) {
+            guard let app = NSWorkspace.shared.urlForApplication(toOpen: url) else { return nil }
+            return Match(url: app, name: FileManager.default.displayName(atPath: app.path))
+        }.value
+    }
+
+    private static func present(
+        _ alert: NSAlert,
+        in window: NSWindow?
+    ) async -> NSApplication.ModalResponse {
+        guard let window else { return .cancel }
+        return await withCheckedContinuation { continuation in
             alert.beginSheetModal(for: window) { response in
                 continuation.resume(returning: response)
             }
