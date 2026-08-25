@@ -276,6 +276,9 @@
         }
       }
     },
+    "%lld more" : {
+
+    },
     "%lld of %lld" : {
       "comment" : "Match position in the find bar: current match, then total matches, e.g. “3 of 17”. Sits between the field and the arrow buttons.",
       "localizations" : {
@@ -312,6 +315,9 @@
           }
         }
       }
+    },
+    "%lld questions" : {
+
     },
     "%lld req" : {
       "comment" : "First field of the agent activity column's usage footer. %lld is how many requests were sent to the model in this tab; “req” is a deliberate abbreviation of “requests”. Monospaced and very tight — abbreviate in your language too.",
@@ -457,11 +463,11 @@
         }
       }
     },
-    "•" : {
-      "comment" : "The bullet character that starts each item in the list of changes in the release notes sheet. It is a glyph, not text — keep it as it is, or replace it only with the bullet character the target language conventionally uses."
-    },
     "`%@` is saved in your Keychain." : {
       "comment" : "Caption under the API key row when a key is stored and can be shown partly hidden. %@ is the masked form of the key, for example the first and last few characters — leave it as it is. The backticks mark it as code and must be kept; Keychain is Apple’s password store, so use Apple’s own name for it."
+    },
+    "1 tab" : {
+
     },
     "A blank page, with the address bar ready." : {
       "comment" : "Caption for the new-tab choice that opens a blank tab."
@@ -513,9 +519,6 @@
     },
     "Actions" : {
       "comment" : "Section heading in the ⌘K palette over the app's own commands (New Tab, Settings, Clear History…). Plural noun, Title Case."
-    },
-    "Activity" : {
-      "comment" : "Title of the Activity tab in the side panel, where the assistant’s steps are listed. A noun on a tab, so keep it to one short word — the tab is narrow and sits beside others."
     },
     "Actual Size" : {
       "comment" : "Command that resets page zoom to 100 per cent: an item in the View menu and in the site controls menu on the toolbar. Title Case, as macOS menu commands are."
@@ -672,8 +675,11 @@
     "Another copy of Linen is open. Nothing here is saved." : {
       "comment" : "Brief notice at the bottom of the window when Linen starts while another copy of it already has the session open — a second build during development, usually. That copy keeps the tabs; this window opens empty and writes nothing down. Sentence case, two short sentences."
     },
-    "Answers immediately. The fastest option, but weak at multi-step tasks." : {
-      "comment" : "Caption under the Thinking segmented control in Settings > Provider, describing the None level of reasoning effort."
+    "Answer…" : {
+
+    },
+    "Answers straight away." : {
+
     },
     "Anthropic" : {
       "comment" : "Vendor name, shown as the API dialect a custom endpoint speaks. Leave as is."
@@ -720,6 +726,12 @@
     "Ask %@" : {
       "comment" : "Section heading over the assistant's row in the address bar results and in the ⌘K palette. %@ is the name of the answering provider and model, e.g. “OpenAI (gpt-5.6-luna)” — never translated. “Ask” is the verb. Title Case."
     },
+    "Ask about this page" : {
+
+    },
+    "Ask again" : {
+
+    },
     "Ask Again" : {
       "comment" : "Words that replace the footer of a recent-task card on the start page while the pointer is over it; clicking the card runs the same prompt again. Verb phrase in Title Case, one line in a narrow card."
     },
@@ -727,7 +739,7 @@
       "comment" : "Tooltip on a recent-task card on the start page. %@ is the user's own earlier prompt, quoted back as they wrote or spoke it — never translated. Keep the colon."
     },
     "Ask anything" : {
-      "comment" : "Large heading above the ask field on the start page, shown when the browser is set to agent-only input. Imperative invitation, sentence case; alternates with “Search anything”."
+
     },
     "Ask where to save each file" : {
       "comment" : "Title of the switch on the Downloads settings page that makes Linen prompt for a folder on every download, and the title of that same row in Settings search. Sentence case."
@@ -906,9 +918,6 @@
     "Certificate exceptions" : {
 
     },
-    "Change in Settings…" : {
-
-    },
     "Change the keyboard shortcut" : {
       "comment" : "Tooltip on the shortcut recorder in Settings > Voice while it is idle; pressing it starts listening for a new key combination."
     },
@@ -936,6 +945,9 @@
     "Checking for updates…" : {
       "comment" : "Status line in the update row on the About settings page while a check is running."
     },
+    "Checking the connection" : {
+
+    },
     "Checking this page…" : {
 
     },
@@ -960,6 +972,9 @@
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
+    "Choose how much it thinks" : {
+
+    },
     "Choose Site Settings in the toolbar to change one." : {
       "comment" : "Guidance under No websites changed, saying where per-website settings are made. Site Settings is the name of a menu in the browser toolbar — translate it the same way there. Imperative."
     },
@@ -969,8 +984,14 @@
     "Choose the bookmarks file you exported from another browser." : {
       "comment" : "Message at the top of the macOS file panel that Choose File… opens. It tells the user which file to pick."
     },
+    "Choose the model" : {
+
+    },
     "Choose what to clear and how far back to go. This can’t be undone." : {
       "comment" : "Message in that dialog, naming its two controls: the checkboxes for what, and the time-range menu for how far back. Do not list the kinds themselves here — they are the checkbox labels, and unticking one would make a list go stale. Curly apostrophe."
+    },
+    "Choose which assistant answers" : {
+
     },
     "Choose Which Tab the Words Follow" : {
       "comment" : "Tooltip on the lyrics panel title while more than one tab has media; the title opens a menu that lists those tabs so the user can pick which one the lyrics follow. Title Case. Twin of “Choose Which Tab to Control”, which is the same control on the media dock."
@@ -1124,6 +1145,9 @@
     "Color" : {
       "comment" : "Label of the color swatches that tint a profile’s symbol."
     },
+    "Compare AirPods prices" : {
+
+    },
     "completes a purchase" : {
       "comment" : "Clause that completes the sentence This … and usually can’t be undone. in the dialog asking the user to approve an action the assistant wants to take. Lowercase, third person singular, and the implied subject is the action being approved."
     },
@@ -1169,11 +1193,23 @@
     "Copy" : {
       "comment" : "Standard macOS Edit menu item. Use the system's own wording. A verb."
     },
+    "Copy Answer" : {
+
+    },
     "Copy Link" : {
       "comment" : "Command that puts the current page's address on the clipboard: an Edit menu item, an item in the site controls menu on the toolbar, and a tab context-menu item. Title Case."
     },
     "Copy Links" : {
       "comment" : "Sidebar context menu on a split row or several selected tabs: puts one web address per line on the clipboard. Plural of Copy Link. Title case."
+    },
+    "Copy Question" : {
+
+    },
+    "Copy this answer" : {
+
+    },
+    "Copy this question" : {
+
     },
     "Couldn’t build the download URL" : {
       "comment" : "Error shown when an extension cannot be fetched because its download address could not be assembled. A technical failure message, shown to the user."
@@ -1265,6 +1301,9 @@
     "Deny" : {
       "comment" : "The saved policy that refuses a permission for a website; an option in the pop-up menus on the Websites settings page. A verb."
     },
+    "Dinner ideas" : {
+
+    },
     "Disable Voice" : {
       "comment" : "Command in the ⌘K palette that stops the assistant reading its replies aloud; its detail line reads “agent speech”. Title Case; pairs with “Enable Voice”."
     },
@@ -1336,6 +1375,12 @@
     "Edit endpoint" : {
       "comment" : "Heading of the Settings page for a custom model server when an existing one is being changed; it reads “Custom endpoint” when a new one is being added. Sentence case; “Edit” is a verb."
     },
+    "Edit Question" : {
+
+    },
+    "Edit this question" : {
+
+    },
     "Edit…" : {
       "comment" : "Button on the current profile’s card that opens that profile’s own page."
     },
@@ -1402,6 +1447,9 @@
     "Experiments" : {
       "comment" : "Name of the Settings page that holds unfinished features, in the System group of the Settings sidebar, and the heading of that page. A noun, plural."
     },
+    "Explain a paper to me" : {
+
+    },
     "Extension" : {
       "comment" : "Placeholder name used for an installed extension whose package declares no name of its own. A generic noun."
     },
@@ -1462,8 +1510,8 @@
     "Finding a video…" : {
       "comment" : "Line in the assistant’s live activity feed while it searches for a video whose topic is unknown. Present participle; real ellipsis."
     },
-    "Finished on %@" : {
-      "comment" : "Caption under the last snapshot in the agent activity column once the assistant has stopped. %@ is the page's host, e.g. example.com, or the fallback phrase “the research page”."
+    "Flights to Lisbon" : {
+
     },
     "Folder" : {
       "comment" : "Label of a chip in the Downloads view's toolbar that opens the download folder in the Finder. The noun, Title Case, in a narrow chip beside a folder glyph."
@@ -1534,8 +1582,8 @@
     "Help" : {
       "comment" : "Title of the Help menu in the menu bar. Use the standard macOS wording."
     },
-    "Hide Assistant Activity" : {
-      "comment" : "View menu item that hides the panel showing what the assistant is doing; the same item reads “Show Assistant Activity” while the panel is hidden. Title Case."
+    "Hide Assistant" : {
+
     },
     "Hide Browser" : {
       "comment" : "View menu item that hides the web view; the same item reads “Show Browser” while it is hidden. Title Case."
@@ -1560,6 +1608,9 @@
     },
     "Hide Sidebar" : {
       "comment" : "View menu item that hides the tab sidebar; the same item reads “Show Sidebar” while it is hidden. Title Case."
+    },
+    "Hide the steps" : {
+
     },
     "Hide Video" : {
       "comment" : "Tooltip on the eye button in the media dock; it hides the picture while playback and the controls carry on. Title Case, narrow dock."
@@ -1590,6 +1641,9 @@
     },
     "Homepage" : {
       "comment" : "Used twice: as an option in the New tab segmented control on the General settings page, and as the title of the row where the homepage address is typed. One word, as browsers write it."
+    },
+    "How are markets today?" : {
+
     },
     "How long visited pages are kept." : {
       "comment" : "Caption for the Keep history for row in Settings search results."
@@ -1828,6 +1882,9 @@
     "left ⌥" : {
       "comment" : "Name of one physical modifier key in the shortcut recorder in Settings, where the two sides of the keyboard have to be told apart. Only the side word is translated — the symbol is the glyph macOS prints on the key, so keep it exactly and keep it beside the word. Very tight: this is a key cap. The glyph is Option."
     },
+    "Left to the assistant" : {
+
+    },
     "Less transparent" : {
 
     },
@@ -1895,6 +1952,9 @@
 
     },
     "Liquid Glass transparency" : {
+
+    },
+    "List Tabs" : {
 
     },
     "Listening…" : {
@@ -1996,6 +2056,9 @@
     "Microphone" : {
       "comment" : "Name of the microphone permission: a row on the Websites settings page and a label in the permission badge in the toolbar."
     },
+    "Minimal" : {
+
+    },
     "Minimize" : {
       "comment" : "Standard macOS Window menu item. Use the system's own wording. A verb."
     },
@@ -2039,6 +2102,9 @@
           }
         }
       }
+    },
+    "More in Settings…" : {
+
     },
     "More Options" : {
       "comment" : "Tooltip on the ellipsis button at the end of an extension's row in Settings > Extensions. It opens a menu holding the extension's own options page, where it has one, and Remove Extension. Title Case."
@@ -2193,6 +2259,9 @@
     "No pages visited yet." : {
       "comment" : "Empty state in the History view when there is no history at all. Full sentence with a period, sentence case."
     },
+    "No preference — the assistant chose" : {
+
+    },
     "No provider is ready" : {
       "comment" : "Settings → Assistant. Title of the status shown when no provider can serve replies at all."
     },
@@ -2210,9 +2279,6 @@
     },
     "No tabs" : {
       "comment" : "Shown where a tab count would be, when a profile has none. A fragment, not a sentence."
-    },
-    "No tasks yet" : {
-      "comment" : "Title shown in the middle of the Activity panel before the assistant has done anything on this page. Sentence case with no final full stop."
     },
     "No webpage is open yet." : {
 
@@ -2499,11 +2565,17 @@
     "Place Side by Side" : {
       "comment" : "Menu command that rearranges two stacked pages into two columns. Title Case. Its opposite is Stack Pages, and the menu shows whichever one is available."
     },
-    "Plans a little before acting. The best balance for voice." : {
-      "comment" : "Caption under the Thinking segmented control in Settings > Provider, describing the Low level of reasoning effort. “Voice” means talking to the assistant out loud."
+    "Plan a day out" : {
+
+    },
+    "Plans a little before acting." : {
+
     },
     "Play" : {
       "comment" : "Tooltip on the play/pause button in the media player docked at the foot of the sidebar, while playback is stopped. Verb; the dock is narrow, so keep it to one word."
+    },
+    "Play a song in any tab. Linen reads its title, looks the words up on LRCLIB, and follows along with the music." : {
+
     },
     "Play chill lofi" : {
       "comment" : "Label on one of three example prompt chips on the start page. “lofi” is the music genre (lo-fi) — keep a form your readers will recognise. The prompt actually sent to the model is separate and stays in English."
@@ -2621,6 +2693,9 @@
     },
     "Read Pages" : {
       "comment" : "Tool name in assistant settings: reading a page’s text and controls."
+    },
+    "Read this answer aloud" : {
+
     },
     "Read your browsing history" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
@@ -2924,9 +2999,6 @@
     "Search" : {
       "comment" : "Title of the General settings section grouping the search engine rows. A noun heading beside an icon, not a button or a verb."
     },
-    "Search anything" : {
-      "comment" : "Large heading above the ask field on the start page in the normal case. Imperative invitation, sentence case; alternates with “Ask anything”."
-    },
     "Search engine" : {
       "comment" : "Title of the General settings row that chooses which search engine is used, and the same wording in the Settings search index. A noun phrase, not an instruction. Sentence case."
     },
@@ -2984,11 +3056,17 @@
     "See the addresses and titles of your open tabs" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Addresses means web addresses. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
+    "See the titles of every tab in the window." : {
+
+    },
     "See your location" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
     "Select All" : {
       "comment" : "Standard macOS Edit menu command, shortcut ⌘A. Use Apple’s own wording for it in the target language."
+    },
+    "Send" : {
+
     },
     "Send you notifications?" : {
       "comment" : "Question in the permission panel when a website asks to send notifications. The website is named in the header just above, so the question deliberately has no subject. Use “send” rather than “show”."
@@ -3032,8 +3110,8 @@
     "Show all models" : {
 
     },
-    "Show Assistant Activity" : {
-      "comment" : "Menu bar command under View that opens the panel showing what the assistant is doing. The same item reads Hide Assistant Activity when the panel is already open, so the two should stay parallel. Title Case."
+    "Show Assistant" : {
+
     },
     "Show Browser" : {
       "comment" : "Menu bar command under View that reveals the web view. The same item reads Hide Browser when the browser is already showing, so the two should stay parallel. Title Case, Show is a verb."
@@ -3086,6 +3164,9 @@
     "Show Tab %lld" : {
       "comment" : "Hidden menu commands under Window bound to ⌘1 through ⌘8. %lld is the tab’s position in the row, a number from 1 to 8. Title Case and established platform terminology."
     },
+    "Show the steps" : {
+
+    },
     "Show Video" : {
       "comment" : "Tooltip on the same eye button once the picture is hidden; it brings the picture back. Title Case, narrow dock."
     },
@@ -3094,6 +3175,9 @@
     },
     "Show what went wrong" : {
       "comment" : "Tooltip on the warning button beside an extension that reported problems; pressing it opens a panel listing them. Show is a verb."
+    },
+    "Side by side" : {
+
     },
     "Sidebar" : {
       "comment" : "Title of the Appearance settings section for the tab sidebar. A noun heading beside an icon."
@@ -3119,6 +3203,9 @@
     "Size on disk" : {
       "comment" : "Title of the row saying how much room a profile takes up."
     },
+    "Skip" : {
+
+    },
     "Skip Setup" : {
       "comment" : "Secondary button on the onboarding screens; ends onboarding without granting anything. Title Case."
     },
@@ -3140,16 +3227,25 @@
     "Software updates can fail when Linen runs from another folder. Linen will move itself to Applications and reopen." : {
       "comment" : "Body of that alert, for a copy that can be moved — usually one sitting in the Downloads folder. The second sentence promises what the default button does. Use the system name of the Applications folder."
     },
+    "Something else" : {
+
+    },
     "Something else…" : {
       "comment" : "Last entry in the search engine pop-up menu, chosen when the user wants an engine that is not listed and will type its address instead. Real ellipsis, promising that a field appears."
     },
     "Space" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the space bar."
     },
+    "Speak Answer" : {
+
+    },
     "Speak answers as they arrive." : {
       "comment" : "Settings search caption for Read aloud. The page caption adds a System Settings link."
     },
     "Speak answers as they arrive. Change the voice or speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)." : {
+
+    },
+    "Split" : {
 
     },
     "Split Down" : {
@@ -3163,6 +3259,9 @@
     },
     "Stack Pages" : {
       "comment" : "Menu command that rearranges two pages shown at once from side by side into one above the other. Title Case. Its opposite is Place Side by Side, and the menu shows whichever one is available."
+    },
+    "Stacked" : {
+
     },
     "Standard" : {
       "comment" : "Name of the conventional non-Liquid Glass window style in Appearance settings. It follows the selected light or dark theme and can optionally use Website tint."
@@ -3219,11 +3318,17 @@
     "Suggested" : {
       "comment" : "Heading over the group of recommended models at the top of the model pop-up menu. Adjective describing the models below it."
     },
+    "Suggestions" : {
+
+    },
     "Suggestions from %@ appear as you type." : {
       "comment" : "Caption under the Search suggestions row. %@ is the search engine's brand name, for example Google or DuckDuckGo — leave the inserted name as is. The alternative caption, used when the engine offers none, is %@ doesn’t offer suggestions."
     },
     "Suggestions from your search engine as you type." : {
       "comment" : "Description of the Search suggestions row, shown only in the Settings search results, where the chosen engine is not known and is named generically. Sentence case with a final full stop."
+    },
+    "Summarise my open tabs" : {
+
     },
     "Swap Pages" : {
       "comment" : "The same command as Swap Panes, on the context menu of a page and of a sidebar row holding two tabs. Title Case. It says pages here because the menu is on the page itself."
@@ -3442,17 +3547,23 @@
     "Theme" : {
       "comment" : "Title of the Appearance settings row that chooses light, dark or automatic, and the same word in the Settings search index. Noun; a short row title."
     },
+    "Things to try" : {
+
+    },
     "Thinking" : {
       "comment" : "Title of the Provider settings row that sets how much reasoning effort the model spends, and the same word in the Settings search index. A noun naming the model’s reasoning, not a progress message."
     },
     "Thinking…" : {
       "comment" : "Status line under the assistant’s reply while it waits for the model, before any action has started. Real ellipsis; unlike the row title with the same word, this one is a progress message."
     },
-    "Thinks as long as it needs, so replies start after a pause." : {
-      "comment" : "Caption under the Thinking segmented control in Settings > Provider, describing the High level of reasoning effort."
+    "Thinks as long as it needs." : {
+
     },
-    "Thinks through multi-step tasks, and is noticeably slower." : {
-      "comment" : "Caption for the Medium level of the reasoning-effort control. The implied subject is the model."
+    "Thinks for a moment first." : {
+
+    },
+    "This chat reads the page it is open beside, and keeps its own thread per tab. Type @ to let it read another tab too." : {
+
     },
     "This connection isn’t private" : {
       "comment" : "Headline on the error page shown when a website’s security certificate could not be verified. A short sentence in sentence case, displayed large above a longer explanation. Curly apostrophe."
@@ -3559,9 +3670,6 @@
     "Type" : {
       "comment" : "Tool name in assistant settings: typing into fields on a web page."
     },
-    "Type @ in the address bar to start one on this page." : {
-      "comment" : "Caption under “No tasks yet”. “One” is a task. The @ is the character that addresses the assistant and is never translated. Full sentence."
-    },
     "Type > for commands" : {
       "comment" : "Note beside the Actions heading in the ⌘K palette, telling the reader that typing the greater-than sign filters the list down to commands only. Keep the “>” character as it is: it is the key the user presses, not punctuation."
     },
@@ -3579,9 +3687,6 @@
     },
     "Unavailable" : {
       "comment" : "Status shown beside a chosen AI provider that cannot run on this Mac. A single word in a narrow status chip, so keep it short."
-    },
-    "Understanding the request" : {
-      "comment" : "Title of the first step in the assistant’s activity trace, shown while it works out what was asked. A noun phrase describing the step, not a sentence."
     },
     "Undo" : {
       "comment" : "Standard macOS Edit menu command, shortcut ⌘Z. Use Apple’s own wording for it in the target language."
@@ -3733,6 +3838,9 @@
     "Watch every network request the browser makes" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Watch means observe. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
+    "Weather this weekend" : {
+
+    },
     "Web Inspector" : {
       "comment" : "Title of the System settings row that turns on web developer tools, and the same wording in the Settings search index. Web Inspector is established platform terminology."
     },
@@ -3844,8 +3952,14 @@
     "Window style" : {
 
     },
+    "Working" : {
+
+    },
     "Working…" : {
       "comment" : "Status line under the assistant’s reply for any action that has no wording of its own. Real ellipsis."
+    },
+    "Works through multi-step tasks." : {
+
     },
     "Would be blocked on this page" : {
 

@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.4.0
+
+### New
+
+- **Assistant** replaces Activity in the side panel: a chat, with its own thread
+  for each tab. Pick which assistant answers, its model, and how much it thinks,
+  under the message you are writing.
+- The assistant can ask you questions. Answer it, skip a question, or let it
+  choose.
+- Type `@` in the panel to attach another tab to your question.
+- Answers are formatted, and each one can be copied, read aloud, asked again, or
+  edited and sent back.
+- **Thinking** shows only the levels the chosen model supports, including
+  **Minimal**.
+- Apple Intelligence answers stream in as they are written.
+- Settings, History, Downloads, Release Notes and new tabs have addresses, so
+  Back and Forward work with them.
+- Suggestions on the start page are a section you can move or turn off.
+- **Settings > Extensions** lists the Safari extensions on your Mac. Each
+  profile keeps its own.
+
+### Improved
+
+- A side panel conversation stays out of the address field.
+- Tab previews cover folders, split panes and Linen’s own pages.
+- Settings pages fit a narrow window.
+- Folder colors are quieter, and a folder’s menu matches them.
+- The split view’s drag pill matches the sidebar and side panel pills.
+- **Website Settings** is off on Linen’s own pages.
+- Linen checks for updates in place, and again after finding one.
+- Extensions say when WebKit cannot run them.
+
+### Fixed
+
+- A website could open one of Linen’s own pages by asking for a `linen:`
+  address.
+- Signing in to a Mac app from a website did nothing.
+- **Read aloud** stayed silent while spoken replies were muted.
+- Release notes broke wrapped lines apart.
+- The window moved while you dragged a button in the toolbar.
+- Space did not reach the page.
+- Sidebar rows sat at different distances from the edge.
+
 ## 0.3.1
 
 ### New
@@ -19,14 +62,13 @@
 
 ### Fixed
 
-- Fixes an issue where the pages you had open in one profile were added to
-  another profile’s history when you switched profiles.
-- Fixes an issue where files you downloaded in a private tab stayed in your
-  downloads after private browsing ended. A download that is still going now
-  stops when you leave private browsing.
-- Fixes an issue where a website’s icon could be saved in the wrong profile.
-- Fixes an issue where the assistant still remembered what you asked it in the
-  profile you left.
+- The pages you had open in one profile were added to another profile’s history
+  when you switched profiles.
+- Files you downloaded in a private tab stayed in your downloads after private
+  browsing ended. A download that is still going now stops when you leave
+  private browsing.
+- A website’s icon could be saved in the wrong profile.
+- The assistant still remembered what you asked it in the profile you left.
 
 ## 0.3.0
 
@@ -66,27 +108,22 @@
 
 ### Fixed
 
-- Fixes an issue where scrolling the sidebar or the side panel could reload the
-  page behind it.
-- Fixes an issue where pointing at the side panel could highlight things on the
-  page underneath.
-- Fixes an issue where dragging an extension button moved the whole window.
-- Fixes an issue where the address field corrected what you typed, so a web
-  address arrives the way you typed it.
-- Fixes an issue where a tab you pointed at with `@` came out blank.
-- Fixes an issue where a new tab said the assistant could read it.
-- Fixes an issue where text in the toolbar was hard to read on some sites.
-- Fixes an issue where an answer from the assistant appeared behind the side
-  panel.
-- Fixes an issue where a tab's title moved when it started playing sound.
-- Fixes an issue where the color of the window changed a moment after you picked
-  a tab.
-- Fixes an issue where some dark sites left the window light, and some sites did
-  not color the window until you reloaded them.
-- Fixes an issue where ⌘← and ⌘→ went back or forward while you were editing the
-  address field instead of moving through its text.
-- Fixes an issue where Website Settings could be difficult to read over a busy
-  or dark page.
+- Scrolling the sidebar or the side panel could reload the page behind it.
+- Pointing at the side panel could highlight things on the page underneath.
+- Dragging an extension button moved the whole window.
+- The address field corrected what you typed. A web address now arrives the way
+  you typed it.
+- A tab you pointed at with `@` came out blank.
+- A new tab said the assistant could read it.
+- Text in the toolbar was hard to read on some sites.
+- An answer from the assistant appeared behind the side panel.
+- A tab's title moved when it started playing sound.
+- The color of the window changed a moment after you picked a tab.
+- Some dark sites left the window light, and some sites did not color the
+  window until you reloaded them.
+- ⌘← and ⌘→ went back or forward while you were editing the address field
+  instead of moving through its text.
+- Website Settings could be difficult to read over a busy or dark page.
 
 ## 0.2.0
 
@@ -121,8 +158,8 @@
 
 ### Fixed
 
-- Fixes an issue where the media player kept showing a track that had stopped.
-- Fixes an issue where Settings and History slid in when they had not moved.
+- The media player kept showing a track that had stopped.
+- Settings and History slid in when they had not moved.
 
 ## 0.1.1
 
@@ -147,10 +184,9 @@
 
 ### Fixed
 
-- Fixes an issue where a pasted link brought its styling into the address field.
-- Fixes an issue where a tab kept spinning after going back.
-- Fixes an issue where the scroll wheel moved the page behind the command
-  palette.
+- A pasted link brought its styling into the address field.
+- A tab kept spinning after going back.
+- The scroll wheel moved the page behind the command palette.
 
 ## 0.1.0
 
