@@ -441,7 +441,15 @@ final class BrowserSettings {
         let known = stored?.compactMap(StartPageSection.init(rawValue:)) ?? []
         var order = known
         for section in StartPageSection.allCases where !order.contains(section) {
-            order.append(section)
+            let following = StartPageSection.allCases
+                .drop { $0 != section }
+                .dropFirst()
+                .first { order.contains($0) }
+            if let following, let index = order.firstIndex(of: following) {
+                order.insert(section, at: index)
+            } else {
+                order.append(section)
+            }
         }
         return order
     }
@@ -643,6 +651,7 @@ final class BrowserSettings {
 }
 
 enum StartPageSection: String, CaseIterable, Identifiable {
+    case suggestions
     case recentTasks
     case frequentSites
     case history
@@ -654,6 +663,8 @@ enum StartPageSection: String, CaseIterable, Identifiable {
 
     var title: LocalizedStringResource {
         switch self {
+        case .suggestions:
+            "Suggestions"
         case .recentTasks:
             "Recent Tasks"
         case .frequentSites:
@@ -667,6 +678,8 @@ enum StartPageSection: String, CaseIterable, Identifiable {
 
     var symbol: String {
         switch self {
+        case .suggestions:
+            "sparkles"
         case .recentTasks:
             "clock.arrow.circlepath"
         case .frequentSites:
@@ -680,6 +693,8 @@ enum StartPageSection: String, CaseIterable, Identifiable {
 
     var summary: LocalizedStringResource {
         switch self {
+        case .suggestions:
+            "Things to try"
         case .recentTasks:
             "Repeat a recent task"
         case .frequentSites:

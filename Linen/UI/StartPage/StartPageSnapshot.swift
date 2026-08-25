@@ -17,6 +17,7 @@ struct StartPageSite: Identifiable, Equatable {
 }
 
 enum StartPageSectionSnapshot: Identifiable, Equatable {
+    case suggestions
     case recentTasks([ConversationLog.TaskTrace])
     case frequentSites([StartPageSite])
     case history([HistoryStore.Entry])
@@ -24,6 +25,8 @@ enum StartPageSectionSnapshot: Identifiable, Equatable {
 
     var id: StartPageSection {
         switch self {
+        case .suggestions:
+            .suggestions
         case .recentTasks:
             .recentTasks
         case .frequentSites:
@@ -62,6 +65,8 @@ struct StartPageSnapshot {
 
     private func sectionSnapshot(_ section: StartPageSection) -> StartPageSectionSnapshot? {
         switch section {
+        case .suggestions:
+            .suggestions
         case .recentTasks:
             recentTasks.isEmpty ? nil : .recentTasks(recentTasks)
         case .frequentSites:

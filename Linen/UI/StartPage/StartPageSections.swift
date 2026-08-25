@@ -29,6 +29,8 @@ private struct StartPageSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             switch section {
+            case .suggestions:
+                StartPageSuggestionSection(coordinator: coordinator)
             case .recentTasks(let traces):
                 StartPageTaskSection(
                     traces: traces,
@@ -55,6 +57,23 @@ private struct StartPageSectionView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct StartPageSuggestionSection: View {
+    let coordinator: AppCoordinator
+
+    var body: some View {
+        StartPageSectionGroup(section: .suggestions) {
+            WrapRow(spacing: 8, lineSpacing: 8, alignment: .leading) {
+                ForEach(StartPageSuggestion.all) { suggestion in
+                    SuggestionChip(symbol: suggestion.symbol, label: suggestion.label) {
+                        Task { await coordinator.handleTypedUtterance(suggestion.ask) }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

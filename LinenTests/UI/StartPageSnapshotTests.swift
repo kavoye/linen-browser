@@ -89,7 +89,8 @@ struct StartPageSnapshotTests {
                 steps: [],
                 response: "",
                 state: .completed,
-                finishedAt: Date(timeIntervalSinceReferenceDate: Double(index + 1))
+                finishedAt: Date(timeIntervalSinceReferenceDate: Double(index + 1)),
+                providerID: nil
             )
         }
 
@@ -106,7 +107,7 @@ struct StartPageSnapshotTests {
         #expect(snapshot.recentDownloads.count == 4)
         #expect(snapshot.recentTasks.map(\.prompt) == ["Task 3", "Task 2", "Task 1"])
         #expect(snapshot.visibleSections(in: StartPageSection.allCases) { _ in true }.map(\.id)
-            == [.recentTasks, .history, .downloads])
+            == [.suggestions, .recentTasks, .history, .downloads])
     }
 
     @Test func startPagePreferencesAreIsolatedBindableAndPersistent() {
@@ -116,11 +117,12 @@ struct StartPageSnapshotTests {
 
         let settings = BrowserSettings(defaults: defaults)
         settings[showsStartPageSection: .history] = false
-        settings.moveStartPageSections(from: IndexSet(integer: 0), to: 4)
+        settings.moveStartPageSections(from: IndexSet(integer: 0), to: 5)
         settings.hideFrequentSite(host: "Example.COM")
 
         #expect(!settings.showsStartPageSection(.history))
-        #expect(settings.startPageOrder == [.frequentSites, .history, .downloads, .recentTasks])
+        #expect(settings.startPageOrder
+            == [.recentTasks, .frequentSites, .history, .downloads, .suggestions])
         #expect(settings.hiddenFrequentHosts == ["example.com"])
 
         let restored = BrowserSettings(defaults: defaults)
