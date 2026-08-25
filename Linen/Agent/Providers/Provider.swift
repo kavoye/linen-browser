@@ -463,6 +463,7 @@ nonisolated enum LLMSettings {
 
     enum ReasoningEffort: String, CaseIterable, Identifiable {
         case none
+        case minimal
         case low
         case medium
         case high
@@ -475,6 +476,8 @@ nonisolated enum LLMSettings {
             switch self {
             case .none:
                 "None"
+            case .minimal:
+                "Minimal"
             case .low:
                 "Low"
             case .medium:
@@ -487,13 +490,15 @@ nonisolated enum LLMSettings {
         var caption: LocalizedStringResource {
             switch self {
             case .none:
-                "Answers immediately. The fastest option, but weak at multi-step tasks."
+                "Answers straight away."
+            case .minimal:
+                "Thinks for a moment first."
             case .low:
-                "Plans a little before acting. The best balance for voice."
+                "Plans a little before acting."
             case .medium:
-                "Thinks through multi-step tasks, and is noticeably slower."
+                "Works through multi-step tasks."
             case .high:
-                "Thinks as long as it needs, so replies start after a pause."
+                "Thinks as long as it needs."
             }
         }
     }

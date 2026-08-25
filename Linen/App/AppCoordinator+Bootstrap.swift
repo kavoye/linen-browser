@@ -132,11 +132,17 @@ extension AppCoordinator {
             media: media,
             log: conversationLog,
             extensionController: extensions.controller,
-            preview: researchPreview
+            preview: researchPreview,
+            questions: agentQuestions
         )
+        agentTurns.onCancel = { [weak self] in self?.agentQuestions.abandon() }
         selectedProvider = ProviderCatalog.shared.selected
         selectedModel = LLMSettings.model(for: selectedProvider)
-        selectedEffort = LLMSettings.reasoningEffort
+        selectedEffort = ReasoningCatalog.resolve(
+            LLMSettings.reasoningEffort,
+            for: selectedProvider,
+            model: selectedModel
+        )
 
         let selected = modelProviders.resolve(selectedProvider)
         supportsReasoningEffort = selected.capabilities.contains(.reasoning)

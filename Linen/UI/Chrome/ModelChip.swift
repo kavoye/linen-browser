@@ -10,7 +10,7 @@ enum ModelChipMetrics {
     }
     static let inset: CGFloat = 9
     static let markSize: CGFloat = 14
-    static let markGap: CGFloat = 7
+    static let markGap: CGFloat = 5
 
     static let textInset = inset + markSize + markGap
 }
@@ -105,7 +105,7 @@ struct EffortMeter: View {
         switch effort {
         case .none:
             1
-        case .low:
+        case .minimal, .low:
             2
         case .medium:
             3
@@ -142,8 +142,19 @@ private enum PopoverMetrics {
     }
 }
 
-private struct EnginePopover: View {
+struct EnginePopover: View {
+    struct Sections: OptionSet {
+        let rawValue: Int
+
+        static let providers = Sections(rawValue: 1 << 0)
+        static let models = Sections(rawValue: 1 << 1)
+        static let thinking = Sections(rawValue: 1 << 2)
+
+        static let engine: Sections = [.models, .thinking]
+    }
+
     let coordinator: AppCoordinator
+    var sections: Sections = .engine
     let dismiss: () -> Void
 
     @State private var fetched: [String] = []
@@ -181,100 +192,122 @@ private struct EnginePopover: View {
         return title
     }
 
+    private var efforts: [LLMSettings.ReasoningEffort] {
+        ReasoningCatalog.efforts(for: provider, model: selectedModel)
+    }
+
+    private var reachable: [Provider] {
+        ProviderCatalog.shared.all.filter { $0.isOnDevice || $0.isLocal || CredentialStore.isConfigured($0) }
+    }
+
+    private var width: CGFloat {
+        if sections.contains(.models) {
+            return 300
+        }
+        return sections.contains(.thinking) ? 280 : 230
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PopoverSectionHeader("Model")
+            if sections.contains(.providers) {
+                PopoverSectionHeader("Assistant")
 
-            ForEach(pinned) { suggestion in
-                EngineRow(
-                    title: suggestion.id,
-                    detail: suggestion.detail,
-                    isSelected: suggestion.id == selectedModel
-                ) {
-                    choose(model: suggestion.id)
-                }
-            }
-
-            if !rest.isEmpty {
-                PopoverSectionHeader(catalogTitle)
-                    .padding(.top, PopoverMetrics.sectionGap)
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(rest, id: \.self) { id in
-                            EngineRow(title: id, detail: "", isSelected: id == selectedModel) {
-                                choose(model: id)
-                            }
-                        }
+                ForEach(reachable) { candidate in
+                    ProviderRow(provider: candidate, isSelected: candidate.id == provider.id) {
+                        choose(provider: candidate)
                     }
                 }
-                .frame(height: catalogHeight)
-                .scrollBounceBehavior(.basedOnSize)
-            } else {
-                PlainRow(
-                    title: "Show all models",
-                    symbol: "arrow.down.circle",
-                    isBusy: isLoading
-                ) {
-                    Task { await load() }
+            }
+
+            if sections.contains(.models) {
+                if sections.contains(.providers) {
+                    PopoverDivider()
                 }
-                .disabled(isLoading)
+
+                PopoverSectionHeader("Model")
+                models
             }
 
-            if let loadError {
-                Text(verbatim: loadError)
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(Theme.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, PopoverMetrics.inset)
-                    .padding(.top, 6)
-            }
-
-            if coordinator.supportsReasoningEffort {
-                PopoverDivider()
+            if sections.contains(.thinking), coordinator.supportsReasoningEffort, !efforts.isEmpty {
+                if sections.contains(.models) || sections.contains(.providers) {
+                    PopoverDivider()
+                }
 
                 PopoverSectionHeader("Thinking")
 
-                SegmentedControl(
-                    items: LLMSettings.ReasoningEffort.allCases.map {
-                        .init(value: $0, label: $0.label)
-                    },
-                    selection: coordinator.selectedEffort,
+                EffortSlider(
+                    efforts: efforts,
+                    effort: ReasoningCatalog.resolve(coordinator.selectedEffort, for: provider, model: selectedModel),
                     onSelect: choose(effort:)
                 )
-                .padding(.horizontal, PopoverMetrics.inset)
-                .help(Text(coordinator.selectedEffort.caption))
+                    .padding(.horizontal, PopoverMetrics.inset)
             }
 
-            PopoverDivider()
-
-            HStack(spacing: 7) {
-                ProviderBrandIcon(providerID: provider.id, size: 12)
-
-                Text(verbatim: provider.name)
-                    .font(Theme.Font.label)
-                    .foregroundStyle(.secondary)
-
-                Spacer(minLength: 8)
-
-                Button {
-                    dismiss()
-                    coordinator.openSettings(.provider)
-                } label: {
-                    Text("Change in Settings…")
-                        .font(Theme.Font.label)
-                        .foregroundStyle(Theme.accent)
-                }
-                .buttonStyle(.plain)
+            if sections.contains(.providers) {
+                PopoverDivider()
+                footer
             }
-            .padding(.horizontal, PopoverMetrics.inset)
         }
         .padding(.vertical, PopoverMetrics.sectionGap)
-        .frame(width: 300)
+        .frame(width: width)
         .task {
-            if fetched.isEmpty {
+            if sections.contains(.models), fetched.isEmpty {
                 await load()
             }
+        }
+    }
+
+    @ViewBuilder private var models: some View {
+        ForEach(pinned) { suggestion in
+            EngineRow(
+                title: suggestion.id,
+                detail: suggestion.detail,
+                isSelected: suggestion.id == selectedModel
+            ) {
+                choose(model: suggestion.id)
+            }
+        }
+
+        if !rest.isEmpty {
+            PopoverSectionHeader(catalogTitle)
+                .padding(.top, PopoverMetrics.sectionGap)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(rest, id: \.self) { id in
+                        EngineRow(title: id, detail: "", isSelected: id == selectedModel) {
+                            choose(model: id)
+                        }
+                    }
+                }
+            }
+            .frame(height: catalogHeight)
+            .scrollBounceBehavior(.basedOnSize)
+        } else {
+            PlainRow(
+                title: "Show all models",
+                symbol: "arrow.down.circle",
+                isBusy: isLoading
+            ) {
+                Task { await load() }
+            }
+            .disabled(isLoading)
+        }
+
+        if let loadError {
+            Text(verbatim: loadError)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.warning)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, PopoverMetrics.inset)
+                .padding(.top, 6)
+        }
+    }
+
+    private var footer: some View {
+        PlainRow(title: "More in Settings…", symbol: "gearshape") {
+            dismiss()
+            coordinator.openSettings(.provider)
         }
     }
 
@@ -284,6 +317,15 @@ private struct EnginePopover: View {
         LLMSettings.setModel(trimmed, for: provider)
         coordinator.configureEngines()
         dismiss()
+    }
+
+    private func choose(provider candidate: Provider) {
+        defer { dismiss() }
+        guard candidate.id != provider.id else { return }
+        coordinator.useProvider(candidate)
+        fetched = []
+        loadError = nil
+        Task { await load() }
     }
 
     private func choose(effort: LLMSettings.ReasoningEffort) {
@@ -332,7 +374,7 @@ private struct PopoverSectionHeader: View {
 private struct PopoverDivider: View {
     var body: some View {
         Divider()
-            .padding(.horizontal, PopoverMetrics.plateInset)
+            .padding(.horizontal, PopoverMetrics.inset)
             .padding(.vertical, PopoverMetrics.sectionGap)
     }
 }
@@ -368,13 +410,51 @@ private struct EngineRow: View {
                         .layoutPriority(-1)
                 }
             }
-            .padding(.horizontal, PopoverMetrics.inset)
+            .padding(.horizontal, PopoverMetrics.inset - PopoverMetrics.plateInset)
             .frame(height: PopoverMetrics.rowHeight)
             .hoverBackground(
                 isActive: hovering,
                 in: RoundedRectangle(cornerRadius: PopoverMetrics.plateRadius, style: .continuous)
             )
             .contentShape(Rectangle())
+            .padding(.horizontal, PopoverMetrics.plateInset)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+    }
+}
+
+private struct ProviderRow: View {
+    let provider: Provider
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .frame(width: 10)
+                    .opacity(isSelected ? 1 : 0)
+
+                ProviderBrandIcon(providerID: provider.id, size: 13)
+
+                Text(verbatim: provider.name)
+                    .font(.system(size: 11.5, weight: isSelected ? .medium : .regular))
+                    .lineLimit(1)
+
+                Spacer(minLength: 8)
+            }
+            .padding(.horizontal, PopoverMetrics.inset - PopoverMetrics.plateInset)
+            .frame(height: PopoverMetrics.rowHeight)
+            .hoverBackground(
+                isActive: hovering,
+                in: RoundedRectangle(cornerRadius: PopoverMetrics.plateRadius, style: .continuous)
+            )
+            .contentShape(Rectangle())
+            .padding(.horizontal, PopoverMetrics.plateInset)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -410,13 +490,14 @@ private struct PlainRow: View {
                 Spacer(minLength: 0)
             }
             .foregroundStyle(.secondary)
-            .padding(.horizontal, PopoverMetrics.inset)
+            .padding(.horizontal, PopoverMetrics.inset - PopoverMetrics.plateInset)
             .frame(height: PopoverMetrics.rowHeight)
             .hoverBackground(
                 isActive: hovering && isEnabled,
                 in: RoundedRectangle(cornerRadius: PopoverMetrics.plateRadius, style: .continuous)
             )
             .contentShape(Rectangle())
+            .padding(.horizontal, PopoverMetrics.plateInset)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

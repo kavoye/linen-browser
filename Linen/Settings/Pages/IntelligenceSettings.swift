@@ -218,10 +218,10 @@ private struct ThinkingSection: View {
             footnote: "Applies to every provider that supports it."
         ) {
             OptionList(
-                options: LLMSettings.ReasoningEffort.allCases.map {
+                options: model.availableEfforts.map {
                     .init(value: $0, label: $0.label, caption: $0.caption)
                 },
-                selection: model.reasoningEffort,
+                selection: model.resolvedEffort,
                 onSelect: model.selectReasoningEffort
             )
         }
@@ -632,7 +632,7 @@ private struct APIKeyEntry: View {
                     SecureField("Paste your key…", text: $model.keyDraft)
                         .textFieldStyle(.plain)
                         .font(.system(size: 11.5, design: .monospaced))
-                        .frame(width: 240)
+                        .frame(maxWidth: 240)
                         .focused($focused)
                         .onSubmit { save() }
                 }

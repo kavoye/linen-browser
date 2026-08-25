@@ -90,6 +90,15 @@ final class IntelligenceViewModel {
         modelProviders.resolve(selected).capabilities.contains(.reasoning)
     }
 
+    var availableEfforts: [LLMSettings.ReasoningEffort] {
+        let offered = ReasoningCatalog.efforts(for: selected, model: selectedModel)
+        return offered.isEmpty ? ReasoningCatalog.standard : offered
+    }
+
+    var resolvedEffort: LLMSettings.ReasoningEffort {
+        ReasoningCatalog.resolve(reasoningEffort, for: selected, model: selectedModel)
+    }
+
     func onAppear() async {
         adoptSubject()
         probeLocalProviders()

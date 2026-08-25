@@ -134,6 +134,7 @@ private struct AnyLanguageModelProvider: ModelProvider {
         toolkit: AgentToolkit,
         log: ConversationLog
     ) -> any AgentRunner {
+        let reasoningEffort = ReasoningCatalog.resolve(reasoningEffort, for: configuration, model: model)
         let window = ContextWindow.tokens(for: configuration, model: model)
         let toolIDs = AgentToolCatalog.resolvedIDs(
             for: configuration,
@@ -309,6 +310,8 @@ private enum LanguageModelRuntimeFactory {
         switch effort {
         case .none:
             .none
+        case .minimal:
+            .minimal
         case .low:
             .low
         case .medium:
@@ -322,6 +325,8 @@ private enum LanguageModelRuntimeFactory {
         switch effort {
         case .none:
             nil
+        case .minimal:
+            512
         case .low:
             1_024
         case .medium:
@@ -338,6 +343,8 @@ private enum LanguageModelRuntimeFactory {
         switch effort {
         case .none:
             modelID.lowercased().contains("pro") ? .budget(128) : .disabled
+        case .minimal:
+            .budget(512)
         case .low:
             .budget(1_024)
         case .medium:
@@ -357,6 +364,8 @@ private enum LanguageModelRuntimeFactory {
         return switch effort {
         case .none:
             700
+        case .minimal:
+            1_200
         case .low:
             2_000
         case .medium:

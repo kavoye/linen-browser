@@ -38,8 +38,9 @@ struct ProviderBrandIcon: View {
         ZStack {
             if providerID == ProviderCatalog.appleOnDevice.id {
                 Image(systemName: "apple.logo")
-                    .font(.system(size: size * 0.75))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: size * 0.88))
+                    .foregroundStyle(.primary)
+                    .offset(y: -size * 0.03)
             } else if let assetName {
                 Image(assetName)
                     .resizable()
