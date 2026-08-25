@@ -76,16 +76,6 @@ struct AskSurfacePlacementTests {
         #expect(!startPage.showsSiteControls)
     }
 
-    @Test func onlyTheStartPageFieldTakesFocusByItself() {
-        #expect(startPage.takesFocusOnAppear)
-        #expect(!toolbar.takesFocusOnAppear)
-    }
-
-    @Test func onlyTheStartPageHasRoomForHintsAndActivity() {
-        #expect(startPage.showsKeyHints)
-        #expect(!toolbar.showsKeyHints)
-    }
-
 }
 
 @MainActor

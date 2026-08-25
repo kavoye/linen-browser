@@ -41,12 +41,6 @@ struct AskSurface: View {
         var showsSiteControls: Bool {
             self == .toolbar
         }
-        var showsKeyHints: Bool {
-            self == .startPage
-        }
-        var takesFocusOnAppear: Bool {
-            self == .startPage
-        }
     }
 
     @State private var model: AskSurfaceModel
@@ -78,6 +72,17 @@ struct AskSurface: View {
             .contentShape(Rectangle())
             .contextMenu {
                 AskSurfaceAddressMenu(model: model)
+            }
+
+            if model.pendingQuestion != nil {
+                Divider()
+                    .padding(.horizontal, 12)
+
+                AskQuestionBlock(
+                    questions: model.coordinator.agentQuestions,
+                    placement: model.placement
+                )
+                .transition(.opacity)
             }
 
             if !sections.isEmpty {
@@ -130,13 +135,9 @@ struct AskSurface: View {
         .animation(Theme.Motion.settle, value: model.isListening)
         .animation(Theme.Motion.drift, value: status)
         .animation(Theme.Motion.settle, value: model.agentMessage)
+        .animation(Theme.Motion.settle, value: model.pendingQuestion)
         .animation(Theme.Motion.settle, value: model.coordinator.notice)
         .onAppear { model.prepare() }
-        .task {
-            guard model.placement.takesFocusOnAppear else { return }
-            try? await Task.sleep(for: .milliseconds(120))
-            model.fieldFocusDidChange(true)
-        }
         .onChange(of: model.currentURL) { _, url in
             model.currentURLDidChange(url)
         }

@@ -81,13 +81,14 @@ final class AskSurfaceModel {
     }
 
     var activity: AskSurfaceActivity {
-        guard let activeSpaceID else { return .none }
+        guard let activeSpaceID,
+              coordinator.agentReply.showsInChrome(inSpace: activeSpaceID)
+        else { return .none }
         let traces = coordinator.conversationLog.traces(forTab: activeSpaceID)
         guard let last = traces.last else { return .none }
         let isRunning = last.state == .running
         let isThinking = isRunning
-            && last.steps.last?.kind == .thinking
-            && last.steps.last?.state == .running
+            && (last.steps.isEmpty || last.steps.last?.state == .running)
         return AskSurfaceActivity(count: traces.count, isRunning: isRunning, isThinking: isThinking)
     }
 
@@ -201,7 +202,11 @@ final class AskSurfaceModel {
         case .ask(let prompt):
             ask(prompt)
         case .navigate(let input):
-            navigate(input)
+            if pendingQuestion == nil {
+                navigate(input)
+            } else {
+                answer(input)
+            }
         }
     }
 
@@ -253,10 +258,26 @@ final class AskSurfaceModel {
         coordinator.openTab(tab)
     }
 
+    var pendingQuestion: AgentQuestionModel.Ask? {
+        coordinator.agentQuestions.ask(inSpace: activeSpaceID)
+    }
+
+    func answer(_ text: String) {
+        let answer = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !answer.isEmpty else { return }
+        interaction.text = ""
+        finishEditing()
+        coordinator.agentQuestions.answer(answer)
+    }
+
     private func ask(_ prompt: String) {
         let prompt = MentionText.resolved(prompt, chips: mentionChips)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty else { return }
+        if pendingQuestion != nil {
+            answer(prompt)
+            return
+        }
         let mentions = mentionedTabIDs
         mentionedTabIDs = []
         finishEditing()

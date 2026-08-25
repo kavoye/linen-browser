@@ -59,6 +59,8 @@ final class AgentTurnModel {
     @ObservationIgnored private var pendingSpaceMoves: [(from: UUID, to: UUID)] = []
     @ObservationIgnored var onTurnFinished: (() -> Void)?
 
+    var onCancel: (() -> Void)?
+
     init(
         browser: any AgentTurnBrowsing,
         log: any AgentTurnLogging,
@@ -87,7 +89,12 @@ final class AgentTurnModel {
     }
 
     @discardableResult
-    func run(utterance: String, mentionedTabIDs: [UUID] = [], trace: LatencyTrace? = nil) -> Bool {
+    func run(
+        utterance: String,
+        mentionedTabIDs: [UUID] = [],
+        trace: LatencyTrace? = nil,
+        showsInChrome: Bool = true
+    ) -> Bool {
         guard let runner else {
             trace?.end()
             return false
@@ -110,7 +117,7 @@ final class AgentTurnModel {
         )
         browser.setAgentWorking(true, inSpace: spaceID)
         activeTask = task
-        reply.bind(toSpace: spaceID)
+        reply.bind(toSpace: spaceID, showsInChrome: showsInChrome)
 
         let reply = reply
         let speech = speech
@@ -137,6 +144,7 @@ final class AgentTurnModel {
 
     func cancel() {
         let hadActiveTurn = activeTask != nil || runTask != nil
+        onCancel?()
         runTask?.cancel()
         runTask = nil
         if let activeTask {
@@ -160,7 +168,7 @@ final class AgentTurnModel {
         log.reassign(from: spaceID, to: newSpaceID)
         runner?.transferSession(from: spaceID, to: newSpaceID)
         if reply.spaceID == spaceID {
-            reply.bind(toSpace: newSpaceID)
+            reply.bind(toSpace: newSpaceID, showsInChrome: reply.showsInChrome)
         }
     }
 

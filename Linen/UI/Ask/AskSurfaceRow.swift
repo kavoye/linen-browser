@@ -90,16 +90,6 @@ struct AskSurfaceRow: View {
                     SiteControlsMenu(browser: model.browser)
                         .frame(width: placement.iconSlot)
                 }
-
-                if placement.showsKeyHints, !model.isListening {
-                    AskKeyHints(
-                        typed: model.interaction.trimmedText,
-                        agentOnly: model.agentOnly,
-                        onReturn: { model.submit(in: sections) },
-                        onCommandReturn: { model.askWhateverIsTyped() }
-                    )
-                    .fixedSize()
-                }
             }
             .frame(height: placement.rowHeight)
             .environment(\.chromeIconExtent, placement.iconSlot)

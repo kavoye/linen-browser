@@ -144,7 +144,7 @@ enum AskRestingContent: Equatable {
         if isListening {
             return .transcript(transcript)
         }
-        let yieldsToTyping = mirrorsPageURL ? !isFocused : typedText.isEmpty
+        let yieldsToTyping = mirrorsPageURL ? (!isFocused || typedText.isEmpty) : typedText.isEmpty
         if let agentMessage, yieldsToTyping {
             return .agent(agentMessage)
         }
@@ -257,6 +257,8 @@ enum AskSurfaceResults {
     ) -> OmniboxSection? {
         let candidates = tabs.filter { tab in
             tab.id != activeTabID
+                && !tab.isShowingSystemPage
+                && !tab.hasNoPageYet
                 && !mentions.contains { $0.id == tab.id }
                 && (fragment.isEmpty
                     || tab.title.lowercased().contains(fragment)

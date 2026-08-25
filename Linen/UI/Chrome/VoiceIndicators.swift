@@ -13,7 +13,7 @@ struct MicButton: View {
     private var isAgentTurn: Bool {
         VoiceGlyph.showsAgentTurn(
             state: coordinator.state,
-            isSpeakingReply: coordinator.agentReply.isStreaming
+            isSpeakingReply: coordinator.isSpeakingInChrome
         )
     }
 
@@ -34,7 +34,7 @@ struct MicButton: View {
         } label: {
             VoiceGlyph(
                 state: coordinator.state,
-                isSpeakingReply: coordinator.agentReply.isStreaming,
+                isSpeakingReply: coordinator.isSpeakingInChrome,
                 isHighlighted: hovering,
                 orbSize: orbSize
             )

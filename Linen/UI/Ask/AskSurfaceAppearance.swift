@@ -33,7 +33,7 @@ struct AskSurfaceBackdrop: View {
 
             if let status {
                 FluidWaves(color: status.color, motion: waveMotion)
-                    .opacity(isThinking ? 0.7 : (isRunning || status == .listening ? 0.62 : 0.3))
+                    .opacity(isThinking ? 0.42 : (isRunning || status == .listening ? 0.36 : 0.2))
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: placement.cornerRadius, style: .continuous))
@@ -101,7 +101,7 @@ struct AskSurfaceMaterial: ViewModifier {
             return Color(red: 0.12, green: 0.11, blue: 0.15).opacity(0.94)
         }
         guard let tint else { return .clear }
-        return tint.opacity(scheme == .dark ? 0.24 : 0.18)
+        return tint.opacity(scheme == .dark ? 0.13 : 0.09)
     }
 
     func body(content: Content) -> some View {
@@ -119,6 +119,8 @@ extension PageSecurity {
         switch self {
         case .secure:
             "lock.fill"
+        case .pending:
+            "lock.dashed"
         case .insecure:
             "lock.open.fill"
         case .mixed:
@@ -132,6 +134,8 @@ extension PageSecurity {
         switch self {
         case .secure:
             .green
+        case .pending:
+            .secondary
         case .insecure:
             .red
         case .mixed:
@@ -145,6 +149,8 @@ extension PageSecurity {
         switch self {
         case .secure:
             "Connection is secure"
+        case .pending:
+            "Checking the connection"
         case .mixed:
             "Parts of this page aren’t encrypted"
         case .insecure:

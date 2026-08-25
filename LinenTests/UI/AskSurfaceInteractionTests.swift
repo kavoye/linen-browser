@@ -129,6 +129,26 @@ struct AskSurfaceInteractionTests {
         #expect(address?.accessibilityValue(fallback: "https://www.example.com/path") == "https://www.example.com/path")
     }
 
+    @Test func anAgentReplyShowsWhileTheFieldIsFocusedAndEmpty() {
+        func resolve(typed: String) -> AskRestingContent? {
+            AskRestingContent.resolve(
+                isListening: false,
+                transcript: "",
+                agentMessage: "Here are some dinner ideas",
+                mirrorsPageURL: true,
+                isFocused: true,
+                typedText: typed,
+                notice: nil,
+                status: nil,
+                placeholder: "Search",
+                currentURL: "https://www.example.com/"
+            )
+        }
+
+        #expect(resolve(typed: "") == .agent("Here are some dinner ideas"))
+        #expect(resolve(typed: "hac") == nil, "what the person is typing wins over the reply")
+    }
+
     @Test func normalResultsHaveAStableOrderAndBoundedGroups() {
         Omnibox.$agentOnlyForTesting.withValue(false) {
             let history = HistoryStore(database: .temporary())

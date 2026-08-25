@@ -63,6 +63,7 @@ final class AppCoordinator {
     let lyrics = LyricsModel()
     #endif
     let conversationLog = ConversationLog()
+    let agentQuestions = AgentQuestionModel()
     var agentReply: AgentReplyModel {
         agentTurns.reply
     }
@@ -277,6 +278,22 @@ final class AppCoordinator {
         speech.stopSpeaking()
     }
 
+    var isSpeakingInChrome: Bool {
+        agentReply.isStreaming && agentReply.showsInChrome(inSpace: browser.activeSpaceID)
+    }
+
+    func readAloud(_ text: String) {
+        guard !text.isEmpty else { return }
+        if isAgentSpeaking {
+            speech.stopSpeaking()
+            return
+        }
+        let muted = speech.isMuted
+        speech.isMuted = false
+        speech.speak(text)
+        speech.isMuted = muted
+    }
+
     func clearDataOnQuitIfNeeded() async {
         guard settings.clearsDataOnQuit else { return }
         await BrowsingData.clearEverything(
@@ -460,6 +477,9 @@ final class AppCoordinator {
     @discardableResult
     func openNewTab(url: URL? = nil) -> BrowserTab {
         let tab = browser.newTab(url: url)
+        if url == nil {
+            focusAddressBar()
+        }
         return tab
     }
 
@@ -569,6 +589,12 @@ final class AppCoordinator {
         sidebar.toggleVisible()
     }
 
+    func useProvider(_ provider: Provider) {
+        guard provider.id != selectedProvider.id else { return }
+        ProviderCatalog.shared.select(provider)
+        configureEngines()
+    }
+
     func stopAgent() {
         agentTurns.cancel()
         speech.stopSpeaking()
@@ -644,8 +670,19 @@ final class AppCoordinator {
         }
     }
 
-    private func runAgent(with utterance: String, mentionedTabIDs: [UUID] = [], trace: LatencyTrace?) {
-        guard agentTurns.run(utterance: utterance, mentionedTabIDs: mentionedTabIDs, trace: trace) else {
+    private func runAgent(
+        with utterance: String,
+        mentionedTabIDs: [UUID] = [],
+        trace: LatencyTrace?,
+        showsInChrome: Bool = true
+    ) {
+        let started = agentTurns.run(
+            utterance: utterance,
+            mentionedTabIDs: mentionedTabIDs,
+            trace: trace,
+            showsInChrome: showsInChrome
+        )
+        guard started else {
             statusMessage = "Add an API key for \(ProviderCatalog.shared.selected.name) in Settings, or enable Apple Intelligence."
             voiceInput.clearTranscript()
             return
@@ -654,7 +691,11 @@ final class AppCoordinator {
 
     // MARK: - Typed input
 
-    func handleTypedUtterance(_ raw: String, mentionedTabIDs: [UUID] = []) async {
+    func handleTypedUtterance(
+        _ raw: String,
+        mentionedTabIDs: [UUID] = [],
+        showsInChrome: Bool = true
+    ) async {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
@@ -662,6 +703,11 @@ final class AppCoordinator {
         speech.stopSpeaking()
         agentTurns.cancel()
         Pipeline.log.notice("typed utterance: \"\(text, privacy: .private)\"")
-        runAgent(with: text, mentionedTabIDs: mentionedTabIDs, trace: LatencyTrace())
+        runAgent(
+            with: text,
+            mentionedTabIDs: mentionedTabIDs,
+            trace: LatencyTrace(),
+            showsInChrome: showsInChrome
+        )
     }
 }
