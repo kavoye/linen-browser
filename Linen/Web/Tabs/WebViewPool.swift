@@ -387,6 +387,7 @@ final class WebViewPool {
         ContentBlocker.shared.apply(to: contentController)
 
         configuration.userContentController = contentController
+        configuration.setURLSchemeHandler(SystemPageSchemeHandler(), forURLScheme: SystemPages.scheme)
 
         let view = TabWebView(
             frame: NSRect(x: 0, y: 0, width: 800, height: 600),

@@ -18,9 +18,6 @@ struct ContentArea: View {
     }
 
     private var showsPagePanelFill: Bool {
-        if coordinator.page == .settings {
-            return true
-        }
         if let panes = browser.splitPanes {
             return panes.allSatisfy { ChromeBand.showsStartPage(for: $0) }
         }
@@ -59,13 +56,13 @@ struct ContentArea: View {
     }
 
     private var pullsAWebPage: Bool {
-        guard coordinator.page == .browser else { return false }
+        guard !coordinator.isShowingSettings else { return false }
         guard let tab = browser.activeTab else { return false }
         return tab.internalPage == nil && !showStartPage && browser.activeSplit == nil
     }
 
     private var landing: SplitDropPlan.Target? {
-        guard coordinator.page == .browser else { return nil }
+        guard !coordinator.isShowingSettings else { return nil }
         guard browser.activeSplit == nil, coordinator.sidebarDrag.source == .row else { return nil }
         return coordinator.sidebarDrag.target
     }
@@ -75,12 +72,11 @@ struct ContentArea: View {
             KeptAliveTabs(browser: browser, media: coordinator.media)
 
             Group {
-                if coordinator.page == .settings {
-                    SettingsView(coordinator: coordinator, workspace: settingsWorkspace)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else if let tab = browser.activeTab, let internalPage = tab.internalPage {
+                if let tab = browser.activeTab, let internalPage = tab.internalPage {
                     Group {
                         switch internalPage {
+                        case .settings:
+                            SettingsView(coordinator: coordinator, workspace: settingsWorkspace)
                         case .history:
                             HistoryView(browser: browser)
                         case .downloads:
@@ -120,7 +116,7 @@ struct ContentArea: View {
             }
             .animation(.spring(response: 0.38, dampingFraction: 0.88), value: browser.internalPageMoves)
             .overlay(alignment: .top) {
-                if coordinator.page == .browser, let tab = browser.activeTab, tab.isLoading {
+                if !coordinator.isShowingSettings, let tab = browser.activeTab, tab.isLoading {
                     LoadingBar(progress: tab.progress)
                         .padding(.top, pullState.offset)
                         .transition(.opacity)
@@ -138,7 +134,7 @@ struct ContentArea: View {
                 .zIndex(6)
             }
 
-            if coordinator.page == .browser, let tab = browser.activeTab, tab.find.isActive {
+            if !coordinator.isShowingSettings, let tab = browser.activeTab, tab.find.isActive {
                 HStack {
                     Spacer()
                     FindBar(session: tab.find)

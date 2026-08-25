@@ -19,7 +19,6 @@ extension AppCoordinator {
             browser.split(current, with: opened, axis: axis)
         }
         browser.activate(opened)
-        showBrowserPage()
     }
 
     func split(_ anchor: BrowserTab, with tab: BrowserTab, axis: SplitAxis, placingTabFirst: Bool = false) {
@@ -30,11 +29,10 @@ extension AppCoordinator {
             browser.split(anchor, with: tab, axis: axis)
         }
         browser.activate(tab)
-        showBrowserPage()
     }
 
     func dropOnPage(_ tab: BrowserTab, onto anchorID: UUID?, zone: SplitDropZone) {
-        guard page == .browser, zone != .none else { return }
+        guard !isShowingSettings, zone != .none else { return }
         let anchor = anchorID.flatMap { browser.tab(id: $0) } ?? browser.activeTab
         guard let anchor, anchor !== tab else { return }
 
@@ -48,7 +46,6 @@ extension AppCoordinator {
             return
         }
         browser.activate(tab)
-        showBrowserPage()
     }
 
     func beginPaneDrag(_ tab: BrowserTab) {

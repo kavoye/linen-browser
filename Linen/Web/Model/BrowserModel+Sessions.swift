@@ -115,6 +115,10 @@ extension BrowserModel {
         }
     }
 
+    var hasPendingSave: Bool {
+        saveTask != nil
+    }
+
     func saveBlocking() {
         cancelPendingSave()
         for tab in tabs {
@@ -320,17 +324,19 @@ extension BrowserModel {
         )
 
         for record in ordered {
+            let restoredURL = record.url.isEmpty
+                ? record.internalPage?.url
+                : URL(string: record.url)
             let tab = makeTab(
-                for: URL(string: record.url),
+                for: restoredURL,
                 id: record.id,
                 restoring: !onScreen.contains(record.id)
             )
             tab.title = record.title
-            tab.urlString = record.url
+            tab.urlString = restoredURL.map(\.absoluteString) ?? record.url
             tab.pinnedURL = record.pinnedURL
             tab.pinnedTitle = record.pinnedTitle ?? ""
-            tab.internalPage = record.internalPage
-            tab.deferRestore(state: record.state, url: URL(string: record.url))
+            tab.deferRestore(state: record.state, url: restoredURL)
             if let host = URL(string: record.url)?.host() {
                 dressRow(tab, fromHost: host)
             }
@@ -445,7 +451,6 @@ extension BrowserModel {
         lastVisitID = [:]
         recentlyActive = []
         writtenStateGeneration = [:]
-        internalReturn = nil
         sidebarDidChange()
         cancelPendingSave()
     }

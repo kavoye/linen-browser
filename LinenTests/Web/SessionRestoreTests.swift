@@ -390,3 +390,58 @@ struct SessionRestoreTests {
         #expect(tab.sessionStateGeneration > before)
     }
 }
+
+/// Linen's own pages are addresses now, so a relaunch has to put a tab back on
+/// the exact one it was showing - down to which page of Settings.
+@MainActor
+@Suite(.serialized, .boundedWebViews)
+struct SystemPageRestoreTests {
+    private func reopen(_ database: AppDatabase) -> BrowserModel {
+        let model = BrowserModel(database: database)
+        model.restoreSession()
+        return model
+    }
+
+    @Test func aSystemPageComesBackAsItself() {
+        let database = AppDatabase.temporary()
+        let model = BrowserModel(database: database)
+        _ = model.showHistory()
+        model.saveBlocking()
+
+        let reopened = reopen(database)
+
+        #expect(reopened.tabs.count == 1)
+        #expect(reopened.tabs.first?.internalPage == .history)
+        #expect(reopened.tabs.first?.title == "History")
+    }
+
+    @Test func settingsComesBackOnThePageItWasLeftOn() async {
+        let database = AppDatabase.temporary()
+        let model = BrowserModel(database: database)
+        let tab = model.showSettings()
+        tab.load(SystemPages.settingsURL(.extensions))
+        #expect(await settled(tab, at: SystemPages.settingsURL(.extensions)))
+        model.saveBlocking()
+
+        let reopened = reopen(database)
+
+        let restored = reopened.tabs.first
+        #expect(restored?.internalPage == .settings)
+        #expect(SystemPages.settingsCategory(of: restored?.urlString ?? "") == .extensions)
+    }
+
+    /// The address only reaches the row through a save the navigation asks
+    /// for, and a system page's load finishes down a different path.
+    @Test func movingBetweenSettingsPagesAsksForASave() async {
+        let database = AppDatabase.temporary()
+        let model = BrowserModel(database: database)
+        let tab = model.showSettings()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.settings.url))
+        model.saveBlocking()
+
+        tab.load(SystemPages.settingsURL(.privacy))
+        #expect(await settled(tab, at: SystemPages.settingsURL(.privacy)))
+        // No explicit save: the navigation itself has to have scheduled one.
+        #expect(await waitUntil { model.hasPendingSave })
+    }
+}

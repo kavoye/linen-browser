@@ -262,7 +262,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     }
     @objc private func reopenClosedTab() {
         coordinator.browser.reopenLastClosedTab()
-        coordinator.showBrowserPage()
     }
     @objc private func openLocation() {
         coordinator.focusAddressBar()
@@ -347,27 +346,21 @@ final class MainMenu: NSObject, NSMenuItemValidation {
 
     @objc private func nextTab() {
         coordinator.browser.cycleTab(forward: true)
-        coordinator.showBrowserPage()
     }
     @objc private func previousTab() {
         coordinator.browser.cycleTab(forward: false)
-        coordinator.showBrowserPage()
     }
     @objc private func switchToNextTab() {
         coordinator.browser.switchTab(forward: true, asTap: coordinator.isControlTap)
-        coordinator.showBrowserPage()
     }
     @objc private func switchToPreviousTab() {
         coordinator.browser.switchTab(forward: false)
-        coordinator.showBrowserPage()
     }
     @objc private func showTabAtIndex(_ sender: NSMenuItem) {
         coordinator.browser.activateTab(at: sender.tag)
-        coordinator.showBrowserPage()
     }
     @objc private func showLastTab() {
         coordinator.browser.activateLastTab()
-        coordinator.showBrowserPage()
     }
 
     @objc private func clearHistory() {

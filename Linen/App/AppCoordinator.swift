@@ -10,11 +10,6 @@ import WebKit
 @MainActor
 @Observable
 final class AppCoordinator {
-    enum Page: Equatable {
-        case browser
-        case settings
-    }
-
     var state: PipelineState {
         if voiceInput.phase != .idle {
             return voiceInput.pipelineState
@@ -116,15 +111,8 @@ final class AppCoordinator {
     private(set) var addressBarFocusToken = 0
     private(set) var isPaletteOpen = false
     private(set) var paletteToken = 0
-    private(set) var page: Page = .browser {
-        didSet {
-            guard oldValue != page else { return }
-            browser.sidebarSelection.dropMarks()
-        }
-    }
-
     var sidebarDestination: SidebarDestination? {
-        SidebarDestination.resolve(page: page, activeTabID: browser.activeTab?.id)
+        SidebarDestination.resolve(activeTabID: browser.activeTab?.id)
     }
 
     private(set) var notice: String?
@@ -373,18 +361,28 @@ final class AppCoordinator {
         ensureHost().toggle()
     }
 
-    var settingsDestination: SettingsCategory?
-
     func openSettings(_ category: SettingsCategory? = nil) {
         showBrowser()
-        page = .settings
-        if let category {
-            settingsDestination = category
-        }
+        let tab = browser.showSettings()
+        guard let category else { return }
+        route(to: category, in: tab)
     }
 
-    func showBrowserPage() {
-        page = .browser
+    func routeSettings(to category: SettingsCategory) {
+        guard let tab = browser.tabs.first(where: { $0.internalPage == .settings }) else { return }
+        route(to: category, in: tab)
+    }
+
+    private func route(to category: SettingsCategory, in tab: BrowserTab) {
+        let url = SystemPages.settingsURL(category)
+        guard tab.urlString != url.absoluteString else { return }
+        tab.load(url)
+        tab.urlString = url.absoluteString
+        tab.title = BrowserTab.InternalPage.settings.title
+    }
+
+    var isShowingSettings: Bool {
+        browser.activeTab?.internalPage == .settings
     }
 
     // MARK: - Media following the tab you're looking at
@@ -412,7 +410,7 @@ final class AppCoordinator {
     }
 
     func copyCurrentURL() {
-        guard page == .browser, let tab = browser.activeTab else { return }
+        guard let tab = browser.activeTab else { return }
         copyLink(for: tab)
     }
 
@@ -432,9 +430,9 @@ final class AppCoordinator {
     }
 
     func linkURL(for tab: BrowserTab) -> URL? {
-        guard tab.internalPage == nil, !tab.urlString.isEmpty,
+        guard !tab.urlString.isEmpty,
               let url = tab.webView.url ?? URL(string: tab.urlString),
-              url.scheme != "about"
+              url.scheme != "about", !SystemPages.isStart(url)
         else { return nil }
         return url
     }
@@ -452,7 +450,6 @@ final class AppCoordinator {
 
     func openTab(_ tab: BrowserTab) {
         browser.activate(tab)
-        showBrowserPage()
     }
 
     func focusPane(_ tab: BrowserTab) {
@@ -463,7 +460,6 @@ final class AppCoordinator {
     @discardableResult
     func openNewTab(url: URL? = nil) -> BrowserTab {
         let tab = browser.newTab(url: url)
-        showBrowserPage()
         return tab
     }
 
@@ -471,7 +467,6 @@ final class AppCoordinator {
         if !browserVisible {
             showBrowser()
         }
-        showBrowserPage()
         addressBarFocusToken += 1
     }
 
@@ -547,19 +542,16 @@ final class AppCoordinator {
 
     func showHistory() {
         showBrowser()
-        showBrowserPage()
         browser.showHistory()
     }
 
     func showDownloads() {
         showBrowser()
-        showBrowserPage()
         browser.showDownloads()
     }
 
     func showReleaseNotes() {
         showBrowser()
-        showBrowserPage()
         browser.showReleaseNotes()
     }
 
@@ -567,7 +559,6 @@ final class AppCoordinator {
         if !browserVisible {
             showBrowser()
         }
-        showBrowserPage()
         sidePanel.toggle(.activity)
     }
 

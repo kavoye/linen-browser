@@ -246,7 +246,6 @@ private struct SplitRowCell: View {
             if showsPinReturn {
                 SplitRowPinReturn(help: String(localized: "Back to \(pinnedPageName(of: tab))")) {
                     browser.returnToPin(tab)
-                    coordinator.showBrowserPage()
                 }
             } else if sidebarStyle == .full, tab.isPlayingAudio || tab.isMuted {
                 SidebarTabMuteButton(isMuted: tab.isMuted) {

@@ -36,7 +36,6 @@ extension AppCoordinator {
         browser.restoreSession()
         retainAgentMemory()
         browser.ensureActiveTab()
-        showBrowserPage()
         show(notice: profile.name)
         Pipeline.log.notice("profile: switched (private: \(profile.isPrivate, privacy: .public))")
     }

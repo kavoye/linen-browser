@@ -12,7 +12,7 @@ enum NavigationHoldMenu {
     private static let maximumTitleLength = 64
 
     static func back(for tab: BrowserTab, coordinator: AppCoordinator) -> NSMenu? {
-        history(tab.reachableBackList.reversed(), tab: tab, coordinator: coordinator)
+        history(tab.backList.reversed(), tab: tab, coordinator: coordinator)
     }
 
     static func forward(for tab: BrowserTab, coordinator: AppCoordinator) -> NSMenu? {
@@ -56,6 +56,15 @@ enum NavigationHoldMenu {
     }
 
     private static func label(for item: WKBackForwardListItem) -> String {
+        if let page = BrowserTab.InternalPage(url: item.url) {
+            guard let category = SystemPages.settingsCategory(of: item.url) else {
+                return page.title
+            }
+            return "\(page.title) — \(String(localized: category.title))"
+        }
+        if SystemPages.isStart(item.url) {
+            return BrowserTab.placeholderTitle
+        }
         var title = item.title ?? ""
         if title.isEmpty {
             title = item.url.displayHost ?? item.url.absoluteString
@@ -65,6 +74,12 @@ enum NavigationHoldMenu {
     }
 
     private static func icon(for item: WKBackForwardListItem) -> NSImage? {
+        if let page = BrowserTab.InternalPage(url: item.url) {
+            return symbol(page.symbol)
+        }
+        if SystemPages.isStart(item.url) {
+            return symbol("square.grid.2x2")
+        }
         guard let host = item.url.host(),
               let cached = FaviconLoader.shared.cached(for: host),
               let sized = cached.copy() as? NSImage

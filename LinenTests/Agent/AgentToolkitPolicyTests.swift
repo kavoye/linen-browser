@@ -202,13 +202,10 @@ struct AgentToolkitPolicyTests {
     }
 
     @Test func everyVisiblePageToolStopsAtItsAccessBoundary() async {
-        func subject(policy: AssistantAccessPolicy) -> AgentToolkit {
+        func subject(policy: AssistantAccessPolicy) async -> AgentToolkit {
             let browser = BrowserModel(database: .temporary())
-            let tab = browser.newTab()
             let url = URL(string: "https://example.com/page")!
-            tab.urlString = url.absoluteString
-            tab.assistantAccess.persistsAnswers = false
-            tab.assistantAccess.pageChanged(url: url)
+            let tab = await parkTab(browser, at: url)
             tab.assistantAccess.set(policy)
             return toolkit(browser: browser)
         }
@@ -306,12 +303,9 @@ struct AgentToolkitPolicyTests {
     @Test func aMentionedTabStaysBehindItsAccessTier() async {
         let browser = BrowserModel(database: .temporary())
         let taskTab = browser.newTab()
-        let mentioned = browser.newTab()
-        mentioned.title = "Bank statements"
         let url = URL(string: "https://bank.example/statements")!
-        mentioned.urlString = url.absoluteString
-        mentioned.assistantAccess.persistsAnswers = false
-        mentioned.assistantAccess.pageChanged(url: url)
+        let mentioned = await parkTab(browser, at: url)
+        mentioned.title = "Bank statements"
         mentioned.assistantAccess.set(.deny)
         browser.activate(taskTab)
 
@@ -329,19 +323,13 @@ struct AgentToolkitPolicyTests {
 
     @Test func actionsNeverLandOnAMentionedTab() async {
         let browser = BrowserModel(database: .temporary())
-        let taskTab = browser.newTab()
         let taskURL = URL(string: "https://example.com/task")!
-        taskTab.urlString = taskURL.absoluteString
-        taskTab.assistantAccess.persistsAnswers = false
-        taskTab.assistantAccess.pageChanged(url: taskURL)
+        let taskTab = await parkTab(browser, at: taskURL)
         taskTab.assistantAccess.set(.deny)
 
-        let mentioned = browser.newTab()
-        mentioned.title = "Nike Air Max"
         let url = URL(string: "https://nike.com/air-max")!
-        mentioned.urlString = url.absoluteString
-        mentioned.assistantAccess.persistsAnswers = false
-        mentioned.assistantAccess.pageChanged(url: url)
+        let mentioned = await parkTab(browser, at: url)
+        mentioned.title = "Nike Air Max"
         mentioned.assistantAccess.set(.control)
         browser.activate(taskTab)
 

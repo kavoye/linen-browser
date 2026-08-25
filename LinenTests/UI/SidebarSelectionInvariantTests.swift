@@ -18,9 +18,9 @@ struct SidebarSelectionInvariantTests {
     }
 
     /// Exactly what the sidebar draws: the destination's row plus any marks.
-    private func litRows(_ model: BrowserModel, page: AppCoordinator.Page = .browser) -> Set<SidebarItem> {
+    private func litRows(_ model: BrowserModel) -> Set<SidebarItem> {
         var lit = model.sidebarSelection.items
-        if case .tab(let id) = SidebarDestination.resolve(page: page, activeTabID: model.activeTab?.id) {
+        if case .tab(let id) = SidebarDestination.resolve(activeTabID: model.activeTab?.id) {
             lit.insert(.tab(id))
         }
         return lit
@@ -28,11 +28,10 @@ struct SidebarSelectionInvariantTests {
 
     // MARK: - The resolver
 
-    @Test func settingsOutranksTheActiveTab() {
+    @Test func theDestinationIsWhicheverTabIsActive() {
         let id = UUID()
-        #expect(SidebarDestination.resolve(page: .settings, activeTabID: id) == .settings)
-        #expect(SidebarDestination.resolve(page: .browser, activeTabID: id) == .tab(id))
-        #expect(SidebarDestination.resolve(page: .browser, activeTabID: nil) == nil)
+        #expect(SidebarDestination.resolve(activeTabID: id) == .tab(id))
+        #expect(SidebarDestination.resolve(activeTabID: nil) == nil)
     }
 
     // MARK: - ⌘T
@@ -78,14 +77,13 @@ struct SidebarSelectionInvariantTests {
 
     // MARK: - Settings
 
-    @Test func settingsShowsNoTabAsSelected() {
+    @Test func theSettingsPageLightsItsOwnRow() {
         let model = makeModel()
-        let tab = model.newTab()
-        model.sidebarSelection.anchor(on: .tab(tab.id))
-        model.activate(tab)
+        _ = model.newTab()
+        let settings = model.showSettings()
 
-        #expect(SidebarDestination.resolve(page: .settings, activeTabID: model.activeTab?.id) == .settings)
-        #expect(litRows(model, page: .settings) == [])
+        #expect(SidebarDestination.resolve(activeTabID: model.activeTab?.id) == .tab(settings.id))
+        #expect(litRows(model) == [.tab(settings.id)])
     }
 
     // MARK: - Clicks, marks and drags

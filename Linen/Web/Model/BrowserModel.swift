@@ -275,8 +275,6 @@ final class BrowserModel {
     var tabsByID: [UUID: BrowserTab] = [:]
     var foldersByID: [UUID: TabFolder] = [:]
 
-    var internalReturn: InternalReturn?
-
     var internalPageMoves = 0
 
     @ObservationIgnored var saveTask: Task<Void, Never>?

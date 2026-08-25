@@ -31,7 +31,7 @@ struct Sidebar: View {
     }
 
     private var inkIsLight: Bool {
-        if coordinator.page == .browser {
+        if !coordinator.isShowingSettings {
             return PageInk.isLight(
                 LoomChrome.sampledColor(
                     ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
@@ -501,20 +501,16 @@ struct SidebarSettingsRow: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @State private var hovering = false
 
-    private var isSelected: Bool {
-        coordinator.sidebarDestination == .settings
-    }
-
     var body: some View {
         Button {
             coordinator.openSettings()
         } label: {
             Image(systemName: "gearshape")
                 .font(Theme.Font.control)
-                .foregroundStyle(isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: SidebarMetrics.controlMaxWidth(style: sidebarStyle))
                 .frame(height: SidebarMetrics.controlHeight)
-                .sidebarRowSelectionEffect(isSelected: isSelected, isHovering: hovering)
+                .sidebarRowSelectionEffect(isSelected: false, isHovering: hovering)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

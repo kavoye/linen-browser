@@ -118,7 +118,7 @@ struct FindSessionTests {
     /// Through the real tab: a committed navigation takes the bar with the
     /// document it was searching.
     @Test func navigatingATabClosesItsFindBar() async {
-        let tab = BrowserTab()
+        let tab = BrowserTab(opensBlank: false)
         tab.find.open()
         tab.find.query = "anything"
         #expect(tab.find.isActive)

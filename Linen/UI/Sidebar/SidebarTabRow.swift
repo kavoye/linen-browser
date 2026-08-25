@@ -174,7 +174,6 @@ struct SidebarTabRow: View {
                 PinReturnSegment(tab: tab, help: returnHelp) {
                     coordinator.tabPreview.dismiss()
                     browser.returnToPin(tab)
-                    coordinator.showBrowserPage()
                 }
                 Rectangle()
                     .fill(Theme.Wash.strong)

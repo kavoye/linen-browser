@@ -7,15 +7,9 @@ import SwiftUI
 
 enum SidebarDestination: Hashable {
     case tab(UUID)
-    case settings
 
-    static func resolve(page: AppCoordinator.Page, activeTabID: UUID?) -> SidebarDestination? {
-        switch page {
-        case .settings:
-            .settings
-        case .browser:
-            activeTabID.map(SidebarDestination.tab)
-        }
+    static func resolve(activeTabID: UUID?) -> SidebarDestination? {
+        activeTabID.map(SidebarDestination.tab)
     }
 }
 

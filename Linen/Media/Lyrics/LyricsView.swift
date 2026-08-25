@@ -38,7 +38,7 @@ struct LyricsSurface: View {
     }
 
     private var isOnScreen: Bool {
-        coordinator.sidePanel.isShowing(.lyrics) && coordinator.page == .browser
+        coordinator.sidePanel.isShowing(.lyrics) && !coordinator.isShowingSettings
     }
 
     private var subtitle: String {

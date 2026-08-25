@@ -480,7 +480,6 @@ final class CommandPaletteModel {
     }
 
     private func openCurrent(_ url: URL) {
-        coordinator.showBrowserPage()
         browser.ensureActiveTab().load(url)
         dismiss()
     }
@@ -519,7 +518,6 @@ final class CommandPaletteModel {
             browser.closeActiveTab()
         case .reopenTab:
             browser.reopenLastClosedTab()
-            coordinator.showBrowserPage()
         case .duplicateTab:
             if let tab {
                 browser.duplicate(tab)

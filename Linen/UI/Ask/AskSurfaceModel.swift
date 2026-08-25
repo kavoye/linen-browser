@@ -240,13 +240,11 @@ final class AskSurfaceModel {
 
     func open(_ url: URL) {
         browser.ensureActiveTab().load(url)
-        coordinator.showBrowserPage()
         finishEditing()
     }
 
     func navigate(_ input: String) {
         browser.handleAddressInput(input)
-        coordinator.showBrowserPage()
         finishEditing()
     }
 

@@ -46,7 +46,7 @@ enum OnboardingUI {
 
     static func finish(model: OnboardingModel, coordinator: AppCoordinator) {
         model.finish()
-        if coordinator.page == .browser {
+        if !coordinator.isShowingSettings {
             coordinator.focusAddressBar()
         }
     }

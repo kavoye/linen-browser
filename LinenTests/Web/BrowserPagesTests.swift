@@ -100,6 +100,180 @@ struct BrowserPagesTests {
         #expect(model.activeTab?.urlString.hasPrefix("https://example.com") == true)
     }
 
+    // MARK: - Back and forward across Linen's own pages
+
+    /// Every page a tab shows is one entry in one list, so Back needs no
+    /// special case for the browser's own pages.
+    @Test func backFromAPageOpenedInHistoryReturnsToHistory() async throws {
+        let server = try await Self.site()
+        let article = try server.url("/one")
+        let model = makeModel()
+        let tab = model.showHistory()
+        #expect(tab.internalPage == .history)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+
+        tab.load(article)
+        #expect(await settled(tab, at: article))
+        #expect(tab.internalPage == nil)
+        #expect(tab.canGoBack)
+
+        tab.goBack()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        #expect(tab.internalPage == .history)
+    }
+
+    @Test func goingBackToHistoryLeavesNoPageRunningBehindIt() async throws {
+        let server = try await Self.site()
+        let model = makeModel()
+        let tab = model.showHistory()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        tab.load(try server.url("/one"))
+        #expect(await waitUntil { tab.internalPage == nil })
+
+        tab.goBack()
+
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        #expect(tab.urlString == BrowserTab.InternalPage.history.url.absoluteString)
+        #expect(!tab.isLoading)
+    }
+
+    /// The bug the rewrite was for: a second item opened from History used to
+    /// leave a stale mark on the back list, so Back stopped one page short.
+    @Test func aSecondItemFromHistoryStillGoesStraightBack() async throws {
+        let server = try await Self.site()
+        let history = BrowserTab.InternalPage.history.url
+        let model = makeModel()
+        let tab = model.showHistory()
+        #expect(await settled(tab, at: history))
+
+        tab.load(try server.url("/one"))
+        #expect(await settled(tab, at: try server.url("/one")))
+        tab.goBack()
+        #expect(await settled(tab, at: history))
+
+        tab.load(try server.url("/two"))
+        #expect(await settled(tab, at: try server.url("/two")))
+
+        tab.goBack()
+        #expect(await settled(tab, at: history))
+        #expect(tab.internalPage == .history)
+    }
+
+    @Test func forwardFromHistoryReturnsToThePageYouOpened() async throws {
+        let server = try await Self.site()
+        let article = try server.url("/one")
+        let history = BrowserTab.InternalPage.history.url
+        let model = makeModel()
+        let tab = model.showHistory()
+        #expect(await settled(tab, at: history))
+        tab.load(article)
+        #expect(await settled(tab, at: article))
+        tab.goBack()
+        #expect(await settled(tab, at: history))
+
+        #expect(tab.canGoForward)
+        tab.goForward()
+
+        #expect(await settled(tab, at: article))
+        #expect(tab.internalPage == nil)
+    }
+
+    @Test func aPageOpenedOnItsOwnHasNothingBehindIt() async throws {
+        let server = try await Self.site()
+        let page = try server.url("/one")
+        let model = makeModel()
+        let tab = model.newTab(url: page)
+
+        #expect(await settled(tab, at: page))
+        #expect(!tab.canGoBack)
+    }
+
+    @Test func everySystemPageComesBackTheSameWay() async throws {
+        let server = try await Self.site()
+        let away = try server.url("/two")
+        for page in [BrowserTab.InternalPage.history, .downloads, .releaseNotes, .settings] {
+            let model = makeModel()
+            let tab = model.newTab(url: page.url)
+            #expect(await settled(tab, at: page.url))
+
+            tab.load(away)
+            #expect(await settled(tab, at: away))
+            #expect(tab.canGoBack)
+            tab.goBack()
+
+            #expect(await settled(tab, at: page.url))
+            #expect(tab.internalPage == page)
+        }
+    }
+
+    /// The system pages are addressable, so typing one opens it like any other
+    /// address.
+    @Test func typingASystemAddressOpensThatPage() async {
+        let model = makeModel()
+        let tab = model.newTab()
+
+        model.handleAddressInput("linen://settings")
+
+        #expect(await waitUntil { tab.internalPage == .settings })
+    }
+
+    /// A real website, served locally. The point of the rewrite is that a
+    /// system page and a website are entries in the same list, so the tests
+    /// have to cross between the two schemes rather than stay inside one.
+    private static func site() async throws -> HTTPFixtureServer {
+        try await HTTPFixtureServer.start(routes: [
+            "/one": .html("<title>One</title><p>One"),
+            "/two": .html("<title>Two</title><p>Two"),
+        ])
+    }
+
+    // MARK: - Settings
+
+    @Test func settingsOpensAsAPageOfItsOwn() {
+        let model = makeModel()
+        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+
+        let shown = model.showSettings()
+
+        #expect(shown.internalPage == .settings)
+        #expect(shown.title == "Settings")
+        #expect(model.activeTab === shown)
+        #expect(shown !== reading)
+    }
+
+    @Test func settingsReusesItsOwnPageRatherThanOpeningAnother() {
+        let model = makeModel()
+
+        let first = model.showSettings()
+        _ = model.newTab(url: URL(string: "https://example.com/")!)
+        let second = model.showSettings()
+
+        #expect(first === second)
+        #expect(model.tabs.count { $0.internalPage == .settings } == 1)
+    }
+
+    @Test func leavingSettingsGoesBackToWhereYouWere() {
+        let model = makeModel()
+        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+
+        _ = model.showSettings()
+        model.dismissInternalPage(.settings)
+
+        #expect(model.activeTab === reading)
+    }
+
+    @Test func openingSettingsFromTheSidebarDoesNotCloseIt() {
+        let model = makeModel()
+        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+
+        let settings = model.showSettings()
+        model.activate(settings)
+
+        #expect(model.activeTab === settings)
+        #expect(settings.internalPage == .settings)
+        #expect(reading.internalPage == nil)
+    }
+
     // MARK: - History and Downloads
 
     @Test func historyTakesOverTheBlankTabItWasAskedFrom() {
@@ -202,12 +376,16 @@ struct BrowserPagesTests {
         #expect(model.activeTab === reading)
     }
 
-    @Test func leavingAPageThatBorrowedABlankTabReturnsItBlank() {
+    @Test func leavingAPageThatBorrowedABlankTabReturnsItBlank() async {
         let model = makeModel()
         let blank = model.newTab()
+        #expect(await settled(blank, at: SystemPages.start))
+
         _ = model.showHistory()
+        #expect(await settled(blank, at: BrowserTab.InternalPage.history.url))
 
         model.dismissInternalPage(.history)
+        #expect(await settled(blank, at: SystemPages.start))
 
         #expect(model.tabs.count == 1)
         #expect(model.tabs.first === blank)
@@ -362,5 +540,63 @@ struct BrowserPagesTests {
 
         #expect(summary.contains("1. Top"))
         #expect(summary.contains("2. Bottom"))
+    }
+}
+
+/// Settings is not one page but twelve, so each one is its own address and
+/// Back walks between them like anywhere else.
+@MainActor
+@Suite(.serialized, .boundedWebViews)
+struct SettingsRoutingTests {
+    @Test func everyCategoryHasAnAddressThatReadsBack() {
+        for category in SettingsCategory.allCases {
+            let url = SystemPages.settingsURL(category)
+            #expect(BrowserTab.InternalPage(url: url) == .settings)
+            #expect(SystemPages.settingsCategory(of: url) ?? .general == category)
+        }
+    }
+
+    /// General is the page Settings opens on, so it is the bare address rather
+    /// than a second one that means the same thing.
+    @Test func generalIsTheBareAddress() {
+        #expect(SystemPages.settingsURL(.general) == BrowserTab.InternalPage.settings.url)
+        #expect(SystemPages.settingsCategory(of: BrowserTab.InternalPage.settings.url) == nil)
+    }
+
+    @Test func anAddressOutsideSettingsNamesNoCategory() {
+        #expect(SystemPages.settingsCategory(of: BrowserTab.InternalPage.history.url) == nil)
+        #expect(SystemPages.settingsCategory(of: "https://example.com/settings/appearance") == nil)
+        #expect(SystemPages.settingsCategory(of: "linen://settings/nonsense") == nil)
+    }
+
+    @Test func backWalksFromOneSettingsPageToTheOneBefore() async {
+        let model = BrowserModel(database: .temporary())
+        let tab = model.showSettings()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.settings.url))
+
+        tab.load(SystemPages.settingsURL(.appearance))
+        #expect(await settled(tab, at: SystemPages.settingsURL(.appearance)))
+        #expect(tab.internalPage == .settings)
+
+        tab.load(SystemPages.settingsURL(.extensions))
+        #expect(await settled(tab, at: SystemPages.settingsURL(.extensions)))
+
+        tab.goBack()
+        #expect(await settled(tab, at: SystemPages.settingsURL(.appearance)))
+        #expect(tab.internalPage == .settings)
+
+        tab.goBack()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.settings.url))
+    }
+
+    /// The address survives the round trip through the row, which is what the
+    /// navigator reads to follow a Back.
+    @Test func aCategoryAddressIsNotCollapsedToTheBareOne() async {
+        let model = BrowserModel(database: .temporary())
+        let tab = model.showSettings()
+        tab.load(SystemPages.settingsURL(.privacy))
+
+        #expect(await waitUntil { tab.urlString == SystemPages.settingsURL(.privacy).absoluteString })
+        #expect(tab.title == "Settings")
     }
 }

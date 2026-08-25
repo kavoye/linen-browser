@@ -163,106 +163,82 @@ struct NewTabChromeTests {
     // MARK: - Getting back to it
 
     /// The bug, stated as the user saw it: open a new tab, go somewhere, and
-    /// Back is dead. The start page is this browser's own view rather than a
-    /// document, so WebKit's back list begins at the first real page and has
-    /// nothing behind it.
-    @Test func backReturnsToTheStartPageATabBeganOn() {
+    /// Back is dead. The start page is a real `linen://start` navigation now,
+    /// so it is the first entry in WebKit's own back list.
+    @Test func backReturnsToTheStartPageATabBeganOn() async throws {
         let tab = BrowserTab()
-        tab.urlString = "https://example.com"
+        #expect(await settled(tab, at: SystemPages.start))
+
+        tab.load(BrowserTab.InternalPage.history.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
 
         #expect(tab.canGoBack)
         tab.goBack()
-        #expect(tab.isShowingStartPage)
+        #expect(await settled(tab, at: SystemPages.start))
 
         // And it is the oldest thing there is: nothing behind the start page.
         #expect(!tab.canGoBack)
         #expect(tab.canGoForward)
 
         tab.goForward()
-        #expect(!tab.isShowingStartPage)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
     }
 
-    /// The start page covers a web view that still holds the last page, so the
-    /// row kept reading "GitHub" while the new-tab surface was on screen.
-    @Test func theStartPageTakesTheRowBackFromThePageItCovers() {
+    /// The start page covers the row's name and icon while it is on screen.
+    @Test func theStartPageTakesTheRowBackFromThePageItCovers() async {
         let tab = BrowserTab()
-        tab.urlString = "https://example.com"
-        tab.title = "GitHub - swiftlang/swift-evolution"
-        tab.favicon = NSImage(size: NSSize(width: 16, height: 16))
+        #expect(await settled(tab, at: SystemPages.start))
+
+        tab.load(BrowserTab.InternalPage.releaseNotes.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.releaseNotes.url))
 
         tab.goBack()
-
-        #expect(tab.isShowingStartPage)
+        #expect(await settled(tab, at: SystemPages.start))
         #expect(tab.title == BrowserTab.placeholderTitle)
         #expect(tab.favicon == nil)
     }
 
-    @Test func goingForwardGivesThePageItsNameBack() {
+    @Test func goingForwardGivesThePageItsNameBack() async {
         let tab = BrowserTab()
-        tab.urlString = "https://example.com"
-        tab.title = "GitHub - swiftlang/swift-evolution"
-        let icon = NSImage(size: NSSize(width: 16, height: 16))
-        tab.favicon = icon
+        #expect(await settled(tab, at: SystemPages.start))
+
+        tab.load(BrowserTab.InternalPage.downloads.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.downloads.url))
 
         tab.goBack()
+        #expect(await settled(tab, at: SystemPages.start))
+
         tab.goForward()
-
-        #expect(!tab.isShowingStartPage)
-        #expect(tab.title == "GitHub - swiftlang/swift-evolution")
-        #expect(tab.favicon === icon)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.downloads.url))
+        #expect(tab.internalPage == .downloads)
     }
 
-    /// Typing an address replaces what the start page covered, so the old name
-    /// must not come back with it.
-    @Test func loadingFromTheStartPageKeepsThePlaceholder() throws {
+    /// The failure that started the rewrite: one remembered page is not a
+    /// stack. Two system pages deep, Back must walk both of them.
+    @Test func backWalksEverySystemPageInTheTab() async {
         let tab = BrowserTab()
-        tab.urlString = "https://example.com"
-        tab.title = "GitHub - swiftlang/swift-evolution"
-        tab.favicon = NSImage(size: NSSize(width: 16, height: 16))
+        #expect(await settled(tab, at: SystemPages.start))
+
+        tab.load(BrowserTab.InternalPage.history.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+
+        tab.load(BrowserTab.InternalPage.settings.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.settings.url))
+
         tab.goBack()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
 
-        tab.load(try #require(URL(string: "https://example.org")))
-
-        #expect(!tab.isShowingStartPage)
-        #expect(tab.title == BrowserTab.placeholderTitle)
-        #expect(tab.favicon == nil)
+        tab.goBack()
+        #expect(await settled(tab, at: SystemPages.start))
+        #expect(!tab.canGoBack)
     }
 
-    /// The start page is not a WebKit history entry, so going back to it never
-    /// moved WebKit's index and the next load appended rather than replaced.
-    @Test func loadingFromTheStartPageBuriesThePageItCovered() {
-        typealias History = BrowserTab.StartPageHistory
-
-        // At GitHub, nothing behind it. Leaving the start page buries it.
-        let floor = History.floor(backCount: 0, hasCurrentItem: true)
-        #expect(floor == 1)
-
-        // WebKit now holds [GitHub, Apple]; standing on Apple, GitHub is behind.
-        #expect(History.reachable(["GitHub"], floor: floor).isEmpty)
-
-        // One more page on: Apple is reachable again, GitHub still is not.
-        #expect(History.reachable(["GitHub", "Apple"], floor: floor) == ["Apple"])
-    }
-
-    @Test func aTabThatNeverLeftTheStartPageBuriesNothing() {
-        typealias History = BrowserTab.StartPageHistory
-
-        #expect(History.floor(backCount: 0, hasCurrentItem: false) == 0)
-        #expect(History.reachable(["a", "b"], floor: 0) == ["a", "b"])
-    }
-
-    /// A restored session rebuilds the list under the mark.
-    @Test func aMarkPastTheEndIsIgnored() {
-        #expect(BrowserTab.StartPageHistory.reachable(["a"], floor: 5) == ["a"])
-    }
-
-    @Test func aTabOpenedStraightOntoALinkHasNoStartPageBehindIt() {
+    @Test func aTabOpenedStraightOntoALinkHasNoStartPageBehindIt() async {
         let tab = BrowserTab(opensBlank: false)
-        tab.urlString = "https://example.com"
 
         #expect(!tab.canGoBack)
         tab.goBack()
-        #expect(!tab.isShowingStartPage, "a tab that never showed a start page must not invent one")
+        #expect(await waitUntil { !tab.isShowingStartPage })
     }
 
     // MARK: - The address field's rhythm
@@ -283,13 +259,11 @@ struct NewTabChromeTests {
         #expect(start.iconSlot == start.orbSize + 2)
     }
 
-    @Test func typingAnAddressLeavesTheStartPageAgain() throws {
+    @Test func typingAnAddressLeavesTheStartPageAgain() async throws {
         let tab = BrowserTab()
-        tab.urlString = "https://example.com"
-        tab.goBack()
-        #expect(tab.isShowingStartPage)
+        #expect(await settled(tab, at: SystemPages.start))
 
-        tab.load(try #require(URL(string: "https://example.org")))
-        #expect(!tab.isShowingStartPage)
+        tab.load(try #require(URL(string: "\(SystemPages.scheme)://stand-in.example/page")))
+        #expect(await waitUntil { !tab.isShowingStartPage })
     }
 }

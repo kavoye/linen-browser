@@ -99,7 +99,6 @@ struct ContentNavBar: View {
                 Task { @MainActor in
                     if let tab = browser.activeTab {
                         tab.load(url)
-                        coordinator.showBrowserPage()
                     } else {
                         coordinator.openNewTab(url: url)
                     }
@@ -129,7 +128,6 @@ struct ContentNavBar: View {
                 }
             ) {
                 browser.activeTab?.goBack()
-                coordinator.showBrowserPage()
             }
             ToolbarButton(
                 symbol: "chevron.right",
@@ -141,7 +139,6 @@ struct ContentNavBar: View {
                 }
             ) {
                 browser.activeTab?.goForward()
-                coordinator.showBrowserPage()
             }
             ToolbarButton(
                 symbol: (browser.activeTab?.isLoading ?? false) ? "xmark" : "arrow.clockwise",
@@ -158,14 +155,13 @@ struct ContentNavBar: View {
                 } else {
                     tab.webView.reload()
                 }
-                coordinator.showBrowserPage()
             }
         }
     }
 
     private var trailingControls: some View {
         HStack(spacing: 6) {
-            if coordinator.page == .browser {
+            if !coordinator.isShowingSettings {
                 StoreInstallButton(manager: coordinator.extensions, browser: browser)
             }
             ExtensionActionsCluster(
@@ -186,7 +182,7 @@ enum ChromeBand {
     }
 
     static func pageColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
-        guard coordinator.page == .browser, !showsStartPage(browser: browser) else { return nil }
+        guard !coordinator.isShowingSettings, !showsStartPage(browser: browser) else { return nil }
         guard browser.activeSplit == nil else { return nil }
         return browser.activeTab?.pageColor
     }
@@ -196,9 +192,12 @@ enum ChromeBand {
     }
 
     static func showsStartPage(for tab: BrowserTab?) -> Bool {
+        guard let tab else { return BrowserSettings.shared.newTab != .blank }
+        if tab.isShowingStartPage {
+            return true
+        }
         guard BrowserSettings.shared.newTab != .blank else { return false }
-        guard let tab else { return true }
-        return tab.hasNoPageYet || tab.isShowingStartPage
+        return tab.hasNoPageYet && tab.internalPage == nil
     }
 }
 

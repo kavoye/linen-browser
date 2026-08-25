@@ -13,7 +13,11 @@ struct BrowserView: View {
     init(browser: BrowserModel, coordinator: AppCoordinator) {
         self.browser = browser
         self.coordinator = coordinator
-        _settingsWorkspace = State(initialValue: SettingsWorkspace(coordinator: coordinator))
+        let workspace = SettingsWorkspace(coordinator: coordinator)
+        workspace.onRoute = { [weak coordinator] category in
+            coordinator?.routeSettings(to: category)
+        }
+        _settingsWorkspace = State(initialValue: workspace)
     }
 
     private var sidebar: SidebarLayout {

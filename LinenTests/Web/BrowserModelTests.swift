@@ -363,9 +363,9 @@ struct BrowserModelTests {
             // which is what starts the process.
             #expect(opened.webView.url != nil || opened.webView.isLoading)
         } else {
-            // The pool holds the views, WebKit holds the spare process, and
-            // nothing loads until there is a page.
-            #expect(opened.webView.url == nil)
+            // The pool holds the views and WebKit holds the spare process. The
+            // only thing a blank tab loads is its own start page.
+            #expect(opened.webView.url == nil || opened.webView.url == SystemPages.start)
         }
     }
 }

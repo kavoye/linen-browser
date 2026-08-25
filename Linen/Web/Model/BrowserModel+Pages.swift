@@ -77,6 +77,11 @@ extension BrowserModel {
     // MARK: - The browser's own pages
 
     @discardableResult
+    func showSettings() -> BrowserTab {
+        show(.settings)
+    }
+
+    @discardableResult
     func showHistory() -> BrowserTab {
         show(.history)
     }
@@ -94,65 +99,35 @@ extension BrowserModel {
     @discardableResult
     private func show(_ page: BrowserTab.InternalPage) -> BrowserTab {
         sidebarSelection.dropMarks()
-        let origin = activeTabID
 
         if let existing = tabs.first(where: { $0.internalPage == page }) {
-            if origin != existing.id {
-                internalReturn = InternalReturn(page: page, closesTab: false, previousTabID: origin)
-            }
             activeTabID = existing.id
             return existing
         }
 
+        internalPageMoves += 1
         let tab: BrowserTab
-        if let active = activeTab, active.urlString.isEmpty, active.internalPage == nil {
+        if let active = activeTab, active.internalPage == nil, active.urlString.isEmpty {
             tab = active
             activeTabID = active.id
-            internalReturn = InternalReturn(page: page, closesTab: false, previousTabID: nil)
+            tab.load(page.url)
         } else {
-            tab = newTab()
-            internalReturn = InternalReturn(page: page, closesTab: true, previousTabID: origin)
+            tab = newTab(url: page.url)
         }
-        install(page, in: tab)
+        tab.title = page.title
+        tab.urlString = page.url.absoluteString
+        scheduleSave()
         return tab
     }
 
     func dismissInternalPage(_ page: BrowserTab.InternalPage) {
         guard let tab = tabs.first(where: { $0.internalPage == page }) else { return }
-        let origin = internalReturn?.page == page ? internalReturn : nil
-        internalReturn = nil
         internalPageMoves += 1
-
-        if origin?.closesTab == true {
-            close(tab)
-            if let previous = origin?.previousTabID, tabs.contains(where: { $0.id == previous }) {
-                activeTabID = previous
-            }
+        if tab.canGoBack {
+            tab.goBack()
             return
         }
-
-        if let previous = origin?.previousTabID, tabs.contains(where: { $0.id == previous }) {
-            activeTabID = previous
-            return
-        }
-
-        tab.internalPage = nil
-        tab.title = BrowserTab.placeholderTitle
-        scheduleSave()
-    }
-
-    struct InternalReturn {
-        let page: BrowserTab.InternalPage
-        let closesTab: Bool
-        let previousTabID: UUID?
-    }
-
-    private func install(_ page: BrowserTab.InternalPage, in tab: BrowserTab) {
-        internalPageMoves += 1
-        tab.internalPage = page
-        tab.title = page.title
-        tab.urlString = ""
-        scheduleSave()
+        close(tab)
     }
 
     func contextSummary(mentionedTabIDs: [UUID] = []) -> String? {

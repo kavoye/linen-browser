@@ -157,7 +157,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             return
         }
 
-        if model.carriedTabID != nil, coordinator.page == .browser,
+        if model.carriedTabID != nil, !coordinator.isShowingSettings,
            model.dropFrameInWindow.contains(inWindow) {
             model.aim(at: inWindow)
         } else if model.target != nil {

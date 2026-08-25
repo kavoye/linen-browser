@@ -22,6 +22,10 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             decisionHandler(.download)
             return
         }
+        if let url = navigationAction.request.url, SystemPages.isSystem(url) {
+            decisionHandler(Self.reaches(url, by: navigationAction, in: tab) ? .allow : .cancel)
+            return
+        }
         if let url = navigationAction.request.url, !ExternalApp.staysInWebView(url) {
             decisionHandler(.cancel)
             if navigationAction.targetFrame?.isMainFrame != false {
@@ -65,6 +69,19 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         }
         decisionHandler(.cancel)
         tab.onNavigationOutsideExtension?(url)
+    }
+
+    private static func reaches(
+        _ url: URL,
+        by action: WKNavigationAction,
+        in tab: BrowserTab?
+    ) -> Bool {
+        guard let tab else { return false }
+        if action.navigationType == .backForward || action.navigationType == .reload
+            || tab.isRestoring {
+            return true
+        }
+        return tab.permitsSystemPage(url)
     }
 
     private static func transition(
@@ -303,17 +320,22 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard let tab, tab.isShowingRealPage else { return }
-        tab.didPresentContent()
-        tab.refreshChrome()
-        tab.refreshFavicon()
-        tab.refreshPageColor(from: webView)
-        tab.restoreScrollOffsetIfNeeded()
+        guard let tab else { return }
         let wasRestore = tab.isRestoring
         tab.isRestoring = false
         tab.finishReclaim()
         isLoadingErrorPage = false
+        tab.refreshChrome()
         tab.invalidateSessionState()
+        guard tab.isShowingRealPage else {
+            // Nothing to record, but the session still moved.
+            tab.onNavigationFinished?(true)
+            return
+        }
+        tab.didPresentContent()
+        tab.refreshFavicon()
+        tab.refreshPageColor(from: webView)
+        tab.restoreScrollOffsetIfNeeded()
         tab.onNavigationFinished?(wasRestore || tab.isShowingError)
     }
 

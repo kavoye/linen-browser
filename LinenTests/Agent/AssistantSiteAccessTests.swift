@@ -161,13 +161,10 @@ struct TabAssistantAccessCenterTests {
 @MainActor
 @Suite(.boundedWebViews)
 struct AgentToolkitAccessTests {
-    private func makeToolkit(policy: AssistantAccessPolicy) -> AgentToolkit {
+    private func makeToolkit(policy: AssistantAccessPolicy) async -> AgentToolkit {
         let browser = BrowserModel(database: .temporary())
-        let tab = browser.newTab()
         let url = URL(string: "https://example.com/page")!
-        tab.urlString = url.absoluteString
-        tab.assistantAccess.persistsAnswers = false
-        tab.assistantAccess.pageChanged(url: url)
+        let tab = await parkTab(browser, at: url)
         tab.assistantAccess.set(policy)
 
         return AgentToolkit(
@@ -178,13 +175,13 @@ struct AgentToolkitAccessTests {
     }
 
     @Test func readPageStopsAtNoAccessBeforeThePageDriver() async {
-        let output = await makeToolkit(policy: .deny).readPage()
+        let output = await (await makeToolkit(policy: .deny)).readPage()
         #expect(output.contains("Assistant access is off for example.com"))
         #expect(!output.contains("<page-content"))
     }
 
     @Test func controlStopsAtReadOnlyBeforeThePageDriver() async {
-        let output = await makeToolkit(policy: .readOnly).scrollPage(direction: "down")
+        let output = await (await makeToolkit(policy: .readOnly)).scrollPage(direction: "down")
         #expect(output.contains("Read Only"))
         #expect(output.contains("allow control"))
         #expect(!output.contains("<page-content"))
@@ -237,9 +234,8 @@ struct AgentToolkitAccessTests {
         let startURL = try redirect.url("/start")
 
         let browser = BrowserModel(database: .temporary())
-        let tab = browser.newTab()
+        let tab = browser.newTab(url: startURL)
         tab.assistantAccess.persistsAnswers = false
-        tab.load(startURL)
         tab.assistantAccess.pageChanged(url: startURL)
         tab.assistantAccess.set(.readOnly)
 
@@ -288,9 +284,8 @@ struct AgentToolkitAccessTests {
         ])
         let url = try server.url()
         let browser = BrowserModel(database: .temporary())
-        let tab = browser.newTab()
+        let tab = browser.newTab(url: url)
         tab.assistantAccess.persistsAnswers = false
-        tab.load(url)
         tab.assistantAccess.pageChanged(url: url)
         tab.assistantAccess.set(.readOnly)
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))

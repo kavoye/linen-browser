@@ -22,15 +22,17 @@ final class SettingsWorkspace {
         )
     }
 
+    var onRoute: ((SettingsCategory) -> Void)?
+
     func select(_ category: SettingsCategory) {
-        self.category = category
         query = ""
         highlightTask?.cancel()
         highlight = nil
+        self.category = category
+        onRoute?(category)
     }
 
     func open(_ entry: SettingsEntry) {
-        category = entry.category
         highlightTask?.cancel()
         highlight = entry.id
         highlightTask = Task { [weak self] in
@@ -38,12 +40,24 @@ final class SettingsWorkspace {
             guard !Task.isCancelled else { return }
             self?.highlight = nil
         }
+        category = entry.category
+        onRoute?(entry.category)
+    }
+
+    func adopt(_ category: SettingsCategory) {
+        guard self.category != category else { return }
+        self.category = category
+        query = ""
     }
 }
 
 struct SettingsView: View {
     let coordinator: AppCoordinator
     let workspace: SettingsWorkspace
+
+    private var address: String {
+        coordinator.browser.tabs.first { $0.internalPage == .settings }?.urlString ?? ""
+    }
 
     private var badges: [SettingsCategory: String] {
         var badges: [SettingsCategory: String] = [:]
@@ -63,7 +77,10 @@ struct SettingsView: View {
 
         HStack(spacing: 0) {
             SettingsNavigator(
-                selection: $workspace.category,
+                selection: Binding(
+                    get: { workspace.category },
+                    set: { workspace.select($0) }
+                ),
                 query: $workspace.query,
                 profileName: coordinator.profiles.current.name,
                 profileSymbol: coordinator.profiles.current.symbol,
@@ -86,10 +103,8 @@ struct SettingsView: View {
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: coordinator.settingsDestination, initial: true) { _, destination in
-            guard let destination else { return }
-            workspace.select(destination)
-            coordinator.settingsDestination = nil
+        .onChange(of: address, initial: true) { _, _ in
+            workspace.adopt(SystemPages.settingsCategory(of: address) ?? .general)
         }
     }
 }

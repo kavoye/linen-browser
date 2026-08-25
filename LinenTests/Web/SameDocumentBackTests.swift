@@ -22,7 +22,7 @@ struct SameDocumentBackTests {
             "/pull": .html("<title>Pull request</title><h1>Files changed</h1>"),
         ])
         let page = try server.url("/pull")
-        let tab = BrowserTab()
+        let tab = BrowserTab(opensBlank: false)
         tab.load(page)
         #expect(await waitUntil { !tab.isLoading && tab.urlString == page.absoluteString })
         return (tab, page, server)

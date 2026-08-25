@@ -61,7 +61,7 @@ extension AppCoordinator {
     /// What left on its own comes back on its own: looking at the tab again is
     /// the same answer as the floating window's return button.
     func returnPictureToTheTabInFront() {
-        guard settings.automaticPictureInPicture, browserVisible, page == .browser else { return }
+        guard settings.automaticPictureInPicture, browserVisible, !isShowingSettings else { return }
         let inFront = browser.tabs.filter {
             $0.id == browser.activeTabID || browser.isVisibleInSplit($0)
         }
@@ -286,7 +286,6 @@ extension AppCoordinator {
         if !browserVisible {
             showBrowser()
         }
-        showBrowserPage()
         sidePanel.toggle(.lyrics)
     }
 

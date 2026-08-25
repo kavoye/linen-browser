@@ -47,83 +47,36 @@ final class BrowserTab: Identifiable {
         urlString.isEmpty && !isLoading
     }
 
-    private var webCanGoBack = false
-    private var webCanGoForward = false
+    private var canGoBackInWeb = false
+    private var canGoForwardInWeb = false
 
-    private let beganOnStartPage: Bool
-
-    var isShowingStartPage = false {
-        didSet {
-            guard isShowingStartPage != oldValue else { return }
-            if isShowingStartPage {
-                coveredTitle = title
-                coveredFavicon = favicon
-                title = Self.placeholderTitle
-                favicon = nil
-            } else {
-                if let coveredTitle {
-                    title = coveredTitle
-                }
-                favicon = coveredFavicon
-                forgetCoveredPage()
-            }
-        }
-    }
-
-    private var coveredTitle: String?
-    private var coveredFavicon: NSImage?
-
-    private func forgetCoveredPage() {
-        coveredTitle = nil
-        coveredFavicon = nil
-    }
-
-    var canReturnToStartPage: Bool {
-        beganOnStartPage
-            && !isShowingStartPage
-            && !webCanGoBack
-            && !hasNoPageYet
-            && internalPage == nil
+    var isShowingStartPage: Bool {
+        SystemPages.isStart(committedURL)
     }
 
     var canGoBack: Bool {
-        webCanGoBack || canReturnToStartPage
+        _ = canGoBackInWeb
+        return webView.canGoBack
     }
 
-    private var historyFloor = 0
-
-    enum StartPageHistory {
-        static func floor(backCount: Int, hasCurrentItem: Bool) -> Int {
-            backCount + (hasCurrentItem ? 1 : 0)
-        }
-
-        static func reachable<Item>(_ list: [Item], floor: Int) -> [Item] {
-            guard floor > 0, floor <= list.count else { return list }
-            return Array(list.dropFirst(floor))
-        }
-    }
-
-    var reachableBackList: [WKBackForwardListItem] {
-        StartPageHistory.reachable(webView.backForwardList.backList, floor: historyFloor)
-    }
     var canGoForward: Bool {
-        webCanGoForward || isShowingStartPage
+        _ = canGoForwardInWeb
+        return webView.canGoForward
     }
+
+    var backList: [WKBackForwardListItem] {
+        webView.backForwardList.backList
+    }
+
+    /// What WebKit has committed. `urlString` answers for a provisional
+    /// navigation too, so the two disagree while a page is on its way in.
+    private(set) var committedURL: URL?
 
     func goBack() {
-        if webCanGoBack {
-            webView.goBack()
-            return
-        }
-        guard canReturnToStartPage else { return }
-        isShowingStartPage = true
+        webView.goBack()
     }
 
     func goForward() {
-        if isShowingStartPage {
-            isShowingStartPage = false
-            return
-        }
         webView.goForward()
     }
 
@@ -160,9 +113,12 @@ final class BrowserTab: Identifiable {
         case history
         case downloads
         case releaseNotes
+        case settings
 
         var title: String {
             switch self {
+            case .settings:
+                "Settings"
             case .history:
                 "History"
             case .downloads:
@@ -174,6 +130,8 @@ final class BrowserTab: Identifiable {
 
         var symbol: String {
             switch self {
+            case .settings:
+                "gearshape"
             case .history:
                 "clock"
             case .downloads:
@@ -184,7 +142,25 @@ final class BrowserTab: Identifiable {
         }
     }
 
-    var internalPage: InternalPage?
+    var internalPage: InternalPage? {
+        InternalPage(url: URL(string: urlString)) ?? InternalPage(url: committedURL)
+    }
+
+    var isShowingSystemPage: Bool {
+        internalPage != nil || isShowingStartPage
+    }
+
+    /// The one `linen:` address Linen asked for. Anything else asking is a
+    /// website, and is refused.
+    private var permittedSystemPage: URL?
+
+    func permitSystemPage(_ url: URL?) {
+        permittedSystemPage = SystemPages.isSystem(url) ? url : nil
+    }
+
+    func permitsSystemPage(_ url: URL) -> Bool {
+        permittedSystemPage == url
+    }
 
     // MARK: - The pin
 
@@ -249,7 +225,7 @@ final class BrowserTab: Identifiable {
         assistantAccess = TabAssistantAccessCenter(store: sitePermissions)
         permissions.persistsAnswers = !privately
         assistantAccess.persistsAnswers = !privately
-        beganOnStartPage = opensBlank && adopting == nil && extensionHost == nil && !restoring
+        let opensStartPage = opensBlank && adopting == nil && extensionHost == nil && !restoring
         if let adopting {
             // WebKit requires this exact view, with the opener's configuration attached.
             webView = adopting
@@ -267,6 +243,10 @@ final class BrowserTab: Identifiable {
         }
         adopt(webView)
         find.driver = .webKit { [weak self] in self?.webView }
+        if opensStartPage, BrowserSettings.shared.newTab != .blank {
+            permitSystemPage(SystemPages.start)
+            webView.load(URLRequest(url: SystemPages.start))
+        }
     }
 
     private func adopt(_ view: WKWebView) {
@@ -445,8 +425,11 @@ final class BrowserTab: Identifiable {
 
     private func pageDidChangeInPlace(_ webView: WKWebView) {
         let previous = urlString
-        permissions.pageChanged(url: webView.url)
-        assistantAccess.pageChanged(url: webView.url)
+        // The start page is a surface over the tab, not a place it went.
+        if !SystemPages.isStart(webView.url) {
+            permissions.pageChanged(url: webView.url)
+            assistantAccess.pageChanged(url: webView.url)
+        }
         applySiteZoom()
         refreshChrome()
         guard urlString != previous else { return }
@@ -651,7 +634,9 @@ final class BrowserTab: Identifiable {
     private var zoomHost = ""
 
     fileprivate func applySiteZoom() {
-        let host = webView.url?.host()?.lowercased() ?? ""
+        let host = SystemPages.isSystem(webView.url)
+            ? ""
+            : webView.url?.host()?.lowercased() ?? ""
         guard host != zoomHost else { return }
         zoomHost = host
         let remembered = host.isEmpty ? nil : PageZoomStore.shared.level(for: host)
@@ -713,19 +698,17 @@ final class BrowserTab: Identifiable {
         pendingTransition = transition
     }
 
+    /// A new tab is still on its way to the start page; two navigations race.
+    private func stopUncommittedStartPage() {
+        guard committedURL == nil, SystemPages.isStart(webView.url) else { return }
+        webView.stopLoading()
+    }
+
     func load(_ url: URL, transition: HistoryStore.Transition = .typed) {
         pendingTransition = transition
         discardDeferredSession()
-        internalPage = nil
-        if isShowingStartPage {
-            let list = webView.backForwardList
-            historyFloor = StartPageHistory.floor(
-                backCount: list.backList.count,
-                hasCurrentItem: list.currentItem != nil
-            )
-        }
-        forgetCoveredPage()
-        isShowingStartPage = false
+        stopUncommittedStartPage()
+        permitSystemPage(url)
         // WebKit refuses a plain request for a file: URL and leaves the tab blank.
         if url.isFileURL {
             webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
@@ -736,6 +719,7 @@ final class BrowserTab: Identifiable {
 
     func loadHTML(_ html: String, baseURL: URL?) {
         discardDeferredSession()
+        stopUncommittedStartPage()
         webView.loadHTMLString(html, baseURL: baseURL)
     }
 
@@ -784,6 +768,7 @@ final class BrowserTab: Identifiable {
         clearDeferredSession()
         invalidateSessionState()
         isRestoring = true
+        permitSystemPage(url)
         if let state {
             webView.interactionState = state
         } else if let url {
@@ -837,13 +822,29 @@ final class BrowserTab: Identifiable {
 
     func refreshChrome() {
         isLoading = webView.isLoading && isShowingRealPage
-        webCanGoBack = webView.canGoBack && !reachableBackList.isEmpty
-        webCanGoForward = webView.canGoForward
-        if let url = webView.url, url.absoluteString != "about:blank" {
-            urlString = url.absoluteString
-        }
-        if let pageTitle = webView.title, !pageTitle.isEmpty {
-            title = pageTitle
+        canGoBackInWeb = webView.canGoBack
+        canGoForwardInWeb = webView.canGoForward
+        let displaced = committedURL
+        committedURL = webView.backForwardList.currentItem?.url
+        let url = webView.url
+        if let page = InternalPage(url: url) {
+            urlString = url?.absoluteString ?? page.url.absoluteString
+            title = page.title
+            favicon = nil
+        } else if SystemPages.isStart(url) {
+            // The start page takes the row's name back only over a page that had one.
+            if displaced != nil, displaced != committedURL {
+                urlString = ""
+                title = Self.placeholderTitle
+                favicon = nil
+            }
+        } else {
+            if let url, url.absoluteString != "about:blank" {
+                urlString = url.absoluteString
+            }
+            if let pageTitle = webView.title, !pageTitle.isEmpty {
+                title = pageTitle
+            }
         }
         refreshSecurity()
         refreshCanvas(from: webView)
@@ -868,11 +869,11 @@ final class BrowserTab: Identifiable {
 
     var isShowingRealPage: Bool {
         guard let scheme = webView.url?.scheme else { return false }
-        return scheme != "about"
+        return scheme != "about" && scheme != SystemPages.scheme
     }
 
     func declaredFaviconChanged() {
-        guard extensionBaseURL == nil, !isPrivate else { return }
+        guard extensionBaseURL == nil, !isPrivate, !isShowingSystemPage else { return }
         guard let host = webView.url?.host()?.lowercased() else { return }
         FaviconLoader.shared.forget(host: host)
         refreshFavicon()
@@ -880,7 +881,7 @@ final class BrowserTab: Identifiable {
 
     func refreshFavicon() {
         guard extensionBaseURL == nil else { return }
-        guard !isPrivate else { return }
+        guard !isPrivate, !isShowingSystemPage else { return }
         guard let host = webView.url?.host()?.lowercased() else { return }
         if host != faviconHost {
             faviconHost = host
