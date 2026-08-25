@@ -201,8 +201,8 @@ struct SidePanelTests {
         let defaults = scratch()
         let first = panel(defaults)
         first.show(.activity)
-        first.dragChanged(translation: -60, container: 1400)
-        first.dragEnded(translation: -60, container: 1400)
+        first.dragChanged(translation: -60, available: 1400)
+        first.dragEnded(translation: -60, available: 1400)
         first.isExpanded = true
         let width = first.width
 
@@ -215,26 +215,36 @@ struct SidePanelTests {
     // MARK: - Width
 
     @Test func theWidthStaysWithinItsRange() {
-        #expect(SidePanelMetrics.clampWidth(10, container: 1400) == SidePanelMetrics.minWidth)
-        #expect(SidePanelMetrics.clampWidth(9000, container: 4000) == SidePanelMetrics.maxWidth)
+        #expect(SidePanelMetrics.clampWidth(10, available: 1400) == SidePanelMetrics.minWidth)
+        #expect(SidePanelMetrics.clampWidth(9000, available: 4000) == SidePanelMetrics.maxWidth)
     }
 
     @Test func aNarrowWindowCapsThePanelBeforeItsOwnMaximum() {
-        let capped = SidePanelMetrics.clampWidth(600, container: 900)
+        let capped = SidePanelMetrics.clampWidth(600, available: 900)
 
-        #expect(capped == 900 * SidePanelMetrics.maxWindowFraction)
+        #expect(capped == 900 - SidePanelMetrics.pageMinWidth)
         #expect(capped < SidePanelMetrics.maxWidth)
     }
 
+    @Test func theSidebarsRoomIsNotThePanelsToTake() {
+        let window: CGFloat = 900
+        let sidebar: CGFloat = 280
+        let panel = SidePanelMetrics.clampWidth(600, available: window - sidebar)
+
+        #expect(panel <= window - sidebar - SidePanelMetrics.pageMinWidth
+            || panel == SidePanelMetrics.minWidth)
+        #expect(window - sidebar - panel >= SidePanelMetrics.minWidth)
+    }
+
     @Test func aWindowTooSmallForTheMinimumStillGetsTheMinimum() {
-        #expect(SidePanelMetrics.clampWidth(400, container: 200) == SidePanelMetrics.minWidth)
+        #expect(SidePanelMetrics.clampWidth(400, available: 200) == SidePanelMetrics.minWidth)
     }
 
     @Test func draggingWiderShowsTheNewWidthBeforeItIsReleased() {
         let panel = panel()
         let start = panel.openWidth(in: 1400)
 
-        panel.dragChanged(translation: -50, container: 1400)
+        panel.dragChanged(translation: -50, available: 1400)
 
         #expect(panel.isDragging)
         #expect(panel.openWidth(in: 1400) == start + 50)
@@ -247,8 +257,8 @@ struct SidePanelTests {
 
     @Test func theWidthGoesBackToTheDefault() {
         let panel = panel()
-        panel.dragChanged(translation: -80, container: 1400)
-        panel.dragEnded(translation: -80, container: 1400)
+        panel.dragChanged(translation: -80, available: 1400)
+        panel.dragEnded(translation: -80, available: 1400)
         #expect(panel.width > SidePanelMetrics.defaultWidth)
 
         panel.resetWidth()

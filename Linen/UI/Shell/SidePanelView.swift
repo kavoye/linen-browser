@@ -115,7 +115,7 @@ private struct SidePanelHeader: View {
                 panel.isExpanded.toggle()
             }
         }
-        .padding(.horizontal, SidePanelMetrics.controlInset)
+        .padding(.horizontal, SidePanelMetrics.tabInset)
         .frame(height: SidePanelMetrics.headerHeight)
     }
 }
@@ -248,7 +248,7 @@ private struct SidePanelTabChip: View {
         }
         .foregroundStyle(isSelected ? Color.primary : Color.secondary)
         .padding(.horizontal, 9)
-        .frame(height: 24)
+        .frame(height: SidePanelMetrics.tabHeight)
         .selectionBackground(isSelected: isSelected, isHovering: hovering, in: shape)
         .contentShape(shape)
         .onTapGesture(perform: onSelect)

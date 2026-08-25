@@ -91,6 +91,9 @@ final class MentionTextField: NSTextField {
             editor.isGrammarCheckingEnabled = false
             editor.isAutomaticSpellingCorrectionEnabled = false
             editor.isAutomaticTextReplacementEnabled = false
+            editor.isAutomaticTextCompletionEnabled = false
+            editor.isAutomaticDashSubstitutionEnabled = false
+            editor.isAutomaticQuoteSubstitutionEnabled = false
         }
         return accepted
     }
@@ -104,6 +107,8 @@ struct MentionField: NSViewRepresentable {
     let isFocused: Bool
     var selectAllToken: Int = 0
     var accessibilityLabel: String = ""
+    /// An `NSTextField` that wraps cannot scroll, so it must grow to fit.
+    var wraps = false
     var onFocusChange: (Bool) -> Void = { _ in }
     var onChipsChange: ([UUID]) -> Void = { _ in }
     var onSubmit: () -> Void = {}
@@ -121,9 +126,10 @@ struct MentionField: NSViewRepresentable {
         field.focusRingType = .none
         field.allowsEditingTextAttributes = true
         field.importsGraphics = false
-        field.lineBreakMode = .byClipping
-        field.cell?.wraps = false
-        field.cell?.isScrollable = true
+        field.lineBreakMode = wraps ? .byWordWrapping : .byClipping
+        field.cell?.wraps = wraps
+        field.cell?.isScrollable = !wraps
+        field.usesSingleLineMode = !wraps
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
@@ -156,6 +162,18 @@ struct MentionField: NSViewRepresentable {
         coordinator.selectAll(token: selectAllToken, in: field)
     }
 
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        nsView: MentionTextField,
+        context: Context
+    ) -> CGSize? {
+        guard wraps, let width = proposal.width, width > 0 else { return nil }
+        nsView.preferredMaxLayoutWidth = width
+        let line = (nsView.font?.pointSize ?? fontSize) + 5
+        let fitted = nsView.sizeThatFits(NSSize(width: width, height: .greatestFiniteMagnitude)).height
+        return CGSize(width: width, height: max(fitted, line))
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
     }
@@ -175,6 +193,8 @@ struct MentionField: NSViewRepresentable {
         private var renderedDark: Bool?
         private var renderedPlaceholder: String?
         private var isSyncingFocus = false
+        private var pendingFocus: Bool?
+        private var isReportingFocus = false
         private var selectionToken = 0
         private var requestedHosts: Set<String> = []
         private var needsRefresh = false
@@ -241,6 +261,10 @@ struct MentionField: NSViewRepresentable {
         }
 
         func syncFocus(_ isFocused: Bool, in field: NSTextField) {
+            // A focus report is one runloop behind the field itself.
+            if let pendingFocus, pendingFocus != isFocused {
+                return
+            }
             guard holdsFocus(field) != isFocused, !isSyncingFocus else { return }
             isSyncingFocus = true
             DispatchQueue.main.async { [weak field] in
@@ -291,11 +315,26 @@ struct MentionField: NSViewRepresentable {
         }
 
         func controlTextDidBeginEditing(_ notification: Notification) {
-            onFocusChange(true)
+            reportFocus(true)
         }
 
         func controlTextDidEndEditing(_ notification: Notification) {
-            onFocusChange(false)
+            reportFocus(false)
+        }
+
+        /// Rewriting the field's string ends editing and begins it again, and
+        /// AppKit posts both from inside a SwiftUI update.
+        private func reportFocus(_ focused: Bool) {
+            pendingFocus = focused
+            guard !isReportingFocus else { return }
+            isReportingFocus = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                isReportingFocus = false
+                guard let settled = pendingFocus else { return }
+                pendingFocus = nil
+                onFocusChange(settled)
+            }
         }
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {

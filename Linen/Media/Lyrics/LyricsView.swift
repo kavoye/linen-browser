@@ -303,7 +303,11 @@ struct LyricsBoard: View {
     private var stage: some View {
         switch lyrics.phase {
         case .idle:
-            PanelNotice(symbol: "music.note", title: "Nothing is playing")
+            PanelNotice(
+                symbol: "music.note",
+                title: "Nothing is playing",
+                caption: "Play a song in any tab. Linen reads its title, looks the words up on LRCLIB, and follows along with the music."
+            )
         case .off:
             PanelNotice(
                 symbol: "quote.bubble",

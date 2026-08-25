@@ -490,8 +490,8 @@ enum CommandPaletteCatalog {
         var view: [CommandPaletteCommand] {
             let sidebarTitle: LocalizedStringResource = context.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"
             let activityTitle: LocalizedStringResource = context.isActivityVisible
-                ? "Hide Assistant Activity"
-                : "Show Assistant Activity"
+                ? "Hide Assistant"
+                : "Show Assistant"
             let lyricsTitle: LocalizedStringResource = context.isLyricsVisible ? "Hide Lyrics" : "Show Lyrics"
             let fullScreenTitle: LocalizedStringResource = context.isFullScreen
                 ? "Exit Full Screen"

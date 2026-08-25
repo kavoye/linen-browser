@@ -111,6 +111,12 @@ struct AgentInspector: View {
         return coordinator.conversationLog.usage(forTab: activeSpaceID)
     }
 
+    @State private var seed: String?
+
+    private var pendingQuestion: AgentQuestionModel.Ask? {
+        coordinator.agentQuestions.ask(inSpace: activeSpaceID)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ResearchGlimpse(preview: coordinator.researchPreview, activeSpaceID: activeSpaceID)
@@ -122,15 +128,38 @@ struct AgentInspector: View {
                     tabID: activeTabID,
                     browser: browser,
                     onRetry: { prompt in
-                        Task { await coordinator.handleTypedUtterance(prompt) }
-                    }
+                        Task { await coordinator.handleTypedUtterance(prompt, showsInChrome: false) }
+                    },
+                    onEdit: { prompt in seed = prompt },
+                    onSpeak: { answer in coordinator.readAloud(answer) }
                 )
             } else {
                 Spacer(minLength: 0)
             }
 
+            if pendingQuestion != nil {
+                AskQuestionBlock(
+                    questions: coordinator.agentQuestions,
+                    placement: .startPage,
+                    takesFocus: false
+                )
+                .background(Theme.Wash.hairline, in: RoundedRectangle(
+                    cornerRadius: Theme.Radius.card,
+                    style: .continuous
+                ))
+                .padding(.horizontal, 12)
+                .transition(.opacity)
+                .modifier(ChatColumn())
+            }
+
+            AssistantComposer(coordinator: coordinator, seed: $seed)
+                .padding(.horizontal, 12)
+                .padding(.top, 4)
+                .modifier(ChatColumn())
+
             InspectorFooter(coordinator: coordinator, usage: usage)
                 .padding(.horizontal, 12)
+                .modifier(ChatColumn())
         }
         .padding(.top, 4)
         .padding(.bottom, 12)
@@ -154,6 +183,14 @@ struct AgentInspector: View {
     }
 }
 
+private struct ChatColumn: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: AssistantChatMetrics.column, alignment: .leading)
+            .frame(maxWidth: .infinity)
+    }
+}
+
 private struct ResearchGlimpse: View {
     let preview: ResearchPreview
     let activeSpaceID: UUID?
@@ -163,7 +200,7 @@ private struct ResearchGlimpse: View {
     }
 
     var body: some View {
-        if let snapshot = preview.snapshot, preview.spaceID == activeSpaceID {
+        if let snapshot = preview.snapshot, preview.spaceID == activeSpaceID, preview.isLive {
             VStack(alignment: .leading, spacing: 5) {
                 Image(nsImage: snapshot)
                     .resizable()
@@ -174,11 +211,10 @@ private struct ResearchGlimpse: View {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(Theme.Wash.selection, lineWidth: 1)
                     )
-                    .opacity(preview.isLive ? 1 : 0.55)
 
                 HStack(spacing: 5) {
                     Circle()
-                        .fill(preview.isLive ? Theme.accent : Color.secondary.opacity(0.5))
+                        .fill(Theme.accent)
                         .frame(width: 5, height: 5)
                     Text(caption)
                         .font(Theme.Font.caption)
@@ -196,10 +232,7 @@ private struct ResearchGlimpse: View {
 
     private var caption: LocalizedStringResource {
         let place = preview.host ?? String(localized: "the research page")
-        let caption: LocalizedStringResource = preview.isLive
-            ? "Browsing \(place)…"
-            : "Finished on \(place)"
-        return caption
+        return "Browsing \(place)…"
     }
 }
 
@@ -209,11 +242,8 @@ private struct InspectorFooter: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            ModelChip(coordinator: coordinator)
-
             if usage.requestCount > 0 {
                 AgentUsageSummary(usage: usage)
-                    .padding(.leading, ModelChipMetrics.textInset)
             }
 
             Text(AIDisclosure.replyCaption)

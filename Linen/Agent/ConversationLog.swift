@@ -97,6 +97,10 @@ final class ConversationLog {
             case completed
             case cancelled
             case failed
+
+            var isSpoken: Bool {
+                self == .completed || self == .cancelled
+            }
         }
 
         let id: UUID
@@ -107,6 +111,7 @@ final class ConversationLog {
         var response: String
         var state: State
         var finishedAt: Date?
+        let providerID: String?
     }
 
     struct Exchange: Equatable {
@@ -124,6 +129,7 @@ final class ConversationLog {
         var response: String
         var state: TaskTrace.State
         var finishedAt: Date?
+        var providerID: String?
     }
 
     private nonisolated struct StepRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -188,10 +194,11 @@ final class ConversationLog {
             tabID: tabID,
             prompt: prompt,
             startedAt: Date(),
-            steps: [Step(kind: .thinking, title: String(localized: "Understanding the request"))],
+            steps: [],
             response: "",
             state: .running,
-            finishedAt: nil
+            finishedAt: nil,
+            providerID: LLMSettings.providerID
         ))
         scheduleSave(trace: taskID)
         return taskID
@@ -233,11 +240,13 @@ final class ConversationLog {
         scheduleSave(trace: taskID)
     }
 
-    func updateResponse(_ response: String, taskID: UUID) {
+    func updateResponse(_ response: String, taskID: UUID, closingSteps: Bool = true) {
         guard let index = traces.firstIndex(where: { $0.id == taskID }),
               traces[index].state == .running
         else { return }
-        finishRunningSteps(at: index)
+        if closingSteps {
+            finishRunningSteps(at: index)
+        }
         traces[index].response = response
         scheduleSave(trace: taskID)
     }
@@ -330,7 +339,7 @@ final class ConversationLog {
 
     func exchanges(forTab tabID: UUID, limit: Int? = nil) -> [Exchange] {
         let exchanges = traces.lazy
-            .filter { $0.tabID == tabID && $0.state == .completed && !$0.response.isEmpty }
+            .filter { $0.tabID == tabID && $0.state.isSpoken && !$0.response.isEmpty }
             .map { Exchange(prompt: $0.prompt, response: $0.response) }
         let all = Array(exchanges)
         guard let limit, all.count > limit else { return all }
@@ -504,7 +513,8 @@ final class ConversationLog {
                 steps: (stepsByTrace[record.id] ?? []).map(Self.step(from:)),
                 response: record.response,
                 state: record.state,
-                finishedAt: record.finishedAt
+                finishedAt: record.finishedAt,
+                providerID: record.providerID
             )
             guard trace.state == .running else { return trace }
             for index in trace.steps.indices where trace.steps[index].state == .running {
@@ -555,7 +565,8 @@ final class ConversationLog {
             startedAt: trace.startedAt,
             response: trace.response,
             state: trace.state,
-            finishedAt: trace.finishedAt
+            finishedAt: trace.finishedAt,
+            providerID: trace.providerID
         )
     }
 

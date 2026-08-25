@@ -11,7 +11,7 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
     var title: LocalizedStringResource {
         switch self {
         case .activity:
-            "Activity"
+            "Assistant"
         case .lyrics:
             "Lyrics"
         }
@@ -49,14 +49,17 @@ nonisolated enum SidePanelMetrics {
     static let minWidth: CGFloat = 300
     static let defaultWidth: CGFloat = minWidth
     static let maxWidth: CGFloat = 620
-    static let maxWindowFraction: CGFloat = 0.5
+    static let pageMinWidth: CGFloat = 420
     static let controlInset: CGFloat = LoomChrome.canvasInset
 
     static let headerHeight: CGFloat = 28 + controlInset * 2
+    static let tabHeight: CGFloat = 24
 
-    static func clampWidth(_ width: CGFloat, container: CGFloat) -> CGFloat {
-        let ceiling = container > 0
-            ? max(minWidth, min(maxWidth, container * maxWindowFraction))
+    static let tabInset: CGFloat = (headerHeight - tabHeight) / 2
+
+    static func clampWidth(_ width: CGFloat, available: CGFloat) -> CGFloat {
+        let ceiling = available > 0
+            ? max(minWidth, min(maxWidth, available - pageMinWidth))
             : maxWidth
         return min(max(width, minWidth), ceiling)
     }
@@ -203,26 +206,26 @@ final class SidePanelModel {
 
     // MARK: - Width
 
-    func openWidth(in container: CGFloat) -> CGFloat {
+    func openWidth(in available: CGFloat) -> CGFloat {
         if let dragWidth {
             return dragWidth
         }
-        return SidePanelMetrics.clampWidth(width, container: container)
+        return SidePanelMetrics.clampWidth(width, available: available)
     }
 
     var isDragging: Bool {
         dragOrigin != nil
     }
 
-    func dragChanged(translation: CGFloat, container: CGFloat) {
+    func dragChanged(translation: CGFloat, available: CGFloat) {
         if dragOrigin == nil {
-            dragOrigin = openWidth(in: container)
+            dragOrigin = openWidth(in: available)
         }
-        apply((dragOrigin ?? 0) - translation, releasing: false, container: container)
+        apply((dragOrigin ?? 0) - translation, releasing: false, available: available)
     }
 
-    func dragEnded(translation: CGFloat, container: CGFloat) {
-        apply((dragOrigin ?? openWidth(in: container)) - translation, releasing: true, container: container)
+    func dragEnded(translation: CGFloat, available: CGFloat) {
+        apply((dragOrigin ?? openWidth(in: available)) - translation, releasing: true, available: available)
         dragOrigin = nil
         dragWidth = nil
         persistWidth()
@@ -234,8 +237,8 @@ final class SidePanelModel {
         persistWidth()
     }
 
-    private func apply(_ proposed: CGFloat, releasing: Bool, container: CGFloat) {
-        let live = SidePanelMetrics.clampWidth(proposed, container: container)
+    private func apply(_ proposed: CGFloat, releasing: Bool, available: CGFloat) {
+        let live = SidePanelMetrics.clampWidth(proposed, available: available)
         if !releasing {
             dragWidth = live
             return

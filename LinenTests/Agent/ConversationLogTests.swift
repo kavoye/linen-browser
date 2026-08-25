@@ -66,8 +66,6 @@ struct ConversationLogTests {
         #expect(trace.state == .completed)
         #expect(trace.response == "Here are three.")
         #expect(trace.finishedAt != nil)
-        // The opening "Understanding the request" step is closed out too; a
-        // finished turn should have nothing left spinning.
         #expect(trace.steps.allSatisfy { $0.state != .running })
     }
 
@@ -157,10 +155,7 @@ struct ConversationLogTests {
         #expect(log.traces(forTab: alive).count == 1)
     }
 
-    /// What seeds a rebuilt model session: completed exchanges only, in
-    /// order, most recent when limited. A failed or cancelled turn is not
-    /// something to remind the model of.
-    @Test func seedsOnlyCompletedExchanges() {
+    @Test func seedsWhatTheAgentActuallySaid() {
         let (log, _) = makeLog()
 
         let tab = UUID()
@@ -170,10 +165,21 @@ struct ConversationLogTests {
         log.completeTask(log.beginTask("four", tabID: tab), response: "4")
 
         let exchanges = log.exchanges(forTab: tab)
-        #expect(exchanges.map(\.prompt) == ["one", "four"])
+        #expect(exchanges.map(\.prompt) == ["one", "four"], "a turn with nothing said adds nothing")
 
         let limited = log.exchanges(forTab: tab, limit: 1)
         #expect(limited.map(\.prompt) == ["four"])
+    }
+
+    @Test func aStoppedTurnThatHadAnsweredStaysInTheConversation() {
+        let (log, _) = makeLog()
+
+        let tab = UUID()
+        let asked = log.beginTask("plan a day out", tabID: tab)
+        log.updateResponse("Where would you like to go?", taskID: asked)
+        log.cancelTask(asked)
+
+        #expect(log.exchanges(forTab: tab).map(\.response) == ["Where would you like to go?"])
     }
 
     /// A failure ends the turn with its reason as the response, and a
@@ -258,6 +264,8 @@ struct ConversationLogTests {
             url: try #require(URL(string: "https://example.com/"))
         )
         log.completeTool(taskID: task, stepID: step, detail: "one result", links: [link])
+        let second = try #require(log.beginTool(taskID: task, name: "navigate", title: "Open"))
+        log.completeTool(taskID: task, stepID: second, detail: "opened")
         log.completeTask(task, response: "found it")
         log.saveBlocking()
 
@@ -267,7 +275,7 @@ struct ConversationLogTests {
         #expect(restored.links == [link])
         #expect(restored.detail == "one result")
         // Order is a column, not an accident of how rows came back.
-        #expect(trace.steps.map(\.title) == ["Understanding the request", "Search"])
+        #expect(trace.steps.map(\.title) == ["Search", "Open"])
     }
 
     @Test func clearingLeavesNoStepsBehind() throws {

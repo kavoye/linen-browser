@@ -80,6 +80,10 @@ private struct ReleaseNotesSection: View {
     let release: GitHubRelease
     let isRunning: Bool
 
+    private var notes: String {
+        (release.body ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
@@ -113,110 +117,14 @@ private struct ReleaseNotesSection: View {
                 }
             }
 
-            MarkdownText(source: release.body ?? "")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-struct MarkdownText: View {
-    let source: String
-
-    private enum Kind {
-        case heading(String, level: Int)
-        case bullet(String)
-        case paragraph(String)
-        case rule
-    }
-
-    private struct Block: Identifiable {
-        let id: Int
-        let kind: Kind
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if blocks.isEmpty {
+            if notes.isEmpty {
                 Text("No notes for this release.")
                     .font(Theme.Font.body)
                     .foregroundStyle(.tertiary)
-            }
-            ForEach(blocks) { block in
-                switch block.kind {
-                case .heading(let text, let level):
-                    inline(text)
-                        .font(.system(size: level <= 2 ? 13 : 12, weight: .semibold))
-                        .padding(.top, 4)
-                case .bullet(let text):
-                    HStack(alignment: .firstTextBaseline, spacing: 7) {
-                        Text("•")
-                            .font(Theme.Font.body)
-                            .foregroundStyle(.tertiary)
-                        inline(text)
-                            .font(Theme.Font.body)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                case .paragraph(let text):
-                    inline(text)
-                        .font(Theme.Font.body)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 3)
-                case .rule:
-                    RowSeparator().padding(.vertical, 2)
-                }
-            }
-        }
-    }
-
-    private func inline(_ text: String) -> Text {
-        let parsed = try? AttributedString(
-            markdown: text,
-            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        )
-        return Text(parsed ?? AttributedString(text))
-    }
-
-    private var blocks: [Block] {
-        var kinds: [Kind] = []
-        var open: Kind?
-
-        func close() {
-            if let open {
-                kinds.append(open)
-            }
-            open = nil
-        }
-
-        for rawLine in source.replacingOccurrences(of: "\r\n", with: "\n").split(
-            separator: "\n",
-            omittingEmptySubsequences: false
-        ) {
-            let line = rawLine.trimmingCharacters(in: .whitespaces)
-            if line.isEmpty {
-                close()
-                continue
-            }
-
-            if line == "---" || line == "***" || line == "___" {
-                close()
-                kinds.append(.rule)
-            } else if line.hasPrefix("#") {
-                close()
-                let level = line.prefix(while: { $0 == "#" }).count
-                let text = line.dropFirst(level).trimmingCharacters(in: .whitespaces)
-                kinds.append(.heading(text, level: level))
-            } else if line.hasPrefix("- ") || line.hasPrefix("* ") || line.hasPrefix("+ ") {
-                close()
-                open = .bullet(String(line.dropFirst(2)))
-            } else if case .bullet(let started)? = open {
-                open = .bullet(started + " " + line)
-            } else if case .paragraph(let started)? = open {
-                open = .paragraph(started + " " + line)
             } else {
-                open = .paragraph(line)
+                ChatMarkdown(text: notes, fontSize: 12, spacing: 8, joinsWrappedLines: true)
             }
         }
-        close()
-        return kinds.enumerated().map { Block(id: $0.offset, kind: $0.element) }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

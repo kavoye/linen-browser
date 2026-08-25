@@ -170,7 +170,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(.separator())
         menu.addItem(command("Hide Sidebar", #selector(toggleSidebar), key: "s", modifiers: [.command, .control]))
         menu.addItem(command(
-            "Show Assistant Activity",
+            "Show Assistant",
             #selector(toggleAgentInspector),
             key: "a",
             modifiers: [.command, .option]
@@ -442,8 +442,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             return true
         case #selector(toggleAgentInspector):
             let activityTitle: LocalizedStringResource = coordinator.sidePanel.isShowing(.activity)
-                ? "Hide Assistant Activity"
-                : "Show Assistant Activity"
+                ? "Hide Assistant"
+                : "Show Assistant"
             menuItem.title = String(localized: activityTitle)
             return true
         case #selector(toggleLyrics):

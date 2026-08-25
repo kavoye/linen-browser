@@ -117,7 +117,14 @@ nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendabl
         tabID: UUID,
         browser: BrowserModel
     ) -> AgentActivityPanel {
-        AgentActivityPanel(traces: traces, tabID: tabID, browser: browser, onRetry: { _ in })
+        AgentActivityPanel(
+            traces: traces,
+            tabID: tabID,
+            browser: browser,
+            onRetry: { _ in },
+            onEdit: { _ in },
+            onSpeak: { _ in }
+        )
     }
 
     /// Selectable SwiftUI text on macOS is an AppKit text field (today a
@@ -197,7 +204,8 @@ nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendabl
                 steps: steps,
                 response: Array(repeating: paragraph, count: 5).joined(separator: "\n\n"),
                 state: .completed,
-                finishedAt: Date(timeIntervalSinceNow: Double(index - count) * 60 + 30)
+                finishedAt: Date(timeIntervalSinceNow: Double(index - count) * 60 + 30),
+                providerID: nil
             )
         }
     }

@@ -148,6 +148,13 @@ struct AppDatabase: Sendable {
             t.column("response", .text).notNull()
             t.column("state", .text).notNull()
             t.column("finishedAt", .datetime)
+            t.column("providerID", .text)
+        }
+
+        if try !db.columns(in: "agentTrace").contains(where: { $0.name == "providerID" }) {
+            try db.alter(table: "agentTrace") { t in
+                t.add(column: "providerID", .text)
+            }
         }
 
         try db.create(table: "agentStep", options: .ifNotExists) {  t in
