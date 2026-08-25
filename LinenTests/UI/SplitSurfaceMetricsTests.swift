@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import Linen
@@ -50,11 +52,34 @@ struct SplitSeamSnapTests {
     }
 }
 
-/// The seam's grab band: narrower than the gutter it sits in, centred on the
-/// line, full length along it.
+/// The seam sits on web pages, not on app chrome, so its ink comes from what
+/// the panes are showing rather than from the window's theme.
+struct SplitSeamInkTests {
+    private let white = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    private let black = NSColor(srgbRed: 0.05, green: 0.05, blue: 0.06, alpha: 1)
+
+    @Test func whitePagesReadAsLightWhateverTheWindowSays() {
+        #expect(PageInk.isLight(white, scheme: .dark))
+        #expect(PageInk.isLight(white, scheme: .light))
+    }
+
+    @Test func darkPagesReadAsDarkWhateverTheWindowSays() {
+        #expect(!PageInk.isLight(black, scheme: .light))
+        #expect(!PageInk.isLight(black, scheme: .dark))
+    }
+
+    @Test func aPageThatNeverReportedFallsBackToTheWindow() {
+        #expect(PageInk.isLight(nil, scheme: .light))
+        #expect(!PageInk.isLight(nil, scheme: .dark))
+    }
+}
+
+/// The seam's grab band: wider than the hairline it sits on, centred on it,
+/// full length along it.
 struct SplitSeamHitTests {
-    @Test func theGrabBandIsNarrowerThanTheGutter() {
-        #expect(SplitMetrics.seamHitWidth < SplitMetrics.gutter)
+    @Test func theGrabBandIsWiderThanTheLine() {
+        #expect(SplitMetrics.gutter <= 1)
+        #expect(SplitMetrics.seamHitWidth > SplitMetrics.gutter)
     }
 
     @Test func anUprightSeamTakesACentredBand() {

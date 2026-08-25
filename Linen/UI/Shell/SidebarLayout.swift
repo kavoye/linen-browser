@@ -272,6 +272,7 @@ extension EnvironmentValues {
 
 struct LoomColumnResizeHandle: View {
     let grabWidth: CGFloat
+    let onLightPage: Bool
     let isDragging: Bool
     let onDragChanged: (CGFloat) -> Void
     let onDragEnded: (CGFloat) -> Void
@@ -287,7 +288,7 @@ struct LoomColumnResizeHandle: View {
                 axis: .vertical,
                 isVisible: isDragging || isHovering,
                 isDragging: isDragging,
-                thickness: LoomChrome.canvasInset - 1
+                onLightPage: onLightPage
             )
         }
         .frame(width: grabWidth)

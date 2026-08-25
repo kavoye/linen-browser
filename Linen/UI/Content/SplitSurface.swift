@@ -6,9 +6,9 @@ import QuartzCore
 import SwiftUI
 
 nonisolated enum SplitMetrics {
-    static let gutter: CGFloat = 3
+    static let gutter: CGFloat = 0.5
 
-    static let seamHitWidth: CGFloat = 2.5
+    static let seamHitWidth: CGFloat = 10
 
     static let snapDistance: CGFloat = 18
 
@@ -79,6 +79,8 @@ struct SplitSurface: View {
     let coordinator: AppCoordinator
     let split: TabSplit
     let panes: [BrowserTab]
+
+    @Environment(\.colorScheme) private var colorScheme
     let pull: PullState
 
     @State private var seamGrab: CGSize?
@@ -169,10 +171,26 @@ struct SplitSurface: View {
         return carriedPane == nil ? .replaces : .exchanges
     }
 
+    private var seamsSitOnLightPages: Bool {
+        PageInk.isLight(
+            ChromeBand.pageColor(browser: browser, coordinator: coordinator),
+            scheme: colorScheme
+        )
+    }
+
+    private var seamColor: Color {
+        Color(nsColor: LoomChrome.sampledColor(
+            ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+            scheme: colorScheme
+        ))
+    }
+
     private func seams(_ layout: SplitLayout) -> some View {
         ForEach(layout.seams) { seam in
             SeamHandle(
                 axis: seam.axis,
+                onLightPage: seamsSitOnLightPages,
+                seamColor: seamColor,
                 onDragChanged: { point in resize(seam, to: point) },
                 onDragEnded: {
                     seamGrab = nil
@@ -379,6 +397,8 @@ struct SplitLandingSlot: View {
 
 private struct SeamHandle: View {
     let axis: SplitAxis
+    let onLightPage: Bool
+    let seamColor: Color
     let onDragChanged: (CGPoint) -> Void
     let onDragEnded: () -> Void
     let onReset: () -> Void
@@ -392,12 +412,14 @@ private struct SeamHandle: View {
 
     var body: some View {
         ZStack {
-            Color.clear
+            Rectangle()
+                .fill(seamColor)
 
             LoomResizePill(
                 axis: isSideBySide ? .vertical : .horizontal,
                 isVisible: hovering || isDragging,
-                isDragging: isDragging
+                isDragging: isDragging,
+                onLightPage: onLightPage
             )
         }
         .contentShape(SeamHitBand(axis: axis))
@@ -483,6 +505,13 @@ private struct PaneHandle: View {
         browser.splits.split(containing: tab.id)
     }
 
+    private var dotInk: Color {
+        if isFocused {
+            return wearsGlass ? Theme.accent : Color.white.opacity(0.8)
+        }
+        return hovering || dragging ? Theme.Wash.scrim : Theme.chrome(0.35)
+    }
+
     private var visibility: Double {
         SplitPillVisibility.opacity(
             isHidden: isHidden,
@@ -493,7 +522,7 @@ private struct PaneHandle: View {
     }
 
     private var wearsGlass: Bool {
-        !isFocused && SplitPillVisibility.isEngaged(
+        SplitPillVisibility.isEngaged(
             isHidden: isHidden,
             isHovered: hovering,
             isDragging: dragging,
@@ -503,23 +532,25 @@ private struct PaneHandle: View {
 
     var body: some View {
         ZStack {
-            if isFocused {
+            if wearsGlass {
+                LoomPanelFill(
+                    shape: Capsule(),
+                    emphasis: isFocused ? 2.6 : 1,
+                    tint: isFocused ? Theme.accent : nil
+                )
+                .transaction { $0.animation = nil }
+            } else if isFocused {
                 Capsule().fill(Theme.accent)
-            } else {
-                LoomPanelFill(shape: Capsule(), isVisible: wearsGlass)
-                    .transaction { $0.animation = nil }
             }
         }
         .overlay {
-            Capsule().strokeBorder(isFocused ? .clear : Theme.Wash.strong, lineWidth: 0.5)
+            Capsule().strokeBorder(Theme.Wash.strong, lineWidth: 0.5)
         }
         .overlay {
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { _ in
                     Circle()
-                        .fill(isFocused
-                            ? Color.white.opacity(hovering || dragging ? 1 : 0.8)
-                            : hovering || dragging ? Theme.Wash.scrim : Theme.chrome(0.35))
+                        .fill(dotInk)
                         .frame(width: 2.5, height: 2.5)
                 }
             }

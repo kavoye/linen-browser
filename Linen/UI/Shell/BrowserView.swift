@@ -22,6 +22,13 @@ struct BrowserView: View {
     @State private var containerWidth: CGFloat = 0
     @Environment(\.colorScheme) private var scheme
 
+    private var chromeSitsOnALightPage: Bool {
+        PageInk.isLight(
+            ChromeBand.pageColor(browser: browser, coordinator: coordinator),
+            scheme: scheme
+        )
+    }
+
     private var panel: SidePanelModel {
         coordinator.sidePanel
     }
@@ -73,6 +80,7 @@ struct BrowserView: View {
             if showsPanel && !isExpanded {
                 LoomColumnResizeHandle(
                     grabWidth: LoomChrome.resizeGrabWidth,
+                    onLightPage: chromeSitsOnALightPage,
                     isDragging: panel.isDragging,
                     onDragChanged: {
                         panel.dragChanged(translation: $0, container: containerWidth)
@@ -114,6 +122,7 @@ struct BrowserView: View {
             if sidebar.isShowing {
                 LoomColumnResizeHandle(
                     grabWidth: LoomChrome.resizeGrabWidth,
+                    onLightPage: chromeSitsOnALightPage,
                     isDragging: sidebar.isDragging,
                     onDragChanged: {
                         sidebar.dragChanged(translation: $0, container: containerWidth)

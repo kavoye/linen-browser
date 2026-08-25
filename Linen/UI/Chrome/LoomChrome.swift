@@ -71,16 +71,26 @@ struct LoomResizePill: View {
     let isDragging: Bool
     var thickness: CGFloat = 3
     var length: CGFloat = 64
+    var onLightPage: Bool = false
+
+    private var ink: Color {
+        onLightPage ? .black : .white
+    }
+
+    private var halo: Color {
+        (onLightPage ? Color.white : Color.black).opacity(0.35)
+    }
 
     var body: some View {
         Capsule()
-            .fill(Color.primary.opacity(isDragging ? 0.9 : 0.62))
+            .fill(ink)
+            .overlay(Capsule().strokeBorder(halo, lineWidth: 0.5))
             .frame(
                 width: axis == .vertical ? thickness : length,
                 height: axis == .vertical ? length : thickness
             )
             .opacity(isVisible ? 1 : 0)
-            .shadow(color: .black.opacity(0.3), radius: 4, y: 1)
+            .shadow(color: .black.opacity(isDragging ? 0.45 : 0.3), radius: 4, y: 1)
     }
 }
 
@@ -286,6 +296,7 @@ struct LoomPanelFill<S: Shape>: View {
     let shape: S
     var isVisible = true
     var emphasis: Double = 1
+    var tint: Color?
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -293,7 +304,7 @@ struct LoomPanelFill<S: Shape>: View {
         guard isVisible else { return .identity }
         let resting = colorScheme == .dark ? 0.18 : 0.10
         return .regular.tint(
-            Theme.sidebarTint.opacity(min(1, resting * emphasis))
+            (tint ?? Theme.sidebarTint).opacity(min(1, resting * emphasis))
         )
     }
 
