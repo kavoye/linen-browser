@@ -150,9 +150,16 @@ cookies, tabs or settings. Delete `$TMPDIR/linen-stage` to reset it, or set
 ## Write commit messages
 
 Linen uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
-Start the subject with a type, then a colon and a summary. Write the summary in
-the imperative mood. Start it with a lower-case letter. Do not put a period at
-the end. Keep the subject to 72 characters or less.
+Start the subject with a type, add a scope in parentheses when the change
+belongs to one area, then a colon and a summary. Write the summary as an
+instruction: one imperative sentence, capitalized, with no final period. Keep
+the whole subject to 72 characters or less.
+
+```
+fix(sidebar): Keep the selection after a drag
+feat(downloads): Keep the list after a quit
+test(agent): Stop a wedged suite from holding the run
+```
 
 Use one of these types:
 
@@ -166,14 +173,14 @@ Use one of these types:
 - `ci`: a change to a workflow in `.github/workflows`.
 - `chore`: a change that no other type describes.
 
-Add a scope in parentheses when the change belongs to one area, for example
-`fix(sidebar): keep the selection after a drag`. Put an exclamation mark after
-the type for a change that breaks an existing setup, for example `feat!:`.
+Put an exclamation mark after the type for a change that breaks an existing
+setup, such as `feat!:`.
 
-Give the reason for the change in the body:
+Give the reason for the change in the body. Say what the code did before, and
+why that was wrong:
 
 ```
-ci: stop re-running tests in the release workflow
+ci: Stop re-running tests in the release workflow
 
 CI tests every push to main, and a tag must point at a commit on main, so
 the release job ran the same suite a second time.
@@ -187,7 +194,7 @@ the release job ran the same suite a second time.
 - User-facing strings remain localizable.
 - The change uses existing visual and interaction patterns.
 - Comments explain constraints, not syntax or product comparisons.
-- Each commit message follows Conventional Commits.
+- Each commit subject follows Conventional Commits and reads as an instruction.
 
 ## License of your contribution
 
