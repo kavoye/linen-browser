@@ -158,20 +158,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         return configuration
     }
 
-    func adopt(profile: Profile?) async {
-        beginAdopting(profile: profile)
-        guard profile != nil else { return }
-        await start()
-    }
-
     func beginAdopting(profile: Profile?) {
         for (_, context) in contexts {
             try? controller.unload(context)
         }
         contexts = [:]
-        installed = []
         appsOutOfReach = []
-        iconCache = [:]
         anchors = [:]
         reloadedForEmptyPopup = []
         presentedPopup?.performClose(nil)

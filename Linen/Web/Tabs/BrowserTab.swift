@@ -57,16 +57,19 @@ final class BrowserTab: Identifiable {
 
     var canGoBack: Bool {
         _ = canGoBackInWeb
+        guard isMaterialised else { return false }
         return webView.canGoBack
     }
 
     var canGoForward: Bool {
         _ = canGoForwardInWeb
+        guard isMaterialised else { return false }
         return webView.canGoForward
     }
 
     var backList: [WKBackForwardListItem] {
-        webView.backForwardList.backList
+        guard isMaterialised else { return [] }
+        return webView.backForwardList.backList
     }
 
     /// What WebKit has committed. `urlString` answers for a provisional
@@ -83,7 +86,7 @@ final class BrowserTab: Identifiable {
 
     var isUnderTopBar = false {
         didSet {
-            guard isUnderTopBar != oldValue else { return }
+            guard isUnderTopBar != oldValue, isMaterialised else { return }
             Self.applyObscuredInsets(to: webView, isUnderTopBar: isUnderTopBar)
             measureBandUnderBar()
         }
@@ -94,7 +97,7 @@ final class BrowserTab: Identifiable {
     private(set) var preview: NSImage?
 
     func refreshPreview() {
-        guard isShowingRealPage, !isDeferred, webView.window != nil else { return }
+        guard isMaterialised, isShowingRealPage, !isDeferred, webView.window != nil else { return }
         let configuration = WKSnapshotConfiguration()
         configuration.snapshotWidth = 480
         configuration.afterScreenUpdates = false
@@ -105,6 +108,12 @@ final class BrowserTab: Identifiable {
     }
 
     private(set) var canvasColor: NSColor?
+
+    /// What the page itself is painted on: behind the web view before it has
+    /// presented, and above it while a pull holds it down.
+    var surfaceColor: Color {
+        canvasColor.map(Color.init(nsColor:)) ?? Theme.windowBackground
+    }
 
     private(set) var hasPresentedContent = false
 
@@ -177,7 +186,21 @@ final class BrowserTab: Identifiable {
         guard let pinnedURL else { return false }
         return urlString == pinnedURL.absoluteString
     }
-    private(set) var webView: WKWebView
+    @ObservationIgnored private var liveView: WKWebView?
+
+    var isMaterialised: Bool {
+        liveView != nil
+    }
+
+    var webView: WKWebView {
+        if let liveView {
+            return liveView
+        }
+        let view = WebViewPool.shared.makeColdView()
+        liveView = view
+        adopt(view)
+        return view
+    }
     var onNavigationFinished: ((Bool) -> Void)?
     var onNavigationOutsideExtension: ((URL) -> Void)?
     var onNewWindow: ((WKWebView, Bool) -> Void)?
@@ -229,20 +252,20 @@ final class BrowserTab: Identifiable {
         let opensStartPage = opensBlank && adopting == nil && extensionHost == nil && !restoring
         if let adopting {
             // WebKit requires this exact view, with the opener's configuration attached.
-            webView = adopting
+            liveView = adopting
             extensionBaseURL = nil
         } else if let extensionHost {
-            webView = WebViewPool.shared.makeView(configuration: extensionHost.configuration)
+            liveView = WebViewPool.shared.makeView(configuration: extensionHost.configuration)
             extensionBaseURL = extensionHost.baseURL
             title = extensionHost.name
             favicon = extensionHost.icon
         } else {
-            webView = restoring
-                ? WebViewPool.shared.makeColdView()
-                : WebViewPool.shared.acquire()
+            liveView = restoring ? nil : WebViewPool.shared.acquire()
             extensionBaseURL = nil
         }
-        adopt(webView)
+        if let liveView {
+            adopt(liveView)
+        }
         find.driver = .webKit { [weak self] in self?.webView }
         if opensStartPage, BrowserSettings.shared.newTab != .blank {
             permitSystemPage(SystemPages.start)
@@ -251,7 +274,7 @@ final class BrowserTab: Identifiable {
     }
 
     private func adopt(_ view: WKWebView) {
-        webView = view
+        liveView = view
         Self.applyObscuredInsets(to: webView, isUnderTopBar: isUnderTopBar)
         fullscreenObservation = webView.observe(\.fullscreenState, options: [.new]) { [weak self] view, _ in
             MainActor.assumeIsolated {
@@ -399,7 +422,7 @@ final class BrowserTab: Identifiable {
         (outgoing as? TabWebView)?.onFaviconDeclarationChange = nil
         outgoing.removeFromSuperview()
 
-        adopt(WebViewPool.shared.makeColdView())
+        liveView = nil
         hasPresentedContent = false
         deferRestore(state: state, url: url)
         processState.markUnloaded()
@@ -463,11 +486,12 @@ final class BrowserTab: Identifiable {
         onSameDocumentNavigation = nil
         onContentProcessTerminated = nil
         onLocationRevoked = nil
-        webView.navigationDelegate = nil
-        webView.uiDelegate = nil
         navigationDelegate = nil
-        (webView as? TabWebView)?.onContextDownload = nil
-        (webView as? TabWebView)?.onZoomChanged = nil
+        guard let view = liveView else { return }
+        view.navigationDelegate = nil
+        view.uiDelegate = nil
+        (view as? TabWebView)?.onContextDownload = nil
+        (view as? TabWebView)?.onZoomChanged = nil
     }
 
     func contentProcessDidTerminate() {
@@ -750,6 +774,9 @@ final class BrowserTab: Identifiable {
         if isDeferred {
             return deferredState
         }
+        guard isMaterialised else {
+            return cachedSessionState
+        }
         if !hasFreshSessionState {
             cachedSessionState = webView.interactionState as? Data
             hasFreshSessionState = true
@@ -886,7 +913,7 @@ final class BrowserTab: Identifiable {
     }
 
     func refreshFavicon() {
-        guard extensionBaseURL == nil else { return }
+        guard extensionBaseURL == nil, isMaterialised else { return }
         guard !isPrivate, !isShowingSystemPage else { return }
         guard let host = webView.url?.host()?.lowercased() else { return }
         if host != faviconHost {

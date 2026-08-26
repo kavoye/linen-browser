@@ -27,7 +27,23 @@ final class DownloadManager: NSObject {
         var bytesExpected: Int64 = 0
         var state: State = .running
         var isResumable = false
-        let started = Date()
+        let started: Date
+
+        init(
+            id: UUID,
+            filename: String,
+            source: String,
+            sourceTabID: UUID?,
+            isPrivate: Bool = false,
+            started: Date = Date()
+        ) {
+            self.id = id
+            self.filename = filename
+            self.source = source
+            self.sourceTabID = sourceTabID
+            self.isPrivate = isPrivate
+            self.started = started
+        }
 
         var isRunning: Bool {
             state == .running
@@ -39,7 +55,9 @@ final class DownloadManager: NSObject {
         }
     }
 
-    private(set) var items: [Item] = []
+    private(set) var items: [Item] = [] {
+        didSet { scheduleWrite() }
+    }
 
     @ObservationIgnored var onFinished: ((String) -> Void)?
 
@@ -54,14 +72,83 @@ final class DownloadManager: NSObject {
 
     @ObservationIgnored private let destinationFolderOverride: URL?
     @ObservationIgnored private let asksWhereToSaveOverride: Bool?
+    @ObservationIgnored private let file: URL?
+    @ObservationIgnored private var writeTask: Task<Void, Never>?
 
-    init(destinationFolder: URL? = nil, asksWhereToSave: Bool? = nil) {
+    init(destinationFolder: URL? = nil, asksWhereToSave: Bool? = nil, file: URL? = nil) {
         destinationFolderOverride = destinationFolder
         asksWhereToSaveOverride = asksWhereToSave
+        self.file = file ?? Self.defaultFile
         super.init()
+        items = Self.read(from: self.file)
+        writeTask?.cancel()
+        writeTask = nil
     }
 
-    private static let capacity = 40
+    static var defaultFile: URL? {
+        guard !AppDatabase.isRunningTests, AppDatabase.ownsSession else { return nil }
+        return AppDatabase.supportDirectory.appendingPathComponent("Downloads.json")
+    }
+
+    /// A ceiling the list is not meant to reach: what it keeps is decided by
+    /// `DownloadRetention`, and this only stops a runaway file.
+    private static let capacity = 1000
+
+    func apply(_ retention: DownloadRetention, now: Date = Date()) {
+        guard let age = retention.maximumAge else { return }
+        let cutoff = now.addingTimeInterval(-age)
+        let stale = items.filter { !$0.isRunning && $0.started < cutoff }
+        guard !stale.isEmpty else { return }
+        for item in stale {
+            finish(item.id)
+        }
+        items.removeAll { !$0.isRunning && $0.started < cutoff }
+    }
+
+    func clearOnQuitIfNeeded(_ retention: DownloadRetention) {
+        guard retention == .onQuit else { return }
+        clearFinished()
+        writeNow()
+    }
+
+    private func scheduleWrite() {
+        guard file != nil else { return }
+        writeTask?.cancel()
+        writeTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            self?.write()
+        }
+    }
+
+    func writeNow() {
+        writeTask?.cancel()
+        writeTask = nil
+        write()
+    }
+
+    private func write() {
+        guard let file else { return }
+        let kept = items.filter { !$0.isPrivate }.prefix(Self.capacity).map(StoredDownload.init)
+        do {
+            try FileManager.default.createDirectory(
+                at: file.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try JSONEncoder().encode(Array(kept)).write(to: file, options: .atomic)
+        } catch {
+            Pipeline.log.error("downloads: writing the list failed: \(error, privacy: .public)")
+        }
+    }
+
+    private static func read(from file: URL?) -> [Item] {
+        guard let file, let data = try? Data(contentsOf: file) else { return [] }
+        guard let stored = try? JSONDecoder().decode([StoredDownload].self, from: data) else {
+            Pipeline.log.error("downloads: the list on disk could not be read")
+            return []
+        }
+        return stored.map(\.item)
+    }
 
     var activeCount: Int {
         items.filter(\.isRunning).count
@@ -111,10 +198,8 @@ final class DownloadManager: NSObject {
             ),
             at: 0
         )
-        if items.count > Self.capacity {
-            if let index = items.lastIndex(where: { !$0.isRunning }) {
-                items.remove(at: index)
-            }
+        if items.count > Self.capacity, let index = items.lastIndex(where: { !$0.isRunning }) {
+            items.remove(at: index)
         }
         origins[id] = source
         return id
@@ -461,5 +546,100 @@ extension DownloadManager.Item {
         default:
             nil
         }
+    }
+}
+
+enum DownloadRetention: String, CaseIterable, Identifiable {
+    case afterOneDay
+    case onQuit
+    case manually
+
+    var id: String {
+        rawValue
+    }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .afterOneDay:
+            "After one day"
+        case .onQuit:
+            "When Linen quits"
+        case .manually:
+            "Manually"
+        }
+    }
+
+    var maximumAge: TimeInterval? {
+        self == .afterOneDay ? 86_400 : nil
+    }
+}
+
+private struct StoredDownload: Codable {
+    enum Outcome: String, Codable {
+        case finished
+        case interrupted
+        case failed
+        case cancelled
+    }
+
+    let id: UUID
+    let filename: String
+    let source: String
+    let destination: URL?
+    let bytesReceived: Int64
+    let bytesExpected: Int64
+    let outcome: Outcome
+    let reason: String?
+    let started: Date
+
+    init(_ item: DownloadManager.Item) {
+        id = item.id
+        filename = item.filename
+        source = item.source
+        destination = item.destination
+        bytesReceived = item.bytesReceived
+        bytesExpected = item.bytesExpected
+        started = item.started
+        switch item.state {
+        case .finished:
+            outcome = .finished
+            reason = nil
+        case .interrupted(let why):
+            outcome = .interrupted
+            reason = why
+        case .failed(let why):
+            outcome = .failed
+            reason = why
+        case .cancelled:
+            outcome = .cancelled
+            reason = nil
+        case .running:
+            outcome = .interrupted
+            reason = String(localized: "Linen closed before this finished")
+        }
+    }
+
+    var item: DownloadManager.Item {
+        var restored = DownloadManager.Item(
+            id: id,
+            filename: filename,
+            source: source,
+            sourceTabID: nil,
+            started: started
+        )
+        restored.destination = destination
+        restored.bytesReceived = bytesReceived
+        restored.bytesExpected = bytesExpected
+        switch outcome {
+        case .finished:
+            restored.state = .finished
+        case .interrupted:
+            restored.state = .interrupted(reason ?? String(localized: "This download did not finish"))
+        case .failed:
+            restored.state = .failed(reason ?? String(localized: "This download failed"))
+        case .cancelled:
+            restored.state = .cancelled
+        }
+        return restored
     }
 }

@@ -56,5 +56,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isRunningTests else { return }
         coordinator.browser.saveBlocking()
         coordinator.conversationLog.saveBlocking()
+        coordinator.browser.downloads.clearOnQuitIfNeeded(coordinator.settings.downloadRetention)
     }
 }

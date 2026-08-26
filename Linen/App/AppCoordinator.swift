@@ -455,7 +455,7 @@ final class AppCoordinator {
 
     func linkURL(for tab: BrowserTab) -> URL? {
         guard !tab.urlString.isEmpty,
-              let url = tab.webView.url ?? URL(string: tab.urlString),
+              let url = (tab.isMaterialised ? tab.webView.url : nil) ?? URL(string: tab.urlString),
               url.scheme != "about", !SystemPages.isStart(url)
         else { return nil }
         return url

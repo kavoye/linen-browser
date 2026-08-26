@@ -12,7 +12,7 @@ import WebKit
 /// remembers where each page was left and puts it back. Both paths are pinned
 /// here.
 @MainActor
-@Suite(.serialized, .boundedWebViews)
+@Suite(.serialized)
 struct BackForwardScrollTests {
     private func eventually(
         timeout: Duration = .seconds(10),
@@ -47,7 +47,7 @@ struct BackForwardScrollTests {
 
     /// crossHost is the case WebKit does not cover: the process swap drops the
     /// page cache, and without the tab's own memory the page lands at the top.
-    @Test(arguments: [false, true])
+    @Test(.boundedWebViews, arguments: [false, true])
     func goingBackReturnsToTheSpotThePageWasLeftAt(crossHost: Bool) async throws {
         let server = try await HTTPFixtureServer.start(routes: [
             "/tall": .html("""

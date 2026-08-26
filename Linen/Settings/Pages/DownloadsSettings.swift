@@ -47,6 +47,21 @@ struct DownloadsSettings: View {
                 SettingsToggle($settings.asksWhereToSave)
             }
             .settingsAnchor("downloads.ask")
+
+            RowSeparator()
+
+            DetailRow(
+                title: "Remove download list items",
+                caption: "The files themselves stay in your Downloads folder."
+            ) {
+                SettingsMenu(
+                    options: DownloadRetention.allCases.map {
+                        .init(value: $0, label: String(localized: $0.label))
+                    },
+                    selection: $settings.downloadRetention
+                )
+            }
+            .settingsAnchor("downloads.retention")
         }
 
         SettingsSection(

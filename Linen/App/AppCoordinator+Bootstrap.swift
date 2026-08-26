@@ -47,10 +47,10 @@ extension AppCoordinator {
             handler: NotificationBridge.shared
         )
         GeolocationBridge.shared.tabResolver = { [weak self] webView in
-            self?.browser.tabs.first { $0.webView === webView }
+            self?.browser.tabs.first { $0.isMaterialised && $0.webView === webView }
         }
         NotificationBridge.shared.tabResolver = { [weak self] webView in
-            self?.browser.tabs.first { $0.webView === webView }
+            self?.browser.tabs.first { $0.isMaterialised && $0.webView === webView }
         }
         WebViewPool.shared.installExtensionController(extensions.controller)
         WebViewPool.shared.warmUp()
@@ -255,6 +255,7 @@ extension AppCoordinator {
         PageClickWatcher.shared.onClick = { [weak self] point in
             self?.downloadFlights.noteClick(at: point)
         }
+        browser.downloads.apply(settings.downloadRetention)
         browser.downloads.onBegin = { [weak self] in
             self?.downloadFlights.launch()
         }

@@ -8,8 +8,12 @@ struct StartPageSite: Identifiable, Equatable {
     let host: String
     let visits: Int
 
+    var domain: String {
+        SiteName.domain(forHost: host)
+    }
+
     var id: String {
-        host
+        domain
     }
     var title: String {
         SiteName.title(forHost: host)
@@ -88,39 +92,60 @@ struct StartPageSnapshot {
         }
     }
 
+    private struct SiteTally {
+        var visits: Int
+        var days: Set<Date>
+        var latestURL: String
+        var hosts: [String: Int]
+    }
+
     static func frequentSites(
         from visits: [HistoryStore.VisitedPage],
         hiddenHosts: Set<String>,
         calendar: Calendar = .current
     ) -> [StartPageSite] {
-        var statistics: [String: (visits: Int, days: Set<Date>, latestURL: String)] = [:]
+        var statistics: [String: SiteTally] = [:]
 
         for visit in visits.prefix(400) {
             guard let parsedHost = URL(string: visit.url)?.host() else { continue }
             let host = parsedHost.lowercased()
-            guard !hiddenHosts.contains(host), !SearchEngineHosts.isSearchEngine(host) else { continue }
+            let domain = SiteName.domain(forHost: host)
+            guard !hiddenHosts.contains(host), !hiddenHosts.contains(domain),
+                  !SearchEngineHosts.isSearchEngine(host)
+            else { continue }
 
             let day = calendar.startOfDay(for: visit.visitedAt)
-            if var existing = statistics[host] {
+            if var existing = statistics[domain] {
                 existing.visits += 1
                 existing.days.insert(day)
-                statistics[host] = existing
+                existing.hosts[host, default: 0] += 1
+                statistics[domain] = existing
             } else {
-                statistics[host] = (1, [day], visit.url)
+                statistics[domain] = SiteTally(
+                    visits: 1,
+                    days: [day],
+                    latestURL: visit.url,
+                    hosts: [host: 1]
+                )
             }
         }
 
-        return statistics.compactMap { host, statistic in
+        return statistics.compactMap { domain, statistic in
             guard statistic.visits >= 3, statistic.days.count >= 2 else { return nil }
+            let host = statistic.hosts
+                .max { first, second in
+                    first.value == second.value ? first.key > second.key : first.value < second.value
+                }?
+                .key
             return StartPageSite(
                 url: statistic.latestURL,
-                host: host,
+                host: host ?? domain,
                 visits: statistic.visits
             )
         }
         .sorted { first, second in
             first.visits == second.visits
-                ? first.host < second.host
+                ? first.domain < second.domain
                 : first.visits > second.visits
         }
         .prefix(10)

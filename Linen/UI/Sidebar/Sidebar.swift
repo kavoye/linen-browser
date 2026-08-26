@@ -427,7 +427,7 @@ struct SidebarDownloadsButton: View {
         } label: {
             VStack(spacing: isRunning ? 3 : 0) {
                 Image(systemName: "arrow.down")
-                    .font(Theme.Font.control)
+                    .font(Theme.Font.rowTitle)
                     .foregroundStyle(.secondary)
 
                 Capsule()

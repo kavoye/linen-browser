@@ -444,9 +444,11 @@ extension BrowserModel {
             saveBlocking()
         }
         for tab in tabs {
-            tab.webView.stopLoading()
+            if tab.isMaterialised {
+                tab.webView.stopLoading()
+                tab.webView.removeFromSuperview()
+            }
             tab.detach()
-            tab.webView.removeFromSuperview()
         }
         tabs = []
         folders = []

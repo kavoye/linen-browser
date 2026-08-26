@@ -66,7 +66,14 @@ identify a real format, service, import source, or compatibility contract.
 - Cover success, failure, boundary, cancellation, and persistence paths where
   they apply.
 - Prefer deterministic fakes and injected dependencies to sleeps or live
-  network calls.
+  network calls. Wait for a condition with `waitUntil`, which returns as soon as
+  it holds; a fixed sleep spends its whole budget on every run and still fails
+  on a slow one.
+- Do not assert on a timer you cannot control. Inject the clock or the interval
+  instead, as `DownloadFlights` and the extension update sweep do.
+- Take a dependency the whole process shares — a stub on a static, a shared
+  store — with a trait that keeps other suites out, as `.exclusiveExternalApp`
+  does. Serializing one suite does not protect a global from the rest.
 - Do not hide a persistent failure with `withKnownIssue`. Either make the test
   deterministic or keep the unsupported check out of the automated suite.
 
@@ -81,10 +88,21 @@ a guardrail, not a substitute for meaningful assertions. It also checks the
 blank-tab, tab-switching, command-palette, Start Page and Ask surface budgets in
 `Tools/check-performance.sh`.
 
-Suites that create a live WebKit view for each case use `@Suite(.serialized)`.
-Keep that boundary unless the fixtures share a bounded process pool. Starting
-every case together can exhaust WebContent processes and turn resource pressure
-into unrelated navigation failures.
+A case that builds a live WebKit view takes `.boundedWebViews`, which holds one
+of a small number of slots — half the machine’s cores. Starting every case
+together exhausts WebContent processes and turns resource pressure into
+unrelated navigation failures. Put the trait on the tests that build a view, not
+on the suite around them, so pure cases do not queue for a resource they never
+use. Add `.serialized` as well when the cases in a suite share state.
+
+`Linen.xctestplan` runs with per-test timeouts: 120 seconds by default, 300 at
+most. A wedged test therefore fails by name instead of holding the whole run.
+Both frameworks run from this plan, and a new test needs no entry in it — the
+plan lists the target, not its tests.
+
+Tests get their own support directory, so a test can create profiles, write
+permissions or fill the download list without reaching the files of an installed
+copy.
 
 ## Keep copy and design consistent
 

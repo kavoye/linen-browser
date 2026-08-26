@@ -292,7 +292,6 @@ struct SidebarIconsOnlyMenuTests {
 /// its private observer - never the view - so the shield unregisters them
 /// rather than filtering events that would never pass through the view.
 @MainActor
-@Suite(.boundedWebViews)
 struct SidebarPeekShieldTests {
     private let width: CGFloat = 268
     private let pageMaxX: CGFloat = 1200
@@ -340,7 +339,7 @@ struct SidebarPeekShieldTests {
     /// The mechanism itself: parking removes every tracking area WebKit owns
     /// (AppKit cannot deliver to an unregistered area), keeps areas added
     /// mid-park off the view, and restores the very same instances after.
-    @Test func parkingUnregistersWebKitsTrackingAreasAndRestoresThem() async throws {
+    @Test(.boundedWebViews) func parkingUnregistersWebKitsTrackingAreasAndRestoresThem() async throws {
         let web = TabWebView(
             frame: NSRect(x: 0, y: 0, width: 600, height: 400),
             configuration: WKWebViewConfiguration()

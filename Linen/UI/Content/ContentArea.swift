@@ -49,12 +49,6 @@ struct ContentArea: View {
         .animation(Theme.Motion.settle, value: browser.activeTab?.find.isActive)
     }
 
-    private func pullBackdrop(for tab: BrowserTab) -> Color {
-        tab.pageColor.map(Color.init(nsColor:))
-            ?? tab.canvasColor.map(Color.init(nsColor:))
-            ?? Theme.windowBackground
-    }
-
     private var pullsAWebPage: Bool {
         guard !coordinator.isShowingSettings else { return false }
         guard let tab = browser.activeTab else { return false }
@@ -94,7 +88,7 @@ struct ContentArea: View {
                         .transition(.identity)
                         .offset(y: pullState.offset)
                         .overlay(alignment: .top) {
-                            pullBackdrop(for: tab)
+                            tab.surfaceColor
                                 .frame(height: pullState.offset)
                                 .allowsHitTesting(false)
                         }
@@ -163,11 +157,12 @@ private struct KeptAliveTabs: View {
 
     var body: some View {
         let kept = browser.tabs.filter { tab in
-            tab.id != browser.activeTab?.id
+            tab.isMaterialised
+                && tab.id != browser.activeTab?.id
                 && !browser.isVisibleInSplit(tab)
                 && tab.internalPage == nil
-                && tab.webView !== media.model.pictureWebView
                 && (tab.isPlayingAudio || media.controlledTabID == tab.id)
+                && tab.webView !== media.model.pictureWebView
         }
         ForEach(kept) { tab in
             WebViewRepresentable(webView: tab.webView, parksWhenIdle: true)
@@ -188,9 +183,7 @@ private struct ActiveWebSurface: View {
             onReady: { tab.webViewDidBecomeVisible() }
         )
             .id(tab.id)
-            .background(
-                tab.canvasColor.map(Color.init(nsColor:)) ?? Theme.windowBackground
-            )
+            .background(tab.surfaceColor)
             .overlay {
                 if !tab.hasPresentedContent {
                     Theme.windowBackground

@@ -42,6 +42,7 @@ final class BrowserSettings {
         static let videoInPlayer = "experiments.videoInPlayer"
         static let downloadFolder = "downloads.folder"
         static let askWhereToSave = "downloads.ask"
+        static let downloadRetention = "downloads.retention"
         static let userAgent = "advanced.userAgent"
         static let customUserAgent = "advanced.userAgent.custom"
         static let webInspector = "advanced.webInspector"
@@ -325,6 +326,10 @@ final class BrowserSettings {
         didSet { write(asksWhereToSave, forKey: Key.askWhereToSave) }
     }
 
+    var downloadRetention: DownloadRetention {
+        didSet { write(downloadRetention.rawValue, forKey: Key.downloadRetention) }
+    }
+
     static var defaultDownloadFolder: URL {
         FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
             ?? FileManager.default.homeDirectoryForCurrentUser
@@ -524,6 +529,8 @@ final class BrowserSettings {
         downloadFolder = storedFolder.map { URL(filePath: $0, directoryHint: .isDirectory) }
             ?? Self.defaultDownloadFolder
         asksWhereToSave = bool(Key.askWhereToSave)
+        downloadRetention = string(Key.downloadRetention)
+            .flatMap(DownloadRetention.init(rawValue:)) ?? .manually
 
         userAgentMode = string(Key.userAgent)
             .flatMap(UserAgentMode.init(rawValue:)) ?? .safari

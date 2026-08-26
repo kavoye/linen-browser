@@ -20,7 +20,7 @@ struct SystemPageReachTests {
         #expect(await settled(tab, at: page))
 
         _ = try? await tab.webView.evaluateJavaScript("location.href = 'linen://settings'")
-        try? await Task.sleep(for: .milliseconds(800))
+        await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(800))
 
         #expect(tab.internalPage == nil, "a website reached one of Linen's own pages")
         #expect(tab.committedURL == page, "the tab left the website it was on")
@@ -36,7 +36,7 @@ struct SystemPageReachTests {
         #expect(await settled(tab, at: page))
 
         _ = try? await tab.webView.evaluateJavaScript("document.getElementById('go').click()")
-        try? await Task.sleep(for: .milliseconds(800))
+        await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(800))
 
         #expect(tab.internalPage == nil)
         #expect(tab.committedURL == page)
@@ -57,7 +57,7 @@ struct SystemPageReachTests {
         #expect(await settled(tab, at: page))
 
         _ = try? await tab.webView.evaluateJavaScript("location.href = 'linen://settings'")
-        try? await Task.sleep(for: .milliseconds(800))
+        await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(800))
 
         #expect(tab.internalPage == nil)
     }
@@ -101,7 +101,7 @@ struct SystemPageAddressTests {
     @Test func anAddressThatNamesNoPageDoesNotOpenOne() async {
         let tab = BrowserTab(opensBlank: false)
         tab.load(URL(string: "linen://nonsense")!)
-        try? await Task.sleep(for: .milliseconds(600))
+        await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(600))
 
         #expect(tab.internalPage == nil)
         #expect(!tab.isShowingStartPage)

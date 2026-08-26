@@ -8,7 +8,7 @@ import WebKit
 @testable import Linen
 
 @MainActor
-@Suite(.serialized, .boundedWebViews)
+@Suite(.serialized, .boundedWebViews, .exclusiveExternalApp)
 struct AppHandoffTests {
     private func asked(for route: String, routes: [String: HTTPFixtureServer.Response]) async throws -> URL? {
         let server = try await HTTPFixtureServer.start(routes: routes)

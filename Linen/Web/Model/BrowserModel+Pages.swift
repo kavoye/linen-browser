@@ -68,7 +68,7 @@ extension BrowserModel {
 
     func applyWebSettings() {
         let settings = BrowserSettings.shared
-        for tab in tabs {
+        for tab in tabs where tab.isMaterialised {
             settings.apply(to: tab.webView)
         }
         WebViewPool.shared.discardIdle()

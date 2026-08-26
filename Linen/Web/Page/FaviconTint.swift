@@ -10,7 +10,7 @@ enum FaviconTint {
     private static let opaqueEnough = 0.35
     private static let cacheLimit = 256
 
-    private static var cache: [ObjectIdentifier: Color?] = [:]
+    private static let cache = NSMapTable<NSImage, NSColor>.weakToStrongObjects()
     private static var held: [UUID: Color] = [:]
 
     static func of(_ image: NSImage?, heldBy tab: UUID) -> Color? {
@@ -30,16 +30,12 @@ enum FaviconTint {
 
     static func of(_ image: NSImage?) -> Color? {
         guard let image else { return nil }
-        let key = ObjectIdentifier(image)
-        if let known = cache[key] {
-            return known
+        if let known = cache.object(forKey: image) {
+            return Color(nsColor: known)
         }
-        if cache.count >= cacheLimit {
-            cache.removeAll(keepingCapacity: true)
-        }
-        let derived = dominant(of: image).map(Color.init(nsColor:))
-        cache[key] = derived
-        return derived
+        guard let derived = dominant(of: image) else { return nil }
+        cache.setObject(derived, forKey: image)
+        return Color(nsColor: derived)
     }
 
     private static func dominant(of image: NSImage) -> NSColor? {

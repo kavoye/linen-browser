@@ -52,7 +52,7 @@ extension AppCoordinator {
     /// of it. The card counts as somewhere, so a lent picture stays put.
     func makeRoomForPicture(in webView: WKWebView?) {
         if let webView, webView !== media.model.pictureWebView,
-           let tab = browser.tabs.first(where: { $0.webView === webView }) {
+           let tab = browser.tabs.first(where: { $0.isMaterialised && $0.webView === webView }) {
             openTab(tab)
         }
         showBrowser()
@@ -100,7 +100,7 @@ extension AppCoordinator {
             }
         }
         media.onTabAudioChanged = { [weak self] webView, isPlaying in
-            guard let self, let tab = browser.tabs.first(where: { $0.webView === webView }) else { return }
+            guard let self, let tab = browser.tabs.first(where: { $0.isMaterialised && $0.webView === webView }) else { return }
             guard tab.isPlayingAudio != isPlaying else { return }
             tab.isPlayingAudio = isPlaying
             if isPlaying {
@@ -112,13 +112,13 @@ extension AppCoordinator {
             }
         }
         media.onTabVideoChanged = { [weak self] webView, hasVideo in
-            guard let self, let tab = browser.tabs.first(where: { $0.webView === webView }),
+            guard let self, let tab = browser.tabs.first(where: { $0.isMaterialised && $0.webView === webView }),
                   tab.hasVideo != hasVideo
             else { return }
             tab.hasVideo = hasVideo
         }
         media.onPictureOutChanged = { [weak self] webView, isOut in
-            guard let self, let tab = browser.tabs.first(where: { $0.webView === webView }),
+            guard let self, let tab = browser.tabs.first(where: { $0.isMaterialised && $0.webView === webView }),
                   tab.isPictureOut != isOut
             else { return }
             tab.isPictureOut = isOut

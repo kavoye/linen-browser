@@ -9,9 +9,9 @@
 
 **An agentic browser for macOS.**
 
-Ask for the results instead of just simply displaying the page. Linen opens websites, reads them,
-clicks, types and scrolls, in the tabs you already have open. Click on the page at
-any time and then it is yours again.
+Ask for the result instead of the page. Linen opens websites, reads them, clicks,
+types and scrolls, in the tabs you already have open. Click the page at any time
+and it is yours again.
 
 <a href="#what-it-does">What it does</a> ·
 <a href="#install">Install</a> ·
@@ -36,69 +36,67 @@ in the media dock, and the assistant reading a page to answer a question.
 
 ## What it does
 
-**🖐️ It uses the page.** The assistant searches, opens websites, reads them,
-clicks, types, scrolls, picks from menus, and opens and closes its own tabs. A
-focus ring marks the element it will act on, before it acts, and the page it
-researches on its own stays visible in the inspector while it works.
+**Ask, and it does the work.** The assistant searches, opens websites, reads
+them, clicks, types, scrolls, picks from menus, and opens and closes its own
+tabs. A focus ring marks what it is about to touch, before it touches it. The
+page it researches on its own stays visible while it works.
 
-**🗂️ It works where you already are.** Ask in the address field. Your open tabs
-are the context. Write `@` to point at one, and the assistant reads that page
-instead of starting from a search. The Agent Activity column keeps every step it
-took, so the work is yours to check.
+**It works where you already are.** Ask in the address field. Your open tabs are
+the context. Type `@` to point at one, and the assistant reads that page instead
+of starting from a search. The Agent Activity column keeps every step it took,
+so the work is yours to check.
 
-**🧰 You pick its tools.** Research, on the page, tabs and media. Each tool
-turns on and off in Settings › Intelligence, so the assistant gets exactly the
-reach you want it to have.
+**You decide what it can reach.** Research, the page, tabs and media are
+separate tools. Each one turns on and off in Settings › Assistant.
 
-**🛡️ It stops before the things that matter.** Every website is Ask, Read Only,
-Allow Control or No Access. The assistant asks first before it buys, sends or
-signs in. It never fills a password or a card number.
+**It stops before the things that matter.** Every website is Ask, Read Only,
+Allow Control or No Access. The assistant asks you first before it buys, sends
+or signs in. It never fills in a password or a card number.
 
-**🔑 Your model, your key.** Apple Intelligence runs on-device out of the box. Or
-add a key for OpenAI, Anthropic, Gemini, DeepSeek, Groq, Mistral, OpenRouter or
-xAI, or point Linen at a local server like Ollama or LM Studio. Keys are stored
-in the macOS Keychain, and each key is sent only to the provider it belongs to.
+**Your model. Your key.** Apple Intelligence runs on your Mac out of the box.
+Add a key for OpenAI, Anthropic, Gemini, DeepSeek, Groq, Mistral, OpenRouter or
+xAI, or point Linen at a local server such as Ollama or LM Studio. Keys live in
+the macOS Keychain, and each one goes only to the provider it belongs to.
 
-**🧠 It fits the model you chose.** Linen measures the context window of your
-model and sizes the work to it: how much of a page comes back, how many steps a
-task gets, how much of the conversation it keeps. A small local model gets a
-short brief and the core tools. A large one gets all of them.
+**It fits the model you chose.** Linen measures your model’s context window and
+sizes the work to it. A small local model gets a short brief and the core tools.
+A large one gets all of them.
 
-**🎙️ Talk to it, too.** Hold ⌥Space and speak. Release the key to send. Pick a
-different key in Settings › Voice. Your speech is transcribed on the Mac and is
-not sent anywhere.
+**Talk to it.** Hold ⌥Space and speak. Release the key to send. Pick a different
+key in Settings › Assistant. Your speech is transcribed on your Mac and goes
+nowhere else.
 
-**🧭 Still a normal browser.** WebKit tabs, folders, drag to reorder, pinned tabs,
-private browsing (⇧⌘N), a command palette (⌘K), one field for addresses and
-search, split view (⌃⌘→), history, downloads that resume, find in page,
-per-website zoom, and a small media player. Extensions install from the Chrome
-Web Store, so you can run a full content blocker like
+**Still a browser.** Tabs, folders you can drag pages into, pinned pages, split
+view, private browsing, a command palette, history, find in page, zoom for each
+website, and a media player that follows whatever is playing. Downloads resume,
+and the list stays until you empty it. Extensions come from the Chrome Web
+Store, update themselves once a day, and include full content blockers such as
 [uBlock Origin Lite](https://github.com/uBlockOrigin/uBOL-home).
 
-**🚫 Trackers blocked out of the box.** Well-known advertising, analytics and
+**Trackers blocked from the start.** Well-known advertising, analytics and
 session-recording networks are blocked when a page loads them from another
 website. It is a baseline rather than a full content blocker. Switch it off for
-one website from Site Settings, or for every website in Settings › Websites.
+one website in Site Settings, or for every website in Settings › Privacy.
 
-**👥 Profiles.** Work and personal, each with its own cookies, history, tabs,
-website permissions and extensions. Signing in to a website under one profile
-does not sign you in under another. Your existing browsing stays exactly where it
-is as the first profile.
+**Profiles keep work and personal apart.** Each one has its own cookies,
+history, tabs, website permissions and extensions. Signing in under one profile
+does not sign you in under another, and your existing browsing stays where it is
+as the first profile.
 
-Private browsing is one of them. A private session writes nothing to disk: not
-history, not tabs, not the assistant’s transcript. ⇧⌘N switches the browser
-into it, and leaving discards the session and restores your tabs.
+**Private browsing writes nothing down.** No history, no tabs, no transcript.
+⇧⌘N switches into it, and leaving discards the session and brings your tabs
+back.
 
-**💤 Background tabs release memory.** When memory runs short, a background tab
-gives its memory back and reloads where you left off when you return to it. A
-window left open all day no longer keeps every tab in memory.
+**Tabs give memory back.** When memory runs short, a background tab releases its
+own and reloads where you left off when you return. A window left open all day
+no longer holds every page in memory.
 
-**🔒 Permissions in one place.** Location, camera, microphone and notifications
-are asked for in the address bar. Allow once, allow always, or deny. What you
-picked stays in Settings › Websites, alongside each website’s assistant access.
+**Permissions in one place.** Location, camera, microphone and notifications are
+asked for in the address bar. Allow once, allow always, or deny. What you chose
+stays in Settings › Websites, beside each website’s assistant access.
 
-**⬆️ Updates in place.** [Sparkle](https://sparkle-project.org), with the appcast
-published on GitHub Releases. See [RELEASING.md](RELEASING.md).
+**Updates arrive in place.** [Sparkle](https://sparkle-project.org) brings them,
+with the appcast published on GitHub Releases. See [RELEASING.md](RELEASING.md).
 
 ## Install
 

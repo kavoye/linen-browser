@@ -291,12 +291,6 @@ private struct WebPane: View {
     let settingsWorkspace: SettingsWorkspace
     let pull: PullState
 
-    private var backdrop: Color {
-        tab.pageColor.map(Color.init(nsColor:))
-            ?? tab.canvasColor.map(Color.init(nsColor:))
-            ?? Theme.windowBackground
-    }
-
     private var showsStartPage: Bool {
         ChromeBand.showsStartPage(for: tab)
     }
@@ -337,11 +331,7 @@ private struct WebPane: View {
             onReady: { tab.webViewDidBecomeVisible() }
         )
             .opacity(showsStartPage ? 0 : 1)
-            .background(
-                showsStartPage
-                    ? Color.clear
-                    : (tab.canvasColor.map(Color.init(nsColor:)) ?? Theme.windowBackground)
-            )
+            .background(showsStartPage ? Color.clear : tab.surfaceColor)
             .overlay {
                 Theme.windowBackground
                     .opacity(!showsStartPage && !tab.hasPresentedContent ? 1 : 0)
@@ -349,7 +339,7 @@ private struct WebPane: View {
             }
             .offset(y: pull.offset)
             .overlay(alignment: .top) {
-                backdrop
+                tab.surfaceColor
                     .frame(height: pull.offset)
                     .allowsHitTesting(false)
             }

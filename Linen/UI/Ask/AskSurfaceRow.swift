@@ -79,13 +79,13 @@ struct AskSurfaceRow: View {
 
             HStack(spacing: placement.controlSpacing) {
                 if placement.showsSiteControls {
-                    PinBadge(browser: model.browser)
-                        .frame(width: placement.iconSlot)
-                    PermissionBadge(browser: model.browser)
+                    TabAudioBadge(browser: model.browser, coordinator: model.coordinator)
                         .frame(width: placement.iconSlot)
                     TabPictureBadge(browser: model.browser, coordinator: model.coordinator)
                         .frame(width: placement.iconSlot)
-                    TabAudioBadge(browser: model.browser, coordinator: model.coordinator)
+                    PermissionBadge(browser: model.browser)
+                        .frame(width: placement.iconSlot)
+                    PinBadge(browser: model.browser)
                         .frame(width: placement.iconSlot)
                     SiteControlsMenu(browser: model.browser)
                         .frame(width: placement.iconSlot)

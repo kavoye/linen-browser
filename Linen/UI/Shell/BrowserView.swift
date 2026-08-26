@@ -40,6 +40,10 @@ struct BrowserView: View {
         panel.isVisible
     }
 
+    private var chromeMotion: Animation? {
+        coordinator.isSwitchingProfile ? nil : Theme.Motion.settle
+    }
+
     var body: some View {
         let width = sidebar.openWidth(in: containerWidth)
         let roomBesideSidebar = containerWidth - (sidebar.isVisible ? width : 0)
@@ -218,10 +222,10 @@ struct BrowserView: View {
         }
         .background(Color.clear)
         .environment(\.chromeIsLight, scheme == .light)
-        .animation(Theme.Motion.settle, value: sidebar.isVisible)
+        .animation(chromeMotion, value: sidebar.isVisible)
         .animation(nil, value: sidebar.isPeeking)
-        .animation(Theme.Motion.settle, value: showsPanel)
-        .animation(Theme.Motion.settle, value: panel.isExpanded)
+        .animation(chromeMotion, value: showsPanel)
+        .animation(chromeMotion, value: panel.isExpanded)
         .animation(
             coordinator.isPaletteOpen ? Theme.Motion.quick : nil, value: coordinator.isPaletteOpen
         )

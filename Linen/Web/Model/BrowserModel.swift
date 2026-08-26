@@ -143,7 +143,9 @@ final class BrowserModel {
                 privately: tab?.isPrivate ?? false
             )
         }
-        BrowserSettings.shared.apply(to: tab.webView)
+        if tab.isMaterialised {
+            BrowserSettings.shared.apply(to: tab.webView)
+        }
         return tab
     }
 

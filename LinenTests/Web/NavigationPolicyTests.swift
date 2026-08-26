@@ -9,7 +9,7 @@ import WebKit
 @testable import Linen
 
 @MainActor
-@Suite(.serialized, .boundedWebViews)
+@Suite(.serialized, .boundedWebViews, .exclusiveExternalApp)
 struct NavigationPolicyTests {
     private final class StubAction: WKNavigationAction {
         var stubbedRequest = URLRequest(url: URL(string: "https://example.com/")!)

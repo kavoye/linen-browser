@@ -12,7 +12,6 @@ import WebKit
 /// Chrome's and Firefox's - because the markup is the part reading code can't
 /// check.
 @MainActor
-@Suite(.boundedWebViews)
 struct BrowserImportTests {
     private static let chromeExport = """
     <!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -166,7 +165,7 @@ struct BrowserImportTests {
 
     // MARK: - Applying
 
-    @Test func bookmarksBecomeOneCollapsedFolderOfColdTabs() {
+    @Test(.boundedWebViews) func bookmarksBecomeOneCollapsedFolderOfColdTabs() {
         let model = BrowserModel(database: .temporary())
         let folder = model.importBookmarksFolder(named: "Imported Bookmarks", entries: [
             .init(url: "https://example.com/", title: "Example", date: .distantPast),

@@ -164,6 +164,9 @@ enum SettingsIndex {
 
         SettingsEntry("downloads.folder", .downloads, "Save files to", "Where downloaded files are saved.",
                       ["downloads", "folder", "location", "directory", "save", "files"]),
+        SettingsEntry("downloads.retention", .downloads, "Remove download list items",
+                      "How long finished downloads stay in the list.",
+                      ["downloads", "history", "list", "clear", "remove", "keep", "retention", "quit"]),
         SettingsEntry("downloads.ask", .downloads, "Ask where to save each file", "Choose a location every time.",
                       ["ask", "prompt", "where", "save as"]),
         SettingsEntry("downloads.list", .downloads, "Recent downloads", "What you’ve downloaded, and where it was saved.",
@@ -194,7 +197,7 @@ enum SettingsIndex {
         SettingsEntry("advanced.inspector", .advanced, "Web Inspector", "Adds Inspect Element to the page’s right-click menu.",
                       ["developer", "devtools", "inspector", "inspect", "debug", "console"]),
         SettingsEntry("advanced.features", .advanced, "Feature flags",
-                      "WebKit’s own experiments, the ones Safari lists under Develop.",
+                      "WebKit’s own experiments. Changing one can break websites.",
                       ["webkit", "flags", "experimental", "features", "develop"]),
         SettingsEntry("advanced.certificates", .advanced, "Certificate exceptions", "Continue past a certificate macOS rejects. Forgotten when you quit.",
                       ["certificate", "ssl", "tls", "https", "self-signed", "proxy", "untrusted",

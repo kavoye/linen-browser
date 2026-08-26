@@ -3,9 +3,18 @@
 
 import Foundation
 
-struct AgentProviderCandidate: Equatable {
+struct AgentProviderCandidate {
     let configuration: Provider
-    let availability: ModelProviderAvailability
+    private let answer: () -> ModelProviderAvailability
+
+    init(configuration: Provider, availability: @autoclosure @escaping () -> ModelProviderAvailability) {
+        self.configuration = configuration
+        answer = availability
+    }
+
+    var availability: ModelProviderAvailability {
+        answer()
+    }
 }
 
 enum AgentProviderDecision: Equatable {

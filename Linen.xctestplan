@@ -1,0 +1,27 @@
+{
+  "configurations" : [
+    {
+      "id" : "2EED7176-1108-4EC1-A5A2-3FF04FB562E1",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : true,
+    "defaultTestExecutionTimeAllowance" : 120,
+    "maximumTestExecutionTimeAllowance" : 300,
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:Linen.xcodeproj",
+        "identifier" : "EEC0DE100000000000000001",
+        "name" : "LinenTests"
+      }
+    }
+  ],
+  "version" : 1
+}

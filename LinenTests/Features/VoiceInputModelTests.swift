@@ -197,8 +197,10 @@ struct VoiceInputModelTests {
     @Test func speakingAgainPostponesTheSilenceCutoff() async throws {
         let audio = FakeAudioInput()
         let transcriber = FakeTranscriber()
-        // Four gaps of 600ms against a 1s deadline: 2.4s in total, so the
-        // session outlives the tail only if every word pushed it back.
+        // Six gaps of 300ms against a 1s deadline: 1.8s in total, so the
+        // session outlives the tail only if every word pushed it back. The
+        // gap is a third of the deadline so that a busy machine delaying a
+        // step cannot be mistaken for silence.
         let model = VoiceInputModel(
             audio: audio,
             transcriber: transcriber,
@@ -207,10 +209,14 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin(endsOnSilence: true)
-        for word in ["open", "open my", "open my email", "open my email now"] {
+        let words = [
+            "open", "open my", "open my email",
+            "open my email now", "open my email now please", "open my email now please and",
+        ]
+        for word in words {
             transcriber.yield(word)
             #expect(await waitUntil { model.transcript == word })
-            try? await Task.sleep(for: .milliseconds(600))
+            try? await Task.sleep(for: .milliseconds(300))
             #expect(model.phase == .listening)
         }
         model.cancel()

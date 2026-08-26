@@ -684,13 +684,22 @@ struct MediaScriptRectTests {
     }
 
     private func waitForRect(_ collector: Collector) async -> String? {
-        for _ in 0..<100 {
-            if let rect = collector.messages.last(where: { $0.hasPrefix("rect:") }) {
-                return rect
-            }
-            try? await Task.sleep(for: .milliseconds(100))
+        var rect: String?
+        _ = await waitUntil {
+            rect = collector.messages.last { $0.hasPrefix("rect:") }
+            return rect != nil
         }
-        return nil
+        return rect
+    }
+
+    private func waitForMessage(_ collector: Collector, prefix: String) async -> Bool {
+        await waitUntil { collector.messages.contains { $0.hasPrefix(prefix) } }
+    }
+
+    private func settle(_ webView: WKWebView, _ collector: Collector) async {
+        collector.messages.removeAll { $0.hasPrefix("rect:") }
+        _ = try? await webView.evaluateJavaScript("window.postMessage('linen-resend', '*')")
+        _ = await waitForMessage(collector, prefix: "rect:")
     }
 
     @Test func thePlayerRectIsReported() async {
@@ -708,10 +717,9 @@ struct MediaScriptRectTests {
         _ = await waitForRect(collector)
 
         _ = try? await webView.evaluateJavaScript("document.querySelector('video').remove()")
-        try? await Task.sleep(for: .seconds(1))
         collector.messages.removeAll()
         _ = try? await webView.evaluateJavaScript("window.postMessage('linen-resend', '*')")
-        try? await Task.sleep(for: .seconds(1))
+        try? await Task.sleep(for: .milliseconds(250))
 
         #expect(!collector.messages.contains { $0.hasPrefix("state:") })
     }
@@ -745,9 +753,8 @@ struct MediaScriptRectTests {
         collector.messages.removeAll()
 
         _ = try? await webView.evaluateJavaScript("window.postMessage('linen-pip', '*')")
-        try? await Task.sleep(for: .seconds(1))
+        #expect(await waitForMessage(collector, prefix: "diag:no-video"))
 
-        #expect(collector.messages.contains("diag:no-video"))
         #expect(!collector.messages.contains("diag:need-gesture"))
     }
 
@@ -757,9 +764,8 @@ struct MediaScriptRectTests {
         collector.messages.removeAll()
 
         _ = try? await webView.evaluateJavaScript("window.postMessage('linen-pip-auto', '*')")
-        try? await Task.sleep(for: .seconds(1))
+        #expect(await waitForMessage(collector, prefix: "diag:not-playing"))
 
-        #expect(collector.messages.contains("diag:not-playing"))
         #expect(!collector.messages.contains("diag:need-gesture"))
     }
 
@@ -771,7 +777,7 @@ struct MediaScriptRectTests {
         collector.messages.removeAll()
 
         _ = try? await webView.evaluateJavaScript("window.postMessage('linen-pip', '*')")
-        try? await Task.sleep(for: .seconds(1))
+        await settle(webView, collector)
 
         #expect(!collector.messages.contains("diag:not-playing"))
     }

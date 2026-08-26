@@ -120,7 +120,7 @@ extension PageSecurity {
         case .secure:
             "lock.fill"
         case .pending:
-            "lock.dashed"
+            "lock"
         case .insecure:
             "lock.open.fill"
         case .mixed:

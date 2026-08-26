@@ -38,7 +38,8 @@ final class AgentQuestionModel {
     private(set) var index = 0
     private(set) var replies: [Reply] = []
 
-    @ObservationIgnored private var waiting: CheckedContinuation<String, Never>?
+    @ObservationIgnored private var waiting: [UUID: CheckedContinuation<String, Never>] = [:]
+    @ObservationIgnored private var settled: [UUID: String] = [:]
 
     var current: Question? {
         ask?.questions.indices.contains(index) == true ? ask?.questions[index] : nil
@@ -70,12 +71,25 @@ final class AgentQuestionModel {
     }
 
     func put(_ questions: [Question], inSpace spaceID: UUID?) async -> String {
+        await result(for: present(questions, inSpace: spaceID))
+    }
+
+    @discardableResult
+    func present(_ questions: [Question], inSpace spaceID: UUID?) -> Ask {
         finish()
-        ask = Ask(questions: questions, spaceID: spaceID)
+        let presented = Ask(questions: questions, spaceID: spaceID)
+        ask = presented
         index = 0
         replies = Array(repeating: .none, count: questions.count)
+        return presented
+    }
+
+    func result(for ask: Ask) async -> String {
+        if let answered = settled.removeValue(forKey: ask.id) {
+            return answered
+        }
         return await withCheckedContinuation { continuation in
-            waiting = continuation
+            waiting[ask.id] = continuation
         }
     }
 
@@ -128,11 +142,8 @@ final class AgentQuestionModel {
     }
 
     private func finish(handingOver: Bool = false) {
-        guard let continuation = waiting else {
-            ask = nil
-            return
-        }
-        let questions = ask?.questions ?? []
+        guard let closing = ask else { return }
+        let questions = closing.questions
         var transcript = Self.transcript(of: questions, replies: replies)
         if handingOver, replies.contains(where: { $0.isBlank }) {
             let unanswered = questions.enumerated()
@@ -145,11 +156,14 @@ final class AgentQuestionModel {
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
         }
-        waiting = nil
         ask = nil
         index = 0
         replies = []
-        continuation.resume(returning: transcript)
+        if let continuation = waiting.removeValue(forKey: closing.id) {
+            continuation.resume(returning: transcript)
+        } else {
+            settled[closing.id] = transcript
+        }
     }
 
     nonisolated static let questionMark = "Q: "

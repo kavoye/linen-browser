@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import SwiftUI
 
 enum ChromeInk {
@@ -225,6 +226,14 @@ extension View {
     }
 }
 
+extension Color {
+    func deepened(by fraction: Double) -> Color {
+        let base = NSColor(self).usingColorSpace(.sRGB) ?? NSColor(self)
+        guard let deeper = base.blended(withFraction: fraction, of: .black) else { return self }
+        return Color(nsColor: deeper)
+    }
+}
+
 struct ChromeIcon: View {
     let symbol: String
     var size: CGFloat = 10.5
@@ -246,7 +255,7 @@ struct ChromeIcon: View {
 
     private var style: AnyShapeStyle {
         if let tint {
-            return AnyShapeStyle(tint.opacity(hovering ? 1 : 0.85))
+            return AnyShapeStyle(chromeIsLight ? tint.deepened(by: 0.28) : tint)
         }
         return ChromeInk.glyph(
             onLight: chromeIsLight,

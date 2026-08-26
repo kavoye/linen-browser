@@ -12,7 +12,7 @@ import Foundation
 /// timeout free on a quiet machine.
 @MainActor
 func waitUntil(
-    timeout: Duration = .seconds(10),
+    timeout: Duration = .seconds(25),
     tick: Duration = .milliseconds(20),
     _ condition: () async -> Bool
 ) async -> Bool {

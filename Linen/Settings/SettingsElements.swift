@@ -57,6 +57,7 @@ private struct OptionPickerLabel: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, SettingsMetrics.pickerLabelGap)
         .padding(.vertical, SettingsMetrics.pickerItemPaddingV)
     }
 }

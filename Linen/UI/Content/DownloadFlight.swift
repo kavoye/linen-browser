@@ -22,6 +22,12 @@ final class DownloadFlights {
 
     static let duration: Double = 0.8
 
+    private let lifetime: Double
+
+    init(lifetime: Double = DownloadFlights.duration) {
+        self.lifetime = lifetime
+    }
+
     private static let freshness: TimeInterval = 5
 
     func watchClicks(in window: @escaping () -> NSWindow?) {
@@ -35,22 +41,22 @@ final class DownloadFlights {
         }
     }
 
-    func noteClick(at point: CGPoint) {
+    func noteClick(at point: CGPoint, on date: Date = Date()) {
         lastClick = point
-        clickedAt = Date()
+        clickedAt = date
     }
 
-    func launch() {
+    func launch(now: Date = Date()) {
         guard let from = lastClick,
               let to = target,
               let clickedAt,
-              Date().timeIntervalSince(clickedAt) < Self.freshness,
+              now.timeIntervalSince(clickedAt) < Self.freshness,
               from != to
         else { return }
         let flight = Flight(from: from, to: to)
         flights.append(flight)
         Task {
-            try? await Task.sleep(for: .seconds(Self.duration))
+            try? await Task.sleep(for: .seconds(lifetime))
             flights.removeAll { $0.id == flight.id }
         }
     }

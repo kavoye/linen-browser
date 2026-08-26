@@ -46,9 +46,12 @@ lifecycle. `TabProcessState` owns process-protection signals, unload status and
 unexpected-termination throttling. `WebViewPool` prepares reusable views
 without owning tab state.
 
-A tab may release its WebContent process under memory pressure. Its title,
-address, favicon and WebKit interaction state remain so activation can rebuild
-the view. Code that adds a new kind of in-progress page work must decide whether
+A restored tab holds no `WKWebView` until you open it. `BrowserTab.webView`
+builds one on first use and `isMaterialised` reports whether it exists, so a
+sweep over every tab must ask before it reaches for the view. A tab may also
+release its WebContent process under memory pressure. In both cases the title,
+address, favicon and WebKit interaction state remain, so activation rebuilds the
+view. Code that adds a new kind of in-progress page work must decide whether
 that work prevents discarding.
 
 Profiles are hard boundaries. Each profile has its own WebKit data store,
@@ -57,9 +60,12 @@ ephemeral profile and an in-memory database. Never add profile identity as a
 column to a shared persistent store.
 
 `BrowserModel` owns the active profile’s permission store and gives that exact
-store to every new `BrowserTab`. A profile switch closes the outgoing tabs and
-replaces the database and permission store together before restoring the next
-session.
+store to every new `BrowserTab`. A profile switch writes the outgoing session,
+drops its tabs without the bookkeeping a single close needs, replaces the
+database and permission store together, swaps the extension controller, and
+restores the next session. The extensions themselves load afterwards, so the
+window is usable first. Each phase logs its own duration under `profile:
+switched`.
 
 ## Agent trust boundaries
 
@@ -97,17 +103,32 @@ third-party error text remain verbatim.
 ## Persistence
 
 GRDB stores structured browser and agent data. Small preferences use
-`UserDefaults`; provider secrets use Keychain. File-backed models use atomic
-writes through the support layer. A write needed for quit or profile teardown
+`UserDefaults`; provider secrets use Keychain. File-backed models — profiles,
+website permissions, page zoom and the download list — use atomic writes through
+the support layer. A write needed for quit or profile teardown
 must be awaited or flushed synchronously before its owner is released.
 
 ## Tests
 
-Tests use Swift Testing. Prefer pure parsing and policy functions, injected
-stores, temporary databases and local WebKit fixtures. `HTTPFixtureServer`
-serves deterministic loopback pages for navigation and origin-boundary tests.
-A test should assert a user-observable result or an enforced invariant. Live
-services and fixed sleeps do not belong in the default suite.
+Tests use Swift Testing, with XCTest for the two things it cannot express:
+performance baselines (`XCTMetric`) and a test that drives the main run loop.
+Prefer pure parsing and policy functions, injected stores, temporary databases
+and local WebKit fixtures. `HTTPFixtureServer` serves deterministic loopback
+pages for navigation and origin-boundary tests. A test should assert a
+user-observable result or an enforced invariant. Live services and fixed sleeps
+do not belong in the default suite.
+
+A test run keeps its files to itself. `AppDatabase.supportDirectory` answers
+with a per-process temporary directory, so profiles, permissions, zoom state and
+the download list never touch the support directory of an installed copy.
+
+`WebViewGate` bounds how many cases hold a live `WKWebView` at once, at half the
+machine’s cores. The `.boundedWebViews` trait takes a slot; apply it to the
+tests that build a view rather than to a whole suite, so the rest do not queue
+for a resource they never use.
+
+`Linen.xctestplan` turns on per-test timeouts: 120 seconds by default, 300 at
+most. A test that wedges fails by name instead of holding the run.
 
 CI runs the full suite with code coverage and rejects app-target coverage below
 the repository floor. See [CONTRIBUTING.md](CONTRIBUTING.md) for the change

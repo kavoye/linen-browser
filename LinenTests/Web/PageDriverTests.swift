@@ -15,13 +15,17 @@ import WebKit
 @MainActor
 @Suite(.serialized, .boundedWebViews)
 struct PageDriverTests {
-    private func loadedWebView(_ body: String) async -> WKWebView {
+    private static let stage: WKWebView = {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
-        let webView = WKWebView(
+        return WKWebView(
             frame: NSRect(x: 0, y: 0, width: 500, height: 400),
             configuration: configuration
         )
+    }()
+
+    private func loadedWebView(_ body: String) async -> WKWebView {
+        let webView = Self.stage
         webView.loadHTMLString("<!doctype html><html><body>\(body)</body></html>", baseURL: nil)
         #expect(await PageSettle.untilIdle(webView, timeout: .seconds(30)))
         return webView

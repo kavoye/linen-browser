@@ -169,9 +169,11 @@ struct SettingsIndexParityTests {
         "provider.model", "provider.connected",
         "appearance.sidebar", "appearance.sidebarStyle", "advanced.reset",
         "privacy.history", "privacy.assistant",
-        "websites.javascript", "websites.trackers", "websites.list",
+        "websites.javascript", "privacy.trackers", "websites.list",
         "websites.permissions", "downloads.folder", "downloads.ask",
-        "downloads.list",
+        "downloads.list", "websites.popups",
+        // The page caption says where the files go, not what the setting does.
+        "downloads.retention",
         // The page caption is computed from live state.
         "search.suggestions", "privacy.storage", "websites.autoplay",
         "provider.thinking",

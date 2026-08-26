@@ -64,6 +64,50 @@ struct StartPageSnapshotTests {
         #expect(sites.first?.url == "https://beta.example/latest")
     }
 
+    @Test func oneWebsiteIsOneTileHoweverManySubdomainsItHas() {
+        let visits = [
+            visit(id: 9, url: "https://news.ycombinator.com/newest", day: 5),
+            visit(id: 8, url: "https://news.ycombinator.com/front", day: 4),
+            visit(id: 7, url: "https://news.ycombinator.com/item?id=1", day: 3),
+            visit(id: 6, url: "https://www.ycombinator.com/companies", day: 3),
+            visit(id: 5, url: "https://ycombinator.com/apply", day: 2),
+        ]
+
+        let sites = StartPageSnapshot.frequentSites(
+            from: visits,
+            hiddenHosts: [],
+            calendar: calendar
+        )
+
+        #expect(sites.count == 1)
+        #expect(sites.first?.visits == 5)
+        #expect(sites.first?.host == "news.ycombinator.com")
+        #expect(sites.first?.url == "https://news.ycombinator.com/newest")
+    }
+
+    @Test func hidingAWebsiteHidesEveryHostUnderIt() {
+        let visits = [
+            visit(id: 5, url: "https://gist.github.com/one", day: 5),
+            visit(id: 4, url: "https://github.com/two", day: 4),
+            visit(id: 3, url: "https://github.com/three", day: 3),
+        ]
+
+        let sites = StartPageSnapshot.frequentSites(
+            from: visits,
+            hiddenHosts: ["github.com"],
+            calendar: calendar
+        )
+
+        #expect(sites.isEmpty)
+    }
+
+    @Test func aTwoPartSuffixIsNotMistakenForTheWebsite() {
+        #expect(SiteName.domain(forHost: "www.bbc.co.uk") == "bbc.co.uk")
+        #expect(SiteName.domain(forHost: "news.bbc.co.uk") == "bbc.co.uk")
+        #expect(SiteName.domain(forHost: "docs.example.com") == "example.com")
+        #expect(SiteName.domain(forHost: "localhost") == "localhost")
+    }
+
     @Test func snapshotBoundsEverySectionAndKeepsNewestTasksFirst() {
         let history = (0..<8).map { index in
             HistoryStore.Entry(

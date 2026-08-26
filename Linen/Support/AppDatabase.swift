@@ -34,9 +34,22 @@ struct AppDatabase: Sendable {
             return staged
         }
         #endif
+        if isRunningTests {
+            return testSupportDirectory
+        }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Linen", isDirectory: true)
     }
+
+    /// A test run keeps its files to itself: profiles, permissions, zoom and
+    /// the download list all hang off this, and none of them belong in the
+    /// support directory a person's copy of Linen is using.
+    private nonisolated static let testSupportDirectory: URL = {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Linen-tests-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }()
 
     static var defaultURL: URL {
         supportDirectory.appendingPathComponent("Linen.sqlite")

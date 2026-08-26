@@ -615,7 +615,7 @@ struct TabAudioBadge: View {
                 ChromeIcon(
                     symbol: "speaker.wave.2.fill",
                     weight: .semibold,
-                    tint: Theme.accent,
+                    tint: Theme.systemAccent,
                     help: String(localized: "Stop Speaking")
                 ) {
                     coordinator.stopAgentSpeech()
@@ -626,6 +626,7 @@ struct TabAudioBadge: View {
                     symbol: tab.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                     weight: .semibold,
                     isSubdued: tab.isMuted,
+                    tint: tab.isMuted ? nil : Theme.systemAccent,
                     help: String(localized: muteHelp(isMuted: tab.isMuted))
                 ) {
                     coordinator.toggleMute(tab: tab)

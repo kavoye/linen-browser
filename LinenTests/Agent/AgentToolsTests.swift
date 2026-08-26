@@ -8,7 +8,6 @@ import Testing
 @testable import Linen
 
 @MainActor
-@Suite(.boundedWebViews)
 struct AgentToolsTests {
     private func tools() -> [any Tool] {
         makeAgentTools(toolkit: AgentToolkit(

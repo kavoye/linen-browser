@@ -14,7 +14,6 @@ import Testing
 /// row becomes when a transfer dies, when the user stops it, and when the two
 /// answers arrive in either order.
 @MainActor
-@Suite(.boundedWebViews)
 struct DownloadResumeTests {
     private let token = Data("resume-token".utf8)
 
@@ -116,7 +115,7 @@ struct DownloadResumeTests {
     /// only one of them carries the token - so whichever is second must read
     /// what is stored rather than trusting its own argument. Reading the
     /// argument is what threw the token away.
-    @Test func theTokenSurvivesWhicheverCallbackArrivesSecond() throws {
+    @Test(.boundedWebViews) func theTokenSurvivesWhicheverCallbackArrivesSecond() throws {
         for order in ["failure first", "cancel first"] {
             let (downloads, id) = makeRunning()
             downloads.noteCancelRequested(id)

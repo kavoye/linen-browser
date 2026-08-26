@@ -546,7 +546,7 @@ struct BrowserPagesTests {
 /// Settings is not one page but twelve, so each one is its own address and
 /// Back walks between them like anywhere else.
 @MainActor
-@Suite(.serialized, .boundedWebViews)
+@Suite(.serialized)
 struct SettingsRoutingTests {
     @Test func everyCategoryHasAnAddressThatReadsBack() {
         for category in SettingsCategory.allCases {

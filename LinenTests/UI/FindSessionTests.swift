@@ -9,7 +9,6 @@ import Testing
 /// Find-in-page state: one session per tab, carrying the match arithmetic
 /// WebKit's find API doesn't provide.
 @MainActor
-@Suite(.boundedWebViews)
 struct FindSessionTests {
     /// A page of plain text standing in for WebKit: finds report whether the
     /// query occurs, counts count occurrences.
@@ -29,7 +28,7 @@ struct FindSessionTests {
 
     /// The regression, stated as the user saw it: find opened on one tab must
     /// not show, or leave its state, on another.
-    @Test func eachTabKeepsItsOwnFindSession() {
+    @Test(.boundedWebViews) func eachTabKeepsItsOwnFindSession() {
         let a = BrowserTab()
         let b = BrowserTab()
         #expect(a.find !== b.find)
@@ -117,7 +116,7 @@ struct FindSessionTests {
 
     /// Through the real tab: a committed navigation takes the bar with the
     /// document it was searching.
-    @Test func navigatingATabClosesItsFindBar() async {
+    @Test(.boundedWebViews) func navigatingATabClosesItsFindBar() async {
         let tab = BrowserTab(opensBlank: false)
         tab.find.open()
         tab.find.query = "anything"

@@ -190,10 +190,12 @@ extension BrowserModel {
         onTabClosed?(tab)
         scheduleSave()
 
-        tab.webView.stopLoading()
+        if tab.isMaterialised {
+            tab.webView.stopLoading()
+            tab.webView.load(URLRequest(url: URL(string: "about:blank")!))
+            tab.webView.removeFromSuperview()
+        }
         tab.detach()
-        tab.webView.load(URLRequest(url: URL(string: "about:blank")!))
-        tab.webView.removeFromSuperview()
     }
 
     private func neighbor(of tab: BrowserTab) -> BrowserTab? {

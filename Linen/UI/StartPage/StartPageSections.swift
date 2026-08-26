@@ -116,7 +116,7 @@ private struct StartPageFrequentSitesSection: View {
                     StartPageSiteTile(
                         site: site,
                         action: { open(site.url) },
-                        onRemove: { settings.hideFrequentSite(host: site.host) }
+                        onRemove: { settings.hideFrequentSite(host: site.domain) }
                     )
                 }
             }

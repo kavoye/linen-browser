@@ -12,36 +12,34 @@ agree:
 
 The feed URL is
 `https://github.com/<owner>/<repo>/releases/latest/download/appcast.xml`.
-GitHub sends this URL to the asset with that name in the most recent release.
-Thus you do not need a web server or a `gh-pages` branch. Attach `appcast.xml`
-to each release. The permalink then points to the new file.
+GitHub redirects that URL to the asset of the same name in the most recent
+release, so you need no web server and no `gh-pages` branch. Attach
+`appcast.xml` to each release, and the permalink follows it.
 
 ## The signing tools
 
-The SPM package does not build `generate_keys`, `sign_update` and
-`generate_appcast`. But the package downloads an artifact bundle that contains
-these three tools. Set a variable to their location. Then you do not have to
-find the path again:
+Sparkle ships `generate_keys`, `sign_update` and `generate_appcast` in an
+artifact bundle rather than as package products, so Swift Package Manager
+downloads them without building them. Point a variable at them once, and you do
+not have to find the path again:
 
 ```bash
 export SPARKLE_BIN=$(dirname "$(find ~/Library/Developer/Xcode/DerivedData -path '*artifacts/sparkle/Sparkle/bin/sign_update' -print -quit)")
 ```
 
-This path is in the DerivedData folder. If you clean the build folder, the
-system removes the path. The next build makes the path again. As an
-alternative, download the release tarball from
+The path lives in DerivedData, so cleaning the build folder removes it and the
+next build puts it back. You can also download the release tarball from
 https://github.com/sparkle-project/Sparkle/releases.
 
 ## One-time: the Sparkle signing keys
 
-The EdDSA key pair exists. `Linen/Info.plist` contains the public key as
-`SUPublicEDKey`. The login keychain of this Mac contains the private key.
-`sign_update` finds the private key in the keychain. No more configuration is
-necessary.
+The EdDSA key pair already exists. `Linen/Info.plist` holds the public key as
+`SUPublicEDKey`, and this Mac’s login keychain holds the private key, where
+`sign_update` finds it. Nothing else needs configuring.
 
-Make a backup of the private key. Keep the backup for a minimum of two years.
-If you lose the private key, no installed copy of the app can update again. The
-only solution is to tell each user to download the app again.
+Back up the private key and keep the backup for at least two years. If you lose
+it, no installed copy can ever update again, and the only way out is to ask
+everyone to download the app afresh.
 
 To export a copy:
 
@@ -95,7 +93,7 @@ declares `keychain-access-groups`. A Developer ID signature can only carry that
 entitlement when an embedded profile authorizes it. Gatekeeper refuses to launch
 an app that declares the entitlement without the profile.
 
-Do these steps one time in the Apple Developer portal:
+Once, in the Apple Developer portal:
 
 1. Open Certificates, Identifiers & Profiles › Identifiers.
 2. Select the `com.kavoye.Linen` App ID, or register it.
@@ -187,7 +185,7 @@ available to every workflow run, with no approval:
 Make the App Store Connect API key in Users and Access › Integrations › App
 Store Connect API. Give the key the Developer role. App Store Connect downloads
 the `.p8` file one time only. `notarytool` uses this key to authenticate. An app-specific
-password also works. But you can revoke the API key independently,
+password also works, but you can revoke the API key on its own,
 and the API key does not give access to all of your Apple ID.
 
 The team ID is not a secret. The workflow already contains it.
@@ -201,25 +199,23 @@ workflow reads the result. Push the tag:
 git tag v1.1 && git push origin v1.1
 ```
 
-Push the tag as soon as the commit is on `main`. You do not have to wait for CI
-first: the `gate` job waits for you. Nothing else is necessary. The workflow
-does these steps:
+Push the tag as soon as the commit is on `main`. You do not have to wait for
+CI, because the `gate` job waits for you. From there the workflow:
 
-1. It makes sure the tag is on `main`.
-2. It waits for the CI run on that commit. It stops if the run fails.
-3. It makes an archive.
-4. It signs the app with the Developer ID certificate and the profile.
-5. It sends the app to Apple for notarization.
-6. It staples the notarization ticket to the app.
-7. It makes a zip file.
-8. It makes a disk image. The image contains the app and a link to the
-   Applications folder.
-9. It signs the disk image.
-10. It sends the disk image to Apple for notarization.
-11. It staples the notarization ticket to the disk image.
-12. It signs the app for Sparkle.
-13. It makes `appcast.xml`.
-14. It publishes the GitHub release with the three assets.
+1. Confirms the tag is on `main`.
+2. Waits for the CI run on that commit, and stops if it fails.
+3. Builds an archive.
+4. Signs the app with the Developer ID certificate and the profile.
+5. Sends the app to Apple for notarization.
+6. Staples the notarization ticket to the app.
+7. Builds a zip file.
+8. Builds a disk image holding the app and a link to the Applications folder.
+9. Signs the disk image.
+10. Sends the disk image to Apple for notarization.
+11. Staples the notarization ticket to the disk image.
+12. Signs the app for Sparkle.
+13. Writes `appcast.xml`.
+14. Publishes the GitHub release with the three assets.
 
 The workflow takes 20 to 40 minutes, plus the time that CI still needs. The
 Apple notary service uses most of this time, and the workflow waits for it two
@@ -242,8 +238,8 @@ Important information:
   installation obvious, so keep the link to the Applications folder in it.
 - **The tag sets the version.** `MARKETING_VERSION` comes from the tag without
   the `v` character. `CURRENT_PROJECT_VERSION` comes from `git rev-list --count
-  HEAD`, the number of commits. Thus the `CFBundleVersion` value that Sparkle
-  compares always increases, in both channels. Do not use the number of the
+  HEAD`, the number of commits, so the `CFBundleVersion` that Sparkle compares
+  always increases, in both channels. Do not use the number of the
   workflow run: that counter restarts if the workflow file is replaced, and a
   build number that goes down stops every installed copy from updating. Do not
   change a version by hand in the Xcode project. The values in the Xcode project
@@ -252,10 +248,10 @@ Important information:
   body from two parts. `CHANGELOG.md` is optional: make it only when a release
   needs notes of its own. If it contains a `## 1.1` section, that section comes
   first. GitHub then adds the list of the commits and the pull
-  requests after the previous tag, and a **New Contributors** section. Thus each
-  contributor gets credit, with or without a changelog. The app reads the body
-  from the API each time it shows the sheet. Thus you can edit the release later
-  to correct the text. A new release is not necessary.
+  requests after the previous tag, and a New Contributors section, so every
+  contributor gets credit with or without a changelog. The app reads the body
+  from the API each time it shows the sheet, so you can edit a release later to
+  correct the text without publishing a new one.
 - **Give credit to a security reporter by hand.** [SECURITY.md](SECURITY.md)
   promises the reporter credit in the release notes. The workflow cannot know
   the name. Put the name in the `CHANGELOG.md` section before you make the tag.
@@ -263,9 +259,9 @@ Important information:
 - **The format of the tag is important.** The notes sheet finds the release with
   the name `v<version>`. If it does not find that name, it uses `<version>`.
   Only the formats `vX.Y` and `vX.Y.Z` start the workflow.
-- **The workflow makes `appcast.xml` from the app bundle.** Thus the version,
-  the minimum system version and the architectures in the feed always agree with
-  the app. The feed contains only the most recent release. This is sufficient
+- **The workflow writes `appcast.xml` from the app bundle**, so the version,
+  the minimum system version and the architectures in the feed always match the
+  app. The feed contains only the most recent release. This is sufficient
   for Sparkle to offer the update to all users.
 
 ### Acknowledgements
@@ -278,24 +274,24 @@ from `Package.resolved` and the resolved checkouts:
 swift Tools/make-acknowledgements.swift
 ```
 
-Do these steps after you add, remove or update a package:
+After you add, remove or update a package:
 
 1. Resolve the packages one time, or build the app.
 2. Run the command above.
 3. Commit the file with the change to `Package.resolved`.
 
 CI runs the same command and stops the build if the result is different. The
-MIT and the Apache license both ask for their terms to go with the binary, and
-a signed build is a redistribution. Thus this file is not optional.
+MIT and Apache both require their terms to travel with the binary, and a signed
+build is a redistribution, so this file is not optional.
 
 ### The disk image
 
-The window of the disk image comes from two files in `Tools/dmg`:
-`background.tiff` and `DS_Store`. The workflow copies both into the staging
-folder. Only Finder writes a `.DS_Store` file, and the runner has no Finder
-session. Thus the layout is made one time on a Mac.
+The disk image window comes from two files in `Tools/dmg`: `background.tiff`
+and `DS_Store`. The workflow copies both into the staging folder. Only Finder
+writes a `.DS_Store`, and the runner has no Finder session, so the layout is
+made once on a Mac.
 
-Do these steps after you change the artwork or the icon positions:
+After you change the artwork or the icon positions:
 
 1. Run this command on a Mac:
 
@@ -362,29 +358,28 @@ Mac:
 Linen has two update channels. A release is the default. A preview build comes
 from the newest commit on `main`, before a release.
 
-To use preview builds, open Settings › About. Set **Update channel** to
-**Preview**. Sparkle reads the other feed at the next check. A restart is not
-necessary.
+To follow preview builds, open Settings › About and set Update channel to
+Preview. Sparkle reads the other feed at the next check, with no restart.
 
 ### What the workflow does
 
-`.github/workflows/tip.yml` starts each time CI passes on `main`. You do not
-start it, and you do not tag anything. The workflow does these steps:
+`.github/workflows/tip.yml` runs each time CI passes on `main`. You neither
+start it nor tag anything. The workflow:
 
-1. It reads the version. The version is the last `v` tag, then the number of
-   commits after that tag. Example: `0.1.2 (4)`.
-2. It stops if that count is zero. The commit is the release itself, and the
-   release already carries the same build.
-3. It makes an archive. It signs the app and sends it to Apple for
-   notarization.
-4. It makes a zip file. It does not make a disk image.
-5. It signs the app for Sparkle. It makes `appcast-tip.xml`.
-6. It moves the `tip` tag to that commit.
-7. It updates the `tip` pre-release with the two files.
-8. It deletes each zip file that is not one of the five most recent.
+1. Reads the version: the last `v` tag, then the number of commits after it,
+   such as `0.1.2 (4)`.
+2. Stops if that count is zero, because the commit is the release itself and
+   already carries the same build.
+3. Builds an archive, signs the app, and sends it to Apple for notarization.
+4. Builds a zip file, and no disk image.
+5. Signs the app for Sparkle and writes `appcast-tip.xml`.
+6. Moves the `tip` tag to that commit.
+7. Updates the `tip` pre-release with the two files.
+8. Deletes every zip file outside the five most recent.
 
-The workflow takes 20 to 30 minutes. Ten commits in ten minutes make one build.
-A new run cancels the run before it, and the last commit is what builds.
+The workflow takes 20 to 30 minutes. Ten commits in ten minutes produce one
+build: a new run cancels the one before it, and the last commit is what
+builds.
 
 ### Where each feed is
 
@@ -398,18 +393,18 @@ A new run cancels the run before it, and the last commit is what builds.
 `releases/download/tip/appcast-tip.xml`. The second URL is a permalink because
 the tag name never changes.
 
-### Rules that you must keep
+### Rules to keep
 
 - **The `tip` release must stay a pre-release.** GitHub makes the most recent
   release that is not a pre-release the “latest” release, and
   `releases/latest/download/` reads that release. A `tip` release that is not a
   pre-release takes the release feed URL. The workflow sets the flag on each
   run.
-- **The two feed files must keep different names.** This is what makes the
-  error above safe. With different names, the release feed gives a 404, each
-  update check fails, and you can correct it. With the same name, each user
-  moves to the preview channel. Sparkle does not install an older version, so
-  you cannot correct that.
+- **The two feed files must keep different names.** That is what makes the
+  mistake above recoverable. With different names the release feed returns a
+  404, update checks fail, and you can fix it. With the same name everyone moves
+  to the preview channel, and since Sparkle never installs an older version, you
+  cannot fix it.
 - **The build number must always increase.** Both workflows use `git rev-list
   --count HEAD`. A release is always at or after the previews before it, so its
   number is never lower.
@@ -417,15 +412,15 @@ the tag name never changes.
   with `git describe --match 'v[0-9]*.[0-9]*'`. Without the pattern, `git
   describe` finds `tip`, and the count becomes zero at each build.
 - **A preview build uses the signing keys.** The certificate, the notarization
-  key and the Sparkle key are used at each green commit on `main`, not only at
-  each release.
+  key and the Sparkle key are used on every green commit on `main`, not only at
+  a release.
 
 ### Going back to releases
 
-Set Update channel to Release. Linen reads the release feed again. Sparkle does not
-install an older version, so the app stays on the preview build until a release
-has a higher build number. To go back immediately, download the disk image from
-the releases page and replace the app.
+Set Update channel to Release, and Linen reads the release feed again. Sparkle
+never installs an older version, so the app stays on the preview build until a
+release carries a higher build number. To go back at once, download the disk
+image from the releases page and replace the app.
 
 ## Update behavior
 
@@ -433,12 +428,12 @@ the releases page and replace the app.
   background check fails, the app shows nothing.
 - The feed that Sparkle reads depends on the Update channel setting. A change
   to the setting starts a check immediately.
-- If Sparkle finds an update, the banner shows in two locations: above the
+- When Sparkle finds an update, the banner appears in two places: above the
   settings page, and in the sidebar below the media player.
-- **Install** does all of it: it downloads the update, installs it, and starts
-  Linen again. Linen does not ask a second time. The app downloads nothing
-  before the user selects **Install**.
-- If the user dismisses the banner, the app defers the update. It does not skip
-  the update. A downloaded update continues at the next launch.
-- Linen › Check for Updates… starts a check immediately. The same banner shows
-  the result.
+- Install does the whole job: it downloads the update, installs it, and opens
+  Linen again, without asking a second time. Nothing downloads before someone
+  chooses Install.
+- Dismissing the banner defers the update rather than skipping it, and a
+  downloaded update carries on at the next launch.
+- Linen › Check for Updates… checks straight away, and the same banner shows the
+  result.

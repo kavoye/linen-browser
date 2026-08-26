@@ -574,6 +574,9 @@
     "Advanced" : {
       "comment" : "Name of the Advanced page in the Settings sidebar and the heading at the top of that page."
     },
+    "After one day" : {
+
+    },
     "agent speech" : {
       "comment" : "Detail line under the Enable/Disable Voice command in the ⌘K palette; it names what the command affects — the assistant reading its replies aloud. Lowercase caption fragment; capitalise if your language capitalises nouns."
     },
@@ -1642,6 +1645,9 @@
     "How are markets today?" : {
 
     },
+    "How long finished downloads stay in the list." : {
+
+    },
     "How long visited pages are kept." : {
       "comment" : "Caption for the Keep history for row in Settings search results."
     },
@@ -1912,6 +1918,9 @@
     "Linen can’t search with this URL. DuckDuckGo is answering instead." : {
       "comment" : "Caption under the custom search engine fields when the URL template the user typed cannot be used, so the default engine answers searches until it is fixed."
     },
+    "Linen closed before this finished" : {
+
+    },
     "Linen is using %@ instead." : {
       "comment" : "Settings → Assistant. %@ is the provider name of the stand-in, e.g. \"Apple Intelligence\". Caption shown when the chosen provider is not ready and another one serves replies. Linen is the application name and is never translated."
     },
@@ -2025,6 +2034,9 @@
     },
     "Manage your other extensions" : {
       "comment" : "One line in the bulleted list of what an extension will be able to do, in the install confirmation sheet. It completes “It will also be able to:”."
+    },
+    "Manually" : {
+
     },
     "Media" : {
       "comment" : "Section title on the Tools settings page."
@@ -2787,6 +2799,9 @@
     "Remove Bookmark" : {
       "comment" : "Command that removes the tab's bookmarked page. Four surfaces share it: the context menu of a tab row, the minus button on a bookmarked row, the toolbar button while the bookmarked page is on screen, and the search palette. Title Case."
     },
+    "Remove download list items" : {
+
+    },
     "Remove Endpoint" : {
       "comment" : "Destructive confirming button inside the dialog that deletes a user-added provider endpoint. Title Case, imperative verb plus its object."
     },
@@ -3445,6 +3460,9 @@
     "The extension will also be able to:" : {
       "comment" : "Line introducing the bulleted list of abilities in the extension install sheet; each bullet below it is a separate entry that must read as a continuation of this line. Keep the colon."
     },
+    "The files themselves stay in your Downloads folder." : {
+
+    },
     "The folder is empty." : {
       "comment" : "Detail line of the delete-folder alert when the folder holds no tabs."
     },
@@ -3567,6 +3585,12 @@
     },
     "This connection isn’t private" : {
       "comment" : "Headline on the error page shown when a website’s security certificate could not be verified. A short sentence in sentence case, displayed large above a longer explanation. Curly apostrophe."
+    },
+    "This download did not finish" : {
+
+    },
+    "This download failed" : {
+
     },
     "This extension asked to talk to its own app. Linen can’t reach it, so the parts that need it won’t work." : {
       "comment" : "Shown in the issues popover beside an extension in settings, and to the extension itself when it calls runtime.sendNativeMessage. Some extensions keep their data in a companion app that only Safari can reach. Two sentences; curly apostrophes."
@@ -3850,9 +3874,6 @@
     "WebKit doesn’t provide some of what this extension uses, so parts of it may not work:" : {
       "comment" : "Heading above a bulleted list in the sheet that confirms installing a browser extension. WebKit is the name of the engine Linen runs extensions on and is never translated. The list items are API names and stay in English. Ends in a colon."
     },
-    "WebKit’s own experiments, the ones Safari lists under Develop." : {
-
-    },
     "WebKit’s own experiments. Changing one can break websites." : {
 
     },
@@ -3924,6 +3945,9 @@
     },
     "What’s on Hacker News?" : {
       "comment" : "Label on one of three example prompt chips on the start page; clicking it asks the assistant that question. “Hacker News” is the name of a website — keep it. Keep the curly apostrophe; the prompt actually sent to the model is separate and stays in English."
+    },
+    "When Linen quits" : {
+
     },
     "When you leave a playing tab, its video moves into the sidebar player. Automatic Picture in Picture turns off while this is on." : {
       "comment" : "Caption under the Show video in the player row on the Experiments settings page, and the caption of that same row in Settings search. The video only moves while the user is on a different tab, and turning this row on turns the Automatic Picture in Picture row off. “Picture in Picture” is the macOS name of the floating video window — use the system’s own wording. Two full sentences."

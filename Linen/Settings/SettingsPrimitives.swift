@@ -24,7 +24,8 @@ enum SettingsMetrics {
     static let cardInsetV: CGFloat = 2
     static let rowPaddingH: CGFloat = 0
     static let rowContentInset: CGFloat = 8
-    static let pickerHorizontalInset: CGFloat = 4
+    static let pickerHorizontalInset: CGFloat = 0
+    static let pickerLabelGap: CGFloat = 6
     static let pickerVerticalInset: CGFloat = 9
     static let pickerItemPaddingV: CGFloat = 5
 
