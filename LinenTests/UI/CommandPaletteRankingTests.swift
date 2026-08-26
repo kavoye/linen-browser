@@ -174,7 +174,7 @@ struct CommandPaletteRankingTests {
 
         #expect(quiet.first { $0.id == "action-toggleSpeech" }?.title == String(localized: "Enable Voice"))
         #expect(loud.first { $0.id == "action-toggleSpeech" }?.title == String(localized: "Disable Voice"))
-        #expect(quiet.first { $0.id == "action-toggleActivity" }?.title == String(localized: "Show Assistant Activity"))
+        #expect(quiet.first { $0.id == "action-toggleActivity" }?.title == String(localized: "Show Assistant"))
         #expect(quiet.first { $0.id == "action-toggleSidebar" }?.title == String(localized: "Hide Sidebar"))
         #expect(loud.first { $0.id == "action-toggleSidebar" }?.title == String(localized: "Show Sidebar"))
     }

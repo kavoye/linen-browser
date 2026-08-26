@@ -45,7 +45,6 @@ final class BrowserSettings {
         static let userAgent = "advanced.userAgent"
         static let customUserAgent = "advanced.userAgent.custom"
         static let webInspector = "advanced.webInspector"
-        static let reportIssueButton = "appearance.reportIssueButton"
         static let updateChannel = "updates.channel"
         static let startPageOrder = "startPage.order"
         static let startPageHidden = "startPage.hidden"
@@ -133,13 +132,6 @@ final class BrowserSettings {
         didSet {
             guard matchesWebsiteColor != oldValue else { return }
             write(matchesWebsiteColor, forKey: Key.websiteTint)
-        }
-    }
-
-    var showsReportIssueButton: Bool {
-        didSet {
-            guard showsReportIssueButton != oldValue else { return }
-            write(showsReportIssueButton, forKey: Key.reportIssueButton)
         }
     }
 
@@ -496,18 +488,12 @@ final class BrowserSettings {
         liquidGlassOpacity = object(Key.liquidGlassOpacity) == nil
             ? 0.5
             : min(max(double(Key.liquidGlassOpacity), 0), 1)
-        showsReportIssueButton = object(Key.reportIssueButton) as? Bool ?? true
         showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
         showsLyrics = object(Key.lyrics) as? Bool ?? true
         refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? false
         sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false
         automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
         showsVideoInPlayer = object(Key.videoInPlayer) as? Bool ?? false
-        #if DEBUG
-        if StageMode.isActive {
-            showsReportIssueButton = false
-        }
-        #endif
         updateChannel = string(Key.updateChannel)
             .flatMap(UpdateChannel.init(rawValue:)) ?? .release
         let storedZoom = double(Key.pageZoom)
@@ -606,6 +592,7 @@ final class BrowserSettings {
         // `isInspectable` only lets an external inspector attach. This private
         // preference enables the page's own Inspect Element item.
         configuration.preferences.setValue(webInspectorEnabled, forKey: "developerExtrasEnabled")
+        WebKitFeatures.apply(to: configuration.preferences)
     }
 
     func apply(to webView: WKWebView) {

@@ -95,8 +95,11 @@ final class DownloadManager: NSObject {
         attach(download, to: id)
     }
 
+    @ObservationIgnored var onBegin: (() -> Void)?
+
     @discardableResult
     func beginItem(source: URL?, sourceTabID: UUID? = nil, privately: Bool = false) -> UUID {
+        onBegin?()
         let id = UUID()
         items.insert(
             Item(

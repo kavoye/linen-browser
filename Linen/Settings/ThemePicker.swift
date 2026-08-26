@@ -99,24 +99,10 @@ private struct ThemeThumbnailCard: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @State private var hovering = false
-
     var body: some View {
-        Button(action: action) {
-            VStack(spacing: 10) {
-                thumbnail
-
-                Text(mode.label)
-                    .font(.system(size: 11.5, weight: isSelected ? .semibold : .regular))
-                    .frame(width: AppearanceThumbnailMetrics.width, alignment: .center)
-            }
-            .contentShape(Rectangle())
+        PreviewChoiceCard(label: mode.label, isSelected: isSelected, action: action) {
+            thumbnail
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .animation(Theme.Motion.quick, value: isSelected)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private var thumbnail: some View {
@@ -136,29 +122,6 @@ private struct ThemeThumbnailCard: View {
                     )
             }
         }
-        .frame(
-            width: AppearanceThumbnailMetrics.width,
-            height: AppearanceThumbnailMetrics.height
-        )
-        .clipShape(shape)
-        .overlay {
-            shape.strokeBorder(
-                isSelected
-                    ? Theme.systemAccent.opacity(0.95)
-                    : Color.primary.opacity(hovering ? 0.22 : 0.11),
-                lineWidth: isSelected ? 2 : 1
-            )
-        }
-        .shadow(
-            color: .black.opacity(hovering || isSelected ? 0.26 : 0.18),
-            radius: hovering || isSelected ? 7 : 4,
-            y: hovering || isSelected ? 3 : 2
-        )
-        .scaleEffect(hovering ? 1.015 : 1)
-    }
-
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
     }
 }
 

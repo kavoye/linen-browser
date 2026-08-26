@@ -129,10 +129,11 @@ struct DrillInRow: View {
     let title: LocalizedStringResource
     var symbol: String?
     var tint: Color = .secondary
+    var caption: LocalizedStringResource?
     var detail: LocalizedStringResource?
     let action: () -> Void
 
-    @State private var hovering = false
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
@@ -149,27 +150,33 @@ struct DrillInRow: View {
                         .accessibilityHidden(true)
                 }
 
-                Text(title)
-                    .font(Theme.Font.rowTitle)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(Theme.Font.rowTitle)
+                        .foregroundStyle(isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+
+                    if let caption {
+                        Text(caption)
+                            .font(Theme.Font.secondary)
+                            .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
 
                 Spacer(minLength: 8)
 
                 if let detail {
                     Text(detail)
                         .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
                 }
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.tertiary)
+                DrillInChevron()
             }
-            .padding(.vertical, 10)
-            .settingsRowHover(isActive: hovering, tint: tint)
+            .padding(.vertical, caption == nil ? 10 : SettingsMetrics.rowPaddingV)
+            .settingsRowTarget()
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
     }
 }
 
@@ -177,12 +184,10 @@ struct AddRow: View {
     let title: LocalizedStringResource
     let action: () -> Void
 
-    @State private var hovering = false
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 26 * 0.32, style: .continuous)
+                Circle()
                     .strokeBorder(
                         Color.primary.opacity(0.22),
                         style: StrokeStyle(lineWidth: 1, dash: [3, 2.5])
@@ -202,32 +207,124 @@ struct AddRow: View {
                 Spacer(minLength: 8)
             }
             .padding(.vertical, 9)
-            .settingsRowHover(isActive: hovering)
+            .settingsRowTarget()
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
     }
 }
 
-struct SubPageHeader: View {
+struct SubPageHeader<Accessory: View>: View {
     private let button: SettingsButton
+    private let accessory: Accessory
 
-    init(backTitle: LocalizedStringResource, onBack: @escaping () -> Void) {
+    init(
+        backTitle: LocalizedStringResource,
+        onBack: @escaping () -> Void,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
         button = SettingsButton(title: backTitle, symbol: "chevron.left", action: onBack)
+        self.accessory = accessory()
     }
 
-    init(verbatimBackTitle: String, onBack: @escaping () -> Void) {
+    init(
+        verbatimBackTitle: String,
+        onBack: @escaping () -> Void,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
         button = SettingsButton(
             verbatimTitle: verbatimBackTitle,
             symbol: "chevron.left",
             action: onBack
         )
+        self.accessory = accessory()
+    }
+
+    init(backTitle: LocalizedStringResource, onBack: @escaping () -> Void) where Accessory == EmptyView {
+        self.init(backTitle: backTitle, onBack: onBack) { EmptyView() }
+    }
+
+    init(verbatimBackTitle: String, onBack: @escaping () -> Void) where Accessory == EmptyView {
+        self.init(verbatimBackTitle: verbatimBackTitle, onBack: onBack) { EmptyView() }
     }
 
     var body: some View {
-        button
-            .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(spacing: 10) {
+            button
+
+            Spacer(minLength: 8)
+
+            accessory
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct SettingsList<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .environment(\.settingsCardInset, SettingsMetrics.cardInset)
+        .environment(\.settingsSectionLit, false)
+        .padding(.horizontal, SettingsMetrics.cardInset)
+        .padding(.vertical, SettingsMetrics.cardInsetV)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Theme.Wash.faint,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+        )
+    }
+}
+
+struct PreviewChoiceCard<Thumbnail: View>: View {
+    let label: LocalizedStringResource
+    let isSelected: Bool
+    let action: () -> Void
+    @ViewBuilder let thumbnail: Thumbnail
+
+    @State private var hovering = false
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                thumbnail
+                    .frame(
+                        width: AppearanceThumbnailMetrics.width,
+                        height: AppearanceThumbnailMetrics.height
+                    )
+                    .clipShape(shape)
+                    .overlay {
+                        shape.strokeBorder(
+                            isSelected
+                                ? Theme.systemAccent.opacity(0.95)
+                                : Color.primary.opacity(hovering ? 0.22 : 0.11),
+                            lineWidth: isSelected ? 2 : 1
+                        )
+                    }
+                    .shadow(
+                        color: .black.opacity(hovering || isSelected ? 0.26 : 0.18),
+                        radius: hovering || isSelected ? 7 : 4,
+                        y: hovering || isSelected ? 3 : 2
+                    )
+                    .scaleEffect(hovering ? 1.015 : 1)
+
+                Text(label)
+                    .font(.system(size: 11.5, weight: isSelected ? .semibold : .regular))
+                    .frame(width: AppearanceThumbnailMetrics.width, alignment: .center)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
+        .animation(Theme.Motion.quick, value: isSelected)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -260,15 +357,37 @@ struct SettingsEmptyState: View {
     }
 }
 
+struct DrillInChevron: View {
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
+    }
+}
+
 struct StatusRow<Trailing: View>: View {
     let tint: Color
     let symbol: String
     let title: LocalizedStringResource
     var caption: LocalizedStringResource?
     var verbatimCaption: String?
+    var action: (() -> Void)?
     @ViewBuilder let trailing: Trailing
 
     var body: some View {
+        if let action {
+            Button(action: action) {
+                row
+                    .settingsRowTarget()
+            }
+            .buttonStyle(.plain)
+        } else {
+            row
+        }
+    }
+
+    private var row: some View {
         HStack(spacing: 11) {
             Circle()
                 .fill(tint.opacity(0.16))
@@ -299,6 +418,10 @@ struct StatusRow<Trailing: View>: View {
             Spacer(minLength: 8)
 
             trailing
+
+            if action != nil {
+                DrillInChevron()
+            }
         }
         .padding(.vertical, SettingsMetrics.rowPaddingV)
     }

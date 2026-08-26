@@ -145,11 +145,10 @@ private struct HomepageRow: View {
         ) {
             HStack(spacing: 8) {
                 FieldChrome(isFocused: focused) {
-                    TextField(text: $settings.homepage) {
-                        Text(verbatim: "example.com")
-                    }
+                    TextField("", text: $settings.homepage)
                         .textFieldStyle(.plain)
                         .font(Theme.Font.body)
+                        .fieldPlaceholder(verbatim: "example.com", isShowing: settings.homepage.isEmpty)
                         .focused($focused)
                 }
 

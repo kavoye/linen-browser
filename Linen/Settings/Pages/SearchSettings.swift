@@ -51,16 +51,19 @@ struct SearchSettings: View {
                 ) {
                     VStack(alignment: .leading, spacing: 8) {
                         FieldChrome(isFocused: focus == .address) {
-                            TextField(text: $settings.customSearchTemplate) {
-                                Text(verbatim: "https://example.com/search?q=")
-                            }
+                            TextField("", text: $settings.customSearchTemplate)
                                 .textFieldStyle(.plain)
                                 .font(Theme.Font.body)
+                                .fieldPlaceholder(
+                                    verbatim: "https://example.com/search?q=",
+                                    isShowing: settings.customSearchTemplate.isEmpty
+                                )
                                 .focused($focus, equals: .address)
                         }
 
                         FieldChrome(isFocused: focus == .name) {
-                            TextField("Name", text: $settings.customSearchName)
+                            TextField("", text: $settings.customSearchName)
+                                .fieldPlaceholder("Name", isShowing: settings.customSearchName.isEmpty)
                                 .textFieldStyle(.plain)
                                 .font(Theme.Font.body)
                                 .focused($focus, equals: .name)
@@ -85,9 +88,8 @@ struct SearchSettings: View {
                     caption: suggestionsCaption
                 ) {
                     SettingsToggle($settings.showsSearchSuggestions)
-                        .disabled(engine.suggestTemplate == nil)
-                        .opacity(engine.suggestTemplate == nil ? 0.45 : 1)
                 }
+                .disabled(engine.suggestTemplate == nil)
                 .settingsAnchor("search.suggestions")
             }
         }

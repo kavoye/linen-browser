@@ -63,6 +63,7 @@ final class AppCoordinator {
     let lyrics = LyricsModel()
     #endif
     let conversationLog = ConversationLog()
+    let downloadFlights = DownloadFlights()
     let agentQuestions = AgentQuestionModel()
     var agentReply: AgentReplyModel {
         agentTurns.reply
@@ -111,6 +112,8 @@ final class AppCoordinator {
     private(set) var windowControlsInset: CGFloat = 0
     private(set) var addressBarFocusToken = 0
     private(set) var isPaletteOpen = false
+    var isProfileSwitcherOpen = false
+    var profileButtonFrame: CGRect?
     private(set) var paletteToken = 0
     var sidebarDestination: SidebarDestination? {
         SidebarDestination.resolve(activeTabID: browser.activeTab?.id)
@@ -330,7 +333,11 @@ final class AppCoordinator {
 
     let profiles = ProfileStore.shared
 
-    var isSwitchingProfile = false
+    var switchingTo: Profile?
+
+    var isSwitchingProfile: Bool {
+        switchingTo != nil
+    }
 
     var privateSession: PrivateBrowsingSession?
 

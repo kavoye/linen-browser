@@ -138,7 +138,7 @@ private enum PopoverMetrics {
     static let visibleCatalogRows = 5
 
     static var plateRadius: CGFloat {
-        Theme.Radius.nested(in: Theme.Radius.panel, inset: plateInset)
+        Theme.Radius.nested(in: Theme.Radius.popover, inset: plateInset)
     }
 }
 

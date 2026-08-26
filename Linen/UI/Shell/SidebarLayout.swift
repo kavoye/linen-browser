@@ -24,11 +24,15 @@ enum SidebarMetrics {
     static let rowControlExtent: CGFloat = 20
 
     static let rowIconSpacing: CGFloat = 8
-    static var fullContentInset: CGFloat {
+    nonisolated static var fullContentInset: CGFloat {
         LoomChrome.canvasInset - LoomChrome.sidebarContentBalanceOffset
     }
 
-    static let iconsContentInset: CGFloat = 8
+    nonisolated static let iconsContentInset: CGFloat = 8
+
+    static var profileLeading: CGFloat {
+        max(0, rowContentPadding(style: .full) + rowIconSize / 2 - 14)
+    }
 
     static let rowHeight: CGFloat = 32
 
@@ -40,8 +44,35 @@ enum SidebarMetrics {
         (rowHeight - rowControlExtent) / 2 - rowContentPadding(style: style)
     }
 
-    static func contentInset(style: SidebarStyle) -> CGFloat {
+    nonisolated static func contentInset(style: SidebarStyle) -> CGFloat {
         style == .icons ? iconsContentInset : fullContentInset
+    }
+
+    nonisolated static func contentInsets(style: SidebarStyle, isFloating: Bool) -> EdgeInsets {
+        if isFloating {
+            let inset = LoomChrome.canvasInset
+            return EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset)
+        }
+        guard style == .full else {
+            return EdgeInsets(top: 0, leading: LoomChrome.canvasInset, bottom: 0, trailing: 0)
+        }
+        let inset = contentInset(style: .full)
+        let balance = LoomChrome.sidebarContentBalanceOffset
+        return EdgeInsets(
+            top: 0,
+            leading: inset + balance,
+            bottom: 0,
+            trailing: inset - balance
+        )
+    }
+
+    nonisolated static func contentWidth(
+        _ sidebarWidth: CGFloat,
+        style: SidebarStyle,
+        isFloating: Bool
+    ) -> CGFloat {
+        let insets = contentInsets(style: style, isFloating: isFloating)
+        return max(0, sidebarWidth - insets.leading - insets.trailing)
     }
 
     static let controlHeight: CGFloat = 32

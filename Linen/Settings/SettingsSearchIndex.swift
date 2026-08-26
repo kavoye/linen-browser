@@ -112,8 +112,6 @@ enum SettingsIndex {
                       ["refract", "glass", "colour", "color", "tint", "selected tab", "favicon", "sidebar"]),
         SettingsEntry("appearance.sidebarStyle", .appearance, "Icons only", "Narrow the sidebar to its icons.",
                       ["sidebar", "icons", "narrow", "compact", "tabs"]),
-        SettingsEntry("appearance.reportIssue", .appearance, "Show report button", "Opens the project’s issue page.",
-                      ["report", "bug", "issue", "ladybug", "feedback", "github", "sidebar", "hide"]),
 
         SettingsEntry("profiles.current", .profiles, "Current profile", "What the current profile stores.",
                       ["profile", "current", "open now", "tabs", "history", "extensions", "websites",
@@ -133,6 +131,10 @@ enum SettingsIndex {
                       ["cookies", "cache", "reset", "storage", "site data", "delete", "erase", "wipe",
                        "local storage", "clear", "history", "time range", "last hour",
                        ]),
+        SettingsEntry("privacy.trackers", .privacy, "Block known trackers", "Block trackers on every website.",
+                      ["tracker", "trackers", "ads", "advertising", "analytics", "block", "privacy",
+                       "content blocker", "adblock", "ad blocker", "telemetry", "pixel",
+                       ]),
         SettingsEntry("privacy.storage", .privacy, "Website data", "How many websites store data on this Mac.",
                       ["cookies", "storage", "sites", "local storage", "data"]),
         SettingsEntry("privacy.history", .privacy, "Keep history for", "How long visited pages are kept.",
@@ -146,11 +148,7 @@ enum SettingsIndex {
 
         SettingsEntry("websites.javascript", .websites, "JavaScript", "Turn scripts off for every website.",
                       ["javascript", "js", "scripts", "disable"]),
-        SettingsEntry("websites.trackers", .websites, "Block known trackers", "Block trackers on every website.",
-                      ["tracker", "trackers", "ads", "advertising", "analytics", "block", "privacy",
-                       "content blocker", "adblock", "ad blocker", "telemetry", "pixel",
-                       ]),
-        SettingsEntry("websites.popups", .websites, "Block pop-ups", "Links you click still open.",
+        SettingsEntry("websites.popups", .websites, "Block pop-ups", "Stop windows a website opens on its own.",
                       ["popup", "pop up", "block", "ads", "windows"]),
         SettingsEntry("websites.autoplay", .websites, "Autoplay", "Whether video and sound may start on their own.",
                       ["autoplay", "video", "sound", "audio", "media", "mute"]),
@@ -160,7 +158,7 @@ enum SettingsIndex {
                        ]),
         SettingsEntry("websites.list", .websites, "Websites you’ve changed", "Every website with a rule of its own, and what that rule allows.",
                       ["site settings", "per site", "exceptions", "assistant access", "read only", "control",
-                       "keep active", "always active", "always loaded", "memory", "unload", "background",
+                       "keep active", "keep awake", "always active", "always loaded", "memory", "unload", "background",
                        "trackers", "tracker exception", "reset website",
                        ]),
 
@@ -195,6 +193,9 @@ enum SettingsIndex {
 
         SettingsEntry("advanced.inspector", .advanced, "Web Inspector", "Adds Inspect Element to the page’s right-click menu.",
                       ["developer", "devtools", "inspector", "inspect", "debug", "console"]),
+        SettingsEntry("advanced.features", .advanced, "Feature flags",
+                      "WebKit’s own experiments, the ones Safari lists under Develop.",
+                      ["webkit", "flags", "experimental", "features", "develop"]),
         SettingsEntry("advanced.certificates", .advanced, "Certificate exceptions", "Continue past a certificate macOS rejects. Forgotten when you quit.",
                       ["certificate", "ssl", "tls", "https", "self-signed", "proxy", "untrusted",
                        "invalid certificate", "exception", "warning",
@@ -210,11 +211,32 @@ enum SettingsIndex {
                       ["channel", "preview", "beta", "tip", "nightly", "early", "release",
                        "prerelease", "pre-release", "test build",
                        ]),
+        SettingsEntry("about.report", .about, "Report a bug", "Opens a new issue on Linen’s repository.",
+                      ["report", "bug", "issue", "feedback", "github", "ladybug"]),
         SettingsEntry("about.acknowledgements", .about, "Acknowledgements", "The open source packages Linen is built with.",
                       ["acknowledgements", "acknowledgments", "credits", "licence", "license", "open source",
                        "third party", "attribution", "notice", "sparkle", "mit", "apache",
                        ]),
     ]
+
+    static let linkScheme = "linen-settings"
+
+    static func link(to anchor: String) -> URL? {
+        URL(string: "\(linkScheme)://\(anchor)")
+    }
+
+    static func caption(
+        _ sentence: LocalizedStringResource,
+        naming name: LocalizedStringResource,
+        at anchor: String
+    ) -> AttributedString {
+        var text = AttributedString(String(localized: sentence))
+        guard let range = text.range(of: String(localized: name)), let url = link(to: anchor) else {
+            return text
+        }
+        text[range].link = url
+        return text
+    }
 
     static func search(_ raw: String) -> [SettingsEntry] {
         let needle = raw.trimmingCharacters(in: .whitespaces).lowercased()

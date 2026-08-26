@@ -20,7 +20,7 @@ struct ProfileSettingsTests {
     @Test func theSessionAndAppHalvesAreDisjoint() {
         let session = Set(BrowserSettings.sessionKeys)
         for key in ["appearance.mode", "content.defaultZoom", "downloads.folder",
-                    "advanced.userAgent", "advanced.webInspector", "appearance.reportIssueButton",
+                    "advanced.userAgent", "advanced.webInspector",
         ] {
             #expect(!session.contains(key))
         }

@@ -21,7 +21,7 @@ struct MediaSidebarCard: View {
     }
 
     private var showsLyricsButton: Bool {
-        coordinator.settings.showsLyrics && !coordinator.sidePanel.isShowing(.lyrics)
+        coordinator.showsLyrics && !coordinator.sidePanel.isShowing(.lyrics)
     }
 
     private var pipHelp: LocalizedStringResource {
@@ -80,6 +80,7 @@ struct MediaSidebarCard: View {
 
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.sidebarWidth) private var sidebarWidth
+    @State private var showsControls = false
 
     @State private var isPulledOut = false
 
@@ -104,7 +105,9 @@ struct MediaSidebarCard: View {
     }
 
     nonisolated static func panelWidth(sidebarWidth: CGFloat, isStowed: Bool) -> CGFloat {
-        isStowed ? floatingWidth : max(sidebarWidth - 24, 150)
+        guard !isStowed else { return floatingWidth }
+        let room = SidebarMetrics.contentWidth(sidebarWidth, style: .full, isFloating: false)
+        return max(room, 150)
     }
 
     nonisolated static func controlsWidth(panelWidth: CGFloat) -> CGFloat {
@@ -113,6 +116,51 @@ struct MediaSidebarCard: View {
 
     nonisolated static func controlsInset(panelWidth: CGFloat) -> CGFloat {
         isCompact(panelWidth: panelWidth) ? 8 : 10
+    }
+
+    private nonisolated static let controlGap: CGFloat = 4
+
+    @ViewBuilder private var controls: some View {
+        HStack(spacing: Self.controlGap) {
+            if showsLyricsButton {
+                MediaButton(systemName: "quote.bubble", size: 9, help: "Show Lyrics") {
+                    coordinator.toggleLyrics()
+                }
+            }
+
+            if media.model.pictureWebView != nil, !media.model.isInNativePiP {
+                MediaButton(
+                    systemName: isPlayerHidden ? "eye.slash" : "eye",
+                    size: 9,
+                    help: playerVisibilityHelp
+                ) {
+                    isPlayerHidden.toggle()
+                }
+            }
+
+            if media.model.hasVideo {
+                MediaButton(
+                    systemName: media.model.isInNativePiP ? "pip.exit" : "pip.enter",
+                    size: 9,
+                    help: pipHelp
+                ) {
+                    media.toggleNativePiP()
+                }
+            }
+
+            if let goToSource {
+                MediaButton(
+                    systemName: "arrow.up.right",
+                    size: 9,
+                    help: "Go to the Tab Playing This",
+                    action: goToSource
+                )
+            }
+
+            MediaButton(systemName: "xmark", size: 9, help: "Pause and Close") {
+                media.close()
+            }
+        }
     }
 
     private var showsPlayer: Bool {
@@ -142,8 +190,9 @@ struct MediaSidebarCard: View {
                     isPulledOut = false
                 }
             }
-            .animation(Theme.Motion.drift, value: showsPlayer)
-            .animation(Theme.Motion.drift, value: isStowed)
+            .animation(nil, value: panelWidth)
+            .animation(Theme.Motion.settle, value: showsPlayer)
+            .animation(Theme.Motion.settle, value: isStowed)
     }
 
     @ViewBuilder
@@ -177,58 +226,22 @@ struct MediaSidebarCard: View {
 
                         Spacer(minLength: 4)
 
-                        if showsLyricsButton {
-                            MediaButton(
-                                systemName: "quote.bubble",
-                                size: 9,
-                                help: "Show Lyrics"
-                            ) {
-                                coordinator.toggleLyrics()
-                            }
-                        }
-
-                        if media.model.pictureWebView != nil, !media.model.isInNativePiP {
-                            MediaButton(
-                                systemName: isPlayerHidden ? "eye.slash" : "eye",
-                                size: 9,
-                                help: playerVisibilityHelp
-                            ) {
-                                isPlayerHidden.toggle()
-                            }
-                        }
-
-                        if media.model.hasVideo {
-                            MediaButton(
-                                systemName: media.model.isInNativePiP ? "pip.exit" : "pip.enter",
-                                size: 9,
-                                help: pipHelp
-                            ) {
-                                media.toggleNativePiP()
-                            }
-                        }
-
-                        if let goToSource {
-                            MediaButton(
-                                systemName: "arrow.up.right",
-                                size: 9,
-                                help: "Go to the Tab Playing This",
-                                action: goToSource
-                            )
-                        }
-
-                        MediaButton(systemName: "xmark", size: 9, help: "Pause and Close") {
-                            media.close()
+                        if showsControls {
+                            controls
+                                .transition(.opacity)
                         }
                     }
+                    .animation(Theme.Motion.quick, value: showsControls)
 
                     MediaTimeline(media: media, isCompact: true)
                     MediaTransport(media: media, isCompact: isCompact)
                 }
                 .padding(.horizontal, Self.controlsInset(panelWidth: panelWidth))
                 .padding(.vertical, 8)
+                .onHover { showsControls = $0 }
                 .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.card, style: .continuous))
                 .contentShape(.rect(cornerRadius: Theme.Radius.card, style: .continuous))
-                .transition(.scale(scale: 0.94, anchor: .bottom).combined(with: .opacity))
+                .transition(.opacity)
             }
         }
         .frame(width: panelWidth, alignment: .leading)

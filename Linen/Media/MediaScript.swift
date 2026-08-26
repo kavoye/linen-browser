@@ -137,9 +137,28 @@ enum MediaScript {
         const raw = m.duration;
         return (isFinite(raw) && raw > 0 && raw < MAX_REAL_DURATION) ? raw : 0;
       }
+      let durationRises = 0;
+      let lastDuration = -1;
+      function forgetDuration() { durationRises = 0; lastDuration = -1; }
+      function stretches(m) {
+        const now = m.duration;
+        if (lastDuration >= 0) {
+          if (now > lastDuration + 0.2) {
+            durationRises = Math.min(durationRises + 1, 3);
+          } else if (Math.abs(now - lastDuration) <= 0.2) {
+            durationRises = Math.max(durationRises - 1, 0);
+          } else {
+            durationRises = 0;
+          }
+        }
+        lastDuration = now;
+        return durationRises >= 2;
+      }
       function isLive(m) {
         const raw = m.duration;
-        return !isNaN(raw) && raw !== 0 && realDuration(m) === 0;
+        if (isNaN(raw) || raw === 0) { return false; }
+        if (realDuration(m) === 0) { return true; }
+        return stretches(m);
       }
       function sendState() {
         const video = primary();
@@ -306,7 +325,10 @@ enum MediaScript {
       }
       function scan() {
         const main = document.querySelector('video');
-        if (main && main !== video) { bind(main, true); }
+        if (main && main !== video) {
+          forgetDuration();
+          bind(main, true);
+        }
         media().forEach(function (m) { if (!m.__linenBound) { bind(m, false); } });
         sendMeta();
         reportAudio();

@@ -729,9 +729,6 @@
     "Ask about this page" : {
 
     },
-    "Ask again" : {
-
-    },
     "Ask Again" : {
       "comment" : "Words that replace the footer of a recent-task card on the start page while the pointer is over it; clicking the card runs the same prompt again. Verb phrase in Title Case, one line in a narrow card."
     },
@@ -739,6 +736,9 @@
       "comment" : "Tooltip on a recent-task card on the start page. %@ is the user's own earlier prompt, quoted back as they wrote or spoke it — never translated. Keep the colon."
     },
     "Ask anything" : {
+
+    },
+    "Ask this again" : {
 
     },
     "Ask where to save each file" : {
@@ -832,6 +832,9 @@
       "comment" : "One line in the bulleted list of what an extension will be able to do, in the install confirmation sheet. It completes “It will also be able to:”."
     },
     "Block known trackers" : {
+
+    },
+    "Block known trackers is off, so trackers are allowed everywhere." : {
 
     },
     "Block pop-ups" : {
@@ -1247,14 +1250,8 @@
     "Custom endpoint" : {
       "comment" : "Heading of the Settings page for adding your own model server; it reads “Edit endpoint” when an existing one is being changed. Sentence case."
     },
-    "Custom tool set" : {
-      "comment" : "Title of the row on the Tools settings page shown when the user changed the recommended tool selection."
-    },
     "Customize Start Page" : {
       "comment" : "Tooltip on the Edit button in the bottom corner of the start page. Title case, no final period."
-    },
-    "Customize…" : {
-      "comment" : "Button on the Tools row in Assistant settings: opens the Tools page."
     },
     "Cut" : {
       "comment" : "Standard macOS Edit menu item. Use the system's own wording. A verb."
@@ -1471,6 +1468,9 @@
     "fastest · default" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the quickest to answer and the one used unless another is picked. The middle dot separates the two words and should be kept. Lowercase, and the space is very tight."
     },
+    "Feature flags" : {
+
+    },
     "File" : {
       "comment" : "Title of the File menu in the menu bar. Use the standard macOS wording."
     },
@@ -1512,9 +1512,6 @@
     },
     "Flights to Lisbon" : {
 
-    },
-    "Folder" : {
-      "comment" : "Label of a chip in the Downloads view's toolbar that opens the download folder in the Finder. The noun, Title Case, in a narrow chip beside a folder glyph."
     },
     "Folder name" : {
       "comment" : "Placeholder in the inline rename field on a sidebar folder row. Sentence case, and very narrow — the field is only as wide as a sidebar row."
@@ -1741,6 +1738,9 @@
     "It is removed from every profile, along with its settings and data." : {
       "comment" : "Message in the dialog that confirms removing an extension, warning that the removal is not limited to the profile the person is in. Full sentence."
     },
+    "It stays loaded even when you haven’t used it in a while." : {
+
+    },
     "Its %lld pages of history are removed, along with the start page tiles. Other profiles are not affected." : {
       "comment" : "Message in the dialog that confirms clearing one profile’s history. %lld is the number of pages in that profile’s history.",
       "localizations" : {
@@ -1822,8 +1822,8 @@
     "Keep history for" : {
       "comment" : "Title of the row on the Privacy settings page whose pop-up menu holds A day, A week, A month, A year and Forever — the title and the chosen value read as one phrase, so leave room for the value to follow. Sentence case."
     },
-    "Keep loaded" : {
-      "comment" : "Row title on a single website's settings page. On means the website is never unloaded to reclaim memory, so returning to its tab does not reload it."
+    "Keep this website awake" : {
+
     },
     "Keep Website Loaded" : {
 
@@ -1945,9 +1945,6 @@
     "Links Copied" : {
       "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
     },
-    "Links you click still open." : {
-      "comment" : "Caption under Block pop-ups in Websites settings, and its settings search caption."
-    },
     "Liquid Glass" : {
 
     },
@@ -2064,9 +2061,6 @@
     },
     "Model" : {
       "comment" : "Title of the row in Settings > Provider that chooses which model answers, and the title of that same row in Settings search. A noun — an AI model."
-    },
-    "model-id" : {
-      "comment" : "Placeholder text inside the field where a model identifier is typed by hand, showing the shape of the expected value rather than naming anything. Written in the lowercase hyphenated style of a technical identifier."
     },
     "model, voice, API key" : {
       "comment" : "Detail line under the Settings command in the ⌘K palette, listing what Settings contains. Lowercase caption, comma-separated; “API key” is the technical term and stays in that form."
@@ -2340,6 +2334,9 @@
     "Nothing is playing" : {
       "comment" : "Title of the empty state in the lyrics view when the media player holds no track. Sentence case with no final full stop."
     },
+    "Nothing matches that." : {
+
+    },
     "Nothing matches." : {
       "comment" : "Shown in the Settings sidebar when a search finds no settings and no pages."
     },
@@ -2406,6 +2403,9 @@
     "Open Image in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
     },
+    "Open in Finder" : {
+
+    },
     "Open Link in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
     },
@@ -2420,9 +2420,6 @@
     },
     "Open models served fast enough for voice." : {
       "comment" : "One-line description of the Groq provider in the provider picker. Open models means open-weight AI models, and voice refers to spoken conversation with the assistant, where the reply has to arrive quickly."
-    },
-    "Open Profile" : {
-      "comment" : "Button that switches the browser to the profile whose page is open."
     },
     "Open Tabs" : {
       "comment" : "Section heading in the ⌘K palette over the tabs already open. “Open” is an adjective describing the tabs, not a command to open them. Title Case."
@@ -2463,8 +2460,8 @@
     "Opening a new tab…" : {
       "comment" : "Status line under the assistant’s reply while it opens a new browser tab. Real ellipsis."
     },
-    "Opens the project’s issue page." : {
-      "comment" : "Caption under Show report button in Appearance settings, and its settings search caption."
+    "Opens a new issue on Linen’s repository." : {
+
     },
     "Orange" : {
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
@@ -2844,7 +2841,10 @@
     "Replies are generated by AI and can contain mistakes. Check important info." : {
       "comment" : "AI disclosure shown under the provider card in Settings. Keep the tone plain and factual."
     },
-    "Report an issue" : {
+    "Report a bug" : {
+
+    },
+    "Report…" : {
 
     },
     "Reported by %@ for the selected model." : {
@@ -3095,9 +3095,6 @@
     "SHA-256: %@" : {
 
     },
-    "Show" : {
-      "comment" : "Button at the end of the Acknowledgements row on the About settings page. It opens the list of open source packages. A verb; very tight, because it sits in a small chip."
-    },
     "Show %@ on the toolbar" : {
       "comment" : "Tooltip on the Pin button in the extensions overflow popover. %@ is the extension’s own display name, taken from the extension’s manifest — it is not translated. Show is a verb, and toolbar is the row of buttons at the top of the window."
     },
@@ -3148,9 +3145,6 @@
     },
     "Show Previous Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘[ and ⌃⇧Tab, which switches to the tab before the current one. Title Case and established platform terminology."
-    },
-    "Show report button" : {
-
     },
     "Show Side Panel" : {
 
@@ -3211,6 +3205,9 @@
     },
     "Sleep inactive tabs" : {
       "comment" : "Title of the switch in Settings > General that lets Linen release the pages of background tabs when the Mac runs short of memory, and the same row in Settings search. Off by default. Sentence case; “Sleep” is a verb the browser does to the tabs."
+    },
+    "Sleep inactive tabs is off, so every website stays loaded." : {
+
     },
     "Small" : {
       "comment" : "First of the four sizes in the lyrics text-size menu (Small, Regular, Large, Extra Large). An adjective for the size of the words. Title Case, as macOS menu items are."
@@ -3293,6 +3290,9 @@
     "Stop Speaking" : {
       "comment" : "Tooltip on the toolbar's speaker button while the assistant is reading a reply aloud; clicking cuts the speech off mid-sentence. It does not change any setting. Title Case."
     },
+    "Stop windows a website opens on its own." : {
+
+    },
     "Stopped" : {
       "comment" : "Small chip in the agent activity panel marking a task the user cancelled. One word; very tight."
     },
@@ -3327,9 +3327,6 @@
     "Suggestions from your search engine as you type." : {
       "comment" : "Description of the Search suggestions row, shown only in the Settings search results, where the chosen engine is not known and is named generically. Sentence case with a final full stop."
     },
-    "Summarise my open tabs" : {
-
-    },
     "Swap Pages" : {
       "comment" : "The same command as Swap Panes, on the context menu of a page and of a sidebar row holding two tabs. Title Case. It says pages here because the menu is on the page itself."
     },
@@ -3344,6 +3341,9 @@
     },
     "Switch to Tab" : {
       "comment" : "Section heading in the address bar results list over rows for tabs that are already open; choosing one switches to it rather than loading a second copy. Title Case."
+    },
+    "Switch to This Profile" : {
+
     },
     "Switching tabs…" : {
       "comment" : "Status line under the assistant’s reply while it moves to a different tab. Real ellipsis."
@@ -3535,9 +3535,6 @@
     "The website asks again before using the camera, microphone, location, or notifications, and the assistant asks before reading it." : {
       "comment" : "Message in the reset confirmation, saying what the website goes back to. Third person singular."
     },
-    "The website stays in memory even when unused." : {
-      "comment" : "Caption under the Keep loaded switch. Normally an unused tab is unloaded to free memory and reloads when you return to it."
-    },
     "The website’s certificate couldn’t be verified, so Linen stopped before sending anything." : {
       "comment" : "Explanatory sentence on the certificate error page, under its headline. Curly apostrophes."
     },
@@ -3546,6 +3543,9 @@
     },
     "Theme" : {
       "comment" : "Title of the Appearance settings row that chooses light, dark or automatic, and the same word in the Settings search index. Noun; a short row title."
+    },
+    "These WebKit features are still in development and can break websites. Reload a page to apply your changes." : {
+
     },
     "Things to try" : {
 
@@ -3763,6 +3763,9 @@
         }
       }
     },
+    "Updated to %@" : {
+
+    },
     "Use %@" : {
       "comment" : "Settings → Assistant → a provider page. %@ is the provider name, e.g. \"Ollama\". Button that makes this provider the one that answers."
     },
@@ -3846,6 +3849,12 @@
     },
     "WebKit doesn’t provide some of what this extension uses, so parts of it may not work:" : {
       "comment" : "Heading above a bulleted list in the sheet that confirms installing a browser extension. WebKit is the name of the engine Linen runs extensions on and is never translated. The list items are API names and stay in English. Ends in a colon."
+    },
+    "WebKit’s own experiments, the ones Safari lists under Develop." : {
+
+    },
+    "WebKit’s own experiments. Changing one can break websites." : {
+
     },
     "Webpages can carry hidden instructions aimed at the assistant. Allow this only if it’s what you asked for." : {
 
@@ -3987,9 +3996,6 @@
     },
     "You’re talking to AI. " : {
 
-    },
-    "You’ve changed which tools %@ may use." : {
-      "comment" : "Caption under the Custom tool set row. %@ is the provider name, e.g. Ollama."
     },
     "Your own models, running locally." : {
       "comment" : "One-line description of the Ollama provider in the provider picker. Locally means on the user’s own Mac. Ollama is a vendor name and is not in this string."

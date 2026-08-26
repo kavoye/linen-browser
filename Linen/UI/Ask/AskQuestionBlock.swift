@@ -96,11 +96,10 @@ struct AskQuestionBlock: View {
                 )
 
             if writingOwnAnswer {
-                TextField(text: $draft) {
-                    Text("Something else\u{2026}")
-                }
-                .textFieldStyle(.plain)
-                .font(.system(size: placement.textSize))
+                TextField("", text: $draft)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: placement.textSize))
+                    .fieldPlaceholder("Something else\u{2026}", isShowing: draft.isEmpty)
                 .focused($writing)
                 .onSubmit { answer(draft) }
             } else {

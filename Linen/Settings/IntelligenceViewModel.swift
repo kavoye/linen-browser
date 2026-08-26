@@ -225,14 +225,16 @@ final class IntelligenceViewModel {
     }
 
     var isUsingRecommendedTools: Bool {
-        LLMSettings.enabledAgentTools(for: subject) == nil
-            || enabledTools == recommendedToolIDs
+        let current = enabledTools
+        return LLMSettings.enabledAgentTools(for: subject) == nil
+            || current == recommendedToolIDs
     }
 
     var toolWarning: String? {
+        let current = enabledTools
         let recommended = recommendedToolIDs
         guard recommended.count < AgentToolCatalog.all.count,
-              enabledTools.count > recommended.count
+              current.count > recommended.count
         else { return nil }
         return String(localized: """
             \(subject.name)’s context is small, and every tool takes a share of it. More than \

@@ -62,6 +62,7 @@ final class TabWebView: WKWebView {
     var hasScrollPositionMonitor = false
     var onFaviconDeclarationChange: (() -> Void)?
     var hasFaviconWatcher = false
+    var hasClickWatcher = false
 
     var onZoomChanged: (() -> Void)?
 

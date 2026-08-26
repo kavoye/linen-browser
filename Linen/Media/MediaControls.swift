@@ -33,6 +33,7 @@ struct MediaPlayerSurface: View {
                 .strokeBorder(Color.black, lineWidth: 0.5)
         }
         .frame(height: isOut ? 0 : height, alignment: .top)
+        .opacity(isOut ? 0 : 1)
         .clipped()
         .contentShape(Rectangle())
         .onTapGesture {

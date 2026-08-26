@@ -39,6 +39,7 @@ enum Theme {
         static var panel: CGFloat {
             min(window, 14)
         }
+        static let popover: CGFloat = 16
         static var card: CGFloat {
             min(window, 12)
         }
@@ -107,6 +108,8 @@ enum Theme {
         static let secondary: SwiftUI.Font = .system(size: 11.5)
         static let label: SwiftUI.Font = .system(size: 11)
         static let caption: SwiftUI.Font = .system(size: 10.5)
+        static let mono: SwiftUI.Font = .system(size: 11.5, design: .monospaced)
+        static let monoCaption: SwiftUI.Font = .system(size: 10.5, design: .monospaced)
         static let badge: SwiftUI.Font = .system(size: 10, weight: .semibold)
         static let micro: SwiftUI.Font = .system(size: 10)
     }

@@ -8,8 +8,17 @@ struct AdvancedSettings: View {
 
     @FocusState private var customFieldFocused: Bool
     @State private var confirmingReset = false
+    @State private var readingFeatures = false
 
     var body: some View {
+        if readingFeatures {
+            WebKitFeaturesPage { readingFeatures = false }
+        } else {
+            page
+        }
+    }
+
+    @ViewBuilder private var page: some View {
         SettingsPageHeader(title: "Advanced")
 
         SettingsCard {
@@ -31,6 +40,18 @@ struct AdvancedSettings: View {
             }
             .settingsAnchor("advanced.certificates")
 
+            if WebKitFeatures.isAvailable {
+                RowSeparator()
+
+                DrillInRow(
+                    title: "Feature flags",
+                    caption: "WebKit’s own experiments. Changing one can break websites."
+                ) {
+                    readingFeatures = true
+                }
+                .settingsAnchor("advanced.features")
+            }
+
             RowSeparator()
 
             DetailRow(
@@ -50,9 +71,13 @@ struct AdvancedSettings: View {
 
                 DetailRow(caption: "Leave empty to use the system default.", layout: .stacked) {
                     FieldChrome(isFocused: customFieldFocused) {
-                        TextField(WebViewPool.safariUserAgent, text: $settings.customUserAgent)
+                        TextField("", text: $settings.customUserAgent)
                             .textFieldStyle(.plain)
                             .font(Theme.Font.label)
+                            .fieldPlaceholder(
+                                verbatim: WebViewPool.safariUserAgent,
+                                isShowing: settings.customUserAgent.isEmpty
+                            )
                             .focused($customFieldFocused)
                     }
                 }

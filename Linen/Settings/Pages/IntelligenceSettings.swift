@@ -50,16 +50,11 @@ private struct AssistantOverview: View {
 
             RowSeparator()
 
-            DetailRow(title: "Tools") {
-                HStack(spacing: 7) {
-                    Text("\(model.enabledTools.count) of \(AgentToolCatalog.all.count)")
-                        .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
-
-                    SettingsButton(title: "Customize…") {
-                        model.showTools()
-                    }
-                }
+            DrillInRow(
+                title: "Tools",
+                detail: "\(model.enabledTools.count) of \(AgentToolCatalog.all.count)"
+            ) {
+                model.showTools()
             }
             .settingsAnchor("assistant.tools")
         }
@@ -237,8 +232,6 @@ private struct ProviderRow: View {
     let isInUse: Bool
     let action: () -> Void
 
-    @State private var hovering = false
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
@@ -264,16 +257,12 @@ private struct ProviderRow: View {
                     Tag("In use")
                 }
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.tertiary)
+                DrillInChevron()
             }
             .padding(.vertical, 9)
-            .settingsRowHover(isActive: hovering)
+            .settingsRowTarget()
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
         .help(Text(verbatim: provider.blurb))
     }
 }
@@ -299,7 +288,11 @@ private struct ProviderPage: View {
     }
 
     var body: some View {
-        SubPageHeader(backTitle: "Assistant") { model.showOverview() }
+        SubPageHeader(backTitle: "Assistant", onBack: { model.showOverview() }) {
+            if !provider.isCustom, model.keySource == .keychain {
+                RemoveKeyButton(model: model)
+            }
+        }
 
         HStack(alignment: .top, spacing: 12) {
             SettingsPageHeader(
@@ -352,16 +345,11 @@ private struct ProviderPage: View {
 
             RowSeparator()
 
-            DetailRow(title: "Tools") {
-                HStack(spacing: 7) {
-                    Text("\(model.enabledToolCount(for: provider)) of \(AgentToolCatalog.all.count)")
-                        .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
-
-                    SettingsButton(title: "Customize…") {
-                        model.showTools()
-                    }
-                }
+            DrillInRow(
+                title: "Tools",
+                detail: "\(model.enabledToolCount(for: provider)) of \(AgentToolCatalog.all.count)"
+            ) {
+                model.showTools()
             }
             .settingsAnchor("provider.tools")
         }
@@ -375,11 +363,6 @@ private struct ProviderPage: View {
                 .padding(.top, -20)
         }
 
-        if !provider.isCustom, model.keySource == .keychain {
-            SectionActions {
-                RemoveKeyButton(model: model)
-            }
-        }
     }
 
     @ViewBuilder
@@ -631,7 +614,7 @@ private struct APIKeyEntry: View {
                 FieldChrome(isFocused: focused) {
                     SecureField("Paste your key…", text: $model.keyDraft)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 11.5, design: .monospaced))
+                        .font(Theme.Font.mono)
                         .frame(maxWidth: 240)
                         .focused($focused)
                         .onSubmit { save() }
@@ -677,9 +660,10 @@ private struct ModelControl: View {
                 DetailRow(caption: "Type the ID exactly as the provider spells it.", layout: .stacked) {
                     HStack(spacing: 7) {
                         FieldChrome(isFocused: customFieldFocused) {
-                            TextField("model-id", text: $model.customModelDraft)
+                            TextField("", text: $model.customModelDraft)
+                                .fieldPlaceholder(verbatim: "model-id", isShowing: model.customModelDraft.isEmpty)
                                 .textFieldStyle(.plain)
-                                .font(.system(size: 11.5, design: .monospaced))
+                                .font(Theme.Font.mono)
                                 .focused($customFieldFocused)
                                 .onSubmit { model.applyCustomModel() }
                         }
@@ -749,11 +733,11 @@ private struct ModelControl: View {
     private var label: some View {
         if model.selectedModel.isEmpty {
             Text("Choose a model")
-                .font(.system(size: 11.5))
+                .font(Theme.Font.secondary)
                 .foregroundStyle(.tertiary)
         } else {
             Text(verbatim: model.selectedModel)
-                .font(.system(size: 11.5, design: .monospaced))
+                .font(Theme.Font.mono)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
@@ -778,12 +762,20 @@ private struct CustomProviderEditor: View {
     private enum Field { case name, url }
 
     private var isEditing: Bool {
-        guard let draft = model.customDraft else { return false }
-        return model.providers.contains { $0.id == draft.id }
+        editedProviderName != nil
+    }
+
+    private var editedProviderName: String? {
+        guard let draft = model.customDraft else { return nil }
+        return model.providers.first { $0.id == draft.id }?.name
     }
 
     var body: some View {
-        SubPageHeader(backTitle: "Back") { model.cancelCustomProvider() }
+        if let name = editedProviderName {
+            SubPageHeader(verbatimBackTitle: name) { model.cancelCustomProvider() }
+        } else {
+            SubPageHeader(backTitle: "Assistant") { model.cancelCustomProvider() }
+        }
 
         SettingsPageHeader(
             title: isEditing ? "Edit endpoint" : "Custom endpoint",
@@ -793,7 +785,8 @@ private struct CustomProviderEditor: View {
         SettingsCard {
             DetailRow(title: "Name", layout: .stacked) {
                 FieldChrome(isFocused: focus == .name) {
-                    TextField("My server", text: $model.customName)
+                    TextField("", text: $model.customName)
+                        .fieldPlaceholder("My server", isShowing: model.customName.isEmpty)
                         .textFieldStyle(.plain)
                         .font(Theme.Font.secondary)
                         .focused($focus, equals: .name)
@@ -804,11 +797,13 @@ private struct CustomProviderEditor: View {
 
             DetailRow(title: "Base URL", layout: .stacked) {
                 FieldChrome(isFocused: focus == .url) {
-                    TextField(text: $model.customBaseURL) {
-                        Text(verbatim: "http://localhost:8000/v1")
-                    }
+                    TextField("", text: $model.customBaseURL)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 11.5, design: .monospaced))
+                        .font(Theme.Font.mono)
+                        .fieldPlaceholder(
+                            verbatim: "http://localhost:8000/v1",
+                            isShowing: model.customBaseURL.isEmpty
+                        )
                         .focused($focus, equals: .url)
                         .onSubmit { model.commitCustomProvider() }
                 }
@@ -845,9 +840,13 @@ private struct AgentToolsPage: View {
 
     var body: some View {
         if let inspected = model.inspectedProvider {
-            SubPageHeader(verbatimBackTitle: inspected.name) { model.leaveTools() }
+            SubPageHeader(verbatimBackTitle: inspected.name, onBack: { model.leaveTools() }) {
+                resetButton
+            }
         } else {
-            SubPageHeader(backTitle: "Assistant") { model.leaveTools() }
+            SubPageHeader(backTitle: "Assistant", onBack: { model.leaveTools() }) {
+                resetButton
+            }
         }
 
         SettingsPageHeader(
@@ -862,21 +861,7 @@ private struct AgentToolsPage: View {
                 title: "More tools than recommended",
                 verbatimCaption: warning
             ) {
-                SettingsButton(title: "Use Recommended", tint: Theme.warning) {
-                    model.resetToolsToRecommended()
-                }
-            }
-            .padding(.top, 6)
-        } else if !model.isUsingRecommendedTools {
-            StatusRow(
-                tint: Color(nsColor: .systemGray),
-                symbol: "slider.horizontal.3",
-                title: "Custom tool set",
-                caption: "You’ve changed which tools \(model.subject.name) may use."
-            ) {
-                SettingsButton(title: "Reset") {
-                    model.resetToolsToRecommended()
-                }
+                EmptyView()
             }
             .padding(.top, 6)
         }
@@ -899,6 +884,18 @@ private struct AgentToolsPage: View {
             }
         }
 
+    }
+
+    @ViewBuilder private var resetButton: some View {
+        if model.toolWarning != nil {
+            SettingsButton(title: "Use Recommended", tint: Theme.warning) {
+                model.resetToolsToRecommended()
+            }
+        } else if !model.isUsingRecommendedTools {
+            SettingsButton(title: "Reset") {
+                model.resetToolsToRecommended()
+            }
+        }
     }
 
     private static func symbol(for category: AgentToolDescriptor.Category) -> String {

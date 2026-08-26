@@ -44,6 +44,11 @@ final class SettingsWorkspace {
         onRoute?(entry.category)
     }
 
+    func reveal(_ anchor: String) {
+        guard let entry = SettingsIndex.all.first(where: { $0.id == anchor }) else { return }
+        open(entry)
+    }
+
     func adopt(_ category: SettingsCategory) {
         guard self.category != category else { return }
         self.category = category
@@ -109,7 +114,8 @@ struct SettingsView: View {
                 coordinator: coordinator,
                 intelligence: workspace.intelligence,
                 highlight: workspace.highlight,
-                isCompact: !showsNamedNavigator
+                isCompact: !showsNamedNavigator,
+                onReveal: workspace.reveal
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -128,6 +134,7 @@ private struct SettingsDetail: View {
     let intelligence: IntelligenceViewModel
     let highlight: String?
     let isCompact: Bool
+    let onReveal: (String) -> Void
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -173,6 +180,13 @@ private struct SettingsDetail: View {
             }
             .scrollContentBackground(.hidden)
             .environment(\.settingsHighlight, highlight)
+            .environment(\.openURL, OpenURLAction { url in
+                guard url.scheme == SettingsIndex.linkScheme, let anchor = url.host() else {
+                    return .systemAction
+                }
+                onReveal(anchor)
+                return .handled
+            })
             .environment(\.settingsIsCompact, isCompact)
             .onChange(of: highlight) { _, anchor in
                 guard let anchor else { return }
@@ -272,8 +286,23 @@ private struct AboutSettings: View {
             .settingsAnchor("about.updates")
 
             SettingsCard {
-                DetailRow(title: "Acknowledgements") {
-                    SettingsButton(title: "Show") { readingAcknowledgements = true }
+                DetailRow(
+                    title: "Report a bug",
+                    caption: "Opens a new issue on Linen’s repository."
+                ) {
+                    SettingsButton(title: "Report…") {
+                        coordinator.openNewTab(url: UpdateFeed.newIssueURL)
+                    }
+                }
+                .settingsAnchor("about.report")
+
+                RowSeparator()
+
+                DrillInRow(
+                    title: "Acknowledgements",
+                    caption: "The open source packages Linen is built with."
+                ) {
+                    readingAcknowledgements = true
                 }
             }
             .settingsAnchor("about.acknowledgements")

@@ -25,7 +25,7 @@ struct AgentQuestionTests {
         #expect(model.index == 1)
         model.answer("Friday")
 
-        #expect(await asked == "Which city? Lisbon\nWhich day? Friday")
+        #expect(await asked == "Q: Which city?\nA: Lisbon\nQ: Which day?\nA: Friday")
         #expect(model.ask == nil)
     }
 
@@ -39,7 +39,7 @@ struct AgentQuestionTests {
         #expect(model.index == 1)
         model.answer("Friday")
 
-        #expect(await asked == "Q: Which day?\\nA: Friday")
+        #expect(await asked == "Q: Which day?\nA: Friday")
     }
 
     @Test func skippingAChoiceHandsItToTheAgent() async {
@@ -82,7 +82,7 @@ struct AgentQuestionTests {
         #expect(model.index == 0, "the unanswered question comes back around")
         model.answer("Lisbon")
 
-        #expect(await asked == "Which city? Lisbon\nWhich day? Friday")
+        #expect(await asked == "Q: Which city?\nA: Lisbon\nQ: Which day?\nA: Friday")
     }
 
     @Test func changingAnAnswerStepsOnRatherThanClosing() async {
@@ -122,7 +122,7 @@ struct AgentQuestionTests {
         #expect(model.index == 1, "a correction steps on instead of closing")
 
         model.answer("Friday")
-        #expect(await asked == "Which city? Porto\nWhich day? Friday")
+        #expect(await asked == "Q: Which city?\nA: Porto\nQ: Which day?\nA: Friday")
     }
 
     @Test func closingTheCardHandsTheRestToTheAgent() async {
@@ -135,7 +135,7 @@ struct AgentQuestionTests {
         model.dismiss()
 
         let result = await asked
-        #expect(result.contains("Q: Which city?\\nA: Lisbon"))
+        #expect(result.contains("Q: Which city?\nA: Lisbon"))
         #expect(result.contains("Choose sensible answers yourself"))
         #expect(result.contains("Which day?"), "the agent is told which ones are its to pick")
         #expect(model.ask == nil)
@@ -149,7 +149,7 @@ struct AgentQuestionTests {
 
         model.answer("Lisbon")
 
-        #expect(await asked == "Q: Which city?\\nA: Lisbon")
+        #expect(await asked == "Q: Which city?\nA: Lisbon")
     }
 
     @Test func aQuestionOnlyShowsInTheSpaceThatAskedIt() async {
@@ -188,7 +188,7 @@ struct AgentQuestionTests {
 
         #expect(await first.isEmpty)
         model.answer("Friday")
-        #expect(await second == "Q: Which day?\\nA: Friday")
+        #expect(await second == "Q: Which day?\nA: Friday")
     }
 
     @Test func anAnswerWithNothingWaitingIsIgnored() {

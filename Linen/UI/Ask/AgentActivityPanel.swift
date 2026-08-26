@@ -348,7 +348,7 @@ private struct ChatUserMessage: View {
             HStack(spacing: 2) {
                 if showsActions {
                     ChatAction(symbol: "doc.on.doc", help: "Copy this question", action: onCopy)
-                    ChatAction(symbol: "arrow.clockwise", help: "Ask again", action: onRetry)
+                    ChatAction(symbol: "arrow.clockwise", help: "Ask this again", action: onRetry)
                     ChatAction(symbol: "pencil", help: "Edit this question", action: onEdit)
                 }
             }

@@ -64,15 +64,24 @@ private struct ExtensionRowMenu: View {
 
     @State private var hovering = false
 
+    private var isChecking: Bool {
+        manager.updateChecks[record.id] == .checking
+    }
+
     var body: some View {
         Menu {
+            Button("Check for Updates") {
+                Task { await manager.checkForUpdate(id: record.id) }
+            }
+            .disabled(isChecking)
+
             if manager.hasOptionsPage(id: record.id) {
                 Button("Extension Options") {
                     manager.openOptionsPage(id: record.id)
                 }
-
-                Divider()
             }
+
+            Divider()
 
             Button("Remove Extension", role: .destructive) {
                 manager.confirmUninstall(id: record.id)
@@ -135,6 +144,17 @@ private struct ExtensionRow: View {
         .task(id: record.id) {
             icon = await manager.icon(for: record.id)
         }
+        .task(id: settledCheck) {
+            guard settledCheck != nil else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            manager.clearUpdateCheck(id: record.id)
+        }
+    }
+
+    private var settledCheck: UpdateCheck? {
+        let check = manager.updateChecks[record.id]
+        return check == .checking ? nil : check
     }
 
     @ViewBuilder
@@ -163,7 +183,9 @@ private struct ExtensionRow: View {
                     }
                 }
 
-                if hovering, !record.version.isEmpty {
+                if let check = manager.updateChecks[record.id] {
+                    ExtensionUpdateStatus(check: check)
+                } else if hovering, !record.version.isEmpty {
                     Text(verbatim: record.version)
                         .font(Theme.Font.caption)
                         .foregroundStyle(.secondary)
@@ -187,6 +209,35 @@ private struct ExtensionRow: View {
             get: { record.enabled },
             set: { manager.setEnabled($0, id: record.id) }
         ))
+    }
+}
+
+private struct ExtensionUpdateStatus: View {
+    let check: UpdateCheck
+
+    var body: some View {
+        switch check {
+        case .checking:
+            HStack(spacing: 5) {
+                Spinner(size: 10)
+                Text("Checking…")
+            }
+            .font(Theme.Font.caption)
+            .foregroundStyle(.secondary)
+        case .upToDate:
+            Text("Up to date")
+                .font(Theme.Font.caption)
+                .foregroundStyle(.secondary)
+        case .updated(let version):
+            Tag("Updated to \(version)")
+        case .failed(let message):
+            Text(verbatim: message)
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.warning)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(Text(verbatim: message))
+        }
     }
 }
 

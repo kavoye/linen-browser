@@ -153,6 +153,8 @@ struct BrowserView: View {
             )
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
+
+            DownloadFlightLayer(flights: coordinator.downloadFlights)
                 .environment(\.sidebarStyle, sidebar.style)
 
             PaneDragOverlay(browser: browser, model: coordinator.sidebarDrag)
@@ -186,6 +188,24 @@ struct BrowserView: View {
                 .transition(.opacity)
             }
 
+            if coordinator.isProfileSwitcherOpen, let anchor = coordinator.profileButtonFrame {
+                GeometryReader { proxy in
+                    ZStack(alignment: .bottomLeading) {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { coordinator.isProfileSwitcherOpen = false }
+
+                        ProfileSwitcher(coordinator: coordinator) {
+                            coordinator.isProfileSwitcherOpen = false
+                        }
+                        .padding(.leading, anchor.minX)
+                        .padding(.bottom, max(0, proxy.size.height - anchor.minY + 6))
+                    }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                }
+                .transition(.opacity)
+            }
+
             if coordinator.onboarding.isPresented {
                 OnboardingOverlay(coordinator: coordinator, model: coordinator.onboarding)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -205,6 +225,11 @@ struct BrowserView: View {
         .animation(
             coordinator.isPaletteOpen ? Theme.Motion.quick : nil, value: coordinator.isPaletteOpen
         )
+        .animation(
+            coordinator.isProfileSwitcherOpen ? Theme.Motion.quick : nil,
+            value: coordinator.isProfileSwitcherOpen
+        )
+
         .animation(nil, value: coordinator.onboarding.isPresented)
     }
 }

@@ -3,73 +3,15 @@
 
 import SwiftUI
 
-struct SidebarProfileButton: View {
-    let coordinator: AppCoordinator
-
-    @Environment(\.sidebarStyle) private var sidebarStyle
-    @State private var hovering = false
-    @State private var switching = false
-
-    private var profiles: ProfileStore {
-        coordinator.profiles
-    }
-    private var current: Profile {
-        profiles.current
-    }
-
-    private var showsName: Bool {
-        sidebarStyle == .full
-    }
-
-    private var symbolTint: AnyShapeStyle {
-        AnyShapeStyle(current.color.tint)
-    }
-
-    var body: some View {
-        Button {
-            switching = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: current.symbol)
-                    .font(Theme.Font.title)
-                    .foregroundStyle(symbolTint)
-                    .frame(width: 16)
-
-                if showsName {
-                    Text(verbatim: current.name)
-                        .font(Theme.Font.title)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    Spacer(minLength: 0)
-                }
-            }
-            .padding(.horizontal, SidebarMetrics.rowContentPadding(style: showsName ? .full : .icons))
-            .frame(minWidth: SidebarMetrics.controlHeight, maxWidth: .infinity)
-            .frame(height: SidebarMetrics.controlHeight)
-            .sidebarRowSelectionEffect(isSelected: switching, isHovering: hovering)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .help(Text("Profile — \(current.name)"))
-        .popover(isPresented: $switching, arrowEdge: .top) {
-            ProfileSwitcher(coordinator: coordinator, isPresented: $switching)
-        }
-    }
-}
-
 struct ProfileGlyph: View {
     let profile: Profile
     var size: CGFloat = 22
 
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
+        Circle()
             .fill(profile.color.tint.opacity(0.16))
             .overlay(
-                RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
+                Circle()
                     .strokeBorder(profile.color.tint.opacity(0.22), lineWidth: 1)
             )
             .overlay {
@@ -81,9 +23,9 @@ struct ProfileGlyph: View {
     }
 }
 
-private struct ProfileSwitcher: View {
+struct ProfileSwitcher: View {
     let coordinator: AppCoordinator
-    @Binding var isPresented: Bool
+    let dismiss: () -> Void
 
     static let inset: CGFloat = 6
     static var rowRadius: CGFloat {
@@ -102,7 +44,7 @@ private struct ProfileSwitcher: View {
                     isCurrent: profile.id == profiles.current.id,
                     caption: caption(for: profile)
                 ) {
-                    isPresented = false
+                    dismiss()
                     Task { await coordinator.switchProfile(to: profile) }
                 }
                 .disabled(coordinator.isSwitchingProfile)
@@ -117,26 +59,28 @@ private struct ProfileSwitcher: View {
                 isCurrent: profiles.isPrivate,
                 caption: privateCaption
             ) {
-                isPresented = false
+                dismiss()
                 coordinator.enterPrivateBrowsing()
             }
             .disabled(coordinator.isSwitchingProfile)
 
             if profiles.isPrivate || coordinator.hasPrivateSession {
                 ProfileActionRow(title: "Leave Private Browsing", symbol: "xmark.circle") {
-                    isPresented = false
+                    dismiss()
                     coordinator.leavePrivateBrowsing()
                 }
                 .disabled(coordinator.isSwitchingProfile)
             }
 
             ProfileActionRow(title: "Manage Profiles…", symbol: "person.2") {
-                isPresented = false
+                dismiss()
                 coordinator.openSettings(.profiles)
             }
         }
         .padding(Self.inset)
         .frame(width: 244)
+        .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.panel, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 22, y: 8)
     }
 
     private func caption(for profile: Profile) -> LocalizedStringResource? {
@@ -190,11 +134,10 @@ private struct ProfileSwitcherRow: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 38)
-            .sidebarRowSelectionEffect(
-                isSelected: false,
-                isHovering: hovering,
-                radius: ProfileSwitcher.rowRadius
-            )
+            .background {
+                RoundedRectangle(cornerRadius: ProfileSwitcher.rowRadius, style: .continuous)
+                    .fill(hovering ? Theme.Wash.selection : .clear)
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -228,11 +171,10 @@ private struct ProfileActionRow: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 30)
-            .sidebarRowSelectionEffect(
-                isSelected: false,
-                isHovering: hovering,
-                radius: ProfileSwitcher.rowRadius
-            )
+            .background {
+                RoundedRectangle(cornerRadius: ProfileSwitcher.rowRadius, style: .continuous)
+                    .fill(hovering ? Theme.Wash.selection : .clear)
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

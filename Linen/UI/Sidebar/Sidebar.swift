@@ -145,11 +145,8 @@ private struct SidebarBottomChrome: View {
         sidebarStyle == .full
     }
 
-    @ViewBuilder private var downloadsButton: some View {
-        if coordinator.browser.downloads.hasRecent {
-            SidebarDownloadsButton(coordinator: coordinator)
-                .transition(.opacity.combined(with: .scale(scale: 0.85)))
-        }
+    private var downloadsButton: some View {
+        SidebarDownloadsButton(coordinator: coordinator)
     }
 
     var body: some View {
@@ -161,35 +158,23 @@ private struct SidebarBottomChrome: View {
 
             if sidebarStyle == .icons {
                 VStack(spacing: 6) {
-                    SidebarProfileButton(coordinator: coordinator)
+                    SidebarProfileControl(coordinator: coordinator)
                     downloadsButton
-                    if coordinator.settings.showsReportIssueButton {
-                        SidebarFeedbackRow(coordinator: coordinator)
-                    }
                     SidebarSettingsRow(coordinator: coordinator)
                 }
             } else {
                 HStack(spacing: 6) {
-                    if expandsProfile {
-                        SidebarProfileButton(coordinator: coordinator)
-                        downloadsButton
-                        if coordinator.settings.showsReportIssueButton {
-                            SidebarFeedbackRow(coordinator: coordinator)
-                        }
-                        SidebarSettingsRow(coordinator: coordinator)
-                    } else {
-                        SidebarSettingsRow(coordinator: coordinator)
-                        if coordinator.settings.showsReportIssueButton {
-                            SidebarFeedbackRow(coordinator: coordinator)
-                        }
-                        downloadsButton
-                        SidebarProfileButton(coordinator: coordinator)
-                    }
+                    SidebarProfileControl(coordinator: coordinator)
+                        .padding(.leading, SidebarMetrics.profileLeading)
+
+                    Spacer(minLength: 0)
+
+                    downloadsButton
+                    SidebarSettingsRow(coordinator: coordinator)
                 }
             }
         }
         .frame(maxWidth: .infinity)
-        .animation(Theme.Motion.settle, value: coordinator.browser.downloads.hasRecent)
     }
 }
 
@@ -427,95 +412,68 @@ struct SidebarDownloadsButton: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @State private var hovering = false
 
+    private static let barWidth: CGFloat = 15
+
     private var downloads: DownloadManager {
         coordinator.browser.downloads
     }
-    private var isShowingDownloads: Bool {
-        guard case .tab(let id) = coordinator.sidebarDestination else { return false }
-        return coordinator.browser.tab(id: id)?.internalPage == .downloads
+    private var isRunning: Bool {
+        downloads.activeCount > 0
     }
 
     var body: some View {
         Button {
             coordinator.showDownloads()
         } label: {
-            ZStack {
-                if downloads.activeCount > 0 {
-                    Circle()
-                        .stroke(Theme.Wash.selection, lineWidth: 2)
-                        .frame(width: 19, height: 19)
-                    Circle()
-                        .trim(from: 0, to: max(0.05, downloads.activeFraction))
-                        .stroke(Theme.accent, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .frame(width: 19, height: 19)
-                        .animation(Theme.Motion.drift, value: downloads.activeFraction)
-                }
-
+            VStack(spacing: isRunning ? 3 : 0) {
                 Image(systemName: "arrow.down")
-                    .font(.system(size: downloads.activeCount > 0 ? 9 : 12, weight: .medium))
-                    .foregroundStyle(isShowingDownloads ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                    .font(Theme.Font.control)
+                    .foregroundStyle(.secondary)
+
+                Capsule()
+                    .fill(Theme.Wash.strong)
+                    .frame(width: Self.barWidth, height: 2)
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(Theme.accent)
+                            .frame(
+                                width: Self.barWidth * max(0.06, min(downloads.activeFraction, 1)),
+                                height: 2
+                            )
+                            .animation(Theme.Motion.drift, value: downloads.activeFraction)
+                    }
+                    .opacity(isRunning ? 1 : 0)
+                    .frame(height: isRunning ? 2 : 0)
             }
-            .frame(maxWidth: SidebarMetrics.controlMaxWidth(style: sidebarStyle))
-            .frame(height: SidebarMetrics.controlHeight)
-            .sidebarRowSelectionEffect(isSelected: isShowingDownloads, isHovering: hovering)
+            .frame(width: 28, height: 28)
+            .hoverBackground(isActive: hovering)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onGeometryChange(for: CGPoint.self) { proxy in
+            CGPoint(x: proxy.frame(in: .global).midX, y: proxy.frame(in: .global).midY)
+        } action: { point in
+            coordinator.downloadFlights.target = point
+        }
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
-        .help(downloads.activeCount > 0
+        .animation(Theme.Motion.settle, value: isRunning)
+        .help(isRunning
               ? Text("Downloads — \(downloads.activeCount) in progress")
               : Text("Downloads"))
-    }
-}
-
-struct SidebarFeedbackRow: View {
-    let coordinator: AppCoordinator
-
-    @Environment(\.sidebarStyle) private var sidebarStyle
-    @State private var hovering = false
-
-    var body: some View {
-        Button {
-            coordinator.openNewTab(url: UpdateFeed.newIssueURL)
-        } label: {
-            Image(systemName: "ladybug")
-                .font(Theme.Font.control)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: SidebarMetrics.controlMaxWidth(style: sidebarStyle))
-                .frame(height: SidebarMetrics.controlHeight)
-                .sidebarRowSelectionEffect(isSelected: false, isHovering: hovering)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .help(Text("Report an issue"))
     }
 }
 
 struct SidebarSettingsRow: View {
     let coordinator: AppCoordinator
 
-    @Environment(\.sidebarStyle) private var sidebarStyle
-    @State private var hovering = false
-
     var body: some View {
-        Button {
+        QuietIconButton(
+            symbol: "gearshape",
+            isOn: false,
+            help: String(localized: "Settings")
+        ) {
             coordinator.openSettings()
-        } label: {
-            Image(systemName: "gearshape")
-                .font(Theme.Font.control)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: SidebarMetrics.controlMaxWidth(style: sidebarStyle))
-                .frame(height: SidebarMetrics.controlHeight)
-                .sidebarRowSelectionEffect(isSelected: false, isHovering: hovering)
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .help(Text("Settings"))
     }
 }

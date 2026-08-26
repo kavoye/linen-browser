@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import Foundation
 import GRDB
 import os
+import WebKit
 
 extension BrowserModel {
     // MARK: - Session persistence
@@ -437,10 +439,14 @@ extension BrowserModel {
 
     // MARK: - Profiles
 
-    func closeAllTabs() {
-        saveBlocking()
+    func closeAllTabs(saving: Bool = true) {
+        if saving {
+            saveBlocking()
+        }
         for tab in tabs {
-            close(tab)
+            tab.webView.stopLoading()
+            tab.detach()
+            tab.webView.removeFromSuperview()
         }
         tabs = []
         folders = []

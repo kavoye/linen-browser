@@ -30,6 +30,13 @@ struct PrivacySettings: View {
         SettingsPageHeader(title: "Privacy")
 
         SettingsCard {
+            DetailRow(title: "Block known trackers") {
+                SettingsToggle($settings.blocksTrackers)
+            }
+            .settingsAnchor("privacy.trackers")
+
+            RowSeparator()
+
             DetailRow(
                 title: "Clear browsing data",
                 caption: "History, cookies, and cached files, over a chosen time range."
@@ -86,10 +93,10 @@ struct PrivacySettings: View {
 
             RowSeparator()
 
-            DetailRow(title: "Website data", caption: siteSummary) {
-                SettingsButton(title: "Show") { showingWebsiteData = true }
-                    .disabled((siteCount ?? 0) == 0)
+            DrillInRow(title: "Website data", caption: siteSummary) {
+                showingWebsiteData = true
             }
+            .disabled((siteCount ?? 0) == 0)
             .settingsAnchor("privacy.storage")
         }
         .task {

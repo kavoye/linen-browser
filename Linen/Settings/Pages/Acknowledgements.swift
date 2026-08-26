@@ -37,8 +37,7 @@ struct AcknowledgementsPage: View {
     let onBack: () -> Void
 
     var body: some View {
-        SettingsButton(title: "About", symbol: "chevron.left", action: onBack)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        SubPageHeader(backTitle: "About", onBack: onBack)
 
         SettingsPageHeader(title: "Acknowledgements")
 
@@ -87,7 +86,7 @@ private struct LicenseText: View {
     var body: some View {
         ScrollView {
             Text(verbatim: package.text)
-                .font(.system(size: 10.5, design: .monospaced))
+                .font(Theme.Font.monoCaption)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)

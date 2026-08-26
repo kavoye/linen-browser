@@ -24,7 +24,6 @@ enum SettingsMetrics {
     static let cardInsetV: CGFloat = 2
     static let rowPaddingH: CGFloat = 0
     static let rowContentInset: CGFloat = 8
-    static let rowHoverFrameInset: CGFloat = 6
     static let pickerHorizontalInset: CGFloat = 4
     static let pickerVerticalInset: CGFloat = 9
     static let pickerItemPaddingV: CGFloat = 5
@@ -72,51 +71,25 @@ struct SettingsCard<Content: View>: View {
         .padding(.horizontal, inset)
         .padding(.vertical, SettingsMetrics.cardInsetV)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .settingsSurface(
-            isActive: isLit,
+        .background(
+            isLit ? Theme.Wash.hover : Theme.Wash.faint,
             in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
         )
         .animation(.easeOut(duration: 0.28), value: isLit)
     }
 }
 
-private struct RowHoverShape: Shape {
-    let radius: CGFloat
-    let verticalInset: CGFloat
-
-    nonisolated func path(in rect: CGRect) -> Path {
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .path(in: rect.insetBy(dx: 0, dy: verticalInset))
-    }
-}
-
-private struct SettingsRowHover: ViewModifier {
-    let isActive: Bool
-    let tint: Color?
-
+private struct SettingsRowTarget: ViewModifier {
     func body(content: Content) -> some View {
-        let hoverBleed = SettingsMetrics.cardInset - SettingsMetrics.rowHoverFrameInset
-        let verticalInset = SettingsMetrics.rowHoverFrameInset - SettingsMetrics.cardInsetV
-
         content
-            .padding(.horizontal, hoverBleed + SettingsMetrics.rowContentInset)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .hoverBackground(
-                isActive: isActive,
-                tint: tint,
-                in: RowHoverShape(
-                    radius: SettingsMetrics.rowRadius,
-                    verticalInset: verticalInset
-                )
-            )
-            .padding(.horizontal, -hoverBleed)
             .contentShape(Rectangle())
     }
 }
 
 extension View {
-    func settingsRowHover(isActive: Bool, tint: Color? = nil) -> some View {
-        modifier(SettingsRowHover(isActive: isActive, tint: tint))
+    func settingsRowTarget() -> some View {
+        modifier(SettingsRowTarget())
     }
 }
 
@@ -185,6 +158,7 @@ struct SettingsSection<Content: View, Accessory: View>: View {
     let title: LocalizedStringResource
     let symbol: String
     var footnote: LocalizedStringResource?
+    var isLongList = false
     @ViewBuilder let accessory: Accessory
     @ViewBuilder let content: Content
 
@@ -194,11 +168,13 @@ struct SettingsSection<Content: View, Accessory: View>: View {
         title: LocalizedStringResource,
         symbol: String,
         footnote: LocalizedStringResource? = nil,
+        isLongList: Bool = false,
         @ViewBuilder content: () -> Content
     ) where Accessory == EmptyView {
         self.title = title
         self.symbol = symbol
         self.footnote = footnote
+        self.isLongList = isLongList
         self.accessory = EmptyView()
         self.content = content()
     }
@@ -207,12 +183,14 @@ struct SettingsSection<Content: View, Accessory: View>: View {
         title: LocalizedStringResource,
         symbol: String,
         footnote: LocalizedStringResource? = nil,
+        isLongList: Bool = false,
         @ViewBuilder accessory: () -> Accessory,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.symbol = symbol
         self.footnote = footnote
+        self.isLongList = isLongList
         self.accessory = accessory()
         self.content = content()
     }
@@ -235,7 +213,11 @@ struct SettingsSection<Content: View, Accessory: View>: View {
             }
             .foregroundStyle(.secondary)
 
-            SettingsCard { content }
+            if isLongList {
+                SettingsList { content }
+            } else {
+                SettingsCard { content }
+            }
 
             if let footnote {
                 Text(footnote)
@@ -271,6 +253,7 @@ struct DetailRow<Content: View>: View {
     private var title: Text?
     private var caption: Text?
     var layout: Layout = .trailing
+    var isMuted = false
 
     @ViewBuilder let content: Content
 
@@ -285,6 +268,20 @@ struct DetailRow<Content: View>: View {
     ) {
         self.title = title.map(Text.init)
         self.caption = caption.map(Text.init)
+        self.layout = layout
+        self.content = content()
+    }
+
+    init(
+        title: LocalizedStringResource,
+        attributedCaption: AttributedString,
+        isMuted: Bool = false,
+        layout: Layout = .trailing,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = Text(title)
+        caption = Text(attributedCaption)
+        self.isMuted = isMuted
         self.layout = layout
         self.content = content()
     }
@@ -324,6 +321,10 @@ struct DetailRow<Content: View>: View {
         .padding(.vertical, SettingsMetrics.rowPaddingV)
     }
 
+    private var isLit: Bool {
+        isEnabled && !isMuted
+    }
+
     @ViewBuilder
     private var label: some View {
         if title != nil || caption != nil {
@@ -331,13 +332,13 @@ struct DetailRow<Content: View>: View {
                 if let title {
                     title
                         .font(Theme.Font.rowTitle)
-                        .foregroundStyle(isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(isLit ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
                 }
 
                 if let caption {
                     caption
                         .font(Theme.Font.secondary)
-                        .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(isLit ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -542,6 +543,48 @@ struct SegmentedControl<Value: Hashable>: View {
 }
 
 // MARK: - Fields
+
+extension View {
+    func fieldPlaceholder(_ text: LocalizedStringResource, isShowing: Bool) -> some View {
+        fieldPlaceholder(Text(text), isShowing: isShowing)
+    }
+
+    func fieldPlaceholder(verbatim text: String, isShowing: Bool) -> some View {
+        fieldPlaceholder(Text(verbatim: text), isShowing: isShowing)
+    }
+
+    private func fieldPlaceholder(_ text: Text, isShowing: Bool) -> some View {
+        overlay(alignment: .leading) {
+            if isShowing {
+                text
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+}
+
+struct SearchFieldChrome<Content: View>: View {
+    var height: CGFloat = SettingsMetrics.controlHeight
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.tertiary)
+
+            content
+        }
+        .padding(.horizontal, 9)
+        .frame(height: height)
+        .glassSurface(
+            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
+        )
+    }
+}
 
 struct FieldChrome<Content: View>: View {
     let isFocused: Bool

@@ -47,7 +47,7 @@ struct SidebarTabRow: View {
     @State private var controlsWidth: CGFloat = 0
 
     private var showsTrailingControls: Bool {
-        hovering || isActive
+        hovering
     }
 
     private var showsPinSegment: Bool {

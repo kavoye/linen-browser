@@ -67,13 +67,6 @@ struct AppearanceSettings: View {
 
             RowSeparator()
 
-            DetailRow(
-                title: "Show report button",
-                caption: "Opens the project’s issue page."
-            ) {
-                SettingsToggle($settings.showsReportIssueButton)
-            }
-            .settingsAnchor("appearance.reportIssue")
         }
     }
 }

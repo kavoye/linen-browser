@@ -7,20 +7,28 @@ import SwiftUI
 struct QuietIconButton: View {
     let symbol: String
     let isOn: Bool
+    var tint: Color?
     let help: String
     let action: () -> Void
 
     @State private var hovering = false
+
+    private var ink: AnyShapeStyle {
+        if let tint {
+            return AnyShapeStyle(tint)
+        }
+        return isOn ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
+    }
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(Theme.Font.rowTitle)
                 .frame(width: 28, height: 28)
-                .hoverBackground(isActive: isOn || hovering)
+                .hoverBackground(isActive: isOn || hovering, tint: tint, in: Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isOn ? .primary : .secondary)
+        .foregroundStyle(ink)
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
         .help(help)

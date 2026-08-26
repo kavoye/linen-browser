@@ -384,14 +384,11 @@ struct SettingsNavigator: View {
     }
 
     private var search: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.tertiary)
-
-            TextField("Search settings", text: $query)
+        SearchFieldChrome {
+            TextField("", text: $query)
                 .textFieldStyle(.plain)
                 .font(Theme.Font.secondary)
+                .fieldPlaceholder("Search settings", isShowing: query.isEmpty)
                 .focused($searchFocused)
                 .onSubmit {
                     if let first = results.first {
@@ -408,11 +405,6 @@ struct SettingsNavigator: View {
                 }
             }
         }
-        .padding(.horizontal, 9)
-        .frame(height: SettingsMetrics.controlHeight)
-        .glassSurface(
-            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
-        )
     }
 }
 

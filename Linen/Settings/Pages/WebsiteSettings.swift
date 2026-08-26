@@ -16,6 +16,8 @@ struct WebsiteSettings: View {
 
     @State private var destination: Destination?
 
+    @Environment(\.settingsHighlight) private var highlight
+
     private enum Destination: Equatable {
         case permission(WebPermission)
         case site(String)
@@ -38,6 +40,15 @@ struct WebsiteSettings: View {
     }
 
     var body: some View {
+        page
+            .onChange(of: highlight) { _, anchor in
+                guard anchor != nil else { return }
+                destination = nil
+            }
+    }
+
+    @ViewBuilder
+    private var page: some View {
         switch destination {
         case .permission(let permission):
             PermissionDetailPage(permission: permission, permissions: permissions) {
@@ -46,6 +57,7 @@ struct WebsiteSettings: View {
         case .site(let origin):
             SiteDetailPage(
                 origin: origin,
+                settings: settings,
                 permissions: permissions,
                 onBack: { destination = nil }
             )
@@ -69,20 +81,11 @@ struct WebsiteSettings: View {
 
             RowSeparator()
 
-            DetailRow(
-                title: "Block pop-ups",
-                caption: "Links you click still open."
-            ) {
+            DetailRow(title: "Block pop-ups") {
                 SettingsToggle($settings.blocksPopups)
             }
             .settingsAnchor("websites.popups")
 
-            RowSeparator()
-
-            DetailRow(title: "Block known trackers") {
-                SettingsToggle($settings.blocksTrackers)
-            }
-            .settingsAnchor("websites.trackers")
         }
 
         SettingsSection(title: "Autoplay", symbol: "play.rectangle") {
@@ -113,7 +116,7 @@ struct WebsiteSettings: View {
         }
         .settingsAnchor("websites.permissions")
 
-        SettingsSection(title: "Websites you’ve changed", symbol: "list.bullet") {
+        SettingsSection(title: "Websites you’ve changed", symbol: "list.bullet", isLongList: true) {
             if entries.isEmpty {
                 SettingsEmptyState(
                     symbol: "globe",
@@ -158,20 +161,14 @@ private struct WebsiteSettingsEntryRow: View {
     let summary: String
     let action: () -> Void
 
-    @State private var hovering = false
-
     var body: some View {
         Button(action: action) {
             SiteRow(host: host, summary: summary) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.tertiary)
+                DrillInChevron()
             }
-            .settingsRowHover(isActive: hovering)
+            .settingsRowTarget()
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
     }
 }
 
@@ -187,7 +184,24 @@ private struct PermissionDetailPage: View {
     }
 
     var body: some View {
-        SubPageHeader(backTitle: "Websites", onBack: onBack)
+        SubPageHeader(backTitle: "Websites", onBack: onBack) {
+            if !origins.isEmpty {
+                SettingsButton(title: "Remove All…", isDestructive: true) {
+                    confirmingRemoveAll = true
+                }
+                .confirmationDialog(
+                    Text("Remove the \(permission.sentenceName) setting for every website?"),
+                    isPresented: $confirmingRemoveAll
+                ) {
+                    Button("Remove All", role: .destructive) {
+                        permissions.removeAll(for: permission)
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("\(origins.count) websites will be asked again the next time they ask.")
+                }
+            }
+        }
 
         SettingsPageHeader(title: permission.label)
 
@@ -233,29 +247,12 @@ private struct PermissionDetailPage: View {
             }
         }
 
-        if !origins.isEmpty {
-            SectionActions {
-                SettingsButton(title: "Remove All…", isDestructive: true) {
-                    confirmingRemoveAll = true
-                }
-            }
-            .confirmationDialog(
-                Text("Remove the \(permission.sentenceName) setting for every website?"),
-                isPresented: $confirmingRemoveAll
-            ) {
-                Button("Remove All", role: .destructive) {
-                    permissions.removeAll(for: permission)
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("\(origins.count) websites will be asked again the next time they ask.")
-            }
-        }
     }
 }
 
 private struct SiteDetailPage: View {
     let origin: String
+    let settings: BrowserSettings
     let permissions: SitePermissions
     let onBack: () -> Void
 
@@ -273,17 +270,58 @@ private struct SiteDetailPage: View {
         SiteSettingsIndex.host(of: origin)
     }
 
-    private var entry: SiteSettingsEntry? {
-        SiteSettingsIndex.entries(
-            permissions: permissions,
-            grantsByHost: grants.grantsByHost,
-            exemptHosts: blocker.exemptHosts
+    private var trackerCaption: AttributedString {
+        SettingsIndex.caption(
+            "Block known trackers is off, so trackers are allowed everywhere.",
+            naming: "Block known trackers",
+            at: "privacy.trackers"
         )
-        .first { $0.origin == origin }
+    }
+
+    private var keepAwakeCaption: AttributedString {
+        SettingsIndex.caption(
+            "Sleep inactive tabs is off, so every website stays loaded.",
+            naming: "Sleep inactive tabs",
+            at: "general.sleepTabs"
+        )
+    }
+
+    private var keepAwakeToggle: some View {
+        SettingsToggle(Binding(
+            get: { permissions.keepsActive(origin) },
+            set: { permissions.setKeepsActive($0, for: origin) }
+        ))
+    }
+
+    private var trackerToggle: some View {
+        SettingsToggle(Binding(
+            get: { !blocker.isExempt(host) },
+            set: { blocker.setExempt(!$0, for: host) }
+        ))
+    }
+
+    private var assistantGrants: [SensitiveAction.Category] {
+        grants.grantsByHost.first { $0.host == host }?.categories ?? []
     }
 
     var body: some View {
-        SubPageHeader(backTitle: "Websites", onBack: onBack)
+        SubPageHeader(backTitle: "Websites", onBack: onBack) {
+            SettingsButton(title: "Reset This Website…", isDestructive: true) {
+                confirmingReset = true
+            }
+            .confirmationDialog(
+                Text("Reset the settings for “\(SitePermissions.displayName(for: origin))”?"),
+                isPresented: $confirmingReset
+            ) {
+                Button("Reset Website", role: .destructive) {
+                    reset()
+                    onBack()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The website asks again before using the camera, microphone, location, or notifications, and the assistant asks before reading it.")
+            }
+        }
 
         SettingsPageHeader(
             verbatimTitle: SitePermissions.displayName(for: origin),
@@ -305,26 +343,42 @@ private struct SiteDetailPage: View {
 
             RowSeparator()
 
-            DetailRow(
-                title: "Keep loaded",
-                caption: "The website stays in memory even when unused."
-            ) {
-                SettingsToggle(Binding(
-                    get: { permissions.keepsActive(origin) },
-                    set: { permissions.setKeepsActive($0, for: origin) }
-                ))
+            if settings.sleepsInactiveTabs {
+                DetailRow(
+                    title: "Keep this website awake",
+                    caption: "It stays loaded even when you haven’t used it in a while."
+                ) {
+                    keepAwakeToggle
+                }
+            } else {
+                DetailRow(
+                    title: "Keep this website awake",
+                    attributedCaption: keepAwakeCaption,
+                    isMuted: true
+                ) {
+                    keepAwakeToggle
+                        .disabled(true)
+                }
             }
 
             RowSeparator()
 
-            DetailRow(
-                title: "Block known trackers",
-                caption: "Turn this off if the website breaks."
-            ) {
-                SettingsToggle(Binding(
-                    get: { !blocker.isExempt(host) },
-                    set: { blocker.setExempt(!$0, for: host) }
-                ))
+            if settings.blocksTrackers {
+                DetailRow(
+                    title: "Block known trackers",
+                    caption: "Turn this off if the website breaks."
+                ) {
+                    trackerToggle
+                }
+            } else {
+                DetailRow(
+                    title: "Block known trackers",
+                    attributedCaption: trackerCaption,
+                    isMuted: true
+                ) {
+                    trackerToggle
+                        .disabled(true)
+                }
             }
         }
 
@@ -349,30 +403,13 @@ private struct SiteDetailPage: View {
             }
         }
 
-        if let entry, !entry.assistantGrants.isEmpty {
-            let names = entry.assistantGrants
+        if !assistantGrants.isEmpty {
+            let names = assistantGrants
                 .map { String(localized: $0.listName) }
                 .formatted(.list(type: .and, width: .narrow))
             Footnote("The assistant may do these without asking: \(names). Change this in Assistant settings.")
         }
 
-        SectionActions {
-            SettingsButton(title: "Reset This Website…", isDestructive: true) {
-                confirmingReset = true
-            }
-        }
-        .confirmationDialog(
-            Text("Reset the settings for “\(SitePermissions.displayName(for: origin))”?"),
-            isPresented: $confirmingReset
-        ) {
-            Button("Reset Website", role: .destructive) {
-                reset()
-                onBack()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The website asks again before using the camera, microphone, location, or notifications, and the assistant asks before reading it.")
-        }
     }
 
     private func reset() {

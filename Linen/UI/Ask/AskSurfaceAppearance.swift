@@ -195,10 +195,9 @@ struct AskRestingLine: View {
                     .transition(.opacity)
 
             case .notice(let notice):
-                Image(systemName: "checkmark")
-                    .font(.system(size: 9.5, weight: .bold))
                 Text(verbatim: notice)
                     .font(.system(size: placement.textSize, weight: .medium))
+                    .foregroundStyle(security == .insecure ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
                     .lineLimit(1)
                     .transition(.opacity)
 

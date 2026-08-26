@@ -81,7 +81,10 @@ extension AppCoordinator {
         extensions.onOpenTab = { [weak self] url in
             self?.openNewTab(url: url)
         }
-        Task { await extensions.start() }
+        Task { [extensions] in
+            await extensions.start()
+            await extensions.updateInstalledIfDue()
+        }
 
         activation.onPress = { [weak self] in
             guard let self, !onboarding.isPresented, microphoneIsReady() else { return }
@@ -244,6 +247,17 @@ extension AppCoordinator {
     private func installKeyMonitors() {
         installEscapeHandler()
         installTabSwitchHandler()
+        installDownloadFlights()
+    }
+
+    private func installDownloadFlights() {
+        downloadFlights.watchClicks { NSApp.keyWindow ?? NSApp.mainWindow }
+        PageClickWatcher.shared.onClick = { [weak self] point in
+            self?.downloadFlights.noteClick(at: point)
+        }
+        browser.downloads.onBegin = { [weak self] in
+            self?.downloadFlights.launch()
+        }
     }
 
     private func installTabSwitchHandler() {
@@ -294,6 +308,10 @@ extension AppCoordinator {
         }
         if onboarding.isPresented {
             onboarding.finish()
+            return true
+        }
+        if isProfileSwitcherOpen {
+            isProfileSwitcherOpen = false
             return true
         }
         let closedInspector = sidePanel.close()

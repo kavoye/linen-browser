@@ -279,6 +279,7 @@ final class BrowserTab: Identifiable {
                 self?.declaredFaviconChanged()
             }
             FaviconWatcher.shared.install(in: tabView)
+            PageClickWatcher.shared.install(in: tabView)
         }
         progressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] _, change in
             let value = change.newValue ?? 1

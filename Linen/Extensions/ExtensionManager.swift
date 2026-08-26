@@ -23,6 +23,9 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     private(set) var contexts: [String: WKWebExtensionContext] = [:]
     private(set) var actionRevision = 0
     var installState: StoreInstallState = .idle
+    var updateChecks: [String: UpdateCheck] = [:]
+
+    @ObservationIgnored private static var systemCatalogue: [SafariExtension]?
 
     var onOpenTab: ((URL?) -> BrowserTab?)?
 
@@ -156,6 +159,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     func adopt(profile: Profile?) async {
+        beginAdopting(profile: profile)
+        guard profile != nil else { return }
+        await start()
+    }
+
+    func beginAdopting(profile: Profile?) {
         for (_, context) in contexts {
             try? controller.unload(context)
         }
@@ -173,7 +182,6 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         controller.delegate = self
         guard let profile else { return }
         library = ExtensionLibrary(profile: profile)
-        await start()
     }
 
     func start() async {
@@ -192,9 +200,15 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     func discoverSystemExtensions() async {
-        let found = await Task.detached(priority: .utility) {
-            SafariExtensionCatalog.installed()
-        }.value
+        let found: [SafariExtension]
+        if let known = Self.systemCatalogue {
+            found = known
+        } else {
+            found = await Task.detached(priority: .utility) {
+                SafariExtensionCatalog.installed()
+            }.value
+            Self.systemCatalogue = found
+        }
         systemExtensions = found.map { extensionBundle in
             let placement = library.placement(for: extensionBundle.id)
             return InstalledExtension(
@@ -434,6 +448,23 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             installState = .failed(id: id, message: message)
             Pipeline.log.error("ext: install of \(id, privacy: .public) failed: \(error, privacy: .public)")
         }
+    }
+
+    func replacePackage(_ package: Data, id: String, name: String?, version: String) async throws {
+        unload(id: id)
+        try await library.unpack(package, id: id)
+        library.updateMetadata(id: id, name: name, version: version)
+        installed = library.records
+        guard let refreshed = record(for: id), refreshed.enabled else { return }
+        await load(refreshed)
+    }
+
+    func grantedPermissions(id: String) -> Set<String> {
+        Set(contexts[id]?.webExtension.requestedPermissions.map(\.rawValue) ?? [])
+    }
+
+    func installedRecord(id: String) -> InstalledExtension? {
+        record(for: id)
     }
 
     private func confirm(_ package: Data, id: String) async throws -> Bool {

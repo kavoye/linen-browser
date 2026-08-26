@@ -252,7 +252,24 @@ final class MediaCenter {
         }
         guard webView === controlledWebView else { return }
         forgetControlledPage()
+        dropDockIfThePageStaysQuiet(webView)
     }
+
+    private func dropDockIfThePageStaysQuiet(_ webView: WKWebView) {
+        controlledPageResets += 1
+        let reset = controlledPageResets
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self,
+                  reset == controlledPageResets,
+                  webView === controlledWebView,
+                  !model.isPlaying
+            else { return }
+            releaseControl()
+        }
+    }
+
+    @ObservationIgnored private var controlledPageResets = 0
 
     private func forgetControlledPage() {
         setPicture(nil)

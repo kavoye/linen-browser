@@ -20,6 +20,11 @@
 - Suggestions on the start page are a section you can move or turn off.
 - **Settings > Extensions** lists the Safari extensions on your Mac. Each
   profile keeps its own.
+- **Settings > Advanced > Feature flags** lists the WebKit switches Safari
+  keeps to itself, with search and a reset.
+- Extensions from the Chrome Web Store update themselves once a day, and
+  **Check for Updates** in an extension’s menu checks right away. An update
+  that asks for more access waits for you.
 
 ### Improved
 
@@ -31,6 +36,22 @@
 - **Website Settings** is off on Linen’s own pages.
 - Linen checks for updates in place, and again after finding one.
 - Extensions say when WebKit cannot run them.
+- Switching profiles is five to eight times faster.
+- The profile switcher opens beside its button in the sidebar, and every
+  profile icon is a circle.
+- The downloads button is always in the sidebar, and a file you download flies
+  from where you clicked into it.
+- Settings is built from one set of rows: nothing lights up under the pointer,
+  every card shares a surface, and anything that opens a page is a row with a
+  chevron rather than a button.
+- A setting that is off because another one is says so, and links to it.
+- **Block known trackers** moved to **Settings > Privacy**, beside the rest of
+  what Linen keeps to itself.
+- **Keep loaded** for a website is now **Keep this website awake**.
+- Each sub-page keeps its own action — Reset, Remove All, Delete Profile —
+  next to the button that goes back.
+- The media player fits the sidebar, its controls appear when you point at it,
+  and the title takes the room they leave.
 
 ### Fixed
 
@@ -42,6 +63,10 @@
 - The window moved while you dragged a button in the toolbar.
 - Space did not reach the page.
 - Sidebar rows sat at different distances from the edge.
+- Placeholder text jumped when a search field took focus.
+- The downloads button stayed selected after you opened downloads.
+- A live stream showed a scrubber and a lyrics button it had no use for.
+- The media player kept a picture from a page you had left.
 
 ## 0.3.1
 

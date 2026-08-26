@@ -20,14 +20,31 @@ struct WebsiteDataPage: View {
     }
 
     var body: some View {
-        SubPageHeader(backTitle: "Privacy", onBack: onBack)
+        SubPageHeader(backTitle: "Privacy", onBack: onBack) {
+            if !entries.isEmpty {
+                SettingsButton(title: "Remove All…", isDestructive: true) {
+                    confirmingRemoveAll = true
+                }
+                .confirmationDialog(
+                    "Remove the data stored by every website?",
+                    isPresented: $confirmingRemoveAll
+                ) {
+                    Button("Remove All", role: .destructive) {
+                        Task { await remove(Set(entries.map(\.displayName))) }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("You’re signed out of \(entries.count) websites, and their preferences are removed. Your history and downloads stay.")
+                }
+            }
+        }
 
         SettingsPageHeader(
             title: "Website data",
             caption: "Websites use this data to keep you signed in and remember your preferences."
         )
 
-        SettingsSection(title: "Stored on this Mac", symbol: "internaldrive", accessory: {
+        SettingsSection(title: "Stored on this Mac", symbol: "internaldrive", isLongList: true, accessory: {
             if !entries.isEmpty {
                 searchField
             }
@@ -74,25 +91,6 @@ struct WebsiteDataPage: View {
         } message: {
             Text("You’re signed out of this website, and its preferences are removed.")
         }
-
-        if !entries.isEmpty {
-            SectionActions {
-                SettingsButton(title: "Remove All…", isDestructive: true) {
-                    confirmingRemoveAll = true
-                }
-            }
-            .confirmationDialog(
-                "Remove the data stored by every website?",
-                isPresented: $confirmingRemoveAll
-            ) {
-                Button("Remove All", role: .destructive) {
-                    Task { await remove(Set(entries.map(\.displayName))) }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("You’re signed out of \(entries.count) websites, and their preferences are removed. Your history and downloads stay.")
-            }
-        }
     }
 
     private var loading: some View {
@@ -109,22 +107,14 @@ struct WebsiteDataPage: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.tertiary)
-
-            TextField("Search websites", text: $query)
+        SearchFieldChrome(height: 24) {
+            TextField("", text: $query)
                 .textFieldStyle(.plain)
                 .font(Theme.Font.label)
+                .fieldPlaceholder("Search websites", isShowing: query.isEmpty)
                 .focused($searchFocused)
                 .frame(width: 130)
         }
-        .padding(.horizontal, 8)
-        .frame(height: 24)
-        .glassSurface(
-            in: RoundedRectangle(cornerRadius: SettingsMetrics.controlRadius, style: .continuous)
-        )
     }
 
     private func reload() async {

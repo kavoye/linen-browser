@@ -49,7 +49,7 @@ struct DownloadsView: View {
 
             Spacer(minLength: 12)
 
-            ToolbarChip(symbol: "folder", label: "Folder") {
+            ToolbarChip(symbol: "folder", label: "Open in Finder") {
                 NSWorkspace.shared.open(BrowserSettings.shared.downloadFolder)
             }
 
@@ -106,12 +106,12 @@ private struct DownloadFileRow: View {
                     Spinner(size: 12)
                         .foregroundStyle(.secondary)
                 }
-                ChromeIcon(symbol: "xmark", size: 9, weight: .bold, help: String(localized: "Stop")) {
+                ChromeIcon.rowControl(symbol: "xmark", help: String(localized: "Stop")) {
                     downloads.cancel(item)
                 }
             } else {
                 if downloads.canResume(item) {
-                    ChromeIcon(
+                    ChromeIcon.rowControl(
                         symbol: "arrow.clockwise",
                         help: String(localized: "Resume")
                     ) {
@@ -121,7 +121,10 @@ private struct DownloadFileRow: View {
 
                 if hovering {
                     if item.state == .finished {
-                        ChromeIcon(symbol: "folder", help: String(localized: "Show in Finder")) {
+                        ChromeIcon.rowControl(
+                            symbol: "folder",
+                            help: String(localized: "Show in Finder")
+                        ) {
                             downloads.revealInFinder(item)
                         }
                     }

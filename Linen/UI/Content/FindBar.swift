@@ -162,7 +162,8 @@ struct FindBar: View {
                 .font(Theme.Font.label)
                 .foregroundStyle(.secondary)
 
-            TextField("Find on page", text: $session.query)
+            TextField("", text: $session.query)
+                .fieldPlaceholder("Find on page", isShowing: session.query.isEmpty)
                 .textFieldStyle(.plain)
                 .font(Theme.Font.row)
                 .frame(width: 200)

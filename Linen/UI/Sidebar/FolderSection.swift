@@ -90,7 +90,8 @@ struct FolderSection: View {
                 if sidebarStyle == .icons {
                     EmptyView()
                 } else if isRenaming {
-                    TextField("Folder name", text: $draftName)
+                    TextField("", text: $draftName)
+                        .fieldPlaceholder("Folder name", isShowing: draftName.isEmpty)
                         .textFieldStyle(.plain)
                         .font(Theme.Font.control)
                         .focused($renameFocused)

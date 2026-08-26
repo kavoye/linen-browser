@@ -212,6 +212,33 @@ private struct ProfileHeroCard: View {
 
 // MARK: - One row in the list
 
+private struct ProfilePageHeading<Trailing: View>: View {
+    let profile: Profile
+    let title: Text
+    let caption: Text
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            ProfileGlyph(profile: profile, size: 60)
+
+            VStack(alignment: .leading, spacing: 6) {
+                title
+                    .font(.system(size: 21, weight: .semibold))
+
+                caption
+                    .font(Theme.Font.body)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            trailing
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct ProfileListRow: View {
     let coordinator: AppCoordinator
     let profile: Profile
@@ -219,7 +246,6 @@ private struct ProfileListRow: View {
     let open: () -> Void
 
     @State private var facts = ProfileFacts.empty
-    @State private var hovering = false
     @State private var width: CGFloat = 0
 
     private var store: ProfileStore {
@@ -245,22 +271,12 @@ private struct ProfileListRow: View {
 
                 Spacer(minLength: 8)
 
-                SettingsButton(title: "Open") {
-                    Task { await coordinator.switchProfile(to: profile) }
-                }
-                .disabled(coordinator.isSwitchingProfile)
-                .opacity(hovering ? 1 : 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.tertiary)
+                DrillInChevron()
             }
             .padding(.vertical, 9)
-            .settingsRowHover(isActive: hovering, tint: profile.color.tint)
+            .settingsRowTarget()
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .onDrag {
             dragging = profile.id
@@ -382,7 +398,23 @@ private struct ProfileDetailPage: View {
 
     @ViewBuilder
     private func page(_ profile: Profile) -> some View {
-        SubPageHeader(backTitle: "Profiles", onBack: onBack)
+        SubPageHeader(backTitle: "Profiles", onBack: onBack) {
+            if !profile.isOriginal {
+                SettingsButton(title: "Delete Profile…", isDestructive: true) { deleting = true }
+                    .disabled(coordinator.isSwitchingProfile)
+                    .confirmationDialog(
+                        Text("Delete “\(profile.name)”?"),
+                        isPresented: $deleting
+                    ) {
+                        Button("Delete Profile", role: .destructive) {
+                            Task { await delete(profile) }
+                        }
+                        Button("Cancel", role: .cancel) { deleting = false }
+                    } message: {
+                        Text("Its \(facts.pages) pages of history, tabs, and sign-ins are removed from this Mac. Downloaded files stay in the Downloads folder.")
+                    }
+            }
+        }
 
         heading(profile)
 
@@ -397,49 +429,21 @@ private struct ProfileDetailPage: View {
         ) {
             ChipList(items: ProfileSummary.separated)
         }
-
-        if !profile.isOriginal {
-            SectionActions {
-                SettingsButton(title: "Delete Profile…", isDestructive: true) { deleting = true }
-                    .disabled(coordinator.isSwitchingProfile)
-            }
-            .confirmationDialog(
-                Text("Delete “\(profile.name)”?"),
-                isPresented: $deleting
-            ) {
-                Button("Delete Profile", role: .destructive) {
-                    Task { await delete(profile) }
-                }
-                Button("Cancel", role: .cancel) { deleting = false }
-            } message: {
-                Text("Its \(facts.pages) pages of history, tabs, and sign-ins are removed from this Mac. Downloaded files stay in the Downloads folder.")
-            }
-        }
     }
 
     private func heading(_ profile: Profile) -> some View {
-        HStack(alignment: .center, spacing: 14) {
-            ProfileGlyph(profile: profile, size: 60)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(verbatim: profile.name)
-                    .font(.system(size: 21, weight: .semibold))
-
-                Text(verbatim: header(for: profile))
-                    .font(Theme.Font.body)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 8)
-
+        ProfilePageHeading(
+            profile: profile,
+            title: Text(verbatim: profile.name),
+            caption: Text(verbatim: header(for: profile))
+        ) {
             if !isCurrent {
-                SettingsButton(title: "Open Profile") {
+                SettingsButton(title: "Switch to This Profile") {
                     Task { await coordinator.switchProfile(to: profile) }
                 }
                 .disabled(coordinator.isSwitchingProfile)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .task(id: profileID) {
             facts = await ProfileFacts.load(for: profile)
         }
@@ -454,9 +458,10 @@ private struct ProfileDetailPage: View {
         SettingsSection(title: "Name and appearance", symbol: "paintpalette") {
             DetailRow(title: "Name") {
                 FieldChrome(isFocused: editing) {
-                    TextField("Name", text: $draft)
+                    TextField("", text: $draft)
                         .textFieldStyle(.plain)
                         .font(Theme.Font.row)
+                        .fieldPlaceholder("Name", isShowing: draft.isEmpty)
                         .focused($editing)
                         .frame(maxWidth: 190)
                         .onSubmit { commit(profile) }
@@ -476,6 +481,11 @@ private struct ProfileDetailPage: View {
                 )
             )
         }
+    }
+
+    private func opener(_ category: SettingsCategory, when condition: Bool) -> (() -> Void)? {
+        guard condition else { return nil }
+        return { coordinator.openSettings(category) }
     }
 
     private func contentsSection(_ profile: Profile) -> some View {
@@ -511,11 +521,10 @@ private struct ProfileDetailPage: View {
                 tint: SettingsCategory.extensions.tint,
                 symbol: "puzzlepiece.extension",
                 title: "Extensions",
-                verbatimCaption: ProfileSummary.extensions(facts.extensions)
+                verbatimCaption: ProfileSummary.extensions(facts.extensions),
+                action: opener(.extensions, when: isCurrent && facts.extensions > 0)
             ) {
-                if isCurrent, facts.extensions > 0 {
-                    SettingsButton(title: "Show") { coordinator.openSettings(.extensions) }
-                }
+                EmptyView()
             }
 
             RowSeparator()
@@ -524,11 +533,10 @@ private struct ProfileDetailPage: View {
                 tint: SettingsCategory.websites.tint,
                 symbol: "hand.raised",
                 title: "Website permissions",
-                verbatimCaption: ProfileSummary.permissions(facts.permissionSites)
+                verbatimCaption: ProfileSummary.permissions(facts.permissionSites),
+                action: opener(.websites, when: isCurrent && facts.permissionSites > 0)
             ) {
-                if isCurrent, facts.permissionSites > 0 {
-                    SettingsButton(title: "Show") { coordinator.openSettings(.websites) }
-                }
+                EmptyView()
             }
 
             RowSeparator()
@@ -623,31 +631,21 @@ private struct NewProfilePage: View {
     var body: some View {
         SubPageHeader(backTitle: "Profiles", onBack: onBack)
 
-        HStack(alignment: .center, spacing: 14) {
-            ProfileGlyph(
-                profile: Profile(id: Profile.originalID, name: trimmed, symbol: symbol, color: color),
-                size: 60
-            )
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("New Profile")
-                    .font(.system(size: 21, weight: .semibold))
-
-                Text("A new profile starts with no history, tabs, or sign-ins.")
-                    .font(Theme.Font.body)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 8)
+        ProfilePageHeading(
+            profile: Profile(id: Profile.originalID, name: trimmed, symbol: symbol, color: color),
+            title: Text("New Profile"),
+            caption: Text("A new profile starts with no history, tabs, or sign-ins.")
+        ) {
+            EmptyView()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
 
         SettingsSection(title: "Name and appearance", symbol: "paintpalette") {
             DetailRow(title: "Name") {
                 FieldChrome(isFocused: naming) {
-                    TextField("Name", text: $name)
+                    TextField("", text: $name)
                         .textFieldStyle(.plain)
                         .font(Theme.Font.row)
+                        .fieldPlaceholder("Name", isShowing: name.isEmpty)
                         .focused($naming)
                         .frame(maxWidth: 190)
                         .onSubmit(add)
@@ -822,7 +820,7 @@ private struct ProfileSymbolChoice: View {
                 .profileChoiceBackground(
                     isSelected: isSelected,
                     tint: tint,
-                    in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
+                    in: Circle()
                 )
         }
         .buttonStyle(.plain)
