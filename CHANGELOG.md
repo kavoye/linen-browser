@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.4.1
+
+### Improved
+
+- History, Settings and Downloads now open in the tab you are using, like a
+  normal web page.
+- The assistant chat now names the website it is reading, such as “Ask about the
+  GitHub page”.
+- The assistant can now show tables in its answers.
+- The media player title now uses the full width. Its buttons fade in over the
+  end of the title when you point at the player, so the title no longer moves.
+- When more than one tab is playing, a new button in the media player opens a
+  list of them.
+- The loading bar now runs the full width of the page.
+- The thinking level now sits beside the Thinking heading, so the slider and
+  what it is set to read as one line.
+- Hide Browser has gone from the View menu. ⌘H hides Linen and ⌘W closes the
+  window, as in any Mac app.
+- “Report a bug” is now “Send feedback”.
+
+### Fixed
+
+- The window disappeared from your desktop when you swiped back from a
+  full-screen app, and another app came to the front.
+- The assistant reading a page turned JavaScript back on in every tab, even
+  with JavaScript turned off in Settings.
+- Back from History closed the tab when you had opened History from the start
+  page.
+
 ## 0.4.0
 
 ### New
