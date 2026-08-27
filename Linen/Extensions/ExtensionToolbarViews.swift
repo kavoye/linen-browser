@@ -280,13 +280,14 @@ struct ExtensionOverflowButton: View {
     @Binding var isPresented: Bool
 
     @State private var hovering = false
+    @Environment(\.chromeIsLight) private var chromeIsLight
 
     var body: some View {
         Button {
             isPresented.toggle()
         } label: {
             Image(systemName: "puzzlepiece.extension")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 11.5, weight: .semibold))
                 .frame(width: 30, height: 28)
                 .overlay(alignment: .bottomTrailing) { marker }
                 .hoverBackground(isActive: hovering || isPresented)
@@ -298,6 +299,9 @@ struct ExtensionOverflowButton: View {
                 }
         }
         .buttonStyle(.plain)
+        .foregroundStyle(
+            ChromeInk.glyph(onLight: chromeIsLight, hovering: hovering || isPresented)
+        )
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
         .help(Text(helpText))
@@ -325,8 +329,8 @@ struct ExtensionOverflowButton: View {
         Circle()
             .fill(color)
             .frame(width: 4, height: 4)
-            .padding(.trailing, 4)
-            .padding(.bottom, 3)
+            .padding(.trailing, 6)
+            .padding(.bottom, 5)
     }
 
     private var hasBadge: Bool {
