@@ -58,29 +58,9 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         if !window.isVisible || !window.isKeyWindow {
             window.makeKeyAndOrderFront(nil)
         }
-        // macOS may refuse a background app the front, and then everything above
-        // this leaves the window behind whatever the user is looking at.
-        if !wasActive {
-            window.orderFrontRegardless()
-        }
-
         window.alignWindowControls()
         isVisible = true
         publish()
-    }
-
-    func hide() {
-        window?.orderOut(nil)
-        isVisible = false
-        publish()
-    }
-
-    func toggle() {
-        guard isVisible, let window, window.isKeyWindow, !window.isMiniaturized else {
-            show()
-            return
-        }
-        hide()
     }
 
     // MARK: - Window
@@ -106,7 +86,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         created.backgroundColor = .clear
         created.minSize = NSSize(width: BrowserWindowMetrics.minWidth, height: 580)
         created.preservesContentDuringLiveResize = true
-        created.collectionBehavior = [.fullScreenPrimary, .moveToActiveSpace]
+        created.collectionBehavior = [.fullScreenPrimary]
         created.isReleasedWhenClosed = false
         created.isMovableByWindowBackground = false
         created.tabbingMode = .disallowed

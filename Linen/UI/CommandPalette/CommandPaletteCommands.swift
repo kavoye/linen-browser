@@ -26,7 +26,6 @@ struct CommandPaletteContext {
     var isActivityVisible = false
     var isLyricsVisible = false
     var canShowLyrics = false
-    var isBrowserVisible = true
     var isFullScreen = false
     var canCheckForUpdates = false
 }
@@ -66,7 +65,6 @@ enum CommandPaletteAction: String, CaseIterable {
     case toggleActivity
     case toggleLyrics
     case toggleFullScreen
-    case toggleBrowser
 
     case toggleSpeech
     case toggleListening
@@ -496,7 +494,6 @@ enum CommandPaletteCatalog {
             let fullScreenTitle: LocalizedStringResource = context.isFullScreen
                 ? "Exit Full Screen"
                 : "Enter Full Screen"
-            let browserTitle: LocalizedStringResource = context.isBrowserVisible ? "Hide Browser" : "Show Browser"
             return [
                 make(
                     .toggleSidebar,
@@ -531,13 +528,6 @@ enum CommandPaletteCatalog {
                     title: fullScreenTitle,
                     symbol: "arrow.up.left.and.arrow.down.right",
                     shortcut: "⌃⌘F"
-                ),
-                make(
-                    .toggleBrowser,
-                    group: .view,
-                    title: browserTitle,
-                    symbol: "globe",
-                    shortcut: "⌥⌘B"
                 ),
             ]
         }

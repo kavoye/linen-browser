@@ -357,10 +357,6 @@ final class AppCoordinator {
         ensureHost().show()
     }
 
-    func hideBrowser() {
-        host?.hide()
-    }
-
     func openFromAnotherApp(_ urls: [URL]) {
         let web = urls.filter { $0.scheme == "http" || $0.scheme == "https" || $0.isFileURL }
         guard !web.isEmpty else { return }
@@ -379,10 +375,6 @@ final class AppCoordinator {
         let queued = queuedExternalURLs
         queuedExternalURLs = []
         openFromAnotherApp(queued)
-    }
-
-    func toggleBrowser() {
-        ensureHost().toggle()
     }
 
     func openSettings(_ category: SettingsCategory? = nil) {

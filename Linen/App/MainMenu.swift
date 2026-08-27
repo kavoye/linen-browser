@@ -95,7 +95,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     private func fileMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(command("New Tab", #selector(newTab), key: "t"))
-        menu.addItem(hidden(command("New Tab", #selector(newTab), key: "n")))
         menu.addItem(command("Private Browsing", #selector(newPrivateTab), key: "n", modifiers: [.command, .shift]))
         menu.addItem(command("Leave Private Browsing", #selector(leavePrivateBrowsing)))
         menu.addItem(command("Reopen Last Closed Tab", #selector(reopenClosedTab), key: "t", modifiers: [.command, .shift]))
@@ -164,7 +163,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             key: "f",
             modifiers: [.command, .control]
         ))
-        menu.addItem(command("Hide Browser", #selector(toggleBrowser), key: "b", modifiers: [.command, .option]))
         menu.addItem(.separator())
         menu.addItem(submenu(splitViewMenu(), titled: "Split View"))
         menu.addItem(.separator())
@@ -299,9 +297,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func goForward() {
         coordinator.browser.activeTab?.goForward()
     }
-    @objc private func toggleBrowser() {
-        coordinator.toggleBrowser()
-    }
     @objc private func toggleSidebar() {
         coordinator.toggleSidebar()
     }
@@ -430,11 +425,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             return coordinator.browser.history.count > 0
         case #selector(checkForUpdates):
             return coordinator.updates.canCheck
-        case #selector(toggleBrowser):
-            let browserTitle: LocalizedStringResource = coordinator.browserVisible
-                ? "Hide Browser" : "Show Browser"
-            menuItem.title = String(localized: browserTitle)
-            return true
         case #selector(toggleSidebar):
             let sidebarTitle: LocalizedStringResource = coordinator.sidebar.isVisible
                 ? "Hide Sidebar" : "Show Sidebar"

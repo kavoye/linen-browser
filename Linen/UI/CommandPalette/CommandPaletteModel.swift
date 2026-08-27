@@ -462,7 +462,6 @@ final class CommandPaletteModel {
             isActivityVisible: coordinator.sidePanel.isShowing(.activity),
             isLyricsVisible: coordinator.sidePanel.isShowing(.lyrics),
             canShowLyrics: coordinator.settings.showsLyrics,
-            isBrowserVisible: coordinator.browserVisible,
             isFullScreen: window?.styleMask.contains(.fullScreen) ?? false,
             canCheckForUpdates: coordinator.updates.canCheck
         )
@@ -574,8 +573,6 @@ final class CommandPaletteModel {
             coordinator.toggleLyrics()
         case .toggleFullScreen:
             coordinator.toggleFullScreen()
-        case .toggleBrowser:
-            coordinator.toggleBrowser()
         case .toggleSpeech:
             coordinator.toggleSpeechMute()
         case .toggleListening:

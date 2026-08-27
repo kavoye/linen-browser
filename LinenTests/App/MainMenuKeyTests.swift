@@ -10,7 +10,7 @@ import Testing
 /// call: `performKeyEquivalent(with:)` is exactly what the app does with a
 /// keystroke, so a hidden item that AppKit would skip fails here too. This
 /// is the test that catches `allowsKeyEquivalentWhenHidden` being lost -
-/// without it every hidden alias (⌘N, ⌘=, ⌘1-9, ⌃Tab) beeps.
+/// without it every hidden alias (⌘=, ⌘1-9, ⌃Tab) beeps.
 @MainActor
 struct MainMenuKeyTests {
     private func pressed(_ character: String, modifiers: NSEvent.ModifierFlags, in menu: NSMenu) -> Bool {
@@ -29,7 +29,19 @@ struct MainMenuKeyTests {
         return menu.performKeyEquivalent(with: event)
     }
 
-    @Test func commandNOpensANewTab() throws {
+    @Test func aHiddenAliasStillAnswersItsKey() throws {
+        let coordinator = AppCoordinator()
+        let menu = MainMenu(coordinator: coordinator)
+        menu.install()
+        defer { NSApp.mainMenu = nil }
+        let root = try #require(NSApp.mainMenu)
+
+        #expect(pressed("=", modifiers: .command, in: root), "⌘= is the hidden alias for Zoom In")
+    }
+
+    /// ⌘N is New Window on macOS. Linen has one window, so the key is left
+    /// alone rather than aliased to New Tab, which ⌘T already opens.
+    @Test func commandNIsLeftToTheSystem() throws {
         let coordinator = AppCoordinator()
         let menu = MainMenu(coordinator: coordinator)
         menu.install()
@@ -37,8 +49,8 @@ struct MainMenuKeyTests {
         let root = try #require(NSApp.mainMenu)
 
         let before = coordinator.browser.tabs.count
-        #expect(pressed("n", modifiers: .command, in: root))
-        #expect(coordinator.browser.tabs.count == before + 1)
+        #expect(!pressed("n", modifiers: .command, in: root))
+        #expect(coordinator.browser.tabs.count == before)
     }
 
     /// ⇧⌘N is checked by what it is bound to rather than by pressing it.
