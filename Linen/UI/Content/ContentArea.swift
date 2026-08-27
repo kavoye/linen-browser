@@ -82,7 +82,7 @@ struct ContentArea: View {
                         coordinator: coordinator,
                         settingsWorkspace: settingsWorkspace
                     )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.identity)
                 } else if let tab = browser.activeTab, !showStartPage {
                     ActiveWebSurface(tab: tab)
                         .transition(.identity)
@@ -102,7 +102,6 @@ struct ContentArea: View {
                         )
                 }
             }
-            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: browser.internalPageMoves)
             .overlay(alignment: .top) {
                 if !coordinator.isShowingSettings, let tab = browser.activeTab, tab.isLoading {
                     LoadingBar(progress: tab.progress)

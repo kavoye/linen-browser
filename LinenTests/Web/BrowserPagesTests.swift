@@ -229,16 +229,17 @@ struct BrowserPagesTests {
 
     // MARK: - Settings
 
-    @Test func settingsOpensAsAPageOfItsOwn() {
+    @Test func settingsOpensInTheTabYouAreOn() {
         let model = makeModel()
         let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+        model.activate(reading)
 
         let shown = model.showSettings()
 
         #expect(shown.internalPage == .settings)
         #expect(shown.title == "Settings")
         #expect(model.activeTab === shown)
-        #expect(shown !== reading)
+        #expect(shown === reading, "a page of the browser's own is a navigation, not a tab")
     }
 
     @Test func settingsReusesItsOwnPageRatherThanOpeningAnother() {
@@ -252,26 +253,18 @@ struct BrowserPagesTests {
         #expect(model.tabs.count { $0.internalPage == .settings } == 1)
     }
 
-    @Test func leavingSettingsGoesBackToWhereYouWere() {
+    /// Leaving never costs a tab: the tab walks back, or goes home when there
+    /// is nothing behind it.
+    @Test func leavingSettingsKeepsTheTab() {
         let model = makeModel()
         let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+        model.activate(reading)
 
         _ = model.showSettings()
         model.dismissInternalPage(.settings)
 
+        #expect(model.tabs.count == 1)
         #expect(model.activeTab === reading)
-    }
-
-    @Test func openingSettingsFromTheSidebarDoesNotCloseIt() {
-        let model = makeModel()
-        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
-
-        let settings = model.showSettings()
-        model.activate(settings)
-
-        #expect(model.activeTab === settings)
-        #expect(settings.internalPage == .settings)
-        #expect(reading.internalPage == nil)
     }
 
     // MARK: - History and Downloads
@@ -287,18 +280,31 @@ struct BrowserPagesTests {
         #expect(shown.internalPage == .history)
     }
 
-    @Test func historyOpensItsOwnTabWhenThePageIsWorthKeeping() {
+    /// Every one of the browser's own pages arrives the same way: a
+    /// navigation in the tab you are on, with what you were reading behind it.
+    @Test func aPageOpensInTheTabYouAreOn() {
         let model = makeModel()
         let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+        model.activate(reading)
 
-        let shown = model.showHistory()
+        let history = model.showHistory()
 
-        #expect(shown !== reading)
-        #expect(model.tabs.count == 2)
-        #expect(model.activeTab === shown)
+        #expect(history === reading, "no tab of its own")
+        #expect(model.tabs.count == 1)
+        #expect(model.activeTab?.internalPage == .history)
     }
 
-    @Test func askingForHistoryTwiceReturnsToTheSameTab() {
+    @Test func aPageOpensTheSameWayFromTheStartPage() {
+        let model = makeModel()
+        let start = model.ensureActiveTab()
+
+        let history = model.showHistory()
+
+        #expect(history === start)
+        #expect(model.tabs.count == 1)
+    }
+
+    @Test func askingForAPageThatIsAlreadyOpenGoesToIt() {
         let model = makeModel()
         _ = model.newTab(url: URL(string: "https://example.com/article")!)
         let first = model.showHistory()
@@ -306,74 +312,181 @@ struct BrowserPagesTests {
         let second = model.showHistory()
 
         #expect(first === second)
-        #expect(model.tabs.count == 2)
-    }
-
-    @Test func aPageSlidesInTheFirstTimeItIsOpened() {
-        let model = makeModel()
-        _ = model.newTab(url: URL(string: "https://example.com/article")!)
-        let before = model.internalPageMoves
-
-        _ = model.showHistory()
-
-        #expect(model.internalPageMoves == before + 1)
-    }
-
-    @Test func askingForAPageThatIsAlreadyOpenDoesNotSlideItInAgain() {
-        let model = makeModel()
-        _ = model.newTab(url: URL(string: "https://example.com/article")!)
-        _ = model.showHistory()
-        let opened = model.internalPageMoves
-
-        _ = model.showHistory()
-
-        #expect(model.internalPageMoves == opened)
-    }
-
-    @Test func returningToAnOpenPageFromTheSidebarDoesNotSlideItInAgain() {
-        let model = makeModel()
-        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
-        let history = model.showHistory()
-        let opened = model.internalPageMoves
-
-        model.activate(reading)
-        model.activate(history)
-
-        #expect(model.internalPageMoves == opened)
-    }
-
-    @Test func leavingAPageSlidesItBackOut() {
-        let model = makeModel()
-        _ = model.newTab(url: URL(string: "https://example.com/article")!)
-        _ = model.showHistory()
-        let opened = model.internalPageMoves
-
-        model.dismissInternalPage(.history)
-
-        #expect(model.internalPageMoves == opened + 1)
-    }
-
-    @Test func historyAndDownloadsAreSeparatePages() {
-        let model = makeModel()
-        _ = model.newTab(url: URL(string: "https://example.com/article")!)
-
-        let history = model.showHistory()
-        let downloads = model.showDownloads()
-
-        #expect(history !== downloads)
-        #expect(history.internalPage == .history)
-        #expect(downloads.internalPage == .downloads)
-    }
-
-    @Test func leavingAPageThatOpenedATabClosesItAndGoesBack() {
-        let model = makeModel()
-        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
-        _ = model.showHistory()
-
-        model.dismissInternalPage(.history)
-
         #expect(model.tabs.count == 1)
-        #expect(model.activeTab === reading)
+    }
+
+    /// A page already open is gone back to rather than loaded again, however
+    /// many tabs are in the way.
+    @Test func askingForAnOpenPageFromAnotherTabGoesToIt() {
+        let model = makeModel()
+        let reading = model.newTab(url: URL(string: "https://example.com/article")!)
+        model.activate(reading)
+        let history = model.showHistory()
+        let other = model.newTab(url: URL(string: "https://example.com/other")!)
+        model.activate(other)
+
+        let again = model.showHistory()
+
+        #expect(again === history)
+        #expect(model.activeTab === history)
+        #expect(other.internalPage == nil, "the tab it was asked from is left alone")
+    }
+
+    /// The state the log caught: the browser's own page is showing while the
+    /// web view is still busy with a navigation. A `goBack()` issued during a
+    /// provisional load is dropped, so the back control did nothing until that
+    /// load gave up — tens of seconds later.
+    @Test(.boundedWebViews) func backLeavesTheOwnPageWhileTheViewIsStillLoading() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/slow": .html("<title>Slow</title>", delay: 30),
+        ])
+        let model = makeModel()
+        let previous = BrowserSettings.shared.newTab
+        BrowserSettings.shared.newTab = .startPage
+        defer { BrowserSettings.shared.newTab = previous }
+
+        let tab = model.newTab()
+        #expect(await waitUntil { tab.isShowingStartPage })
+        model.activeTabID = tab.id
+        let history = model.showHistory()
+        #expect(history === tab)
+        #expect(await waitUntil { tab.internalPage == .history && tab.canGoBack })
+
+        // Busy the view without touching the address, which is the shape the
+        // tab is in: showing History, WebKit part-way into something else.
+        tab.webView.load(URLRequest(url: try server.url("/slow")))
+        #expect(await waitUntil { tab.webView.isLoading })
+
+        model.dismissInternalPage(.history)
+
+        #expect(
+            await waitUntil(timeout: .seconds(10)) { model.activeTab?.internalPage == nil },
+            "back was dropped while the view was loading"
+        )
+    }
+
+    /// What the sidebar and the content area disagreed about: the address had
+    /// been taken back, but WebKit's list still named History, and the page
+    /// stayed on screen until the list caught up seconds later.
+    @Test(.boundedWebViews) func aStaleBackForwardListDoesNotKeepAPageOnScreen() async {
+        let model = makeModel()
+        let tab = model.ensureActiveTab()
+        tab.load(BrowserTab.InternalPage.history.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        #expect(tab.internalPage == .history)
+
+        // What a back out of History leaves behind: the view is standing on
+        // the Start Page with nothing loading, while WebKit's list still names
+        // the page that has gone.
+        tab.load(SystemPages.start)
+        #expect(await waitUntil { tab.isShowingStartPage })
+
+        #expect(tab.urlString.isEmpty, "the tab takes its address back")
+        #expect(tab.internalPage == nil, "and does not read the page back off the list")
+    }
+
+    /// Back into the page cache fires no navigation callback, and WebKit's
+    /// back-forward list can still name the page being left. The tab has to
+    /// take its address back from what it is showing, not from that list.
+    @Test(.boundedWebViews) func showingTheStartPageTakesTheAddressBack() async {
+        let model = makeModel()
+        let tab = model.ensureActiveTab()
+        tab.load(SystemPages.start)
+        #expect(await settled(tab, at: SystemPages.start))
+
+        // The state a system page leaves behind: an address set by hand, over
+        // a web view that is standing on the Start Page.
+        tab.urlString = BrowserTab.InternalPage.history.url.absoluteString
+        #expect(tab.internalPage == .history)
+
+        tab.refreshChrome()
+
+        #expect(tab.urlString.isEmpty, "the Start Page tab carries no address")
+        #expect(tab.internalPage == nil)
+    }
+
+    /// Leaving is the same move wherever the page was opened from: the tab
+    /// walks back to what it was showing.
+    @Test(.boundedWebViews) func backFromAPageReturnsTheTabToWhatItWasShowing() async {
+        let model = makeModel()
+        let tab = model.ensureActiveTab()
+        _ = tab.webView
+        #expect(await waitUntil { tab.isShowingStartPage })
+
+        let history = model.showHistory()
+        #expect(history === tab)
+        #expect(await waitUntil { tab.internalPage == .history })
+        #expect(await waitUntil { tab.canGoBack }, "the page it opened over is behind it")
+
+        model.dismissInternalPage(.history)
+
+        #expect(await waitUntil { model.activeTab?.internalPage == nil }, "back never left History")
+        #expect(model.tabs.count == 1, "the tab walks back rather than closing")
+        #expect(model.activeTab === tab)
+        #expect(await waitUntil { tab.isShowingStartPage })
+    }
+
+    /// The complaint this rule was written for: the page used to arrive over
+    /// the Start Page one way and as a tab's very first entry the other, so
+    /// the toolbar's Back arrow was alive in one and dead in the other.
+    @Test(.boundedWebViews) func aPageAlwaysHasWhatItOpenedOverBehindIt() async throws {
+        let server = try await Self.site()
+
+        let fromHome = makeModel()
+        let home = fromHome.ensureActiveTab()
+        _ = home.webView
+        #expect(await waitUntil { home.isShowingStartPage })
+        _ = fromHome.showHistory()
+        #expect(await settled(home, at: BrowserTab.InternalPage.history.url))
+        #expect(home.canGoBack, "the Start Page is behind it")
+
+        let fromPage = makeModel()
+        let reading = fromPage.newTab(url: try server.url("/one"))
+        fromPage.activate(reading)
+        #expect(await settled(reading, at: try server.url("/one")))
+        _ = fromPage.showHistory()
+        #expect(await settled(reading, at: BrowserTab.InternalPage.history.url))
+        #expect(reading.canGoBack, "the page being read is behind it")
+    }
+
+    /// A page that was the first thing a tab ever showed has nothing to walk
+    /// back to, so leaving hands that tab to the Start Page. Closing it would
+    /// take a window with one tab down to nothing.
+    @Test(.boundedWebViews) func leavingAPageWithNothingBehindItGoesHome() async {
+        let model = makeModel()
+        let tab = model.newTab(url: BrowserTab.InternalPage.history.url)
+        model.activate(tab)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        #expect(!tab.canGoBack, "nothing behind it")
+
+        model.dismissInternalPage(.history)
+
+        #expect(await waitUntil { tab.isShowingStartPage })
+        #expect(model.tabs.count == 1, "the tab survives")
+        #expect(model.activeTab === tab)
+        #expect(tab.internalPage == nil)
+    }
+
+    /// One page at a time in a tab, like any other address: asking for the
+    /// next one walks to it, and Back walks back to the one before.
+    @Test(.boundedWebViews) func onePageWalksToTheNext() async {
+        let model = makeModel()
+        let tab = model.ensureActiveTab()
+        _ = tab.webView
+        #expect(await waitUntil { tab.isShowingStartPage })
+
+        let history = model.showHistory()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        let downloads = model.showDownloads()
+        #expect(await settled(tab, at: BrowserTab.InternalPage.downloads.url))
+
+        #expect(history === downloads, "both are the same tab")
+        #expect(model.tabs.count == 1)
+
+        model.dismissInternalPage(.downloads)
+
+        #expect(await waitUntil { tab.internalPage == .history }, "Back returns to the page before")
+        #expect(model.tabs.count == 1)
     }
 
     @Test func leavingAPageThatBorrowedABlankTabReturnsItBlank() async {
@@ -401,18 +514,6 @@ struct BrowserPagesTests {
 
         #expect(model.tabs.count == 1)
         #expect(model.tabs.first === only)
-    }
-
-    @Test func leavingOnePageLeavesTheOtherAlone() {
-        let model = makeModel()
-        _ = model.newTab(url: URL(string: "https://example.com/article")!)
-        let history = model.showHistory()
-        _ = model.showDownloads()
-
-        model.dismissInternalPage(.downloads)
-
-        #expect(model.tabs.contains { $0 === history })
-        #expect(history.internalPage == .history)
     }
 
     // MARK: - Keeping a website awake

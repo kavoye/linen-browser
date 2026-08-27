@@ -105,15 +105,9 @@ extension BrowserModel {
             return existing
         }
 
-        internalPageMoves += 1
-        let tab: BrowserTab
-        if let active = activeTab, active.internalPage == nil, active.urlString.isEmpty {
-            tab = active
-            activeTabID = active.id
-            tab.load(page.url)
-        } else {
-            tab = newTab(url: page.url)
-        }
+        let tab = ensureActiveTab()
+        activeTabID = tab.id
+        tab.load(page.url)
         tab.title = page.title
         tab.urlString = page.url.absoluteString
         scheduleSave()
@@ -122,12 +116,11 @@ extension BrowserModel {
 
     func dismissInternalPage(_ page: BrowserTab.InternalPage) {
         guard let tab = tabs.first(where: { $0.internalPage == page }) else { return }
-        internalPageMoves += 1
         if tab.canGoBack {
             tab.goBack()
             return
         }
-        close(tab)
+        tab.load(SystemPages.start)
     }
 
     func contextSummary(mentionedTabIDs: [UUID] = []) -> String? {

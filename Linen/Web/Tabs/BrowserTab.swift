@@ -153,7 +153,13 @@ final class BrowserTab: Identifiable {
     }
 
     var internalPage: InternalPage? {
-        InternalPage(url: URL(string: urlString)) ?? InternalPage(url: committedURL)
+        if let addressed = InternalPage(url: URL(string: urlString)) {
+            return addressed
+        }
+        if isMaterialised, !isLoading, let standing = webView.url {
+            return InternalPage(url: standing)
+        }
+        return InternalPage(url: committedURL)
     }
 
     var isShowingSystemPage: Bool {
@@ -862,7 +868,8 @@ final class BrowserTab: Identifiable {
             favicon = nil
         } else if SystemPages.isStart(url) {
             // The start page takes the row's name back only over a page that had one.
-            if displaced != nil, displaced != committedURL {
+            let leftOwnPage = InternalPage(url: URL(string: urlString)) != nil
+            if leftOwnPage || (displaced != nil && displaced != committedURL) {
                 urlString = ""
                 title = Self.placeholderTitle
                 favicon = nil
