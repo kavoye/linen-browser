@@ -45,13 +45,30 @@ struct MediaSidebarCard: View {
         }
     }
 
-    @ViewBuilder
+    private var hasPicker: Bool {
+        coordinator.mediaPickerTabs.count > 1
+    }
+
+    private var titleWidth: CGFloat {
+        max(40, Self.controlsWidth(panelWidth: panelWidth))
+    }
+
     private var title: some View {
+        Text(verbatim: media.model.title)
+            .font(titleFont)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .foregroundStyle(.secondary)
+            .frame(width: titleWidth, alignment: .leading)
+            .mask(alignment: .leading) { titleMask }
+    }
+
+    @ViewBuilder private var pickerButton: some View {
         let items = coordinator.mediaPickerTabs
-        let docked = media.controlledTabID
-        let playing = items.filter { $0.isPlayingAudio || $0.id == docked }
-        let quiet = items.filter { !($0.isPlayingAudio || $0.id == docked) }
         if items.count > 1 {
+            let docked = media.controlledTabID
+            let playing = items.filter { $0.isPlayingAudio || $0.id == docked }
+            let quiet = items.filter { !($0.isPlayingAudio || $0.id == docked) }
             Menu {
                 ForEach(playing) { tab in
                     pickerRow(tab, isDocked: docked == tab.id)
@@ -63,24 +80,22 @@ struct MediaSidebarCard: View {
                     }
                 }
             } label: {
-                Text(verbatim: media.model.title)
-                    .font(titleFont)
-                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
             }
             .menuStyle(.borderlessButton)
-            .foregroundStyle(.secondary)
+            .menuIndicator(.hidden)
+            .frame(width: 14, height: 14)
             .help("Choose Which Tab to Control")
-        } else {
-            Text(verbatim: media.model.title)
-                .font(titleFont)
-                .lineLimit(1)
-                .foregroundStyle(.secondary)
         }
     }
 
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.sidebarWidth) private var sidebarWidth
+    @Environment(\.sidebarIsFloating) private var sidebarIsFloating
     @State private var showsControls = false
+
+    @State private var controlsWidth: CGFloat = 0
 
     @State private var isPulledOut = false
 
@@ -104,9 +119,13 @@ struct MediaSidebarCard: View {
         panelWidth < widthForRoomyControls
     }
 
-    nonisolated static func panelWidth(sidebarWidth: CGFloat, isStowed: Bool) -> CGFloat {
+    nonisolated static func panelWidth(
+        sidebarWidth: CGFloat,
+        isStowed: Bool,
+        isFloating: Bool
+    ) -> CGFloat {
         guard !isStowed else { return floatingWidth }
-        let room = SidebarMetrics.contentWidth(sidebarWidth, style: .full, isFloating: false)
+        let room = SidebarMetrics.contentWidth(sidebarWidth, style: .full, isFloating: isFloating)
         return max(room, 150)
     }
 
@@ -120,8 +139,21 @@ struct MediaSidebarCard: View {
 
     private nonisolated static let controlGap: CGFloat = 4
 
+    private var titleMask: some View {
+        let covered = showsControls ? controlsWidth : 0
+        return HStack(spacing: 0) {
+            Rectangle()
+            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: covered > 0 ? 18 : 0)
+            Color.clear
+                .frame(width: covered)
+        }
+    }
+
     @ViewBuilder private var controls: some View {
         HStack(spacing: Self.controlGap) {
+            pickerButton
+
             if showsLyricsButton {
                 MediaButton(systemName: "quote.bubble", size: 9, help: "Show Lyrics") {
                     coordinator.toggleLyrics()
@@ -178,7 +210,7 @@ struct MediaSidebarCard: View {
             .frame(maxWidth: .infinity, alignment: sidebarStyle == .full ? .leading : .center)
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { buttonFrame = $0 }
             .overlay(alignment: .bottomLeading) { panel }
-            .padding(.vertical, 4)
+            .padding(.top, 4)
             .background {
                 ClickOutsideCatcher(isActive: isStowed && isPulledOut, keepingOut: [panelFrame, buttonFrame]) {
                     isPulledOut = false
@@ -221,17 +253,15 @@ struct MediaSidebarCard: View {
 
             if showsPlayer {
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: isCompact ? 6 : 8) {
-                        title
-
-                        Spacer(minLength: 4)
-
-                        if showsControls {
+                    title
+                        .overlay(alignment: .trailing) {
                             controls
-                                .transition(.opacity)
+                                .onGeometryChange(for: CGFloat.self) { $0.size.width }
+                                    action: { controlsWidth = $0 }
+                                .opacity(showsControls ? 1 : 0)
+                                .allowsHitTesting(showsControls)
                         }
-                    }
-                    .animation(Theme.Motion.quick, value: showsControls)
+                        .animation(Theme.Motion.quick, value: showsControls)
 
                     MediaTimeline(media: media, isCompact: true)
                     MediaTransport(media: media, isCompact: isCompact)
@@ -261,7 +291,7 @@ struct MediaSidebarCard: View {
     }
 
     private var panelWidth: CGFloat {
-        Self.panelWidth(sidebarWidth: sidebarWidth, isStowed: isStowed)
+        Self.panelWidth(sidebarWidth: sidebarWidth, isStowed: isStowed, isFloating: sidebarIsFloating)
     }
 
     private var stowedButton: some View {

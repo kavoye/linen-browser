@@ -305,6 +305,8 @@ extension EnvironmentValues {
     @Entry var sidebarStyle: SidebarStyle = .full
 
     @Entry var sidebarWidth: CGFloat = SidebarMetrics.defaultWidth
+
+    @Entry var sidebarIsFloating: Bool = false
 }
 
 struct LoomColumnResizeHandle: View {

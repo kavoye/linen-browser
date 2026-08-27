@@ -18,7 +18,11 @@ struct MediaCardFitTests {
     }
 
     @Test func theTransportFitsTheNarrowestSidebar() {
-        let panel = MediaSidebarCard.panelWidth(sidebarWidth: SidebarMetrics.minWidth, isStowed: false)
+        let panel = MediaSidebarCard.panelWidth(
+            sidebarWidth: SidebarMetrics.minWidth,
+            isStowed: false,
+            isFloating: false
+        )
         #expect(MediaSidebarCard.isCompact(panelWidth: panel))
         #expect(transportWidth(isCompact: true) <= MediaSidebarCard.controlsWidth(panelWidth: panel))
     }
@@ -29,8 +33,23 @@ struct MediaCardFitTests {
         #expect(transportWidth(isCompact: false) <= MediaSidebarCard.controlsWidth(panelWidth: panel))
     }
 
+    /// A sidebar that floats over the page is inset on both sides. The card
+    /// used to measure its room as though it were not, which ran it past the
+    /// rows and out to the sidebar's own edge.
+    @Test func theCardTakesTheSameRoomAsTheRowsWhenTheSidebarFloats() {
+        let width = SidebarMetrics.defaultWidth
+        let panel = MediaSidebarCard.panelWidth(sidebarWidth: width, isStowed: false, isFloating: true)
+
+        #expect(panel == SidebarMetrics.contentWidth(width, style: .full, isFloating: true))
+        #expect(panel <= width - 2 * LoomChrome.canvasInset)
+    }
+
     @Test func theFloatingPlayerIsRoomy() {
-        let panel = MediaSidebarCard.panelWidth(sidebarWidth: SidebarMetrics.iconsWidth, isStowed: true)
+        let panel = MediaSidebarCard.panelWidth(
+            sidebarWidth: SidebarMetrics.iconsWidth,
+            isStowed: true,
+            isFloating: false
+        )
         #expect(panel == MediaSidebarCard.floatingWidth)
         #expect(!MediaSidebarCard.isCompact(panelWidth: panel))
     }

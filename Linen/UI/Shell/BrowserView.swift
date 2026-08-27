@@ -115,6 +115,7 @@ struct BrowserView: View {
             .frame(width: width)
             .environment(\.sidebarStyle, sidebar.style)
             .environment(\.sidebarWidth, width)
+            .environment(\.sidebarIsFloating, sidebar.isFloating)
             .compositingGroup()
             .shadow(
                 color: .black.opacity(sidebar.isFloating ? 0.45 : 0),
