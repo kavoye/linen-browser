@@ -13,6 +13,7 @@ struct EffortSlider: View {
         static let track: CGFloat = 4
         static let tick: CGFloat = 5
         static let lane: CGFloat = 18
+        static let captionIndent: CGFloat = 53
     }
 
     private var stops: [LLMSettings.ReasoningEffort] {
@@ -96,18 +97,12 @@ struct EffortSlider: View {
     }
 
     private var caption: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Text(effort.label)
-                .font(Theme.Font.label)
-                .foregroundStyle(.secondary)
-                .frame(width: 48, alignment: .leading)
-
-            Text(effort.caption)
-                .font(Theme.Font.caption)
-                .foregroundStyle(.tertiary)
-                .lineLimit(2, reservesSpace: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        Text(effort.caption)
+            .font(Theme.Font.caption)
+            .foregroundStyle(.tertiary)
+            .lineLimit(2, reservesSpace: true)
+            .padding(.leading, Metrics.captionIndent)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func pick(at x: CGFloat, inset: CGFloat, step: CGFloat) {

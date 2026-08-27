@@ -233,7 +233,19 @@ struct EnginePopover: View {
                     PopoverDivider()
                 }
 
-                PopoverSectionHeader("Thinking")
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    PopoverSectionHeader("Thinking")
+                    Spacer(minLength: 8)
+                    Text(ReasoningCatalog.resolve(
+                        coordinator.selectedEffort,
+                        for: provider,
+                        model: selectedModel
+                    ).label)
+                        .font(Theme.Font.label.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, PopoverMetrics.inset)
+                        .padding(.bottom, 5)
+                }
 
                 EffortSlider(
                     efforts: efforts,
