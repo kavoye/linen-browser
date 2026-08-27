@@ -45,6 +45,8 @@ struct ScratchWakeTests {
         defer {
             win.orderOut(nil)
             win.contentView?.subviews.forEach { $0.removeFromSuperview() }
+            sleeper.detach()
+            keeper.detach()
         }
         host(sleeper.webView, in: win)
         #expect(await PageSettle.untilIdle(sleeper.webView, timeout: .seconds(30)))

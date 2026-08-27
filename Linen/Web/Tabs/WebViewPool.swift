@@ -265,6 +265,18 @@ final class WebViewPool {
 
     private(set) var dataStore: WKWebsiteDataStore = .default()
 
+    // WebKit traps in ~WebProcessPool when a pool is destroyed while a display
+    // link client is still registered. A copy shares its template's pool, and
+    // the template outlives every view, so no pool is ever destroyed.
+    private static let configurationTemplate = WKWebViewConfiguration()
+
+    static func makeConfiguration() -> WKWebViewConfiguration {
+        guard let configuration = configurationTemplate.copy() as? WKWebViewConfiguration else {
+            preconditionFailure("a WKWebViewConfiguration copy is a WKWebViewConfiguration")
+        }
+        return configuration
+    }
+
     func useDataStore(_ store: WKWebsiteDataStore) {
         guard store !== dataStore else { return }
         dataStore = store
@@ -368,7 +380,7 @@ final class WebViewPool {
     }
 
     private func buildView() -> WKWebView {
-        let configuration = WKWebViewConfiguration()
+        let configuration = Self.makeConfiguration()
         configuration.websiteDataStore = dataStore
         configuration.webExtensionController = extensionController
         BrowserSettings.shared.apply(to: configuration)

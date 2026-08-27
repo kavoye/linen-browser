@@ -787,7 +787,7 @@ final class AgentToolkit {
     static func researchConfiguration(
         extensionController: WKWebExtensionController?
     ) -> WKWebViewConfiguration {
-        let configuration = WKWebViewConfiguration()
+        let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.webExtensionController = extensionController
         BrowserSettings.shared.apply(to: configuration)
