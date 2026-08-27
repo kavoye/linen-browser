@@ -214,7 +214,7 @@ enum SettingsIndex {
                       ["channel", "preview", "beta", "tip", "nightly", "early", "release",
                        "prerelease", "pre-release", "test build",
                        ]),
-        SettingsEntry("about.report", .about, "Report a bug", "Opens a new issue on Linen’s repository.",
+        SettingsEntry("about.report", .about, "Send feedback", "Opens a new issue on Linen’s repository.",
                       ["report", "bug", "issue", "feedback", "github", "ladybug"]),
         SettingsEntry("about.acknowledgements", .about, "Acknowledgements", "The open source packages Linen is built with.",
                       ["acknowledgements", "acknowledgments", "credits", "licence", "license", "open source",

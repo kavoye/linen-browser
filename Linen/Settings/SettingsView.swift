@@ -287,10 +287,10 @@ private struct AboutSettings: View {
 
             SettingsCard {
                 DetailRow(
-                    title: "Report a bug",
+                    title: "Send feedback",
                     caption: "Opens a new issue on Linen’s repository."
                 ) {
-                    SettingsButton(title: "Report…") {
+                    SettingsButton(title: "Send…") {
                         coordinator.openNewTab(url: UpdateFeed.newIssueURL)
                     }
                 }
