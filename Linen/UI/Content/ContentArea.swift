@@ -211,7 +211,6 @@ struct LoadingBar: View {
                 .animation(Theme.Motion.drift, value: progress)
         }
         .frame(height: Self.thickness)
-        .padding(.horizontal, LoomChrome.canvasRadius)
         .allowsHitTesting(false)
     }
 }
