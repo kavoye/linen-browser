@@ -114,7 +114,10 @@ struct LazyWebViewTests {
         #expect(!waiting.isMaterialised)
     }
 
-    @Test func aSleptTabGivesUpItsView() {
+    /// A tab that has been shown keeps a view when it sleeps, and takes a
+    /// fresh one: it is the page that is given up, not the view. Only a tab
+    /// that has never been opened waits without one.
+    @Test func aSleptTabTakesAFreshViewAndWaitsToLoad() {
         let model = BrowserModel(database: .temporary())
         let first = model.newTab(url: URL(string: "https://a.example/"))
         let second = model.newTab(url: URL(string: "https://b.example/"))
@@ -122,9 +125,11 @@ struct LazyWebViewTests {
         first.urlString = "https://a.example/"
 
         #expect(first.isMaterialised)
+        let before = first.webView
         first.discardWebContent()
 
-        #expect(!first.isMaterialised)
+        #expect(first.isMaterialised, "a slept tab keeps a view to wake into")
+        #expect(first.webView !== before, "the page it was showing is gone")
         #expect(first.isDeferred)
     }
 

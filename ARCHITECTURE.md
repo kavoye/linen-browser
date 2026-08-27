@@ -48,10 +48,10 @@ without owning tab state.
 
 A restored tab holds no `WKWebView` until you open it. `BrowserTab.webView`
 builds one on first use and `isMaterialised` reports whether it exists, so a
-sweep over every tab must ask before it reaches for the view. A tab may also
-release its WebContent process under memory pressure. In both cases the title,
-address, favicon and WebKit interaction state remain, so activation rebuilds the
-view. Code that adds a new kind of in-progress page work must decide whether
+sweep over every tab must ask before it reaches for the view. A tab that sleeps
+under memory pressure keeps a view, but gives up the page and takes a fresh one.
+In both cases the title, address, favicon and WebKit interaction state remain, so
+activation loads the page again. Code that adds a new kind of in-progress page work must decide whether
 that work prevents discarding.
 
 Profiles are hard boundaries. Each profile has its own WebKit data store,

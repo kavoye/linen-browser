@@ -422,7 +422,7 @@ final class BrowserTab: Identifiable {
         (outgoing as? TabWebView)?.onFaviconDeclarationChange = nil
         outgoing.removeFromSuperview()
 
-        liveView = nil
+        adopt(WebViewPool.shared.makeColdView())
         hasPresentedContent = false
         deferRestore(state: state, url: url)
         processState.markUnloaded()
