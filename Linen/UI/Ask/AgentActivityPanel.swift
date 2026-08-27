@@ -23,9 +23,7 @@ struct AgentActivityPanel: View {
         ScrollViewReader { scrollProxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Metrics.traceGap) {
-                    ForEach(Array(traces.enumerated()), id: \.element.id) { index, trace in
-                        ChatTurnRule(label: Self.when(trace), isFirst: index == 0)
-
+                    ForEach(traces) { trace in
                         AgentTaskTraceView(
                             trace: trace,
                             tabID: tabID,
@@ -75,13 +73,6 @@ struct AgentActivityPanel: View {
     }
 
     private static let bottomAnchor = "chat.bottom"
-
-    private static func when(_ trace: ConversationLog.TaskTrace) -> String {
-        guard trace.state != .running else { return String(localized: "now") }
-        let age = Date().timeIntervalSince(trace.startedAt)
-        guard age >= 45 else { return String(localized: "just now") }
-        return trace.startedAt.formatted(.relative(presentation: .numeric))
-    }
 
     private func scrollToLatest(using proxy: ScrollViewProxy) {
         guard !traces.isEmpty else { return }
@@ -161,8 +152,11 @@ struct AgentUsageSummary: View {
 private struct AgentActivityEmptyState: View {
     let browser: BrowserModel
 
-    private var pages: [AskContextPage] {
-        AskContext.pages(browser: browser, mentionedTabIDs: [])
+    private var siteName: String? {
+        guard let tab = browser.activeTab, tab.isShowingRealPage,
+              let host = URL(string: tab.urlString)?.displayHost
+        else { return nil }
+        return SiteName.title(forHost: host)
     }
 
     var body: some View {
@@ -172,29 +166,22 @@ private struct AgentActivityEmptyState: View {
                 .foregroundStyle(.tertiary)
                 .accessibilityHidden(true)
 
-            Text("Ask about this page")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
+            Group {
+                if let siteName {
+                    Text("Ask about the \(siteName) page")
+                } else {
+                    Text("Ask about this page")
+                }
+            }
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
 
             Text("This chat reads the page it is open beside, and keeps its own thread per tab. Type @ to let it read another tab too.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-
-            if !pages.isEmpty {
-                ChipFlow(spacing: 6) {
-                    ForEach(pages) { page in
-                        AskPageChipView(
-                            title: page.title,
-                            host: page.host,
-                            isAttached: page.isAttached,
-                            fontSize: 10.5
-                        )
-                    }
-                }
-                .padding(.top, 2)
-            }
         }
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -224,6 +211,7 @@ private struct AgentTaskTraceView: View {
         VStack(alignment: .leading, spacing: Metrics.turnGap) {
             ChatUserMessage(
                 text: trace.prompt,
+                when: Self.when(trace),
                 showsActions: hovering,
                 onEdit: { onEdit(trace.prompt) },
                 onCopy: { copy(trace.prompt) },
@@ -290,6 +278,13 @@ private struct AgentTaskTraceView: View {
         }
     }
 
+    static func when(_ trace: ConversationLog.TaskTrace) -> String {
+        guard trace.state != .running else { return String(localized: "now") }
+        let age = Date().timeIntervalSince(trace.startedAt)
+        guard age >= 45 else { return String(localized: "just now") }
+        return trace.startedAt.formatted(.relative(presentation: .numeric))
+    }
+
     private func open(_ url: URL) {
         guard let tab = browser.tabs.first(where: { $0.id == tabID }) else { return }
         browser.activate(tab)
@@ -322,6 +317,7 @@ private struct AgentTaskTraceView: View {
 
 private struct ChatUserMessage: View {
     let text: String
+    let when: String
     let showsActions: Bool
     let onEdit: () -> Void
     let onCopy: () -> Void
@@ -350,6 +346,11 @@ private struct ChatUserMessage: View {
                     ChatAction(symbol: "doc.on.doc", help: "Copy this question", action: onCopy)
                     ChatAction(symbol: "arrow.clockwise", help: "Ask this again", action: onRetry)
                     ChatAction(symbol: "pencil", help: "Edit this question", action: onEdit)
+                } else {
+                    Text(verbatim: when)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(.tertiary)
+                        .padding(.trailing, 4)
                 }
             }
             .frame(height: Metrics.action)
@@ -405,33 +406,6 @@ struct ChatBubble: Shape {
         )
         path.closeSubpath()
         return path
-    }
-}
-
-private struct ChatTurnRule: View {
-    let label: String
-    let isFirst: Bool
-
-    var body: some View {
-        HStack(spacing: 8) {
-            rule
-
-            Text(verbatim: label)
-                .font(Theme.Font.micro)
-                .foregroundStyle(.tertiary)
-                .fixedSize()
-
-            rule
-        }
-        .padding(.vertical, isFirst ? 2 : 6)
-        .accessibilityElement()
-        .accessibilityLabel(Text(verbatim: label))
-    }
-
-    private var rule: some View {
-        Rectangle()
-            .fill(Theme.Wash.hairline)
-            .frame(height: 1)
     }
 }
 
@@ -496,40 +470,44 @@ private struct ChatTurnFooter: View {
 
     @State private var copied = false
 
+    private var showsTheTime: Bool {
+        !showsActions || isThinking
+    }
+
     var body: some View {
-        HStack(spacing: 2) {
-            HStack(spacing: 5) {
+        HStack(spacing: 5) {
+            if showsTheTime {
                 if isThinking {
                     TypingDots()
                         .frame(width: Metrics.action, height: Metrics.action)
                 } else if let providerID {
                     ProviderBrandIcon(providerID: providerID, size: 12)
-                        .frame(width: Metrics.action, height: Metrics.action)
                 }
 
                 if !label.isEmpty {
                     Text(verbatim: label)
                         .font(Theme.Font.caption)
                         .monospacedDigit()
+                        .foregroundStyle(.tertiary)
                 }
-
-                if stepCount > 0 {
-                    StepsToggle(count: stepCount, isShown: stepsAreShown, action: onToggleSteps)
-                }
-            }
-            .foregroundStyle(.tertiary)
-            .padding(.trailing, 4)
-
-            if showsActions {
-                ChatAction(symbol: copied ? "checkmark" : "doc.on.doc", help: "Copy this answer") {
-                    onCopy()
-                    copied = true
-                    Task {
-                        try? await Task.sleep(for: .seconds(1.4))
-                        copied = false
+            } else {
+                HStack(spacing: 0) {
+                    ChatAction(symbol: copied ? "checkmark" : "doc.on.doc", help: "Copy this answer") {
+                        onCopy()
+                        copied = true
+                        Task {
+                            try? await Task.sleep(for: .seconds(1.4))
+                            copied = false
+                        }
                     }
+                    ChatAction(symbol: "speaker.wave.2", help: "Read this answer aloud", action: onSpeak)
                 }
-                ChatAction(symbol: "speaker.wave.2", help: "Read this answer aloud", action: onSpeak)
+                .padding(.leading, -3)
+            }
+
+            if stepCount > 0 {
+                StepsToggle(count: stepCount, isShown: stepsAreShown, action: onToggleSteps)
+                    .foregroundStyle(.tertiary)
             }
 
             Spacer(minLength: 0)
