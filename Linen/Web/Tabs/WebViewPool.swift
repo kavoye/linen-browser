@@ -274,6 +274,9 @@ final class WebViewPool {
         guard let configuration = configurationTemplate.copy() as? WKWebViewConfiguration else {
             preconditionFailure("a WKWebViewConfiguration copy is a WKWebViewConfiguration")
         }
+        configuration.preferences = WKPreferences()
+        configuration.defaultWebpagePreferences = WKWebpagePreferences()
+        configuration.userContentController = WKUserContentController()
         return configuration
     }
 
