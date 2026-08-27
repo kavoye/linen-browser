@@ -66,7 +66,54 @@ struct ChatMarkdown: View {
         case .rule:
             RowSeparator()
                 .padding(.vertical, 2)
+
+        case .table(let table):
+            grid(table)
         }
+    }
+
+    private func grid(_ table: ChatMarkdownTable) -> some View {
+        Grid(alignment: .topLeading, horizontalSpacing: 16, verticalSpacing: 0) {
+            GridRow {
+                ForEach(table.header.indices, id: \.self) { column in
+                    cell(table.header[column], in: table, at: column)
+                        .font(.system(size: fontSize, weight: .semibold))
+                }
+            }
+
+            rule(across: table.header.count)
+
+            ForEach(table.rows.indices, id: \.self) { row in
+                GridRow {
+                    ForEach(table.header.indices, id: \.self) { column in
+                        cell(table.cell(row: row, column: column), in: table, at: column)
+                            .font(.system(size: fontSize))
+                    }
+                }
+
+                if row < table.rows.count - 1 {
+                    rule(across: table.header.count)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func rule(across columns: Int) -> some View {
+        Rectangle()
+            .fill(Theme.Wash.hairline)
+            .frame(height: 1)
+            .gridCellUnsizedAxes(.horizontal)
+            .gridCellColumns(max(1, columns))
+    }
+
+    private func cell(_ text: String, in table: ChatMarkdownTable, at column: Int) -> some View {
+        inline(text)
+            .lineSpacing(2)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: table.frameAlignment(at: column))
+            .padding(.vertical, 8)
+            .gridColumnAlignment(table.alignment(at: column))
     }
 
     private func inline(_ source: String) -> Text {
@@ -87,6 +134,7 @@ struct ChatMarkdownBlock: Identifiable {
         case bullet(depth: Int, mark: String)
         case code
         case rule
+        case table(ChatMarkdownTable)
     }
 
     var id = 0
@@ -114,7 +162,11 @@ struct ChatMarkdownBlock: Identifiable {
             return true
         }
 
-        for line in source.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n") {
+        let lines = source.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
+        var index = 0
+        while index < lines.count {
+            let line = lines[index]
+            defer { index += 1 }
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
             if trimmed.hasPrefix("```") {
@@ -156,6 +208,13 @@ struct ChatMarkdownBlock: Identifiable {
                 continue
             }
 
+            if let table = table(at: index, in: lines) {
+                flushParagraph()
+                blocks.append(ChatMarkdownBlock(kind: .table(table.value), text: ""))
+                index = table.last
+                continue
+            }
+
             if continuesLastBullet(with: trimmed) {
                 continue
             }
@@ -171,6 +230,60 @@ struct ChatMarkdownBlock: Identifiable {
             var stamped = block
             stamped.id = offset
             return stamped
+        }
+    }
+
+    private static func table(at index: Int, in lines: [String]) -> (value: ChatMarkdownTable, last: Int)? {
+        guard index + 1 < lines.count else { return nil }
+        let header = lines[index].trimmingCharacters(in: .whitespaces)
+        guard header.contains("|") else { return nil }
+        let ruled = lines[index + 1].trimmingCharacters(in: .whitespaces)
+        guard rulesColumns(ruled) else { return nil }
+
+        let headings = cells(in: header)
+        let alignments = cells(in: ruled).map(alignment(of:))
+        guard headings.count > 1, alignments.count == headings.count else { return nil }
+
+        var rows: [[String]] = []
+        var cursor = index + 2
+        while cursor < lines.count {
+            let row = lines[cursor].trimmingCharacters(in: .whitespaces)
+            guard row.contains("|") else { break }
+            rows.append(cells(in: row))
+            cursor += 1
+        }
+        let table = ChatMarkdownTable(header: headings, rows: rows, alignments: alignments)
+        return (table, cursor - 1)
+    }
+
+    private static func cells(in line: String) -> [String] {
+        var text = Substring(line)
+        if text.hasPrefix("|") {
+            text = text.dropFirst()
+        }
+        if text.hasSuffix("|") {
+            text = text.dropLast()
+        }
+        return text.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    private static func rulesColumns(_ line: String) -> Bool {
+        guard line.contains("|"), line.contains("-") else { return false }
+        let parts = cells(in: line)
+        guard !parts.isEmpty else { return false }
+        return parts.allSatisfy { part in
+            part.contains("-") && part.allSatisfy { $0 == "-" || $0 == ":" }
+        }
+    }
+
+    private static func alignment(of ruled: String) -> ChatMarkdownTable.Side {
+        switch (ruled.hasPrefix(":"), ruled.hasSuffix(":")) {
+        case (true, true):
+            .centre
+        case (false, true):
+            .trailing
+        default:
+            .leading
         }
     }
 
@@ -212,5 +325,48 @@ struct ChatMarkdownBlock: Identifiable {
             kind: .bullet(depth: depth, mark: "\(digits)."),
             text: String(rest.drop(while: { $0 == " " }))
         )
+    }
+}
+
+struct ChatMarkdownTable: Equatable {
+    enum Side: Equatable {
+        case leading
+        case centre
+        case trailing
+    }
+
+    let header: [String]
+    let rows: [[String]]
+    let alignments: [Side]
+
+    func cell(row: Int, column: Int) -> String {
+        guard rows.indices.contains(row), rows[row].indices.contains(column) else { return "" }
+        return rows[row][column]
+    }
+
+    func alignment(at column: Int) -> HorizontalAlignment {
+        switch side(at: column) {
+        case .leading:
+            .leading
+        case .centre:
+            .center
+        case .trailing:
+            .trailing
+        }
+    }
+
+    func frameAlignment(at column: Int) -> Alignment {
+        switch side(at: column) {
+        case .leading:
+            .leading
+        case .centre:
+            .center
+        case .trailing:
+            .trailing
+        }
+    }
+
+    private func side(at column: Int) -> Side {
+        alignments.indices.contains(column) ? alignments[column] : .leading
     }
 }
