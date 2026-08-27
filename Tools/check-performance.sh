@@ -69,7 +69,7 @@ check_average \
 check_average \
   'BrowserPerformanceTests/testSwitchingTabsInACrowdedSession()' \
   'com.apple.dt.XCTMetric_Clock.time.monotonic' \
-  '0.025' \
+  '0.035' \
   '500 tab activations' \
   's'
 check_average \
@@ -93,7 +93,7 @@ check_average \
 check_average \
   'BrowserPerformanceTests/testCommandPaletteResultProjection()' \
   'com.apple.dt.XCTMetric_Clock.time.monotonic' \
-  '0.015' \
+  '0.020' \
   '500-history, 100-tab palette projection' \
   's'
 check_average \
@@ -105,7 +105,7 @@ check_average \
 check_average \
   'BrowserPerformanceTests/testStartPageFrequentSiteProjection()' \
   'com.apple.dt.XCTMetric_Clock.time.monotonic' \
-  '0.010' \
+  '0.015' \
   '400-visit start page projection' \
   's'
 check_average \

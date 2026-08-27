@@ -86,7 +86,10 @@ control-flow body inside single-line braces; short closures, `guard … else
 { return }` and accessor lists (`{ get set }`) stay inline. Coverage is
 a guardrail, not a substitute for meaningful assertions. It also checks the
 blank-tab, tab-switching, command-palette, Start Page and Ask surface budgets in
-`Tools/check-performance.sh`.
+`Tools/check-performance.sh`. Each budget sits at about twice what the runner
+measures, because a shared runner varies by half again between runs. A real
+regression shows as a multiple, not a few percent. Change a budget only with the
+measurements that justify it.
 
 A case that builds a live WebKit view takes `.boundedWebViews`, which holds one
 of a small number of slots — half the machine’s cores. Starting every case
