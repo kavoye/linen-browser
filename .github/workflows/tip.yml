@@ -62,7 +62,9 @@ jobs:
 
           SHORT="${BASE#v}"
           echo "build=true"                              >> "$GITHUB_OUTPUT"
-          echo "marketing=$SHORT ($COUNT)"               >> "$GITHUB_OUTPUT"
+          # `+` is semver's build metadata. The About panel adds the build
+          # number in brackets of its own, so brackets here read as two.
+          echo "marketing=$SHORT+$COUNT"                 >> "$GITHUB_OUTPUT"
           echo "file=$SHORT-$COUNT"                      >> "$GITHUB_OUTPUT"
           # Sparkle orders updates by this number, and it must never go back.
           # It counts every commit, so a release always sorts above the previews
