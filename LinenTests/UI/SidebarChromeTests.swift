@@ -352,14 +352,18 @@ struct SidebarPeekShieldTests {
         )
         defer { window.orderOut(nil) }
         window.contentView?.addSubview(web)
+        window.orderBack(nil)
         web.loadHTMLString("<html><body>page</body></html>", baseURL: nil)
+        // WebKit installs the areas for a page it has painted in a window on
+        // screen. Asking before either has happened is what made this flake.
+        #expect(await PageSettle.untilIdle(web, timeout: .seconds(30)))
 
         var foreign: [NSTrackingArea] = []
         _ = await waitUntil {
             foreign = web.trackingAreas.filter { $0.owner !== web }
             return !foreign.isEmpty
         }
-        try #require(!foreign.isEmpty)
+        try #require(!foreign.isEmpty, "WebKit installed no tracking area of its own to park")
 
         web.setHoverParked(true)
         #expect(web.trackingAreas.allSatisfy { $0.owner === web })

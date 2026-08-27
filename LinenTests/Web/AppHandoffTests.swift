@@ -18,7 +18,7 @@ struct AppHandoffTests {
 
         let tab = BrowserTab(opensBlank: false)
         tab.load(try server.url(route))
-        _ = await waitUntil(timeout: .seconds(6)) { seen != nil }
+        _ = await waitUntil { seen != nil }
         _ = server
         return seen
     }
