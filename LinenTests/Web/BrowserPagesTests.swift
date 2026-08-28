@@ -385,6 +385,26 @@ struct BrowserPagesTests {
         #expect(tab.internalPage == nil, "and does not read the page back off the list")
     }
 
+    /// Back into the page cache fires no navigation callback and leaves
+    /// WebKit's list naming the page that has gone. Nothing else is coming to
+    /// correct that, so the committed address has to agree with the view as
+    /// soon as the view stops loading — the suites that flaked were waiting
+    /// on an address that would never arrive.
+    @Test(.boundedWebViews) func theCommittedAddressAgreesWithTheViewWhenNothingIsLoading() async {
+        let model = makeModel()
+        let tab = model.ensureActiveTab()
+        tab.load(BrowserTab.InternalPage.history.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        tab.load(BrowserTab.InternalPage.settings.url)
+        #expect(await settled(tab, at: BrowserTab.InternalPage.settings.url))
+
+        tab.goBack()
+
+        #expect(await waitUntil { !tab.webView.isLoading })
+        #expect(tab.committedURL == tab.webView.url, "the list may lag; the view does not")
+        #expect(tab.committedURL == BrowserTab.InternalPage.history.url)
+    }
+
     /// Back into the page cache fires no navigation callback, and WebKit's
     /// back-forward list can still name the page being left. The tab has to
     /// take its address back from what it is showing, not from that list.
