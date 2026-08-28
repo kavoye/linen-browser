@@ -514,7 +514,7 @@ final class CommandPaletteModel {
         case .leavePrivateBrowsing:
             coordinator.leavePrivateBrowsing()
         case .closeTab:
-            browser.closeActiveTab()
+            coordinator.closeActiveTabAskingIfBookmarked()
         case .reopenTab:
             browser.reopenLastClosedTab()
         case .duplicateTab:

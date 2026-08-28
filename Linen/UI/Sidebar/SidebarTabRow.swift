@@ -93,7 +93,7 @@ struct SidebarTabRow: View {
         Group {
             if tab.pinnedURL == nil {
                 CloseButton {
-                    browser.close(tab)
+                    coordinator.closeAskingIfBookmarked(tab)
                 }
             } else {
                 ChromeIcon.rowControl(

@@ -256,7 +256,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.leavePrivateBrowsing()
     }
     @objc private func closeTab() {
-        coordinator.browser.closeActiveTab()
+        coordinator.closeActiveTabAskingIfBookmarked()
     }
     @objc private func reopenClosedTab() {
         coordinator.browser.reopenLastClosedTab()

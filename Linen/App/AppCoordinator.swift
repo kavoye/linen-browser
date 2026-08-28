@@ -559,6 +559,26 @@ final class AppCoordinator {
         }
     }
 
+    func closeAskingIfBookmarked(_ tab: BrowserTab) {
+        guard tab.pinnedURL != nil else {
+            browser.close(tab)
+            return
+        }
+        Task {
+            guard await ConfirmAlert.destructive(
+                "Close this bookmarked tab?",
+                detail: "Its bookmark is removed when the tab closes.",
+                verb: "Close Tab"
+            ) else { return }
+            browser.close(tab)
+        }
+    }
+
+    func closeActiveTabAskingIfBookmarked() {
+        guard let tab = browser.activeTab else { return }
+        closeAskingIfBookmarked(tab)
+    }
+
     func showHistory() {
         showBrowser()
         browser.showHistory()

@@ -4,6 +4,12 @@
     "" : {
       "comment" : "Not shown to anyone: the empty branch of a conditional tooltip on the sidebar's New Tab and Settings rows, used when the sidebar is wide enough to show the row's own title. Leave the translation empty."
     },
+    "Close this bookmarked tab?" : {
+      "comment" : "Title of the alert shown when ⌘W would close a tab that carries a bookmark. The bookmark lives on the tab, so both go. Sentence case, question mark."
+    },
+    "Its bookmark is removed when the tab closes." : {
+      "comment" : "Body of the alert that asks before closing a bookmarked tab. It says what is lost and nothing else; the title above already asks the question. One sentence."
+    },
     "“%@” is playing" : {
       "comment" : "Tooltip on the speaker glyph of a collapsed folder in the sidebar, saying which tab inside it is making sound. %@ is the tab's title, written by the website — never translated. Keep the curly quotation marks around it."
     },
