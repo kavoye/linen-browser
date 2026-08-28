@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.2
+
+### Improved
+
+- Bookmarked tabs stay at the top of the sidebar. A new tab now opens below
+  them instead of pushing them down, and a line separates the two groups.
+- Linen asks before you close a bookmarked tab, because the bookmark closes
+  with it.
+- Back to Bookmarked Page is now ⇧⌘D. macOS keeps ⌥⌘D for the Dock.
+- Control-click empty space in the sidebar for New Tab, New Folder and
+  Organize Tabs.
+- The sidebar and the toolbar take much more colour from the website you are
+  reading when **Settings > Appearance > Website tint** is enabled.
+- Hover effect under the pointer now reads against that colour, so
+  highlights stay visible on a dark website and stay gentle on a light one.
+
+### Fixed
+
+- Dragging inside the address field moved the window, so you could not select
+  the address.
+- The update notice stayed hidden while Settings was open.
+- The top of a chat faded out even with nothing scrolled above it.
+- The dots on the split view handle took the accent colour on the pane you were
+  using, instead of staying white.
+
 ## 0.4.1
 
 ### Improved
