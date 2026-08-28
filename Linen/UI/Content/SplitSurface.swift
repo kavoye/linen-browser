@@ -511,7 +511,7 @@ private struct PaneHandle: View {
 
     private var dotInk: Color {
         if isFocused {
-            return wearsGlass ? Theme.accent : Color.white.opacity(0.8)
+            return Color.white.opacity(0.8)
         }
         return hovering || dragging ? Theme.Wash.scrim : Theme.chrome(0.35)
     }
