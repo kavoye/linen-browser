@@ -66,6 +66,31 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         )
     }
 
+    @ViewBuilder
+    private var emptySpaceMenu: some View {
+        Button {
+            _ = coordinator.openNewTab()
+        } label: {
+            Label("New Tab", systemImage: "plus")
+        }
+
+        Button {
+            _ = browser.createFolder(containing: [] as [SidebarItem])
+        } label: {
+            Label("New Folder…", systemImage: "folder.badge.plus")
+        }
+
+        if browser.tabs.count > 1 {
+            Divider()
+
+            Button {
+                coordinator.organizeTabs()
+            } label: {
+                Label("Organize Tabs…", systemImage: "folder.badge.gearshape")
+            }
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 2) {
@@ -75,6 +100,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
                     .frame(height: 26 + bottomClearance)
                     .contentShape(Rectangle())
                     .onTapGesture { selection.takeKeyboard() }
+                    .contextMenu { emptySpaceMenu }
                     .animation(Theme.Motion.drift, value: bottomClearance)
             }
             .padding(.leading, contentInsets.leading)
@@ -96,6 +122,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
                 .padding(.trailing, contentInsets.trailing)
                 .zIndex(1)
         }
+        .contextMenu { emptySpaceMenu }
         .coordinateSpace(.named(WorkspaceListCoordinateSpace.name))
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { model.listOriginInWindow = $0.origin }
         // The gesture belongs to the container. A reorder rebuilds the dragged
