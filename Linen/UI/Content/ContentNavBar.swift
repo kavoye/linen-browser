@@ -110,6 +110,7 @@ struct ContentNavBar: View {
 
     private var addressSurface: some View {
         AskSurface(placement: .toolbar, browser: browser, coordinator: coordinator)
+            .holdsWindowStillOnHover()
     }
 
     private var reloadHelp: LocalizedStringResource {
