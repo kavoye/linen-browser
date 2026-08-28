@@ -516,12 +516,26 @@ final class BrowserTab: Identifiable {
 
     // MARK: - Page colour
 
+    private(set) var holdsPageColor = false
+
+    func holdPageColorUntilLoaded() {
+        guard isShowingRealPage else {
+            clearPageColor()
+            return
+        }
+        holdsPageColor = true
+    }
+
+    func releasePageColorHold() {
+        holdsPageColor = false
+    }
+
     func refreshPageColor(from webView: WKWebView) {
         guard isShowingRealPage else {
             clearPageColor()
             return
         }
-        guard provisionalNavigation == nil else { return }
+        guard provisionalNavigation == nil, !holdsPageColor else { return }
         guard hasPresentedContent else {
             setPageColor(nil)
             return
@@ -533,7 +547,7 @@ final class BrowserTab: Identifiable {
     private var needsBandRemeasure = false
 
     func measureBandUnderBar() {
-        guard isShowingRealPage, hasPresentedContent, webView.window != nil,
+        guard isShowingRealPage, hasPresentedContent, !holdsPageColor, webView.window != nil,
               webView.bounds.height > 0 else { return }
         guard !isMeasuringBand else {
             // The first presentation can still contain the old/blank frame.
@@ -560,7 +574,7 @@ final class BrowserTab: Identifiable {
                 }
             }
             guard urlString == requestedURL, provisionalNavigation == nil,
-                  hasPresentedContent,
+                  hasPresentedContent, !holdsPageColor,
                   let image,
                   let average = Self.averageOfTopBand(of: image, fraction: bandFraction)
             else { return }

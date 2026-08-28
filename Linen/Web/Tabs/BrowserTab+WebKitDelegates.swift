@@ -312,7 +312,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         if let tab, tab.isShowingRealPage, !tab.hasPresentedContent {
             tab.awaitFirstPresentation()
         }
-        tab?.refreshPageColor(from: webView)
+        tab?.holdPageColorUntilLoaded()
         tab?.refreshChrome()
         tab?.invalidateSessionState()
     }
@@ -332,6 +332,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         }
         tab.didPresentContent()
         tab.refreshFavicon()
+        tab.releasePageColorHold()
         tab.refreshPageColor(from: webView)
         tab.restoreScrollOffsetIfNeeded()
         tab.onNavigationFinished?(wasRestore || tab.isShowingError)
@@ -340,6 +341,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         tab?.isRestoring = false
         tab?.finishReclaim()
+        tab?.releasePageColorHold()
         showError(error, in: webView)
         tab?.refreshChrome()
     }
@@ -351,6 +353,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     ) {
         if let tab, tab.provisionalNavigation === navigation {
             tab.provisionalNavigation = nil
+            tab.releasePageColorHold()
             tab.refreshPageColor(from: webView)
         }
         tab?.isRestoring = false
