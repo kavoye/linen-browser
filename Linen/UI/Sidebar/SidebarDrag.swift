@@ -217,8 +217,28 @@ struct SidebarRows: View {
     let depth: Int
     let context: SidebarRowContext
 
+    private var keptRunLength: Int {
+        guard depth == 0 else { return 0 }
+        var count = 0
+        for item in items {
+            guard case .tab(let id) = item,
+                  context.browser.tab(id: id)?.pinnedURL != nil
+            else { break }
+            count += 1
+        }
+        return count == items.count ? 0 : count
+    }
+
     var body: some View {
-        ForEach(items) { item in
+        ForEach(Array(items.enumerated()), id: \.element) { index, item in
+            if index == keptRunLength, keptRunLength > 0 {
+                Rectangle()
+                    .fill(Theme.Wash.hairline)
+                    .frame(height: 1)
+                    .padding(.horizontal, SidebarMetrics.rowContentPadding(style: .full))
+                    .padding(.vertical, 3)
+            }
+
             switch item {
             case .folder(let id):
                 if let folder = context.browser.folder(id: id) {

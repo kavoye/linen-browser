@@ -189,6 +189,10 @@ final class BrowserModel {
            let index = tabs.firstIndex(where: { $0 === anchor }) {
             tabs.insert(tab, at: tabs.index(after: index))
             storedTree = reconciledTree().inserting(.tab(tab.id), after: .tab(anchor.id))
+        } else if let kept = lastKeptTabAtTop() {
+            tabs.insert(tab, at: 0)
+            storedTree = reconciledTree().inserting(.tab(tab.id), after: .tab(kept.id))
+            syncTabOrder()
         } else {
             tabs.insert(tab, at: 0)
             place([.tab(tab.id)], in: nil, before: reconciledTree().root.first)

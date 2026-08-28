@@ -20,6 +20,18 @@ extension BrowserModel {
         scheduleSave()
     }
 
+    func lastKeptTabAtTop() -> BrowserTab? {
+        var last: BrowserTab?
+        for item in sidebarTree.rows(in: nil) {
+            guard case .tab(let id) = item,
+                  let tab = tabs.first(where: { $0.id == id }),
+                  tab.pinnedURL != nil
+            else { break }
+            last = tab
+        }
+        return last
+    }
+
     func returnToPin(_ tab: BrowserTab) {
         guard let url = tab.pinnedURL else { return }
         activeTabID = tab.id
@@ -474,7 +486,7 @@ extension BrowserModel {
         }
     }
 
-    private func syncTabOrder() {
+    func syncTabOrder() {
         let byID = Dictionary(tabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let ordered = reconciledTree().flattenedTabs(known: Set(byID.keys))
         let placed = Set(ordered)
