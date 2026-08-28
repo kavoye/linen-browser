@@ -11,6 +11,8 @@ struct AgentActivityPanel: View {
     let onEdit: (String) -> Void
     let onSpeak: (String) -> Void
 
+    @State private var edges = Edges()
+
     var body: some View {
         if traces.isEmpty {
             AgentActivityEmptyState(browser: browser)
@@ -47,13 +49,21 @@ struct AgentActivityPanel: View {
             }
             .scrollIndicators(.visible)
             .frame(maxHeight: .infinity)
+            .onScrollGeometryChange(for: Edges.self) { geometry in
+                let top = geometry.contentOffset.y + geometry.contentInsets.top
+                let bottom = geometry.contentSize.height - geometry.contentOffset.y
+                    - geometry.containerSize.height + geometry.contentInsets.bottom
+                return Edges(hasContentAbove: top > 1, hasContentBelow: bottom > 1)
+            } action: { _, edges in
+                self.edges = edges
+            }
             .mask {
                 VStack(spacing: 0) {
                     LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-                        .frame(height: 12)
+                        .frame(height: edges.hasContentAbove ? 12 : 0)
                     Rectangle()
                     LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                        .frame(height: 10)
+                        .frame(height: edges.hasContentBelow ? 10 : 0)
                 }
             }
             .onAppear { scrollToLatest(using: scrollProxy) }
@@ -147,6 +157,11 @@ struct AgentUsageSummary: View {
         .foregroundStyle(.secondary)
         .lineLimit(1)
     }
+}
+
+private struct Edges: Equatable {
+    var hasContentAbove = false
+    var hasContentBelow = false
 }
 
 private struct AgentActivityEmptyState: View {
