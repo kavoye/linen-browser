@@ -101,7 +101,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(command("Close Tab", #selector(closeTab), key: "w"))
         menu.addItem(.separator())
         menu.addItem(command("Bookmark This Page", #selector(pinPage), key: "d"))
-        menu.addItem(command("Back to Bookmarked Page", #selector(returnToPin), key: "d", modifiers: [.command, .option]))
+        menu.addItem(command(
+            "Back to Bookmarked Page",
+            #selector(returnToPin),
+            key: "d",
+            modifiers: [.command, .shift]
+        ))
         menu.addItem(.separator())
         menu.addItem(command("Open Location…", #selector(openLocation), key: "l"))
         menu.addItem(command("Search Everything…", #selector(openPalette), key: "k"))

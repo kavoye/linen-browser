@@ -299,7 +299,7 @@ enum CommandPaletteCatalog {
                     group: .tabs,
                     title: "Back to Bookmarked Page",
                     symbol: "bookmark",
-                    shortcut: "⌥⌘D",
+                    shortcut: "⇧⌘D",
                     isAvailable: context.isAwayFromPin
                 ),
                 make(
