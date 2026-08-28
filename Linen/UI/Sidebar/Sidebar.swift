@@ -30,6 +30,13 @@ struct Sidebar: View {
         sidebarStyle == .icons
     }
 
+    private var inkColor: NSColor {
+        LoomChrome.sampledColor(
+            ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+            scheme: scheme
+        )
+    }
+
     private var inkIsLight: Bool {
         if !coordinator.isShowingSettings {
             return PageInk.isLight(
@@ -108,6 +115,7 @@ struct Sidebar: View {
             }
         }
         .environment(\.chromeIsLight, inkIsLight)
+        .environment(\.chromeWash, .of(inkColor, isLight: inkIsLight))
         .environment(\.windowColorScheme, scheme)
         .environment(\.colorScheme, inkIsLight ? .light : .dark)
         .animation(nil, value: inkIsLight)
@@ -278,6 +286,13 @@ struct SidebarVisibilityToggle: View {
         sidebar.isVisible ? "Hide Sidebar" : "Show Sidebar"
     }
 
+    private var barColor: NSColor {
+        LoomChrome.sampledColor(
+            ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+            scheme: scheme
+        )
+    }
+
     private var barIsLight: Bool {
         PageInk.isLight(
             LoomChrome.sampledColor(
@@ -310,6 +325,7 @@ struct SidebarVisibilityToggle: View {
         .frame(height: Theme.topBarHeight)
         .frame(maxHeight: .infinity, alignment: .top)
         .environment(\.chromeIsLight, barIsLight)
+        .environment(\.chromeWash, .of(barColor, isLight: barIsLight))
         .environment(\.colorScheme, barIsLight ? .light : .dark)
         .animation(nil, value: barIsLight)
     }

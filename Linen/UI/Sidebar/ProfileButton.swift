@@ -104,6 +104,7 @@ private struct ProfileSwitcherRow: View {
 
     @Environment(\.isEnabled) private var isEnabled
     @State private var hovering = false
+    @Environment(\.chromeWash) private var wash
 
     var body: some View {
         Button(action: action) {
@@ -136,7 +137,7 @@ private struct ProfileSwitcherRow: View {
             .frame(height: 38)
             .background {
                 RoundedRectangle(cornerRadius: ProfileSwitcher.rowRadius, style: .continuous)
-                    .fill(hovering ? Theme.Wash.selection : .clear)
+                    .fill(hovering ? wash.layer(0.12) : .clear)
             }
             .contentShape(Rectangle())
         }
@@ -154,6 +155,7 @@ private struct ProfileActionRow: View {
 
     @Environment(\.isEnabled) private var isEnabled
     @State private var hovering = false
+    @Environment(\.chromeWash) private var wash
 
     var body: some View {
         Button(action: action) {
@@ -173,7 +175,7 @@ private struct ProfileActionRow: View {
             .frame(height: 30)
             .background {
                 RoundedRectangle(cornerRadius: ProfileSwitcher.rowRadius, style: .continuous)
-                    .fill(hovering ? Theme.Wash.selection : .clear)
+                    .fill(hovering ? wash.layer(0.12) : .clear)
             }
             .contentShape(Rectangle())
         }

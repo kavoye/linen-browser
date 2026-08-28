@@ -223,6 +223,7 @@ struct BrowserView: View {
         }
         .background(Color.clear)
         .environment(\.chromeIsLight, scheme == .light)
+        .environment(\.chromeWash, .of(nil, isLight: scheme == .light))
         .animation(chromeMotion, value: sidebar.isVisible)
         .animation(nil, value: sidebar.isPeeking)
         .animation(chromeMotion, value: showsPanel)

@@ -53,6 +53,13 @@ struct ContentNavBar: View {
         )
     }
 
+    private var barColor: NSColor {
+        LoomChrome.sampledColor(
+            ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+            scheme: scheme
+        )
+    }
+
     private var barIsLight: Bool {
         PageInk.isLight(
             LoomChrome.sampledColor(
@@ -66,6 +73,7 @@ struct ContentNavBar: View {
     var body: some View {
         barContent
         .environment(\.chromeIsLight, barIsLight)
+        .environment(\.chromeWash, .of(barColor, isLight: barIsLight))
         .environment(\.windowColorScheme, scheme)
         .environment(\.colorScheme, barIsLight ? .light : .dark)
         .animation(nil, value: barIsLight)
@@ -213,7 +221,7 @@ enum PageInk {
         return againstBlack > againstWhite
     }
 
-    private static func luminance(of rgb: NSColor) -> CGFloat {
+    static func luminance(of rgb: NSColor) -> CGFloat {
         func linear(_ channel: CGFloat) -> CGFloat {
             channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
         }

@@ -382,6 +382,7 @@ private struct ExtensionOverflowRow: View {
 
     @State private var hovering = false
     @State private var pinHovering = false
+    @Environment(\.chromeWash) private var wash
 
     var body: some View {
         HStack(spacing: 9) {
@@ -430,7 +431,7 @@ private struct ExtensionOverflowRow: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
-                        pinHovering ? Theme.Wash.selection : Theme.Wash.hover,
+                        pinHovering ? wash.layer(0.12) : wash.layer(0.10),
                         in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
                     )
             }

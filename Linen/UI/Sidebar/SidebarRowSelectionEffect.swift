@@ -15,6 +15,7 @@ private struct SidebarRowSelectionEffect: ViewModifier {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.windowColorScheme) private var windowColorScheme
+    @Environment(\.chromeWash) private var wash
 
     private var fill: AnyShapeStyle {
         if isDropTarget {
@@ -27,7 +28,7 @@ private struct SidebarRowSelectionEffect: ViewModifier {
         if let hoverTint {
             return AnyShapeStyle(hoverTint.opacity(0.18))
         }
-        return ChromeInk.hoverStyle
+        return ChromeInk.hoverStyle(on: wash)
     }
 
     private var wearsGlass: Bool {

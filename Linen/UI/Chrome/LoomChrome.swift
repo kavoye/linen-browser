@@ -41,17 +41,15 @@ enum LoomChrome {
         let isLight = PageInk.isLight(color, scheme: scheme)
         let neutral = neutral(isLight: isLight)
 
-        // Site colour is structural, but never gets to set control contrast.
-        let floor: CGFloat = isLight ? 0.74 : 0.08
-        let ceiling: CGFloat = isLight ? 1 : 0.34
+        let floor: CGFloat = isLight ? 0.55 : 0.02
+        let ceiling: CGFloat = isLight ? 1 : 0.82
         let tint = NSColor(
             hue: color.hueComponent,
-            saturation: color.saturationComponent,
+            saturation: min(color.saturationComponent, 0.55),
             brightness: min(max(color.brightnessComponent, floor), ceiling),
             alpha: 1
         )
-        let fraction = isLight ? 0.44 : 0.38
-        return neutral.blended(withFraction: fraction, of: tint) ?? neutral
+        return neutral.blended(withFraction: 0.85, of: tint) ?? neutral
     }
 
     private static func neutral(isLight: Bool) -> NSColor {
@@ -203,11 +201,7 @@ private struct LoomTintedBackdrop: View {
                 blending: isFloating ? .withinWindow : .behindWindow
             )
 
-            Color(nsColor: sampled).opacity(
-                PageInk.isLight(sampled, scheme: scheme)
-                    ? (isFloating ? 0.30 : 0.44)
-                    : (isFloating ? 0.38 : 0.62)
-            )
+            Color(nsColor: sampled).opacity(isFloating ? 0.72 : 0.92)
 
             if !isFloating {
                 LinearGradient(

@@ -646,5 +646,6 @@ private struct LyricsGlyph: View {
             .frame(width: 22, height: 22)
             .hoverBackground(isActive: hovering)
             .environment(\.chromeIsLight, false)
+            .environment(\.chromeWash, .of(nil, isLight: false))
     }
 }

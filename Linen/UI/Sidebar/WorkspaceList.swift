@@ -454,6 +454,7 @@ struct SidebarDragChip: View {
     let browser: BrowserModel
 
     @Environment(\.sidebarStyle) private var sidebarStyle
+    @Environment(\.chromeWash) private var wash
 
     var body: some View {
         content
@@ -465,7 +466,7 @@ struct SidebarDragChip: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-                    .strokeBorder(Theme.Wash.hover, lineWidth: 0.5)
+                    .strokeBorder(wash.layer(0.10), lineWidth: 0.5)
             }
             .shadow(color: .black.opacity(0.3), radius: 11, y: 5)
     }

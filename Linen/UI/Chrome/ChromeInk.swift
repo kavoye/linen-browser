@@ -35,6 +35,10 @@ enum ChromeInk {
         AnyShapeStyle(Color.primary.opacity(0.10))
     }
 
+    static func hoverStyle(on wash: ChromeWash) -> AnyShapeStyle {
+        AnyShapeStyle(wash.layer(0.10))
+    }
+
     static func selectionTint(onLight: Bool) -> Color {
         wash(
             onLight: onLight,
@@ -49,8 +53,10 @@ private struct GlassSurface<S: Shape>: ViewModifier {
     let tint: Color?
     let shape: S
 
+    @Environment(\.chromeWash) private var wash
+
     private var hoverFill: AnyShapeStyle {
-        isActive ? ChromeInk.hoverStyle : AnyShapeStyle(.clear)
+        isActive ? ChromeInk.hoverStyle(on: wash) : AnyShapeStyle(.clear)
     }
 
     func body(content: Content) -> some View {
@@ -144,8 +150,10 @@ private struct HoverBackground<S: Shape>: ViewModifier {
     let tint: Color?
     let shape: S
 
+    @Environment(\.chromeWash) private var wash
+
     private var fill: AnyShapeStyle {
-        isActive ? ChromeInk.hoverStyle : AnyShapeStyle(.clear)
+        isActive ? ChromeInk.hoverStyle(on: wash) : AnyShapeStyle(.clear)
     }
 
     func body(content: Content) -> some View {
@@ -192,9 +200,11 @@ private struct SelectionBackground<S: Shape>: ViewModifier {
         return .identity
     }
 
+    @Environment(\.chromeWash) private var wash
+
     private var hoverFill: AnyShapeStyle {
         isHovering && !isSelected
-            ? ChromeInk.hoverStyle
+            ? ChromeInk.hoverStyle(on: wash)
             : AnyShapeStyle(.clear)
     }
 
@@ -308,7 +318,62 @@ struct CloseButton: View {
     }
 }
 
+struct ChromeWash: Equatable {
+    var isLight = false
+    var luminance: Double = 0.12
+
+    static let neutral = ChromeWash()
+
+    static func of(_ color: NSColor?, isLight: Bool) -> ChromeWash {
+        guard let srgb = color?.usingColorSpace(.sRGB) else {
+            return ChromeWash(isLight: isLight, luminance: isLight ? 0.87 : 0.011)
+        }
+        return ChromeWash(isLight: isLight, luminance: Double(PageInk.luminance(of: srgb)))
+    }
+
+    var ink: Color {
+        isLight ? .black : .white
+    }
+
+    func layer(_ base: Double) -> Color {
+        ink.opacity(min(Self.ceiling, max(base, alpha(forStep: base * stepPerUnit))))
+    }
+
+    private var stepPerUnit: Double {
+        isLight ? 40 : 50
+    }
+
+    private static let ceiling = 0.55
+
+    private func alpha(forStep step: Double) -> Double {
+        let ground = max(0, min(1, luminance))
+        let here = Self.lightness(ground)
+        let wanted = isLight ? here - step : here + step
+        let after = Self.luminance(ofLightness: wanted)
+        if isLight {
+            guard ground > 0.0001 else { return 0 }
+            return max(0, 1 - after / ground)
+        }
+        guard ground < 0.9999 else { return 0 }
+        return max(0, (after - ground) / (1 - ground))
+    }
+
+    private static func lightness(_ luminance: Double) -> Double {
+        let f = luminance > 0.008856
+            ? pow(luminance, 1.0 / 3.0)
+            : (7.787 * luminance + 16.0 / 116.0)
+        return 116 * f - 16
+    }
+
+    private static func luminance(ofLightness lightness: Double) -> Double {
+        let f = (max(0, min(100, lightness)) + 16) / 116
+        return f > 0.206893 ? pow(f, 3) : (f - 16.0 / 116.0) / 7.787
+    }
+}
+
 extension EnvironmentValues {
+    @Entry var chromeWash: ChromeWash = .neutral
+
     @Entry var chromeIsLight: Bool = false
     @Entry var chromeIconExtent: CGFloat = 16
 
