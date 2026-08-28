@@ -26,10 +26,9 @@ final class UpdateModel {
     var progress: Double = 0
     var isProgressKnown = false
     var isDismissed = false
-    var isShownInSettings = false
 
     var isBannerVisible: Bool {
-        guard !isDismissed, !isShownInSettings else { return false }
+        guard !isDismissed else { return false }
         return switch phase {
         case .idle:
             false

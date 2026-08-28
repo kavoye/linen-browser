@@ -186,8 +186,6 @@ struct UpdateRow: View {
         .padding(.horizontal, SettingsMetrics.rowPaddingH)
         .padding(.vertical, SettingsMetrics.rowPaddingV)
         .animation(Theme.Motion.settle, value: model.phase)
-        .onAppear { model.isShownInSettings = true }
-        .onDisappear { model.isShownInSettings = false }
     }
 
     private var statusTitle: LocalizedStringResource {
