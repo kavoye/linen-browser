@@ -183,6 +183,10 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         Task { await coordinator.windowDidClose() }
     }
 
+    func windowWillMiniaturize(_ notification: Notification) {
+        coordinator?.moveVideoToPictureInPicture()
+    }
+
     func windowWillEnterFullScreen(_ notification: Notification) {
         window?.toolbar = nil
     }
