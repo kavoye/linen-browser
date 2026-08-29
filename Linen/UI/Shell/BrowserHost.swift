@@ -49,6 +49,11 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         }
         if !wasActive {
             NSApp.activate()
+            if !NSApp.isActive {
+                NSRunningApplication.current.activate(
+                    options: [.activateAllWindows, .activateIgnoringOtherApps]
+                )
+            }
         }
         // `makeKeyAndOrderFront` leaves a window that is in the Dock in the Dock,
         // and a miniaturized window cannot be made key.
