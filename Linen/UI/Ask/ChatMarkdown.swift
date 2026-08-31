@@ -146,6 +146,7 @@ struct ChatMarkdownBlock: Identifiable {
         var paragraph: [String] = []
         var code: [String] = []
         var fenced = false
+        var followsBlank = false
         let join = joiningWrappedLines ? " " : "\n"
 
         func flushParagraph() {
@@ -155,7 +156,8 @@ struct ChatMarkdownBlock: Identifiable {
         }
 
         func continuesLastBullet(with line: String) -> Bool {
-            guard joiningWrappedLines, paragraph.isEmpty, let last = blocks.last else { return false }
+            guard joiningWrappedLines, !followsBlank, paragraph.isEmpty,
+                  let last = blocks.last else { return false }
             guard case .bullet = last.kind else { return false }
             blocks.removeLast()
             blocks.append(ChatMarkdownBlock(kind: last.kind, text: last.text + " " + line))
@@ -187,8 +189,10 @@ struct ChatMarkdownBlock: Identifiable {
 
             if trimmed.isEmpty {
                 flushParagraph()
+                followsBlank = true
                 continue
             }
+            defer { followsBlank = false }
 
             if trimmed == "---" || trimmed == "***" || trimmed == "___" {
                 flushParagraph()
