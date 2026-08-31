@@ -4,12 +4,6 @@
     "" : {
       "comment" : "Not shown to anyone: the empty branch of a conditional tooltip on the sidebar's New Tab and Settings rows, used when the sidebar is wide enough to show the row's own title. Leave the translation empty."
     },
-    "Close this bookmarked tab?" : {
-      "comment" : "Title of the alert shown when ⌘W would close a tab that carries a bookmark. The bookmark lives on the tab, so both go. Sentence case, question mark."
-    },
-    "Its bookmark is removed when the tab closes." : {
-      "comment" : "Body of the alert that asks before closing a bookmarked tab. It says what is lost and nothing else; the title above already asks the question. One sentence."
-    },
     "“%@” is playing" : {
       "comment" : "Tooltip on the speaker glyph of a collapsed folder in the sidebar, saying which tab inside it is making sound. %@ is the tab's title, written by the website — never translated. Keep the curly quotation marks around it."
     },
@@ -1142,6 +1136,9 @@
     "Close These Tabs" : {
       "comment" : "Destructive context-menu command on a sidebar row that holds two to four pages shown at once; it closes all of them. Title Case."
     },
+    "Close this bookmarked tab?" : {
+      "comment" : "Title of the alert shown when ⌘W would close a tab that carries a bookmark. The bookmark lives on the tab, so both go. Sentence case, question mark."
+    },
     "Close This Page" : {
       "comment" : "Destructive context-menu command on a page shown beside another; it closes that page's tab. Title Case. This distinguishes it from Close Other Page directly below it."
     },
@@ -1639,6 +1636,9 @@
     "Hold %@ again to speak." : {
       "comment" : "Status message shown right after the user allows the microphone. %@ is the push-to-talk shortcut drawn as text, e.g. “⌥Space”. Again means the first press only asked for permission, so the key has to be held once more."
     },
+    "Hold the pointer over a link to see its address at the bottom of the page." : {
+      "comment" : "Caption under the Show link preview toggle, also its entry in settings search. One sentence."
+    },
     "Hold while speaking. Release to send." : {
       "comment" : "Caption under Push to talk in Settings > Voice, and the caption of that same row in Settings search. Both sentences are imperatives about holding a key down."
     },
@@ -1821,6 +1821,9 @@
           }
         }
       }
+    },
+    "Its bookmark is removed when the tab closes." : {
+      "comment" : "Body of the alert that asks before closing a bookmarked tab. It says what is lost and nothing else; the title above already asks the question. One sentence."
     },
     "Its name and URL are removed. The server itself isn’t affected." : {
       "comment" : "Explanatory text in the confirmation sheet for removing a custom provider endpoint. “Its” refers to that endpoint; the machine it points at is untouched. Curly apostrophe."
@@ -2423,6 +2426,9 @@
     },
     "Open in Finder" : {
 
+    },
+    "Open in New Tab" : {
+      "comment" : "Context-menu command on a history row, on the history page and the start page; it opens that entry in a new tab and leaves the list on screen. Title Case."
     },
     "Open Link in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
@@ -3139,6 +3145,9 @@
     },
     "Show Last Tab" : {
       "comment" : "Hidden menu command under Window, shortcut ⌘9, which switches to the last tab in the row. Title Case and established platform terminology."
+    },
+    "Show link preview" : {
+      "comment" : "Toggle on the General settings page. The link preview is the capsule at the bottom of the page naming a hovered link's address. Title reads as a command; Sentence case after the first word."
     },
     "Show lyrics" : {
       "comment" : "Title of the switch on the General settings page that adds the lyrics button to the media player, and its settings-search title. Sentence case, as settings rows are."

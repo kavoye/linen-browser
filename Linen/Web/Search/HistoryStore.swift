@@ -174,12 +174,23 @@ final class HistoryStore {
     }
 
     func removeVisit(_ id: Int64) {
-        let url = write { db -> String? in
-            let url = try String.fetchOne(
-                db, sql: "SELECT url FROM historyVisit WHERE id = ?", arguments: [id]
+        removeVisits([id])
+    }
+
+    func removeVisits(_ ids: [Int64]) {
+        guard !ids.isEmpty else { return }
+        let marks = databaseQuestionMarks(count: ids.count)
+        let removed = write { db -> Bool in
+            let urls = try String.fetchAll(
+                db,
+                sql: "SELECT DISTINCT url FROM historyVisit WHERE id IN (\(marks))",
+                arguments: StatementArguments(ids)
             )
-            guard let url else { return nil }
-            try db.execute(sql: "DELETE FROM historyVisit WHERE id = ?", arguments: [id])
+            guard !urls.isEmpty else { return false }
+            try db.execute(
+                sql: "DELETE FROM historyVisit WHERE id IN (\(marks))",
+                arguments: StatementArguments(ids)
+            )
             try db.execute(
                 sql: """
                     UPDATE historyPage SET
@@ -194,14 +205,14 @@ final class HistoryStore {
                             ),
                             lastVisit
                         )
-                    WHERE url = ?
+                    WHERE url IN (\(databaseQuestionMarks(count: urls.count)))
                     """,
-                arguments: [url]
+                arguments: StatementArguments(urls)
             )
             try db.execute(sql: "DELETE FROM historyPage WHERE visitCount = 0")
-            return url
+            return true
         }
-        guard url != nil else { return }
+        guard removed == true else { return }
         reload()
     }
 

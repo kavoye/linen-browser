@@ -5,7 +5,8 @@ import Foundation
 
 extension URL {
     var displayHost: String? {
-        host()?.replacingOccurrences(of: "www.", with: "")
+        guard let host = host() else { return nil }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
     var displayAddress: String? {

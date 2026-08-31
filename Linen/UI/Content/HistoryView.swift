@@ -8,6 +8,7 @@ struct HistoryView: View {
     let browser: BrowserModel
 
     @State private var query = ""
+    @State private var hoveredURL: String?
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -28,7 +29,9 @@ struct HistoryView: View {
                                 HistoryRow(
                                     entry: row.entry,
                                     action: { open(row.entry.url) },
-                                    onRemove: { remove(row) }
+                                    onRemove: { remove(row) },
+                                    onOpenInNewTab: { openInNewTab(row.entry.url, activate: $0) },
+                                    onHoverChanged: { noteHover(of: row.entry.url, $0) }
                                 )
                             }
                         } header: {
@@ -37,6 +40,18 @@ struct HistoryView: View {
                     }
                 }
             }
+        }
+        .overlay(alignment: .bottomLeading) {
+            LinkPreview(address: hoveredURL, delay: .zero, obeysSetting: false)
+        }
+        .onChange(of: query) { hoveredURL = nil }
+    }
+
+    private func noteHover(of url: String, _ inside: Bool) {
+        if inside {
+            hoveredURL = url
+        } else if hoveredURL == url {
+            hoveredURL = nil
         }
     }
 
@@ -116,19 +131,19 @@ struct HistoryView: View {
     struct Row: Identifiable {
         let id: String
         let entry: HistoryStore.Entry
-        let visitID: Int64?
+        var visitIDs: [Int64]
     }
 
     private var matching: [Row] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else {
             return browser.history.visits.map {
-                Row(id: "visit-\($0.id)", entry: $0.entry, visitID: $0.id)
+                Row(id: "visit-\($0.id)", entry: $0.entry, visitIDs: [$0.id])
             }
         }
         return browser.history.search(matching: HistoryQuery.parse(needle), limit: 500)
             .sorted { $0.date > $1.date }
-            .map { Row(id: "page-\($0.url)", entry: $0, visitID: nil) }
+            .map { Row(id: "page-\($0.url)", entry: $0, visitIDs: []) }
     }
 
     struct Day: Identifiable {
@@ -138,25 +153,40 @@ struct HistoryView: View {
     }
 
     private var days: [Day] {
-        let calendar = Calendar.current
+        Self.days(collapsing: matching, calendar: .current)
+    }
+
+    static func days(collapsing rows: [Row], calendar: Calendar) -> [Day] {
         var groups: [Day] = []
         var current: [Row] = []
+        var indexByURL: [String: Int] = [:]
         var currentDay: Date?
 
-        for row in matching {
+        func closeDay() {
+            guard let currentDay else { return }
+            groups.append(Day(
+                id: currentDay,
+                title: title(for: currentDay, calendar: calendar),
+                rows: current
+            ))
+        }
+
+        for row in rows {
             let day = calendar.startOfDay(for: row.entry.date)
             if day != currentDay {
-                if let currentDay {
-                    groups.append(Day(id: currentDay, title: Self.title(for: currentDay, calendar: calendar), rows: current))
-                }
+                closeDay()
                 currentDay = day
                 current = []
+                indexByURL = [:]
             }
-            current.append(row)
+            if let index = indexByURL[row.entry.url] {
+                current[index].visitIDs.append(contentsOf: row.visitIDs)
+            } else {
+                indexByURL[row.entry.url] = current.count
+                current.append(row)
+            }
         }
-        if let currentDay {
-            groups.append(Day(id: currentDay, title: Self.title(for: currentDay, calendar: calendar), rows: current))
-        }
+        closeDay()
         return groups
     }
 
@@ -183,11 +213,19 @@ struct HistoryView: View {
         browser.ensureActiveTab().load(parsed)
     }
 
+    private func openInNewTab(_ url: String, activate: Bool) {
+        guard let parsed = URL(string: url) else { return }
+        browser.newTab(url: parsed, activate: activate, after: browser.activeTab)
+    }
+
     private func remove(_ row: Row) {
-        if let visitID = row.visitID {
-            browser.history.removeVisit(visitID)
-        } else {
+        if row.visitIDs.isEmpty {
             browser.history.remove(row.entry)
+        } else {
+            browser.history.removeVisits(row.visitIDs)
+        }
+        if hoveredURL == row.entry.url {
+            hoveredURL = nil
         }
     }
 }

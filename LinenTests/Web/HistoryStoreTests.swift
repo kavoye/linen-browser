@@ -353,6 +353,32 @@ struct HistoryStoreTests {
         #expect(entry.visitCount == 1)
     }
 
+    /// One collapsed history row can stand for several visits; removing it
+    /// removes all of them in one write.
+    @Test func removingSeveralVisitsAtOnceTakesThePageWithThem() throws {
+        let (store, _) = makeStore()
+
+        let first = try #require(store.record(url: "https://example.com/a", title: "First"))
+        let second = try #require(store.record(url: "https://example.com/a", title: "Second"))
+        store.record(url: "https://example.com/b", title: "Elsewhere")
+
+        store.removeVisits([first, second])
+
+        #expect(store.entries.map(\.url) == ["https://example.com/b"])
+        #expect(store.visits.count == 1)
+    }
+
+    @Test func removingNoVisitsChangesNothing() {
+        let (store, _) = makeStore()
+        store.record(url: "https://example.com/a", title: "Only")
+
+        store.removeVisits([])
+        store.removeVisits([9999])
+
+        #expect(store.entries.count == 1)
+        #expect(store.visits.count == 1)
+    }
+
     /// Removing the last visit takes the page with it - a page with no
     /// visits is a row nothing can reach.
     @Test func removingTheLastVisitRemovesThePage() throws {

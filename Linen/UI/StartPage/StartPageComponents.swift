@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import SwiftUI
 
 private struct StartPageSurface<S: Shape>: ViewModifier {
@@ -316,6 +317,8 @@ struct HistoryRow: View {
     let entry: HistoryStore.Entry
     let action: () -> Void
     var onRemove: (() -> Void)?
+    var onOpenInNewTab: ((_ activate: Bool) -> Void)?
+    var onHoverChanged: ((Bool) -> Void)?
 
     @State private var hovering = false
 
@@ -330,12 +333,13 @@ struct HistoryRow: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: open) {
             HStack(spacing: 10) {
                 RemoteSiteBadge(host: host, size: 15)
                 Text(verbatim: entry.title)
                     .font(Theme.Font.row)
                     .lineLimit(1)
+                    .layoutPriority(1)
                 Text(verbatim: host)
                     .font(Theme.Font.label)
                     .foregroundStyle(.tertiary)
@@ -357,6 +361,20 @@ struct HistoryRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(Text(verbatim: entry.url))
+        .onMiddleClick { onOpenInNewTab?(false) }
+        .contextMenu {
+            if let onOpenInNewTab {
+                Button("Open in New Tab") { onOpenInNewTab(false) }
+            }
+            Button("Copy Link") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(entry.url, forType: .string)
+            }
+            if let onRemove {
+                Button("Remove from History", role: .destructive, action: onRemove)
+            }
+        }
         .overlay(alignment: .trailing) {
             if let onRemove {
                 CloseButton(help: String(localized: "Remove from History"), action: onRemove)
@@ -364,7 +382,19 @@ struct HistoryRow: View {
                     .opacity(showsRemove ? 1 : 0)
             }
         }
-        .onHover { hovering = $0 }
+        .onHover {
+            hovering = $0
+            onHoverChanged?($0)
+        }
+    }
+
+    private func open() {
+        let flags = NSApp.currentEvent?.modifierFlags ?? []
+        if let onOpenInNewTab, flags.contains(.command) {
+            onOpenInNewTab(flags.contains(.shift))
+        } else {
+            action()
+        }
     }
 }
 

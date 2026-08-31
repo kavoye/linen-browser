@@ -141,7 +141,8 @@ private struct StartPageHistorySection: View {
                     HistoryRow(
                         entry: entry,
                         action: { open(entry.url) },
-                        onRemove: { browser.history.remove(entry) }
+                        onRemove: { browser.history.remove(entry) },
+                        onOpenInNewTab: { openInNewTab(entry.url, activate: $0) }
                     )
                 }
 
@@ -156,6 +157,11 @@ private struct StartPageHistorySection: View {
     private func open(_ address: String) {
         guard let url = URL(string: address) else { return }
         browser.ensureActiveTab().load(url)
+    }
+
+    private func openInNewTab(_ address: String, activate: Bool) {
+        guard let url = URL(string: address) else { return }
+        browser.newTab(url: url, activate: activate, after: browser.activeTab)
     }
 }
 
