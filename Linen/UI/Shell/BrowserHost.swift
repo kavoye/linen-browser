@@ -51,7 +51,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
             NSApp.activate()
             if !NSApp.isActive {
                 NSRunningApplication.current.activate(
-                    options: [.activateAllWindows, .activateIgnoringOtherApps]
+                    options: [.activateAllWindows]
                 )
             }
         }
