@@ -42,6 +42,7 @@ final class BrowserModel {
             refreshTopBarCoverage()
             if previous.map({ !isVisibleInSplit($0) }) ?? false {
                 previous?.refreshPreview()
+                previous?.noteHoveredLink(nil)
             }
             activeTab?.realizeDeferredSession()
             for id in activeSplit?.tabs ?? [] {

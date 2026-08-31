@@ -82,6 +82,16 @@ struct GeneralSettings: View {
             Footnote("If no panel appeared, set it in System Settings under Desktop & Dock.")
         }
 
+        SettingsSection(title: "Browsing", symbol: "cursorarrow.rays") {
+            DetailRow(
+                title: "Show link preview",
+                caption: "Hold the pointer over a link to see its address at the bottom of the page."
+            ) {
+                SettingsToggle($settings.showsLinkPreview)
+            }
+            .settingsAnchor("general.linkPreview")
+        }
+
         SettingsSection(title: "Media", symbol: "play.rectangle", footnote: mediaFootnote) {
             DetailRow(
                 title: "Show media player",

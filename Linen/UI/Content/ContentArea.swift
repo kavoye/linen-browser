@@ -189,6 +189,9 @@ private struct ActiveWebSurface: View {
                         .transition(.identity)
                 }
             }
+            .overlay(alignment: .bottomLeading) {
+                LinkPreview(address: tab.hoveredLink?.absoluteString)
+            }
     }
 }
 

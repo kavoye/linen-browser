@@ -132,6 +132,21 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
 
     /// `WKUIDelegatePrivate`. WebKit tells the app itself, so these arrive even
     /// when the page cannot: spell them exactly or they never fire.
+    @objc(_webView:mouseDidMoveOverElement:withFlags:userInfo:)
+    func webView(
+        _ webView: WKWebView,
+        mouseDidMoveOverElement hitTestResult: NSObject?,
+        withFlags flags: NSEvent.ModifierFlags,
+        userInfo: Any?
+    ) {
+        var url: URL?
+        if let hitTestResult,
+           hitTestResult.responds(to: NSSelectorFromString("absoluteLinkURL")) {
+            url = hitTestResult.value(forKey: "absoluteLinkURL") as? URL
+        }
+        tab?.noteHoveredLink(url)
+    }
+
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
     func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isOut: Bool) {
         tab?.onPictureInPictureChanged?(isOut)
@@ -312,6 +327,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             tab?.provisionalNavigation = nil
         }
         tab?.noteDocumentChanged()
+        tab?.noteHoveredLink(nil)
         tab?.clearPageActivity()
         if let tab, tab.isShowingRealPage, !tab.hasPresentedContent {
             tab.awaitFirstPresentation()

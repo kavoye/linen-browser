@@ -48,6 +48,13 @@ final class BrowserTab: Identifiable {
         urlString.isEmpty && !isLoading
     }
 
+    private(set) var hoveredLink: URL?
+
+    func noteHoveredLink(_ url: URL?) {
+        guard hoveredLink != url else { return }
+        hoveredLink = url
+    }
+
     private var canGoBackInWeb = false
     private var canGoForwardInWeb = false
 

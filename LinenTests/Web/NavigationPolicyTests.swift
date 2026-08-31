@@ -239,6 +239,67 @@ struct NavigationPolicyTests {
         #expect(policy == .allow)
     }
 
+    // MARK: - Hovered links
+
+    private final class StubHit: NSObject {
+        @objc var absoluteLinkURL: URL?
+
+        init(_ url: URL?) {
+            absoluteLinkURL = url
+        }
+    }
+
+    @Test func hoveringALinkNamesItsDestination() {
+        let (tab, delegate) = subject()
+
+        delegate.webView(
+            tab.webView,
+            mouseDidMoveOverElement: StubHit(URL(string: "https://example.com/target")),
+            withFlags: [],
+            userInfo: nil
+        )
+
+        #expect(tab.hoveredLink?.absoluteString == "https://example.com/target")
+    }
+
+    @Test func movingOffTheLinkClearsTheDestination() {
+        let (tab, delegate) = subject()
+        delegate.webView(
+            tab.webView,
+            mouseDidMoveOverElement: StubHit(URL(string: "https://example.com/target")),
+            withFlags: [],
+            userInfo: nil
+        )
+
+        delegate.webView(tab.webView, mouseDidMoveOverElement: StubHit(nil), withFlags: [], userInfo: nil)
+
+        #expect(tab.hoveredLink == nil)
+    }
+
+    /// The hit test result is a private WebKit class read by key; anything
+    /// that does not answer for the key means no link, never a crash.
+    @Test func aResultWithoutTheLinkKeyReadsAsNoLink() {
+        let (tab, delegate) = subject()
+
+        delegate.webView(tab.webView, mouseDidMoveOverElement: NSObject(), withFlags: [], userInfo: nil)
+
+        #expect(tab.hoveredLink == nil)
+    }
+
+    @Test func aNavigationDropsTheHoveredLink() {
+        let (tab, delegate) = subject()
+        delegate.webView(
+            tab.webView,
+            mouseDidMoveOverElement: StubHit(URL(string: "https://example.com/target")),
+            withFlags: [],
+            userInfo: nil
+        )
+
+        delegate.webView(tab.webView, didCommit: nil)
+
+        #expect(tab.hoveredLink == nil)
+    }
+
     // MARK: - How the visit is recorded
 
     @Test func aClickedLinkIsRecordedAsALink() {

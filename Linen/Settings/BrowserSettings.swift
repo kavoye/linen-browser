@@ -22,6 +22,7 @@ final class BrowserSettings {
         static let pageZoom = "content.defaultZoom"
         static let newTab = "startup.newTab"
         static let sleepsInactiveTabs = "tabs.sleep"
+        static let linkPreview = "content.linkPreview"
         static let homepage = "startup.homepage"
         static let searchEngine = "search.engine"
         static let customSearchName = "search.custom.name"
@@ -174,6 +175,13 @@ final class BrowserSettings {
         didSet {
             guard sleepsInactiveTabs != oldValue else { return }
             write(sleepsInactiveTabs, forKey: Key.sleepsInactiveTabs)
+        }
+    }
+
+    var showsLinkPreview: Bool {
+        didSet {
+            guard showsLinkPreview != oldValue else { return }
+            write(showsLinkPreview, forKey: Key.linkPreview)
         }
     }
 
@@ -497,6 +505,7 @@ final class BrowserSettings {
         showsLyrics = object(Key.lyrics) as? Bool ?? true
         refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? false
         sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false
+        showsLinkPreview = object(Key.linkPreview) as? Bool ?? true
         automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
         showsVideoInPlayer = object(Key.videoInPlayer) as? Bool ?? false
         updateChannel = string(Key.updateChannel)

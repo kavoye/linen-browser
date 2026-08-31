@@ -351,6 +351,11 @@ private struct WebPane: View {
                 }
             }
             .clipped()
+            .overlay(alignment: .bottomLeading) {
+                if !showsStartPage {
+                    LinkPreview(address: tab.hoveredLink?.absoluteString)
+                }
+            }
     }
 }
 
