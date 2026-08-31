@@ -105,9 +105,14 @@ extension BrowserModel {
             return existing
         }
 
-        let tab = ensureActiveTab()
-        activeTabID = tab.id
-        tab.load(page.url)
+        let tab: BrowserTab
+        if let active = activeTab, SystemPages.showsStartFace(active) {
+            tab = active
+            activeTabID = tab.id
+            tab.load(page.url)
+        } else {
+            tab = newTab(url: page.url, after: activeTab)
+        }
         tab.title = page.title
         tab.urlString = page.url.absoluteString
         scheduleSave()
@@ -118,6 +123,14 @@ extension BrowserModel {
         guard let tab = tabs.first(where: { $0.internalPage == page }) else { return }
         if tab.canGoBack {
             tab.goBack()
+            return
+        }
+        if tabs.count > 1 {
+            if activeTabID == tab.id,
+               let previous = recentlyActive.first(where: { $0 != tab.id && tabsByID[$0] != nil }) {
+                activeTabID = previous
+            }
+            close(tab)
             return
         }
         tab.load(SystemPages.start)

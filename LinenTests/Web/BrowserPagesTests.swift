@@ -229,7 +229,7 @@ struct BrowserPagesTests {
 
     // MARK: - Settings
 
-    @Test func settingsOpensInTheTabYouAreOn() {
+    @Test func settingsOpensInATabOfItsOwn() {
         let model = makeModel()
         let reading = model.newTab(url: URL(string: "https://example.com/article")!)
         model.activate(reading)
@@ -239,7 +239,9 @@ struct BrowserPagesTests {
         #expect(shown.internalPage == .settings)
         #expect(shown.title == "Settings")
         #expect(model.activeTab === shown)
-        #expect(shown === reading, "a page of the browser's own is a navigation, not a tab")
+        #expect(shown !== reading, "the page being read is left alone")
+        #expect(reading.internalPage == nil)
+        #expect(model.tabs.count == 2)
     }
 
     @Test func settingsReusesItsOwnPageRatherThanOpeningAnother() {
@@ -253,9 +255,9 @@ struct BrowserPagesTests {
         #expect(model.tabs.count { $0.internalPage == .settings } == 1)
     }
 
-    /// Leaving never costs a tab: the tab walks back, or goes home when there
-    /// is nothing behind it.
-    @Test func leavingSettingsKeepsTheTab() {
+    /// A page that got a tab of its own gives it back on leaving, and the tab
+    /// that was being read comes to the front again.
+    @Test func leavingSettingsClosesItsTabAndReturns() {
         let model = makeModel()
         let reading = model.newTab(url: URL(string: "https://example.com/article")!)
         model.activate(reading)
@@ -280,18 +282,19 @@ struct BrowserPagesTests {
         #expect(shown.internalPage == .history)
     }
 
-    /// Every one of the browser's own pages arrives the same way: a
-    /// navigation in the tab you are on, with what you were reading behind it.
-    @Test func aPageOpensInTheTabYouAreOn() {
+    /// Every one of the browser's own pages arrives the same way: over a web
+    /// page it gets a tab of its own, and what was being read stays put.
+    @Test func aPageOverAWebPageOpensItsOwnTab() {
         let model = makeModel()
         let reading = model.newTab(url: URL(string: "https://example.com/article")!)
         model.activate(reading)
 
         let history = model.showHistory()
 
-        #expect(history === reading, "no tab of its own")
-        #expect(model.tabs.count == 1)
+        #expect(history !== reading, "the page being read is left alone")
+        #expect(model.tabs.count == 2)
         #expect(model.activeTab?.internalPage == .history)
+        #expect(reading.internalPage == nil)
     }
 
     @Test func aPageOpensTheSameWayFromTheStartPage() {
@@ -312,7 +315,7 @@ struct BrowserPagesTests {
         let second = model.showHistory()
 
         #expect(first === second)
-        #expect(model.tabs.count == 1)
+        #expect(model.tabs.count { $0.internalPage == .history } == 1)
     }
 
     /// A page already open is gone back to rather than loaded again, however
@@ -446,10 +449,10 @@ struct BrowserPagesTests {
         #expect(await waitUntil { tab.isShowingStartPage })
     }
 
-    /// The complaint this rule was written for: the page used to arrive over
-    /// the Start Page one way and as a tab's very first entry the other, so
-    /// the toolbar's Back arrow was alive in one and dead in the other.
-    @Test(.boundedWebViews) func aPageAlwaysHasWhatItOpenedOverBehindIt() async throws {
+    /// Over the Start Page the page walks in, so the Start Page is behind it.
+    /// Over a web page it starts a tab of its own, so it has nothing behind
+    /// it, and leaving closes that tab and returns to the page being read.
+    @Test(.boundedWebViews) func whatIsBehindThePageDependsOnWhereItOpened() async throws {
         let server = try await Self.site()
 
         let fromHome = makeModel()
@@ -464,9 +467,14 @@ struct BrowserPagesTests {
         let reading = fromPage.newTab(url: try server.url("/one"))
         fromPage.activate(reading)
         #expect(await settled(reading, at: try server.url("/one")))
-        _ = fromPage.showHistory()
-        #expect(await settled(reading, at: BrowserTab.InternalPage.history.url))
-        #expect(reading.canGoBack, "the page being read is behind it")
+        let history = fromPage.showHistory()
+        #expect(history !== reading)
+        #expect(await settled(history, at: BrowserTab.InternalPage.history.url))
+        #expect(!history.canGoBack, "a fresh tab has nothing behind it")
+
+        fromPage.dismissInternalPage(.history)
+        #expect(fromPage.tabs.count == 1)
+        #expect(fromPage.activeTab === reading)
     }
 
     /// A page that was the first thing a tab ever showed has nothing to walk
@@ -487,9 +495,9 @@ struct BrowserPagesTests {
         #expect(tab.internalPage == nil)
     }
 
-    /// One page at a time in a tab, like any other address: asking for the
-    /// next one walks to it, and Back walks back to the one before.
-    @Test(.boundedWebViews) func onePageWalksToTheNext() async {
+    /// Only a blank or start-page tab is taken over. A tab already showing
+    /// one of the browser's pages keeps it; the next page gets its own tab.
+    @Test(.boundedWebViews) func aSecondPageOpensItsOwnTabToo() async {
         let model = makeModel()
         let tab = model.ensureActiveTab()
         _ = tab.webView
@@ -498,15 +506,16 @@ struct BrowserPagesTests {
         let history = model.showHistory()
         #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
         let downloads = model.showDownloads()
-        #expect(await settled(tab, at: BrowserTab.InternalPage.downloads.url))
 
-        #expect(history === downloads, "both are the same tab")
-        #expect(model.tabs.count == 1)
+        #expect(history !== downloads, "History keeps its tab")
+        #expect(model.tabs.count == 2)
+        #expect(model.activeTab === downloads)
+        #expect(history.internalPage == .history)
 
         model.dismissInternalPage(.downloads)
 
-        #expect(await waitUntil { tab.internalPage == .history }, "Back returns to the page before")
         #expect(model.tabs.count == 1)
+        #expect(model.activeTab === history)
     }
 
     @Test func leavingAPageThatBorrowedABlankTabReturnsItBlank() async {
