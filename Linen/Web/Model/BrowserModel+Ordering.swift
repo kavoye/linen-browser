@@ -20,16 +20,20 @@ extension BrowserModel {
         scheduleSave()
     }
 
-    func lastKeptTabAtTop() -> BrowserTab? {
-        var last: BrowserTab?
+    func keptRunAtTop() -> [BrowserTab] {
+        var run: [BrowserTab] = []
         for item in sidebarTree.rows(in: nil) {
             guard case .tab(let id) = item,
                   let tab = tabs.first(where: { $0.id == id }),
                   tab.pinnedURL != nil
             else { break }
-            last = tab
+            run.append(tab)
         }
-        return last
+        return run
+    }
+
+    func lastKeptTabAtTop() -> BrowserTab? {
+        keptRunAtTop().last
     }
 
     func returnToPin(_ tab: BrowserTab) {
