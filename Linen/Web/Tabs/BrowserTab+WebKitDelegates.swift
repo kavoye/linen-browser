@@ -34,7 +34,8 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         }
         if let tab, let onOpenInNewTab = tab.onOpenInNewTab,
            navigationAction.navigationType == .linkActivated,
-           navigationAction.modifierFlags.contains(.command),
+           navigationAction.modifierFlags.contains(.command)
+               || navigationAction.buttonNumber == Self.middleButton,
            navigationAction.targetFrame?.isMainFrame != false,
            let url = navigationAction.request.url {
             decisionHandler(.cancel)
@@ -68,6 +69,9 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         decisionHandler(.cancel)
         tab.onNavigationOutsideExtension?(url)
     }
+
+    /// WebKit numbers the middle button 4, not NSEvent's 2.
+    private static let middleButton = 4
 
     private static func reaches(
         _ url: URL,

@@ -15,6 +15,7 @@ struct NavigationPolicyTests {
         var stubbedRequest = URLRequest(url: URL(string: "https://example.com/")!)
         var stubbedType: WKNavigationType = .other
         var stubbedModifiers: NSEvent.ModifierFlags = []
+        var stubbedButton = 0
         var stubbedDownload = false
 
         override var request: URLRequest {
@@ -27,6 +28,10 @@ struct NavigationPolicyTests {
 
         override var modifierFlags: NSEvent.ModifierFlags {
             stubbedModifiers
+        }
+
+        override var buttonNumber: Int {
+            stubbedButton
         }
 
         override var shouldPerformDownload: Bool {
@@ -66,14 +71,19 @@ struct NavigationPolicyTests {
     private func action(
         _ address: String,
         type: WKNavigationType = .other,
-        modifiers: NSEvent.ModifierFlags = []
+        modifiers: NSEvent.ModifierFlags = [],
+        button: Int = 0
     ) -> StubAction {
         let stub = StubAction()
         stub.stubbedRequest = URLRequest(url: URL(string: address)!)
         stub.stubbedType = type
         stub.stubbedModifiers = modifiers
+        stub.stubbedButton = button
         return stub
     }
+
+    /// WebKit's number for the middle button, which is not NSEvent's 2.
+    private static let middleButton = 4
 
     // MARK: - Ordinary navigation
 
@@ -162,6 +172,48 @@ struct NavigationPolicyTests {
         _ = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.command, .shift]
         ))
+    }
+
+    @Test func middleClickingALinkOpensATabInTheBackground() {
+        let (tab, delegate) = subject()
+        var opened: (URL, Bool)?
+        tab.onOpenInNewTab = { opened = ($0, $1) }
+
+        let policy = decide(delegate, tab, action(
+            "https://example.com/target", type: .linkActivated, button: Self.middleButton
+        ))
+
+        #expect(policy == .cancel)
+        #expect(opened?.0.absoluteString == "https://example.com/target")
+        #expect(opened?.1 == false)
+    }
+
+    @Test func shiftMiddleClickingAsksForTheTabToBeActivated() {
+        let (tab, delegate) = subject()
+        var opened: (URL, Bool)?
+        tab.onOpenInNewTab = { opened = ($0, $1) }
+        tab.onOpenInSplit = { _ in Issue.record("shift with the middle button must not split") }
+
+        let policy = decide(delegate, tab, action(
+            "https://example.com/target",
+            type: .linkActivated,
+            modifiers: [.shift],
+            button: Self.middleButton
+        ))
+
+        #expect(policy == .cancel)
+        #expect(opened?.1 == true)
+    }
+
+    @Test func theMiddleButtonIsIgnoredWhenThePageNavigatesItself() {
+        let (tab, delegate) = subject()
+        tab.onOpenInNewTab = { _, _ in Issue.record("a redirect must not open a tab") }
+
+        let policy = decide(delegate, tab, action(
+            "https://example.com/target", type: .other, button: Self.middleButton
+        ))
+
+        #expect(policy == .allow)
     }
 
     @Test func modifiersAreIgnoredWhenThePageNavigatesItself() {
