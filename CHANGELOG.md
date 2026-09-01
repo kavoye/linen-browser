@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.5.0
+
+### New
+
+- Extensions install from Firefox Add-ons as well as the Chrome Web Store.
+- Extensions can now exchange messages with a companion app on your Mac.
+- Middle-click a link to open it in a new tab.
+- Point at a link to see its address at the foot of the page.
+- Settings, History and Downloads open in a tab of their own.
+- Turn Automatic Picture in Picture off for one website, in **Settings >
+  Websites** or in Website Settings in the toolbar.
+- Minimizing the window sends a playing video to Picture in Picture, as
+  leaving its tab already did.
+
+### Improved
+
+- Address bar suggestions favour the pages you visit most and most recently.
+- History gathers a day’s repeat visits to one page into a single entry.
+- Open a history entry in a new tab with a middle-click or a ⌘-click.
+- Picture in Picture now works on websites that used to refuse it.
+- Tracker blocking says when a page refers to no known trackers, instead of
+  showing an empty list.
+- The Liquid Glass window style is now called Transparent.
+- Website Controls in the toolbar is now Website Settings.
+
+### Fixed
+
+- The toolbar took the colour of the page you were opening before that page
+  appeared, so it changed colour twice.
+- A link to a tracker domain did not open. Only the requests a page makes in
+  the background are blocked.
+- Turning a Safari extension off in the toolbar menu took it off the list
+  instead of disabling it.
+- A tab stayed marked as muted after the page unmuted itself.
+- Linen did not come forward when you sent the floating video back to its tab.
+- A new tab opened from a bookmarked tab landed among the bookmarked ones,
+  instead of below them.
+- In the release notes, the line after a list ran into the last bullet above
+  it.
+
 ## 0.4.2
 
 ### Improved
