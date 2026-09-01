@@ -227,7 +227,7 @@ enum Omnibox {
             $0.title.lowercased().contains(needle) || $0.urlString.lowercased().contains(needle)
         }
         let items: [OmniboxItem] = mostRelevant(matching, for: query, limit: limit) {
-            ($0.title, URL(string: $0.urlString)?.displayAddress ?? $0.urlString)
+            ($0.title, URL(string: $0.urlString)?.displayAddress ?? $0.urlString, 0)
         }
         .map { tab in
             let host = URL(string: tab.urlString)?.displayHost
@@ -278,16 +278,38 @@ enum Omnibox {
         return score - min(address.count / 4, 40)
     }
 
+    static func frecency(visitCount: Int, lastVisit: Date, now: Date = Date()) -> Int {
+        guard visitCount > 0 else { return 0 }
+        let days = max(0, now.timeIntervalSince(lastVisit)) / 86_400
+        let decay: Double = switch days {
+        case ..<4:
+            1
+        case ..<14:
+            0.7
+        case ..<31:
+            0.5
+        case ..<90:
+            0.3
+        default:
+            0.1
+        }
+        return Int(log2(Double(visitCount) + 1) * 60 * decay)
+    }
+
     private static func mostRelevant<T>(
         _ candidates: [T],
         for query: String,
         limit: Int,
-        fields: (T) -> (title: String, address: String)
+        fields: (T) -> (title: String, address: String, bonus: Int)
     ) -> [T] {
         candidates.enumerated()
             .map { entry -> (index: Int, item: T, score: Int) in
-                let (title, address) = fields(entry.element)
-                return (entry.offset, entry.element, relevance(title: title, address: address, for: query))
+                let (title, address, bonus) = fields(entry.element)
+                return (
+                    entry.offset,
+                    entry.element,
+                    relevance(title: title, address: address, for: query) + bonus
+                )
             }
             .sorted { ($0.score, -$0.index) > ($1.score, -$1.index) }
             .prefix(limit)
@@ -324,7 +346,11 @@ enum Omnibox {
 
         let candidates = store.search(query, limit: max(limit * 10, 30))
         let items: [OmniboxItem] = mostRelevant(candidates, for: query, limit: limit) { entry in
-            (entry.title, URL(string: entry.url)?.displayAddress ?? entry.url)
+            (
+                entry.title,
+                URL(string: entry.url)?.displayAddress ?? entry.url,
+                frecency(visitCount: entry.visitCount, lastVisit: entry.lastVisit)
+            )
         }
         .compactMap { entry in
             guard let url = URL(string: entry.url) else { return nil }

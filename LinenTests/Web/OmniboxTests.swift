@@ -134,6 +134,37 @@ struct OmniboxTests {
         #expect(starts > contains)
     }
 
+    // MARK: - Frecency
+
+    @Test func aDailyPageOutranksAStrongerMatchVisitedOnce() throws {
+        let store = HistoryStore(database: .temporary())
+        store.record(url: "https://example.com/rare", title: "Weekly report")
+        for _ in 0..<100 {
+            store.record(url: "https://example.com/daily", title: "My weekly report")
+        }
+
+        let section = try #require(Omnibox.historySection(
+            query: "wee", store: store, limit: 2
+        ) { _ in })
+        #expect(section.items.first?.detail == "example.com/daily")
+    }
+
+    @Test func frecencyGrowsSlowlyAndDecaysWithAge() {
+        let now = Date()
+        let daily = Omnibox.frecency(visitCount: 100, lastVisit: now, now: now)
+        let once = Omnibox.frecency(visitCount: 1, lastVisit: now, now: now)
+        #expect(daily > once)
+        #expect(Omnibox.frecency(visitCount: 10_000, lastVisit: now, now: now) < 1000)
+
+        let stale = Omnibox.frecency(
+            visitCount: 100,
+            lastVisit: now.addingTimeInterval(-120 * 86_400),
+            now: now
+        )
+        #expect(stale < daily / 2)
+        #expect(Omnibox.frecency(visitCount: 0, lastVisit: now, now: now) == 0)
+    }
+
     // MARK: - Tabs already open
 
     @Test func anOpenTabIsOfferedAsSomewhereToSwitchTo() throws {
