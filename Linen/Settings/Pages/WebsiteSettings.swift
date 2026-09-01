@@ -293,6 +293,21 @@ private struct SiteDetailPage: View {
         ))
     }
 
+    private var automaticPictureCaption: AttributedString {
+        SettingsIndex.caption(
+            "Automatic Picture in Picture is off, so video stays in its tab everywhere.",
+            naming: "Automatic Picture in Picture",
+            at: "general.automaticPiP"
+        )
+    }
+
+    private var automaticPictureToggle: some View {
+        SettingsToggle(Binding(
+            get: { permissions.allowsAutomaticPicture(origin) },
+            set: { permissions.setAllowsAutomaticPicture($0, for: origin) }
+        ))
+    }
+
     private var trackerToggle: some View {
         SettingsToggle(Binding(
             get: { !blocker.isExempt(host) },
@@ -363,6 +378,26 @@ private struct SiteDetailPage: View {
 
             RowSeparator()
 
+            if settings.automaticPictureInPicture {
+                DetailRow(
+                    title: "Automatic Picture in Picture",
+                    caption: "Turn this off to keep this website’s video in its tab."
+                ) {
+                    automaticPictureToggle
+                }
+            } else {
+                DetailRow(
+                    title: "Automatic Picture in Picture",
+                    attributedCaption: automaticPictureCaption,
+                    isMuted: true
+                ) {
+                    automaticPictureToggle
+                        .disabled(true)
+                }
+            }
+
+            RowSeparator()
+
             if settings.blocksTrackers {
                 DetailRow(
                     title: "Block known trackers",
@@ -418,6 +453,7 @@ private struct SiteDetailPage: View {
         }
         permissions.setAssistantAccess(.ask, for: origin)
         permissions.setKeepsActive(false, for: origin)
+        permissions.setAllowsAutomaticPicture(true, for: origin)
         blocker.setExempt(false, for: host)
     }
 }

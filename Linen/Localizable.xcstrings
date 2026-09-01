@@ -793,10 +793,13 @@
       "comment" : "Theme choice that automatically follows the Mac’s Light or Dark appearance. A short label beneath a visual preview."
     },
     "Automatic Picture in Picture" : {
-      "comment" : "Title of the row on the General settings page that makes video float in its own window on its own, and the title of that same row in Settings search. “Picture in Picture” is the macOS name of that window — use the system’s own wording. Title Case."
+      "comment" : "Title of the row that makes video float in its own window on its own: on the General settings page, in Settings search, on a single website’s page under Websites, and in the Site Settings menu in the toolbar. “Picture in Picture” is the macOS name of that window — use the system’s own wording. Title Case."
     },
     "Automatic Picture in Picture is off while “Show video in the player” is on in Experiments." : {
       "comment" : "Footnote under the Media card on the General settings page, shown only while the Experiments row is on and the Automatic Picture in Picture switch above is dimmed. It says why that switch cannot be used. The quoted phrase is the exact title of the Experiments row — translate it identically there and here, and keep the curly quotation marks. Full sentence."
+    },
+    "Automatic Picture in Picture is off, so video stays in its tab everywhere." : {
+      "comment" : "Caption on the per-website Automatic Picture in Picture row, shown when the setting is off for every website. “Automatic Picture in Picture” is a link to that row on the General page — spell it exactly as that title."
     },
     "Autoplay" : {
       "comment" : "Title of the row on the Websites settings page controlling whether video and sound may start on their own, and the title of that same row in Settings search. A noun; the browser term."
@@ -2231,6 +2234,9 @@
     },
     "No app can open this link." : {
       "comment" : "Heading of the alert shown when nothing installed on the Mac handles the kind of link that was clicked."
+    },
+    "no automatic Picture in Picture" : {
+      "comment" : "Fragment in the one-line summary under a website, meaning its video does not float into its own window on its own. Lower case: joined with other fragments. “Picture in Picture” is the macOS name of that window — use the system’s own wording."
     },
     "No bookmarks in this file." : {
       "comment" : "Caption under the Bookmarks row when the chosen file was read but held no web pages."
@@ -3717,6 +3723,9 @@
     },
     "Turn this off if the website breaks." : {
       "comment" : "Caption under the Block known trackers switch on one website's page, saying what to do when tracker blocking stops a website working. Imperative."
+    },
+    "Turn this off to keep this website’s video in its tab." : {
+      "comment" : "Caption on the per-website Automatic Picture in Picture row. “this website” is the one named at the top of the page."
     },
     "Type" : {
       "comment" : "Tool name in assistant settings: typing into fields on a web page."

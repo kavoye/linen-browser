@@ -73,6 +73,20 @@ struct SitePermissionsStoreTests {
         #expect(store.keptActiveOrigins == ["https://example.com:8443"])
     }
 
+    @Test func automaticPictureIsAllowedUntilAWebsiteOptsOut() {
+        let store = temporaryStore()
+        #expect(store.allowsAutomaticPicture("https://example.com"))
+
+        store.setAllowsAutomaticPicture(false, for: "https://example.com")
+        #expect(!store.allowsAutomaticPicture("https://example.com"))
+        #expect(store.allowsAutomaticPicture("http://example.com"))
+        #expect(store.noAutomaticPictureOrigins == ["https://example.com"])
+
+        store.setAllowsAutomaticPicture(true, for: "https://example.com")
+        #expect(store.allowsAutomaticPicture("https://example.com"))
+        #expect(store.noAutomaticPictureOrigins.isEmpty)
+    }
+
     @Test func hostsCompareCaseInsensitivelyAndIgnoreTheRootDot() {
         let store = temporaryStore()
         store.set(.allow, for: "HTTPS://Example.COM.", .notifications)
@@ -148,6 +162,18 @@ struct SitePermissionsStoreTests {
         #expect(reader.keptActiveOrigins == ["https://example.com"])
     }
 
+    @Test func noAutomaticPictureSurvivesRelaunch() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SitePermissionsAutomaticPicture-\(UUID().uuidString).json")
+        let writer = SitePermissions(storageURL: url)
+        writer.setAllowsAutomaticPicture(false, for: "HTTPS://Example.COM.")
+        await writer.waitForPendingSave()
+
+        let reader = SitePermissions(storageURL: url)
+        #expect(!reader.allowsAutomaticPicture("https://example.com"))
+        #expect(reader.noAutomaticPictureOrigins == ["https://example.com"])
+    }
+
     @Test func onlyATrustworthyOriginCanHoldAPermission() {
         #expect(SitePermissions.isPotentiallyTrustworthy(URL(string: "https://example.com")))
         #expect(SitePermissions.isPotentiallyTrustworthy(URL(string: "http://localhost:3000")))
@@ -187,12 +213,14 @@ struct SitePermissionsStoreTests {
         store.set(.allow, for: "https://example.com", .camera)
         store.setAssistantAccess(.control, for: "https://example.com")
         store.setKeepsActive(true, for: "https://example.com")
+        store.setAllowsAutomaticPicture(false, for: "https://example.com")
 
         store.removeEverything()
 
         #expect(store.records.isEmpty)
         #expect(store.assistantOrigins.isEmpty)
         #expect(store.keptActiveOrigins.isEmpty)
+        #expect(store.noAutomaticPictureOrigins.isEmpty)
     }
 }
 

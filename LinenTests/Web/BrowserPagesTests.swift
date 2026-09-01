@@ -552,7 +552,7 @@ struct BrowserPagesTests {
         let tab = model.newTab()
         tab.urlString = "https://example.com/some/deep/page?q=1"
 
-        #expect(model.keepActiveOrigin(for: tab) == SitePermissions.origin(for: URL(string: "https://example.com/")))
+        #expect(model.siteOrigin(for: tab) == SitePermissions.origin(for: URL(string: "https://example.com/")))
     }
 
     @Test func aPageThatIsNotAWebsiteHasNoOriginToRemember() {
@@ -561,7 +561,7 @@ struct BrowserPagesTests {
 
         for address in ["", "about:blank", "file:///tmp/page.html", "data:text/html,hi"] {
             tab.urlString = address
-            #expect(model.keepActiveOrigin(for: tab).isEmpty, "\(address)")
+            #expect(model.siteOrigin(for: tab).isEmpty, "\(address)")
         }
     }
 

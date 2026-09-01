@@ -9,6 +9,7 @@ struct SiteSettingsEntry: Identifiable, Equatable {
     var permissions: [WebPermission: PermissionPolicy] = [:]
     var assistantAccess: AssistantAccessPolicy = .ask
     var keepsActive = false
+    var blocksAutomaticPicture = false
     var allowsTrackers = false
     var assistantGrants: [SensitiveAction.Category] = []
 
@@ -24,6 +25,7 @@ struct SiteSettingsEntry: Identifiable, Equatable {
         permissions.isEmpty
             && assistantAccess == .ask
             && !keepsActive
+            && !blocksAutomaticPicture
             && !allowsTrackers
             && assistantGrants.isEmpty
     }
@@ -63,6 +65,10 @@ struct SiteSettingsEntry: Identifiable, Equatable {
 
         if keepsActive {
             phrases.append(String(localized: "kept loaded"))
+        }
+
+        if blocksAutomaticPicture {
+            phrases.append(String(localized: "no automatic Picture in Picture"))
         }
 
         if allowsTrackers {
@@ -111,6 +117,12 @@ enum SiteSettingsIndex {
         for origin in permissions.keptActiveOrigins {
             var found = entry(for: origin)
             found.keepsActive = true
+            byOrigin[origin] = found
+        }
+
+        for origin in permissions.noAutomaticPictureOrigins {
+            var found = entry(for: origin)
+            found.blocksAutomaticPicture = true
             byOrigin[origin] = found
         }
 

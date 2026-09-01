@@ -193,8 +193,8 @@ private struct SiteBehaviorSection: View {
     let browser: BrowserModel
     let tab: BrowserTab
 
-    private var keepActiveOrigin: String {
-        browser.keepActiveOrigin(for: tab)
+    private var siteOrigin: String {
+        browser.siteOrigin(for: tab)
     }
 
     private var blockableHost: String? {
@@ -213,11 +213,23 @@ private struct SiteBehaviorSection: View {
                 }
             }
 
-            if BrowserSettings.shared.sleepsInactiveTabs, !keepActiveOrigin.isEmpty {
+            if BrowserSettings.shared.sleepsInactiveTabs, !siteOrigin.isEmpty {
                 SiteControlRow(symbol: "bolt", title: "Keep Website Loaded") {
                     Toggle("", isOn: Binding(
                         get: { browser.keepsActive(tab) },
                         set: { browser.setKeepsActive($0, for: tab) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                }
+            }
+
+            if BrowserSettings.shared.automaticPictureInPicture, !siteOrigin.isEmpty {
+                SiteControlRow(symbol: "pip", title: "Automatic Picture in Picture") {
+                    Toggle("", isOn: Binding(
+                        get: { browser.allowsAutomaticPicture(tab) },
+                        set: { browser.setAllowsAutomaticPicture($0, for: tab) }
                     ))
                     .labelsHidden()
                     .toggleStyle(.switch)

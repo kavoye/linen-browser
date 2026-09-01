@@ -134,6 +134,9 @@ final class SitePermissions {
     private var keptActiveOriginSet: Set<String> = []
     private(set) var keptActiveOrigins: [String] = []
 
+    private var noAutomaticPictureOriginSet: Set<String> = []
+    private(set) var noAutomaticPictureOrigins: [String] = []
+
     private let file: URL
     private var saveTask: Task<Void, Never>?
 
@@ -176,6 +179,10 @@ final class SitePermissions {
 
     func keepsActive(_ origin: String) -> Bool {
         keptActiveOriginSet.contains(normalize(origin))
+    }
+
+    func allowsAutomaticPicture(_ origin: String) -> Bool {
+        !noAutomaticPictureOriginSet.contains(normalize(origin))
     }
 
     // MARK: - Writing
@@ -234,6 +241,18 @@ final class SitePermissions {
         scheduleSave()
     }
 
+    func setAllowsAutomaticPicture(_ allows: Bool, for origin: String) {
+        let origin = normalize(origin)
+        guard !origin.isEmpty else { return }
+        if allows {
+            noAutomaticPictureOriginSet.remove(origin)
+        } else {
+            noAutomaticPictureOriginSet.insert(origin)
+        }
+        noAutomaticPictureOrigins = noAutomaticPictureOriginSet.sorted()
+        scheduleSave()
+    }
+
     func removeAllKeptActiveOrigins() {
         keptActiveOriginSet = []
         keptActiveOrigins = []
@@ -245,6 +264,8 @@ final class SitePermissions {
         assistantRecords = [:]
         keptActiveOriginSet = []
         keptActiveOrigins = []
+        noAutomaticPictureOriginSet = []
+        noAutomaticPictureOrigins = []
         scheduleSave()
     }
 
@@ -316,18 +337,21 @@ final class SitePermissions {
         var defaults: [WebPermission: PermissionPolicy] = [:]
         var assistantAccess: [String: AssistantAccessPolicy] = [:]
         var keptActive: Set<String> = []
+        var noAutomaticPicture: Set<String> = []
 
         init(
             records: [String: [WebPermission: PermissionPolicy]],
             defaults:
                 [WebPermission: PermissionPolicy],
             assistantAccess: [String: AssistantAccessPolicy],
-            keptActive: Set<String>
+            keptActive: Set<String>,
+            noAutomaticPicture: Set<String>
         ) {
             self.records = records
             self.defaults = defaults
             self.assistantAccess = assistantAccess
             self.keptActive = keptActive
+            self.noAutomaticPicture = noAutomaticPicture
         }
 
         init(from decoder: Decoder) throws {
@@ -348,6 +372,10 @@ final class SitePermissions {
                 Set<String>.self,
                 forKey: .keptActive
             ) ?? []
+            noAutomaticPicture = try values.decodeIfPresent(
+                Set<String>.self,
+                forKey: .noAutomaticPicture
+            ) ?? []
         }
     }
 
@@ -365,7 +393,8 @@ final class SitePermissions {
             defaults:
                 defaults,
             assistantAccess: assistantRecords,
-            keptActive: keptActiveOriginSet
+            keptActive: keptActiveOriginSet,
+            noAutomaticPicture: noAutomaticPictureOriginSet
         )
         let url = file
         saveTask = Task {
@@ -395,6 +424,13 @@ final class SitePermissions {
             }
         }
         keptActiveOrigins = keptActiveOriginSet.sorted()
+        for key in snapshot.noAutomaticPicture {
+            let origin = normalize(key)
+            if !origin.isEmpty {
+                noAutomaticPictureOriginSet.insert(origin)
+            }
+        }
+        noAutomaticPictureOrigins = noAutomaticPictureOriginSet.sorted()
     }
 
     private static var defaultFile: URL {

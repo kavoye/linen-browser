@@ -39,7 +39,7 @@ extension BrowserModel {
         return nil
     }
 
-    func keepActiveOrigin(for tab: BrowserTab) -> String {
+    func siteOrigin(for tab: BrowserTab) -> String {
         guard let url = URL(string: tab.urlString),
               let scheme = url.scheme?.lowercased(),
               scheme == "http" || scheme == "https"
@@ -48,14 +48,25 @@ extension BrowserModel {
     }
 
     func keepsActive(_ tab: BrowserTab) -> Bool {
-        let origin = keepActiveOrigin(for: tab)
+        let origin = siteOrigin(for: tab)
         return !origin.isEmpty && sitePermissions.keepsActive(origin)
     }
 
     func setKeepsActive(_ keepsActive: Bool, for tab: BrowserTab) {
-        let origin = keepActiveOrigin(for: tab)
+        let origin = siteOrigin(for: tab)
         guard !origin.isEmpty else { return }
         sitePermissions.setKeepsActive(keepsActive, for: origin)
+    }
+
+    func allowsAutomaticPicture(_ tab: BrowserTab) -> Bool {
+        let origin = siteOrigin(for: tab)
+        return origin.isEmpty || sitePermissions.allowsAutomaticPicture(origin)
+    }
+
+    func setAllowsAutomaticPicture(_ allows: Bool, for tab: BrowserTab) {
+        let origin = siteOrigin(for: tab)
+        guard !origin.isEmpty else { return }
+        sitePermissions.setAllowsAutomaticPicture(allows, for: origin)
     }
 
     func relieveMemoryPressure(_ level: MemoryPressureMonitor.Level) {

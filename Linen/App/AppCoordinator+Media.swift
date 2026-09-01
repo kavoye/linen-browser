@@ -36,7 +36,7 @@ extension AppCoordinator {
                   !previousTab.isMuted
             else { return }
             controlPlayback(in: previousTab)
-            if settings.automaticPictureInPicture {
+            if settings.automaticPictureInPicture, browser.allowsAutomaticPicture(previousTab) {
                 media.requestNativePiP(on: previousTab.webView)
             }
         }
@@ -65,7 +65,9 @@ extension AppCoordinator {
         let inFront = browser.tabs.filter {
             $0.id == browser.activeTabID || browser.isVisibleInSplit($0)
         }
-        guard let tab = inFront.first(where: { media.isPictureOut($0.webView) }) else { return }
+        guard let tab = inFront.first(where: {
+            media.isPictureOut($0.webView) && browser.allowsAutomaticPicture($0)
+        }) else { return }
         Pipeline.log.notice("media: its tab is in front again, putting the picture back")
         media.exitPictureInPicture(for: tab.webView)
     }
@@ -83,7 +85,8 @@ extension AppCoordinator {
             docked: media.controlledTabID,
             isDockedPlaying: media.model.isPlaying
         ),
-            let tab = browser.tabs.first(where: { $0.id == id }), !tab.isDeferred
+            let tab = browser.tabs.first(where: { $0.id == id }), !tab.isDeferred,
+            browser.allowsAutomaticPicture(tab)
         else { return }
         media.requestNativePiP(on: tab.webView)
     }

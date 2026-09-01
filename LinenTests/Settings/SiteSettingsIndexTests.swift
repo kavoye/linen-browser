@@ -39,6 +39,16 @@ struct SiteSettingsIndexTests {
         #expect(found[0].keepsActive)
     }
 
+    @Test func turningAutomaticPictureOffAloneStillGetsARow() {
+        let permissions = store()
+        permissions.setAllowsAutomaticPicture(false, for: "https://example.com")
+
+        let found = entries(permissions)
+        #expect(found.count == 1)
+        #expect(found[0].origin == "https://example.com")
+        #expect(found[0].blocksAutomaticPicture)
+    }
+
     @Test func hostKeyedRulesReachTheirOriginRow() {
         let permissions = store()
         permissions.set(.allow, for: "https://www.example.com", .location)
@@ -92,11 +102,13 @@ struct SiteSettingsIndexTests {
         permissions.set(.allow, for: "https://example.com", .camera)
         permissions.setAssistantAccess(.control, for: "https://example.com")
         permissions.setKeepsActive(true, for: "https://example.com")
+        permissions.setAllowsAutomaticPicture(false, for: "https://example.com")
 
         let phrases = entries(permissions, exempt: ["example.com"])[0].summaryPhrases
-        #expect(phrases.count == 4)
+        #expect(phrases.count == 5)
         #expect(phrases.contains { $0.contains("assistant may control") })
         #expect(phrases.contains { $0.contains("kept loaded") })
+        #expect(phrases.contains { $0.contains("no automatic Picture in Picture") })
         #expect(phrases.contains { $0.contains("trackers allowed") })
     }
 
