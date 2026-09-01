@@ -70,7 +70,9 @@ struct BookmarkImportRow: View {
         isReading = true
         status = nil
         Task {
-            let result = await Task.detached { Result { try BrowserImport.read(file) } }.value
+            let result = await Task.detached(priority: .userInitiated) {
+                Result { try BrowserImport.read(file) }
+            }.value
             isReading = false
             switch result {
             case .success(let payload) where payload.isEmpty:

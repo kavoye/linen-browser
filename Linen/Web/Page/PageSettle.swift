@@ -59,14 +59,18 @@ enum PageSettle {
             let gate = PageSettleSignatureGate(continuation)
             webView.evaluateJavaScript(script) { value, _ in
                 let signature = (value as? NSNumber)?.intValue
-                Task.detached { await gate.close(with: signature) }
+                Task.detached(priority: .userInitiated) {
+                    await gate.close(with: signature)
+                }
             }
-            let timeoutTask = Task.detached {
+            let timeoutTask = Task.detached(priority: .userInitiated) {
                 try? await Task.sleep(for: timeout)
                 guard !Task.isCancelled else { return }
                 await gate.close(with: nil)
             }
-            Task.detached { await gate.install(timeoutTask) }
+            Task.detached(priority: .userInitiated) {
+                await gate.install(timeoutTask)
+            }
         }
     }
 
