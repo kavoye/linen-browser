@@ -36,7 +36,7 @@ jobs:
       marketing: ${{ steps.compute.outputs.marketing }}
       file: ${{ steps.compute.outputs.file }}
       number: ${{ steps.compute.outputs.number }}
-      subject: ${{ steps.compute.outputs.subject }}
+      base: ${{ steps.compute.outputs.base }}
 
     steps:
       # `workflow_run` checks out the default branch, not the commit that
@@ -70,7 +70,7 @@ jobs:
           # It counts every commit, so a release always sorts above the previews
           # before it.
           echo "number=$(git rev-list --count HEAD)"     >> "$GITHUB_OUTPUT"
-          echo "subject=$(git log -1 --pretty=%s)"       >> "$GITHUB_OUTPUT"
+          echo "base=$BASE"                              >> "$GITHUB_OUTPUT"
 
   preview:
     needs: version
@@ -246,19 +246,35 @@ jobs:
           SHA: ${{ github.event.workflow_run.head_sha }}
           MARKETING: ${{ needs.version.outputs.marketing }}
           FILE: ${{ needs.version.outputs.file }}
-          SUBJECT: ${{ needs.version.outputs.subject }}
+          BASE: ${{ needs.version.outputs.base }}
         run: |
           git tag -f "$TIP" "$SHA"
           git push -f origin "refs/tags/$TIP"
 
-          mkdir -p build
-          cat > build/notes.md <<NOTES
-          $SUBJECT
+          # GitHub's own generated notes list pull requests, and this
+          # repository pushes to main. The range is the one the version
+          # counts: every commit since the last release.
+          LIMIT=20
+          TOTAL="$(git rev-list --count --no-merges "$BASE"..HEAD)"
 
+          mkdir -p build
+          {
+            git log --no-merges --max-count="$LIMIT" \
+              --pretty=format:"- %s ([%h](https://github.com/$GITHUB_REPOSITORY/commit/%H))" \
+              "$BASE"..HEAD
+            printf '\n'
+            if [ "$TOTAL" -gt "$LIMIT" ]; then
+              printf '\n…and %s more.\n' "$((TOTAL - LIMIT))"
+            fi
+            printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n\n' \
+              "$GITHUB_REPOSITORY" "$BASE" "$TIP"
+            cat <<'NOTES'
           Preview builds come from the newest commit on main. They get less
           testing than a release. To receive them, set **Update channel** to
           **Preview** in Settings, under About.
           NOTES
+          } > build/notes.md
+          cat build/notes.md
 
           if gh release view "$TIP" > /dev/null 2>&1; then
             gh release edit "$TIP" --prerelease \
