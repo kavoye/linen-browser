@@ -123,7 +123,7 @@ struct LyricsBackdrop: View {
                         if case let .success(image) = phase {
                             image
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .blur(radius: 70)
                                 .saturation(1.5)
                                 .scaleEffect(1.4)
@@ -256,7 +256,7 @@ struct LyricsBoard: View {
                 if let artwork {
                     AsyncImage(url: artwork) { phase in
                         if case let .success(image) = phase {
-                            image.resizable().aspectRatio(contentMode: .fill)
+                            image.resizable().scaledToFill()
                         }
                     }
                 } else {

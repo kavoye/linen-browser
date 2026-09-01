@@ -204,7 +204,7 @@ private struct ResearchGlimpse: View {
             VStack(alignment: .leading, spacing: 5) {
                 Image(nsImage: snapshot)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(maxWidth: Self.maxSnapshotWidth)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(

@@ -59,7 +59,7 @@ struct RemoteSiteBadge: View {
                 Image(nsImage: icon)
                     .resizable()
                     .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .clipShape(RoundedRectangle(cornerRadius: size / 5, style: .continuous))
             } else {
                 Image(systemName: "globe")

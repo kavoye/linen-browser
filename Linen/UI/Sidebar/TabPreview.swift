@@ -265,7 +265,7 @@ private struct TabFaviconMark: View {
             } else if let favicon = tab.favicon {
                 Image(nsImage: favicon)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: 9))
@@ -310,7 +310,7 @@ private struct TabFace: View {
             } else if let preview = tab.preview {
                 Image(nsImage: preview)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .scaledToFill()
                     .frame(width: TabPreviewCard.width, height: Self.imageHeight, alignment: .top)
                     .clipped()
                     .saturation(isAsleep ? 0 : 1)

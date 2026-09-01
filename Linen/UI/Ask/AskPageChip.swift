@@ -39,7 +39,7 @@ struct AskPageChip: View {
                     Image(nsImage: icon)
                         .resizable()
                         .interpolation(.high)
-                        .aspectRatio(contentMode: .fit)
+                        .scaledToFit()
                         .clipShape(RoundedRectangle(cornerRadius: iconRadius, style: .continuous))
                 } else {
                     Image(systemName: "globe")

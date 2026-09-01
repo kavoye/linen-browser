@@ -166,7 +166,7 @@ struct OmniboxFavicon: View {
                 Image(nsImage: image)
                     .resizable()
                     .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
             } else {
                 Image(systemName: fallback)
                     .font(.system(size: size * 0.75))

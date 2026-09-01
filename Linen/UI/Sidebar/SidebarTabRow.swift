@@ -313,7 +313,7 @@ private struct PinReturnSegment: View {
                     Image(nsImage: pinnedFavicon)
                         .resizable()
                         .interpolation(.high)
-                        .aspectRatio(contentMode: .fit)
+                        .scaledToFit()
                         .frame(width: 14, height: 14)
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
                         .opacity(hovering ? 0 : 1)
@@ -448,7 +448,7 @@ struct TabIcon: View {
                 Image(nsImage: favicon)
                     .resizable()
                     .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: size - 1, height: size - 1)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
             } else {
