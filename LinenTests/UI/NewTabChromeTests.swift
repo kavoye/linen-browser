@@ -107,7 +107,7 @@ struct NewTabChromeTests {
     /// dark mode and a black flash across every page opened in light.
     @Test func theWarmUpPageFollowsTheAppearanceItIsShownIn() async throws {
         func renderedBackground(_ appearance: NSAppearance.Name) async throws -> (r: Double, g: Double, b: Double) {
-            let configuration = WKWebViewConfiguration()
+            let configuration = WebViewPool.makeConfiguration()
             configuration.websiteDataStore = .nonPersistent()
             let webView = WKWebView(
                 frame: NSRect(x: 0, y: 0, width: 200, height: 200),

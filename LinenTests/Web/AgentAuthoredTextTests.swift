@@ -10,7 +10,7 @@ import WebKit
 @Suite(.serialized, .boundedWebViews)
 struct AgentAuthoredTextTests {
     private func makeWebView() -> WKWebView {
-        WKWebView(frame: .init(x: 0, y: 0, width: 400, height: 300), configuration: WKWebViewConfiguration())
+        WKWebView(frame: .init(x: 0, y: 0, width: 400, height: 300), configuration: WebViewPool.makeConfiguration())
     }
 
     private func load(_ webView: WKWebView, at url: URL) async {

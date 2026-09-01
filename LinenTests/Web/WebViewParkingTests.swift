@@ -41,7 +41,10 @@ struct WebViewParkingTests {
 
     @Test func aHostLeavingTheWindowParksItsWebViewRatherThanOrphaningIt() {
         let window = makeWindow()
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 600, height: 400),
+            configuration: WebViewPool.makeConfiguration()
+        )
         let container = host(webView, in: window)
         #expect(webView.window === window)
 
@@ -55,7 +58,10 @@ struct WebViewParkingTests {
 
     @Test func theNextHostTakesTheViewBackOffTheShelf() {
         let window = makeWindow()
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 600, height: 400),
+            configuration: WebViewPool.makeConfiguration()
+        )
         host(webView, in: window).removeFromSuperview()
 
         let second = host(webView, in: window)
@@ -75,7 +81,10 @@ struct WebViewParkingTests {
     /// to keep meaning what it says: leave, and take the page with you.
     @Test func aHostThatDoesNotParkLetsTheViewLeaveTheWindow() {
         let window = makeWindow()
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 600, height: 400),
+            configuration: WebViewPool.makeConfiguration()
+        )
         let container = WebViewContainer(webView: webView)
         container.frame = NSRect(x: 0, y: 0, width: 600, height: 400)
         window.contentView?.addSubview(container)

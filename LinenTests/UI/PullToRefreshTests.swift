@@ -142,7 +142,7 @@ struct PullToRefreshOwnershipTests {
 @Suite(.serialized, .boundedWebViews)
 struct PullToRefreshProbeTests {
     private func loadedWebView(_ body: String) async -> WKWebView {
-        let configuration = WKWebViewConfiguration()
+        let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let webView = WKWebView(
             frame: NSRect(x: 0, y: 0, width: 500, height: 400),

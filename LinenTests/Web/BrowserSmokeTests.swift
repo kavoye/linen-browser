@@ -33,7 +33,7 @@ struct BrowserSmokeTests {
     }
 
     private func webView(using dataStore: WKWebsiteDataStore) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
+        let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = dataStore
         return WKWebView(
             frame: CGRect(x: 0, y: 0, width: 800, height: 600),

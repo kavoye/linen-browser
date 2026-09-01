@@ -654,7 +654,7 @@ struct MediaScriptRectTests {
 
     private func playerWebView() async -> (WKWebView, Collector) {
         let collector = Collector()
-        let configuration = WKWebViewConfiguration()
+        let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.userContentController.add(
             collector,

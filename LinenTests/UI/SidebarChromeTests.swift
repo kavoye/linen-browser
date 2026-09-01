@@ -342,7 +342,7 @@ struct SidebarPeekShieldTests {
     @Test(.boundedWebViews) func parkingUnregistersWebKitsTrackingAreasAndRestoresThem() async throws {
         let web = TabWebView(
             frame: NSRect(x: 0, y: 0, width: 600, height: 400),
-            configuration: WKWebViewConfiguration()
+            configuration: WebViewPool.makeConfiguration()
         )
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),

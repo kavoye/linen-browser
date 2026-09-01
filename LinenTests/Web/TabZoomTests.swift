@@ -78,7 +78,7 @@ struct TabZoomTests {
     @Test func commandScrollZoomsOnAWheelAndNotOnATrackpad() {
         let view = TabWebView(
             frame: NSRect(x: 0, y: 0, width: 400, height: 300),
-            configuration: WKWebViewConfiguration()
+            configuration: WebViewPool.makeConfiguration()
         )
         let start = view.pageZoom
 

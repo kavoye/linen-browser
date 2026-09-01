@@ -14,7 +14,10 @@ import WebKit
 @Suite(.boundedWebViews)
 struct PageSavingTests {
     private func page(title: String?, at address: String?) async -> WKWebView {
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 300, height: 200),
+            configuration: WebViewPool.makeConfiguration()
+        )
         let head = title.map { "<title>\($0)</title>" } ?? ""
         if let address, let url = URL(string: address) {
             webView.loadHTMLString("<!doctype html>\(head)<body>hi</body>", baseURL: url)

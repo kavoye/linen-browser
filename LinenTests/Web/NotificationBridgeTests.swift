@@ -28,7 +28,7 @@ struct NotificationBridgeTests {
         tab.permissions.pageChanged(url: URL(string: origin))
         NotificationBridge.shared.tabResolver = { _ in tab }
 
-        let configuration = WKWebViewConfiguration()
+        let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let controller = WKUserContentController()
         controller.addUserScript(WKUserScript(

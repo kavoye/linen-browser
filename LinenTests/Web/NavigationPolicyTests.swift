@@ -47,7 +47,7 @@ struct NavigationPolicyTests {
         let tab: BrowserTab
         if let extensionBase {
             tab = BrowserTab(extensionHost: ExtensionPageHost(
-                configuration: WKWebViewConfiguration(),
+                configuration: WebViewPool.makeConfiguration(),
                 baseURL: extensionBase,
                 name: "Stub Extension",
                 icon: nil

@@ -84,3 +84,20 @@ custom_rules:
       - comment
       - doccomment
       - string
+  pooled_web_view_configuration:
+    name: "Pooled web view configuration"
+    message: "Use WebViewPool.makeConfiguration(). A fresh configuration owns a process pool, and WebKit crashes on the display-link thread when that pool dies"
+    regex: 'WKWebViewConfiguration\(\)'
+    excluded: '.*/WebViewPool\.swift'
+    excluded_match_kinds:
+      - comment
+      - doccomment
+      - string
+  configured_web_view:
+    name: "Configured web view"
+    message: "Pass a WebViewPool.makeConfiguration(). A view without one owns a process pool, and WebKit crashes on the display-link thread when that pool dies"
+    regex: 'WKWebView\(frame:(?!(?:[^()\n]|\([^()\n]*\))*configuration)'
+    excluded_match_kinds:
+      - comment
+      - doccomment
+      - string

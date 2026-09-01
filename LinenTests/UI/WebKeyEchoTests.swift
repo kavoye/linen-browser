@@ -14,14 +14,20 @@ import WebKit
 @Suite(.boundedWebViews)
 struct WebKeyEchoTests {
     @Test func aKeyEchoedByTheWebViewIsSilenced() {
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 100, height: 100),
+            configuration: WebViewPool.makeConfiguration()
+        )
         #expect(WebKeyEcho.shouldSilenceUnhandledKey(from: webView))
     }
 
     /// WebKit sometimes hands focus to an inner view of its own; anything
     /// inside the web view still means "the page was asked".
     @Test func aResponderInsideTheWebViewIsSilencedToo() {
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 100, height: 100),
+            configuration: WebViewPool.makeConfiguration()
+        )
         let inner = NSView(frame: .zero)
         webView.addSubview(inner)
         #expect(WebKeyEcho.shouldSilenceUnhandledKey(from: inner))
@@ -51,7 +57,10 @@ struct WebKeyEchoTests {
     /// the page - is not inside it, and must not borrow its silence.
     @Test func aSiblingOfTheWebViewIsNotSilenced() {
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 150, height: 200))
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 150, height: 200),
+            configuration: WebViewPool.makeConfiguration()
+        )
         let sidebar = NSView(frame: NSRect(x: 150, y: 0, width: 150, height: 200))
         container.addSubview(webView)
         container.addSubview(sidebar)
