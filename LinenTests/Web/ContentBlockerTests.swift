@@ -19,8 +19,8 @@ struct ContentBlockerRuleTests {
 
     @Test func everyTrackerBecomesABlockRule() throws {
         let parsed = try rules()
-        #expect(parsed.count == TrackerList.domains.count)
-        for rule in parsed {
+        #expect(parsed.count == TrackerList.domains.count + 1)
+        for rule in parsed.prefix(TrackerList.domains.count) {
             let action = try #require(rule["action"] as? [String: Any])
             #expect(action["type"] as? String == "block")
         }
@@ -29,10 +29,21 @@ struct ContentBlockerRuleTests {
     /// A site serving its own analytics from its own domain is not what this
     /// is for, and blocking it breaks pages for no privacy gain.
     @Test func onlyThirdPartyLoadsAreBlocked() throws {
-        for rule in try rules() {
+        for rule in try rules().prefix(TrackerList.domains.count) {
             let trigger = try #require(rule["trigger"] as? [String: Any])
             #expect(trigger["load-type"] as? [String] == ["third-party"])
         }
+    }
+
+    @Test func topFrameNavigationIsNeverBlocked() throws {
+        let rule = try #require(try rules().last)
+
+        let action = try #require(rule["action"] as? [String: Any])
+        #expect(action["type"] as? String == "ignore-previous-rules")
+
+        let trigger = try #require(rule["trigger"] as? [String: Any])
+        #expect(trigger["resource-type"] as? [String] == ["document"])
+        #expect(trigger["load-context"] as? [String] == ["top-frame"])
     }
 
     /// The filter is a regex WebKit runs against the whole URL, so an
@@ -92,7 +103,7 @@ struct ContentBlockerRuleTests {
     /// blocking off for the rules that follow it.
     @Test func anExceptionIsTheLastRule() throws {
         let parsed = try rules(exempt: ["example.com"])
-        #expect(parsed.count == TrackerList.domains.count + 1)
+        #expect(parsed.count == TrackerList.domains.count + 2)
 
         let last = try #require(parsed.last)
         let action = try #require(last["action"] as? [String: Any])
@@ -104,8 +115,8 @@ struct ContentBlockerRuleTests {
         #expect(trigger["if-domain"] as? [String] == ["*example.com"])
     }
 
-    @Test func noExceptionsMeansNoExtraRule() throws {
-        #expect(try rules().count == TrackerList.domains.count)
+    @Test func noExceptionsMeansNoExceptionRule() throws {
+        #expect(try rules().count == TrackerList.domains.count + 1)
     }
 
     @Test func hostsAreNormalizedSoWwwIsNotASeparateWebsite() {

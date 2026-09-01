@@ -125,6 +125,15 @@ final class ContentBlocker {
             ]
         }
 
+        rules.append([
+            "trigger": [
+                "url-filter": ".*",
+                "resource-type": ["document"],
+                "load-context": ["top-frame"],
+            ],
+            "action": ["type": "ignore-previous-rules"],
+        ])
+
         if !exemptHosts.isEmpty {
             rules.append([
                 "trigger": [
