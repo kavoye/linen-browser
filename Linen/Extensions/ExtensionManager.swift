@@ -568,6 +568,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     func setPinned(_ pinned: Bool, id: String) {
         library.setPinned(pinned, id: id)
         installed = library.records
+        applyPlacementsToSystemExtensions()
         if !pinned {
             anchors[id] = nil
         }
@@ -744,7 +745,8 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             menu.addItem(.separator())
         }
 
-        let isPinned = installed.first { $0.id == id }?.isPinned ?? true
+        let known = record(for: id)
+        let isPinned = known?.isPinned ?? true
         let pinTitle: LocalizedStringResource = isPinned ? "Hide Extension" : "Show Extension"
         menu.addItem(appMenuItem(
             title: String(localized: pinTitle),
@@ -760,11 +762,19 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
 
         menu.addItem(.separator())
-        menu.addItem(appMenuItem(
-            title: String(localized: "Remove Extension"),
-            action: #selector(removeFromMenu(_:)),
-            id: id
-        ))
+        if known?.isSystem == true {
+            menu.addItem(appMenuItem(
+                title: String(localized: "Disable Extension"),
+                action: #selector(disableFromMenu(_:)),
+                id: id
+            ))
+        } else {
+            menu.addItem(appMenuItem(
+                title: String(localized: "Remove Extension"),
+                action: #selector(removeFromMenu(_:)),
+                id: id
+            ))
+        }
         return menu
     }
 
@@ -777,8 +787,13 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
 
     @objc private func togglePinnedFromMenu(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String,
-              let record = installed.first(where: { $0.id == id }) else { return }
+              let record = record(for: id) else { return }
         setPinned(!record.isPinned, id: id)
+    }
+
+    @objc private func disableFromMenu(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        setEnabled(false, id: id)
     }
 
     @objc private func openOptionsFromMenu(_ sender: NSMenuItem) {
