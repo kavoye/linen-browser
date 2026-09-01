@@ -574,25 +574,32 @@ struct StoreInstallButton: View {
 
     @State private var hovering = false
 
-    private var storeID: String? {
-        ChromeWebStore.extensionID(fromPageURL: browser.activeTab?.urlString ?? "")
+    private var storeTarget: (store: ExtensionStore, id: String)? {
+        let address = browser.activeTab?.urlString ?? ""
+        if let id = ChromeWebStore.extensionID(fromPageURL: address) {
+            return (.chrome, id)
+        }
+        if let slug = FirefoxAddons.slug(fromPageURL: address) {
+            return (.firefox, slug)
+        }
+        return nil
     }
 
     var body: some View {
-        if let id = storeID {
-            content(for: id)
+        if let target = storeTarget {
+            content(for: target.id, from: target.store)
                 .transition(.opacity)
                 .animation(Theme.Motion.settle, value: manager.installState)
         }
     }
 
     @ViewBuilder
-    private func content(for id: String) -> some View {
+    private func content(for id: String, from store: ExtensionStore) -> some View {
         switch manager.installState {
         case .installing(let installing) where installing == id:
             label(symbol: nil, text: "Installing…", tint: .secondary, spinning: true)
         case .failed(let failed, let message) where failed == id:
-            Button { Task { await manager.install(fromStoreID: id) } } label: {
+            Button { Task { await manager.install(id: id, from: store) } } label: {
                 label(symbol: "exclamationmark.triangle.fill", text: "Retry", tint: .orange)
             }
             .buttonStyle(.plain)
@@ -602,7 +609,7 @@ struct StoreInstallButton: View {
                 label(symbol: "checkmark", text: "Installed", tint: .secondary)
                     .help("Already installed in Linen")
             } else {
-                Button { Task { await manager.install(fromStoreID: id) } } label: {
+                Button { Task { await manager.install(id: id, from: store) } } label: {
                     label(symbol: "arrow.down.circle.fill", text: "Install", tint: Theme.accent)
                 }
                 .buttonStyle(.plain)

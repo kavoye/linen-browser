@@ -4,6 +4,11 @@
 import Foundation
 import os
 
+enum ExtensionStore: String, Codable, Sendable {
+    case chrome
+    case firefox
+}
+
 struct InstalledExtension: Codable, Identifiable, Equatable {
     var id: String
     var displayName: String
@@ -12,6 +17,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
     var installedAt: Date
     var isPinned: Bool
     var toolbarOrder: Int
+    var source: ExtensionStore
     var bundlePath: String?
 
     var isSystem: Bool {
@@ -26,6 +32,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
         installedAt: Date,
         isPinned: Bool = true,
         toolbarOrder: Int = 0,
+        source: ExtensionStore = .chrome,
         bundlePath: String? = nil
     ) {
         self.id = id
@@ -35,6 +42,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
         self.installedAt = installedAt
         self.isPinned = isPinned
         self.toolbarOrder = toolbarOrder
+        self.source = source
         self.bundlePath = bundlePath
     }
 
@@ -47,6 +55,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
         installedAt = try container.decode(Date.self, forKey: .installedAt)
         isPinned = try container.decodeIfPresent(Bool.self, forKey: .isPinned) ?? true
         toolbarOrder = try container.decodeIfPresent(Int.self, forKey: .toolbarOrder) ?? .max
+        source = try container.decodeIfPresent(ExtensionStore.self, forKey: .source) ?? .chrome
         bundlePath = try container.decodeIfPresent(String.self, forKey: .bundlePath)
     }
 }
@@ -58,6 +67,7 @@ final class ExtensionLibrary {
         var displayName: String
         var version: String
         var installedAt: Date
+        var source: ExtensionStore?
     }
 
     private nonisolated struct Placement: Codable, Equatable {
@@ -114,7 +124,8 @@ final class ExtensionLibrary {
                 enabled: placement?.enabled ?? false,
                 installedAt: entry.installedAt,
                 isPinned: placement?.isPinned ?? true,
-                toolbarOrder: placement?.toolbarOrder ?? offset
+                toolbarOrder: placement?.toolbarOrder ?? offset,
+                source: entry.source ?? .chrome
             )
             listed.append((record, offset))
         }
@@ -251,13 +262,14 @@ final class ExtensionLibrary {
         try? FileManager.default.removeItem(at: packageURL(for: id))
     }
 
-    func recordInstall(id: String) {
+    func recordInstall(id: String, source: ExtensionStore = .chrome) {
         if !catalogue.entries.contains(where: { $0.id == id }) {
             catalogue.entries.append(CatalogueEntry(
                 id: id,
                 displayName: id,
                 version: "",
-                installedAt: Date()
+                installedAt: Date(),
+                source: source
             ))
         }
         var mine = placements.profiles[profileKey] ?? [:]

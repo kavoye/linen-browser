@@ -37,7 +37,13 @@ extension ExtensionManager {
             updateChecks[id] = .checking
         }
         do {
-            let package = try await ChromeWebStore.downloadPackage(id: id)
+            let package: Data
+            switch record.source {
+            case .chrome:
+                package = try await ChromeWebStore.downloadPackage(id: id)
+            case .firefox:
+                package = try await FirefoxAddons.downloadPackage(slug: id)
+            }
             let scratch = FileManager.default.temporaryDirectory
                 .appendingPathComponent("linen-ext-update-\(id).zip")
             try package.write(to: scratch, options: .atomic)

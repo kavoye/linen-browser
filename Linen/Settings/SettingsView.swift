@@ -220,7 +220,7 @@ private struct ExtensionsSettings: View {
         SettingsPageHeader(title: "Extensions", caption: summary)
 
         SettingsSection(
-            title: "Chrome extensions",
+            title: "Web extensions",
             symbol: "puzzlepiece.extension",
             accessory: {
                 SettingsButton(title: "Chrome Web Store", symbol: "arrow.up.forward") {
@@ -228,7 +228,13 @@ private struct ExtensionsSettings: View {
                         url: URL(string: "https://chromewebstore.google.com/category/extensions")
                     )
                 }
-                .help("Browse extensions to install")
+                .help("Browse Chrome extensions to install")
+                SettingsButton(title: "Firefox Add-ons", symbol: "arrow.up.forward") {
+                    coordinator.openNewTab(
+                        url: URL(string: "https://addons.mozilla.org/firefox/extensions/")
+                    )
+                }
+                .help("Browse Firefox add-ons to install")
             },
             content: {
                 ExtensionsSettingsCard(coordinator: coordinator)

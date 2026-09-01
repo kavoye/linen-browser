@@ -424,17 +424,23 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
 
     // MARK: - Install and manage
 
-    func install(fromStoreID id: String) async {
+    func install(id: String, from store: ExtensionStore) async {
         installState = .installing(id: id)
         do {
-            let package = try await ChromeWebStore.downloadPackage(id: id)
+            let package: Data
+            switch store {
+            case .chrome:
+                package = try await ChromeWebStore.downloadPackage(id: id)
+            case .firefox:
+                package = try await FirefoxAddons.downloadPackage(slug: id)
+            }
             try await library.unpack(package, id: id)
             guard try await confirm(package, id: id) else {
                 library.discardPackage(id: id)
                 installState = .idle
                 return
             }
-            library.recordInstall(id: id)
+            library.recordInstall(id: id, source: store)
             installed = library.records
             guard let record = installed.first(where: { $0.id == id }) else {
                 installState = .failed(
@@ -453,7 +459,10 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
                 return
             }
             installState = .installed(id: id)
-            Pipeline.log.notice("ext: installed \(id, privacy: .public) from the Chrome Web Store")
+            Pipeline.log.notice("""
+                ext: installed \(id, privacy: .public) from the \
+                \(store.rawValue, privacy: .public) store
+                """)
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             installState = .failed(id: id, message: message)

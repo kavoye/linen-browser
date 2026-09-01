@@ -194,8 +194,8 @@ enum SettingsIndex {
                       ["speech", "speak", "mute", "voice", "aloud"]),
         SettingsEntry("voice.talk", .provider, "Push to talk", "Hold while speaking. Release to send.",
                       ["shortcut", "hotkey", "microphone", "mic", "option key", "activation"]),
-        SettingsEntry("extensions.installed", .extensions, "Installed extensions", "Chrome extensions running in Linen.",
-                      ["chrome", "web store", "add-ons", "plugins", "adblock"]),
+        SettingsEntry("extensions.installed", .extensions, "Installed extensions", "Chrome extensions and Firefox add-ons running in Linen.",
+                      ["chrome", "web store", "firefox", "mozilla", "add-ons", "plugins", "adblock"]),
 
         SettingsEntry("advanced.inspector", .advanced, "Web Inspector", "Adds Inspect Element to the page’s right-click menu.",
                       ["developer", "devtools", "inspector", "inspect", "debug", "console"]),
