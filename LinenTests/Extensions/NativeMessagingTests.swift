@@ -23,7 +23,9 @@ struct NativeMessagingTests {
 
         var sawClose = false
         for await event in connection.events {
-            if case .closed = event { sawClose = true }
+            if case .closed = event {
+                sawClose = true
+            }
         }
         #expect(sawClose, "a host that exits reports its close")
 
@@ -41,7 +43,9 @@ struct NativeMessagingTests {
 
         var closure: NativeMessagingError?
         for await event in connection.events {
-            if case .closed(let error) = event { closure = error }
+            if case .closed(let error) = event {
+                closure = error
+            }
         }
         #expect(closure == .hostExited, "a nonzero exit is an error, not a clean close")
     }
@@ -82,7 +86,9 @@ struct NativeMessagingTests {
                 received = data
                 connection.close()
             }
-            if case .closed = event { break }
+            if case .closed = event {
+                break
+            }
         }
 
         let object = received.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }

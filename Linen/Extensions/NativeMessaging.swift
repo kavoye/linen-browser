@@ -13,9 +13,12 @@ nonisolated enum NativeMessagingError: Error, Sendable, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .forbidden: "Access to the specified native messaging host is forbidden."
-        case .communicationFailed: "Error when communicating with the native messaging host."
-        case .hostExited: "Native host has exited."
+        case .forbidden:
+            "Access to the specified native messaging host is forbidden."
+        case .communicationFailed:
+            "Error when communicating with the native messaging host."
+        case .hostExited:
+            "Native host has exited."
         }
     }
 }
@@ -208,7 +211,9 @@ nonisolated final class NativeMessagingConnection: @unchecked Sendable {
                 if status != 0 {
                     Pipeline.log.notice("nativemsg: \(hostName, privacy: .public) exited with \(status, privacy: .public)")
                 }
-                if self.sawEOF { self.finishForExit(status) }
+                if self.sawEOF {
+                    self.finishForExit(status)
+                }
             }
             self.queue.asyncAfter(deadline: .now() + 2) {
                 self.finishForExit(status)
@@ -243,7 +248,9 @@ nonisolated final class NativeMessagingConnection: @unchecked Sendable {
         guard !finished else { return }
         guard !chunk.isEmpty else {
             sawEOF = true
-            if let exitStatus { finishForExit(exitStatus) }
+            if let exitStatus {
+                finishForExit(exitStatus)
+            }
             return
         }
         decoder.append(chunk)
@@ -271,7 +278,9 @@ nonisolated final class NativeMessagingConnection: @unchecked Sendable {
         let process = process
         if process.isRunning {
             queue.asyncAfter(deadline: .now() + .milliseconds(500)) {
-                if process.isRunning { process.terminate() }
+                if process.isRunning {
+                    process.terminate()
+                }
             }
         }
     }
