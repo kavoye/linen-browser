@@ -163,6 +163,7 @@ enum MediaScript {
       function sendState() {
         const video = primary();
         if (!video) { return; }
+        if (!video.paused && !video.ended) { lastPlayedAt = performance.now(); }
         post('state:' + JSON.stringify({
           t: video.currentTime || 0,
           d: realDuration(video),
@@ -218,6 +219,31 @@ enum MediaScript {
       let armedGesture = null;
       let armedGestureExpiry = null;
       let armedAt = 0;
+      let lastPlayedAt = 0;
+      function playedRecently() {
+        return performance.now() - lastPlayedAt < 4000;
+      }
+      function gesturePoint() {
+        if (window !== window.top) { return null; }
+        const box = video.getBoundingClientRect();
+        const candidates = [
+          [box.left + box.width / 2, box.top + box.height / 2],
+          [box.left + 10, box.top + 10],
+          [box.left + box.width / 2, Math.max(box.top - 12, 6)],
+          [10, 10],
+          [window.innerWidth / 2, 8]
+        ];
+        for (const pair of candidates) {
+          const x = pair[0];
+          const y = pair[1];
+          if (x < 1 || y < 1 || x >= window.innerWidth - 1 || y >= window.innerHeight - 1) { continue; }
+          const found = document.elementFromPoint(x, y);
+          if (found && found.tagName !== 'IFRAME' && found.tagName !== 'EMBED' && found.tagName !== 'OBJECT') {
+            return { x: Math.round(x), y: Math.round(y) };
+          }
+        }
+        return null;
+      }
       const swallowed = ['pointerdown', 'pointerup', 'mousedown', 'mouseup'];
       function isOurGesture() {
         return performance.now() - armedAt < 2000;
@@ -240,7 +266,7 @@ enum MediaScript {
       }
       function armGesture(onlyWhilePlaying) {
         if (!video || video.webkitPresentationMode === 'picture-in-picture') { return; }
-        if (onlyWhilePlaying && (video.paused || video.ended)) {
+        if (onlyWhilePlaying && (video.ended || (video.paused && !playedRecently()))) {
           post('diag:not-playing');
           return;
         }
@@ -259,8 +285,9 @@ enum MediaScript {
             event.stopPropagation();
             event.preventDefault();
           }
-          const wasPlaying = !video.paused;
+          const wasPlaying = !video.paused || playedRecently();
           try {
+            allowPiP(video);
             video.webkitSetPresentationMode('picture-in-picture');
           } catch (err) {
             post('diag:error ' + err.message);
@@ -285,6 +312,8 @@ enum MediaScript {
           gestureAttempts = 0;
           post('diag:gesture-expired');
         }, 10000);
+        const target = gesturePoint();
+        if (target) { post('pipat:' + target.x + ',' + target.y); }
         post('diag:need-gesture');
       }
       window.addEventListener('message', function (event) {
@@ -323,13 +352,33 @@ enum MediaScript {
         sendState();
         reportAudio();
       }
+      function allowPiP(v) {
+        if (v.disablePictureInPicture) { v.disablePictureInPicture = false; }
+        if (v.hasAttribute('disablepictureinpicture')) {
+          v.removeAttribute('disablepictureinpicture');
+        }
+      }
+      function mainVideo() {
+        let best = null;
+        let bestScore = 0;
+        Array.prototype.forEach.call(document.querySelectorAll('video'), function (v) {
+          const box = v.getBoundingClientRect();
+          let score = Math.max(box.width * box.height, 1);
+          if (!v.paused && !v.ended) { score *= 4; }
+          if (score > bestScore) { bestScore = score; best = v; }
+        });
+        return best;
+      }
       function scan() {
-        const main = document.querySelector('video');
+        const main = mainVideo();
         if (main && main !== video) {
           forgetDuration();
           bind(main, true);
         }
-        media().forEach(function (m) { if (!m.__linenBound) { bind(m, false); } });
+        media().forEach(function (m) {
+          if (m.tagName === 'VIDEO') { allowPiP(m); }
+          if (!m.__linenBound) { bind(m, false); }
+        });
         sendMeta();
         reportAudio();
         reportVideo();

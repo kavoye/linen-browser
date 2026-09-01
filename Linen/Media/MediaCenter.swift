@@ -469,6 +469,7 @@ final class MediaCenter {
     private var pipRequestedAt: Date?
     private weak var pipTarget: WKWebView?
     private var pipTargetRect: CGRect?
+    private var pipGesturePoint: CGPoint?
     private weak var nativePiPView: WKWebView?
     private var pictureWentOutAt: Date?
     private var returnAskedAt: Date?
@@ -480,6 +481,7 @@ final class MediaCenter {
         pipRequestedAt = nil
         pipTarget = nil
         pipTargetRect = nil
+        pipGesturePoint = nil
     }
 
     private func forgetPicture(_ webView: WKWebView) {
@@ -559,6 +561,10 @@ final class MediaCenter {
             pipTargetRect = Self.rect(in: String(message.dropFirst("rect:".count)))
             return false
         }
+        if isMainFrame, message.hasPrefix("pipat:") {
+            pipGesturePoint = Self.point(in: String(message.dropFirst("pipat:".count)))
+            return true
+        }
         if message == "diag:need-gesture" {
             answerGestureRequest(on: webView)
             return true
@@ -575,8 +581,22 @@ final class MediaCenter {
             Pipeline.log.notice("media: unsolicited gesture request ignored")
             return
         }
+        if let cssPoint = pipGesturePoint {
+            pipGesturePoint = nil
+            synthesizeGestureClick(on: webView, atPagePoint: cssPoint)
+            return
+        }
         let rect = webView === controlledWebView ? model.playerViewportRect : pipTargetRect
         synthesizeGestureClick(on: webView, viewportRect: rect)
+    }
+
+    nonisolated private static func point(in payload: String) -> CGPoint? {
+        let parts = payload.split(separator: ",")
+        guard parts.count == 2,
+              let x = Double(parts[0]),
+              let y = Double(parts[1])
+        else { return nil }
+        return CGPoint(x: x, y: y)
     }
 
     // MARK: - Script messages
@@ -599,6 +619,11 @@ final class MediaCenter {
         }
         if message == "ended" {
             model.isPlaying = false
+            return
+        }
+        if message.hasPrefix("pipat:") {
+            guard isMainFrame else { return }
+            pipGesturePoint = Self.point(in: String(message.dropFirst("pipat:".count)))
             return
         }
         if message == "diag:need-gesture" {
@@ -730,11 +755,20 @@ final class MediaCenter {
         }
     }
 
+    private func synthesizeGestureClick(on webView: WKWebView, atPagePoint cssPoint: CGPoint) {
+        let bounds = webView.bounds
+        let raw = NSPoint(
+            x: cssPoint.x,
+            y: cssPoint.y + webView.obscuredContentInsets.top
+        )
+        let point = NSPoint(
+            x: min(max(raw.x, bounds.minX + 1), bounds.maxX - 1),
+            y: min(max(raw.y, bounds.minY + 1), bounds.maxY - 1)
+        )
+        deliverGestureClick(on: webView, at: point)
+    }
+
     private func synthesizeGestureClick(on webView: WKWebView, viewportRect: CGRect?) {
-        guard let window = webView.window else {
-            Pipeline.log.notice("media: no hosting window for gesture click")
-            return
-        }
         let point: NSPoint
         if let rect = viewportRect,
            let crop = MediaCropMath.visibleCrop(
@@ -745,6 +779,14 @@ final class MediaCenter {
             point = NSPoint(x: crop.midX, y: crop.midY)
         } else {
             point = NSPoint(x: webView.bounds.midX, y: webView.bounds.midY)
+        }
+        deliverGestureClick(on: webView, at: point)
+    }
+
+    private func deliverGestureClick(on webView: WKWebView, at point: NSPoint) {
+        guard let window = webView.window else {
+            Pipeline.log.notice("media: no hosting window for gesture click")
+            return
         }
         let windowPoint = webView.convert(point, to: nil)
         func mouseEvent(_ type: NSEvent.EventType) -> NSEvent? {
