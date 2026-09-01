@@ -359,27 +359,36 @@ private struct TrackerDomainList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Text(heading)
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(.secondary)
+            if domains.isEmpty {
+                HStack(spacing: 9) {
+                    Image(systemName: "checkmark.shield")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.success)
+                        .frame(width: 20)
 
-                Spacer()
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("No trackers found")
+                            .font(Theme.Font.rowTitle)
+                        Text("This page does not reference known tracker domains.")
+                            .font(Theme.Font.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+            } else {
+                HStack {
+                    Text(heading)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(.secondary)
 
-                if !domains.isEmpty {
+                    Spacer()
+
                     Text(domains.count, format: .number)
                         .font(Theme.Font.caption)
                         .foregroundStyle(.tertiary)
                         .monospacedDigit()
                 }
-            }
 
-            if domains.isEmpty {
-                Text("No known tracker domains were found.")
-                    .font(Theme.Font.label)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-            } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 7) {
                         ForEach(domains, id: \.self) { domain in
@@ -408,7 +417,7 @@ private struct TrackerInfoCaption: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Linen blocks third-party requests to known advertising, analytics, session-recording, social-pixel, and fingerprinting domains.")
-            Text("The list is based on tracker URLs referenced by this page.")
+            Text("The list shows the known tracker domains this page refers to. A request that is stopped before it loads can be missing.")
         }
         .font(Theme.Font.caption)
         .foregroundStyle(.secondary)

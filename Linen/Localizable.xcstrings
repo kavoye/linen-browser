@@ -2253,9 +2253,6 @@
     "No key yet" : {
       "comment" : "Settings → Assistant. Shown under a provider name when it has no API key."
     },
-    "No known tracker domains were found." : {
-
-    },
     "No lyrics found" : {
       "comment" : "Title of the empty state in the lyrics view when nothing matched the track. Sentence case with no final full stop."
     },
@@ -2297,6 +2294,9 @@
     },
     "No tabs" : {
       "comment" : "Shown where a tab count would be, when a profile has none. A fragment, not a sentence."
+    },
+    "No trackers found" : {
+
     },
     "No webpage is open yet." : {
 
@@ -3508,7 +3508,7 @@
     "The last profile used" : {
       "comment" : "One of two choices for which profile the browser opens in."
     },
-    "The list is based on tracker URLs referenced by this page." : {
+    "The list shows the known tracker domains this page refers to. A request that is stopped before it loads can be missing." : {
 
     },
     "The model couldn’t group the tabs. Try again." : {
@@ -3642,6 +3642,9 @@
     },
     "This page didn’t load" : {
       "comment" : "Headline on the error page used for any failure the app has no specific wording for. A short sentence in sentence case, displayed large above the system’s own error text. Curly apostrophe."
+    },
+    "This page does not reference known tracker domains." : {
+
     },
     "This provider has no endpoint set." : {
       "comment" : "Message shown for a user-added provider whose server address is missing, both as a reason it is unavailable and as an error when its model list is fetched. Provider means the AI provider; endpoint is the technical term for the server address."
