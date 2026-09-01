@@ -110,7 +110,7 @@ private struct SiteControlsHeader: View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
 
             VStack(alignment: .leading, spacing: 1) {
-                Text("Website Controls")
+                Text("Website Settings")
                     .font(.system(size: 13, weight: .semibold))
                 Text(verbatim: host)
                     .font(Theme.Font.caption)

@@ -3910,9 +3910,6 @@
     "Webpages can carry hidden instructions aimed at the assistant. Allow this only if it’s what you asked for." : {
 
     },
-    "Website Controls" : {
-
-    },
     "Website data" : {
       "comment" : "Title of the Privacy settings row reporting how many websites are storing something on this Mac, and the same wording in the Settings search index. A noun phrase; sentence case."
     },
