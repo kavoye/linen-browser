@@ -80,6 +80,7 @@ final class MediaCenter {
     var onReturnedInline: ((WKWebView?) -> Void)?
     var onTabAudioChanged: ((WKWebView, Bool) -> Void)?
     var onTabVideoChanged: ((WKWebView, Bool) -> Void)?
+    var onTabUnmuted: ((WKWebView) -> Void)?
     var onPictureOutChanged: ((WKWebView, Bool) -> Void)?
     var onControlledTabChanged: ((UUID?, UUID?) -> Void)?
     var onPictureChanged: (() -> Void)?
@@ -107,6 +108,10 @@ final class MediaCenter {
         }
         if let webView, isMainFrame, message == "hello" {
             forgetPicture(webView)
+        }
+        if let webView, message == "tabunmuted" {
+            onTabUnmuted?(webView)
+            return
         }
         if let controlled = controlledWebView, webView === controlled {
             if isMainFrame, let playing = Self.audioReport(in: message) {

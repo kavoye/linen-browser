@@ -344,6 +344,12 @@ enum MediaScript {
             .forEach(function (name) { found.addEventListener(name, sendState); });
           ['play', 'pause', 'ended', 'emptied', 'volumechange']
             .forEach(function (name) { found.addEventListener(name, reportAudio); });
+          found.addEventListener('volumechange', function () {
+            if (muteAll && !found.muted) {
+              muteAll = false;
+              post('tabunmuted');
+            }
+          });
           found.addEventListener('ended', function () { post('ended'); });
           found.addEventListener('webkitpresentationmodechanged', function () {
             post(found.webkitPresentationMode);

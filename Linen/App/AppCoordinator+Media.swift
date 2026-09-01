@@ -111,6 +111,15 @@ extension AppCoordinator {
                 controlPlayback(in: tab)
             }
         }
+        media.onTabUnmuted = { [weak self] webView in
+            guard let self, let tab = browser.tabs.first(where: { $0.isMaterialised && $0.webView === webView }),
+                  tab.isMuted
+            else { return }
+            tab.isMuted = false
+            if media.controlledTabID == tab.id {
+                media.model.isMuted = false
+            }
+        }
         media.onTabVideoChanged = { [weak self] webView, hasVideo in
             guard let self, let tab = browser.tabs.first(where: { $0.isMaterialised && $0.webView === webView }),
                   tab.hasVideo != hasVideo
