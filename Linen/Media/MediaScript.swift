@@ -221,7 +221,7 @@ enum MediaScript {
       let armedAt = 0;
       let lastPlayedAt = 0;
       function playedRecently() {
-        return performance.now() - lastPlayedAt < 4000;
+        return lastPlayedAt > 0 && performance.now() - lastPlayedAt < 4000;
       }
       function gesturePoint() {
         if (window !== window.top) { return null; }
