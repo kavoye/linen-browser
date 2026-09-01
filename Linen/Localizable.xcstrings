@@ -870,8 +870,11 @@
     "Bring your bookmarks over" : {
       "comment" : "Heading of the last onboarding screen, where the user imports bookmarks from another browser and makes Linen the default browser. An invitation, not a command."
     },
-    "Browse extensions to install" : {
-      "comment" : "Tooltip on the Chrome Web Store button on the Extensions settings page."
+    "Browse Chrome extensions to install" : {
+
+    },
+    "Browse Firefox add-ons to install" : {
+
     },
     "Browser" : {
       "comment" : "Heading of the first group in the Settings sidebar, covering the General and Appearance pages. A noun."
@@ -1017,10 +1020,7 @@
     "Choosing an option…" : {
       "comment" : "Line in the assistant’s live activity feed while it picks from a menu whose option text is unknown. Present participle; real ellipsis."
     },
-    "Chrome extensions" : {
-      "comment" : "Title of the Extensions settings section listing extensions installed from the Chrome Web Store. Chrome is a product name and is never translated."
-    },
-    "Chrome extensions running in Linen." : {
+    "Chrome extensions and Firefox add-ons running in Linen." : {
 
     },
     "Chrome Web Store" : {
@@ -1310,6 +1310,9 @@
     "Dinner ideas" : {
 
     },
+    "Disable Extension" : {
+
+    },
     "Disable Voice" : {
       "comment" : "Command in the ⌘K palette that stops the assistant reading its replies aloud; its detail line reads “agent speech”. Title Case; pairs with “Enable Voice”."
     },
@@ -1518,6 +1521,15 @@
     },
     "Finding a video…" : {
       "comment" : "Line in the assistant’s live activity feed while it searches for a video whose topic is unknown. Present participle; real ellipsis."
+    },
+    "Firefox Add-ons" : {
+
+    },
+    "Firefox Add-ons returned an unreadable listing" : {
+
+    },
+    "Firefox Add-ons returned HTTP %lld" : {
+
     },
     "Flights to Lisbon" : {
 
@@ -3460,6 +3472,9 @@
     "The default for every website. Individual tabs can still be zoomed." : {
       "comment" : "Caption under the Page zoom row, saying the chosen percentage applies everywhere but does not stop a single tab being zoomed on its own. Two sentences; website is one word."
     },
+    "The downloaded add-on didn’t match its checksum" : {
+
+    },
     "The downloaded file is not a supported extension package" : {
       "comment" : "Error shown when an extension install fails because the downloaded file is not in the expected format. No final full stop."
     },
@@ -3878,6 +3893,9 @@
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Watch means observe. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
     "Weather this weekend" : {
+
+    },
+    "Web extensions" : {
 
     },
     "Web Inspector" : {
