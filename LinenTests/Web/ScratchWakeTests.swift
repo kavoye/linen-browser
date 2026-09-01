@@ -19,11 +19,15 @@ struct ScratchWakeTests {
         )
     }
 
+    /// The window stays off screen. A page that renders to a display takes a
+    /// display link with it, and dropping a rendering view - which is what
+    /// discarding a tab does - crashes WebKit's display-link thread on a
+    /// virtual display. A view in a window still presents, which is all the
+    /// test asks of it.
     private func host(_ webView: WKWebView, in window: NSWindow) {
         webView.frame = NSRect(x: 0, y: 0, width: 800, height: 600)
         window.contentView?.subviews.forEach { $0.removeFromSuperview() }
         window.contentView?.addSubview(webView)
-        window.orderBack(nil)
     }
 
     @Test(arguments: [false, true])
@@ -43,7 +47,6 @@ struct ScratchWakeTests {
         let keeper = model.newTab(url: b)
         let win = window()
         defer {
-            win.orderOut(nil)
             win.contentView?.subviews.forEach { $0.removeFromSuperview() }
             sleeper.detach()
             keeper.detach()
