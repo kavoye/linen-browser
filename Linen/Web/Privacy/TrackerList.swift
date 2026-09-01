@@ -93,7 +93,6 @@ enum TrackerList {
         "fpjs.io",
         "iovation.com",
         "threatmetrix.com",
-        "audioeye.com",
     ]
 
     static let domains: [String] =
