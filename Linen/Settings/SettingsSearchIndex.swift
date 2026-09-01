@@ -98,7 +98,7 @@ enum SettingsIndex {
 
         SettingsEntry("appearance.theme", .appearance, "Theme", "Light, dark, or match your Mac.",
                       ["dark mode", "light mode", "theme", "appearance", "colour", "color", "night"]),
-        SettingsEntry("appearance.windowStyle", .appearance, "Window style", "Choose Standard or Liquid Glass.",
+        SettingsEntry("appearance.windowStyle", .appearance, "Window style", "Choose Standard or Transparent.",
                       ["loom", "window", "standard", "liquid glass", "clear", "opacity",
                        "transparency", "transparent", "translucent", "contrast", "toolbar",
                        "sidebar", "chrome",

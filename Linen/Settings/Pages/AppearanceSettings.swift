@@ -108,22 +108,22 @@ private struct WindowStyleSettingsSection: View {
                 }
                 .settingsAnchor("appearance.refraction")
 
-                if settings.loomStyle == .liquidGlass {
+                if settings.loomStyle == .transparent {
                     RowSeparator()
 
                     DetailRow(
-                        title: "Glass transparency",
+                        title: "Transparency",
                         caption: "Clear shows more of what’s behind Linen. Tinted adds contrast to content and controls.",
                         layout: .stacked
                     ) {
-                        LiquidGlassTransparencyControl(opacity: $settings.liquidGlassOpacity)
+                        LoomTransparencyControl(opacity: $settings.transparency)
                     }
-                    .settingsAnchor("appearance.liquidGlassOpacity")
+                    .settingsAnchor("appearance.transparency")
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
 
-            Text("Choose Standard or Liquid Glass.")
+            Text("Choose Standard or Transparent.")
                 .font(Theme.Font.label)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

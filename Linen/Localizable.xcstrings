@@ -990,8 +990,8 @@
     "Choose Site Settings in the toolbar to change one." : {
       "comment" : "Guidance under No websites changed, saying where per-website settings are made. Site Settings is the name of a menu in the browser toolbar — translate it the same way there. Imperative."
     },
-    "Choose Standard or Liquid Glass." : {
-      "comment" : "Caption below Window style in Appearance settings and the same wording in Settings search. Standard and Liquid Glass are the exact names of the two choices."
+    "Choose Standard or Transparent." : {
+
     },
     "Choose the bookmarks file you exported from another browser." : {
       "comment" : "Message at the top of the macOS file panel that Choose File… opens. It tells the user which file to pick."
@@ -1570,9 +1570,6 @@
     "Get a Key" : {
       "comment" : "Button in the API key row in Settings > Provider that opens the provider's own website, where a key can be obtained. A command; “key” means API key."
     },
-    "Glass transparency" : {
-
-    },
     "go" : {
       "comment" : "Hint word printed beside a ↩ key cap under the address field, reading “↩ go”, shown when what is typed looks like an address: pressing Return loads it. One lowercase verb, tiny type."
     },
@@ -1974,12 +1971,6 @@
     },
     "Links Copied" : {
       "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
-    },
-    "Liquid Glass" : {
-
-    },
-    "Liquid Glass transparency" : {
-
     },
     "List Tabs" : {
 
@@ -3697,6 +3688,12 @@
     "trackers allowed" : {
       "comment" : "Fragment in the one-line summary under a website, meaning tracker blocking is switched off there. Lower case: joined with other fragments."
     },
+    "Transparency" : {
+
+    },
+    "Transparent" : {
+
+    },
     "Try Again" : {
       "comment" : "Button that retries a failed agent turn or a failed update check."
     },
@@ -4013,6 +4010,9 @@
       "comment" : "Title of one of the menus in the menu bar. Use Apple’s own wording for the standard Window menu in the target language."
     },
     "Window style" : {
+
+    },
+    "Window transparency" : {
 
     },
     "Working" : {

@@ -37,7 +37,7 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 
 enum LoomStyle: String, CaseIterable, Identifiable {
     case standard
-    case liquidGlass
+    case transparent
 
     var id: String {
         rawValue
@@ -47,8 +47,8 @@ enum LoomStyle: String, CaseIterable, Identifiable {
         switch self {
         case .standard:
             "Standard"
-        case .liquidGlass:
-            "Liquid Glass"
+        case .transparent:
+            "Transparent"
         }
     }
 }

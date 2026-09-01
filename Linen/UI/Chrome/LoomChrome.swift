@@ -148,10 +148,10 @@ struct LoomAmbientBackdrop: View {
         switch settings.loomStyle {
         case .standard:
             LoomTintedBackdrop(sampledPageColor: websiteTint, isFloating: false)
-        case .liquidGlass:
-            LoomLiquidGlassBackdrop(
+        case .transparent:
+            LoomTransparentBackdrop(
                 sampledPageColor: websiteTint,
-                opacity: settings.liquidGlassOpacity,
+                opacity: settings.transparency,
                 isFloating: false
             )
         }
@@ -170,10 +170,10 @@ struct LoomFloatingFill: View {
         switch settings.loomStyle {
         case .standard:
             LoomTintedBackdrop(sampledPageColor: websiteTint, isFloating: true)
-        case .liquidGlass:
-            LoomLiquidGlassBackdrop(
+        case .transparent:
+            LoomTransparentBackdrop(
                 sampledPageColor: websiteTint,
-                opacity: settings.liquidGlassOpacity,
+                opacity: settings.transparency,
                 isFloating: true
             )
         }
@@ -194,37 +194,31 @@ private struct LoomTintedBackdrop: View {
         LoomChrome.sampledColor(sampledPageColor, scheme: scheme)
     }
 
+    private var washOpacity: CGFloat {
+        if sampledPageColor != nil {
+            return isFloating ? 0.72 : 0.92
+        }
+        if isFloating {
+            return 0.55
+        }
+        return PageInk.isLight(sampled, scheme: scheme) ? 0.34 : 0.28
+    }
+
     var body: some View {
         ZStack {
             VisualEffectView(
-                material: .sidebar,
+                material: .underWindowBackground,
                 blending: isFloating ? .withinWindow : .behindWindow
             )
 
-            Color(nsColor: sampled).opacity(isFloating ? 0.72 : 0.92)
-
-            if !isFloating {
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(
-                            PageInk.isLight(sampled, scheme: scheme) ? 0.075 : 0.025
-                        ),
-                        Color.clear,
-                        Color.black.opacity(
-                            PageInk.isLight(sampled, scheme: scheme) ? 0.018 : 0.075
-                        ),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
+            Color(nsColor: sampled).opacity(washOpacity)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 }
 
-private struct LoomLiquidGlassBackdrop: View {
+private struct LoomTransparentBackdrop: View {
     let sampledPageColor: NSColor?
     let opacity: Double
     let isFloating: Bool

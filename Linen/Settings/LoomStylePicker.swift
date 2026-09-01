@@ -88,36 +88,9 @@ private struct LoomStyleThumbnail: View {
             tintsSelectedTab: tintsSelectedTab
         ) {
             ZStack {
-                LoomPreviewBackdrop(style: style, usesWebsiteTint: usesWebsiteTint)
+                LoomPreviewWallpaper()
                 LoomPreviewChrome(style: style, usesWebsiteTint: usesWebsiteTint)
             }
-        }
-    }
-}
-
-private struct LoomPreviewBackdrop: View {
-    let style: LoomStyle
-    let usesWebsiteTint: Bool
-
-    var body: some View {
-        switch style {
-        case .standard where usesWebsiteTint:
-            LinearGradient(
-                colors: [
-                    Color(red: 0.98, green: 0.50, blue: 0.22),
-                    Color(red: 0.46, green: 0.20, blue: 0.72),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .standard:
-            LinearGradient(
-                colors: [Color(white: 0.94), Color(white: 0.18)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .liquidGlass:
-            LoomPreviewWallpaper()
         }
     }
 }
@@ -158,22 +131,27 @@ private struct LoomPreviewChrome: View {
 
     var body: some View {
         switch style {
-        case .standard where usesWebsiteTint:
-            LinearGradient(
-                colors: [
-                    Color(red: 0.95, green: 0.43, blue: 0.18).opacity(0.90),
-                    Color(red: 0.38, green: 0.14, blue: 0.58).opacity(0.92),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
         case .standard:
-            LinearGradient(
-                colors: [Color.white.opacity(0.90), Color.black.opacity(0.76)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .liquidGlass:
+            ZStack {
+                Rectangle()
+                    .fill(.regularMaterial)
+
+                if usesWebsiteTint {
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.95, green: 0.43, blue: 0.18)
+                                .opacity(0.90),
+                            Color(red: 0.38, green: 0.14, blue: 0.58)
+                                .opacity(0.92),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    Color(white: 0.94).opacity(0.34)
+                }
+            }
+        case .transparent:
             Color.clear
                 .glassEffect(
                     .clear.tint(
@@ -187,7 +165,7 @@ private struct LoomPreviewChrome: View {
     }
 }
 
-struct LiquidGlassTransparencyControl: View {
+struct LoomTransparencyControl: View {
     @Binding var opacity: Double
 
     var body: some View {
@@ -196,7 +174,7 @@ struct LiquidGlassTransparencyControl: View {
                 Image(systemName: "capsule.on.rectangle")
                     .foregroundStyle(.secondary)
 
-                LiquidGlassSnapSlider(opacity: $opacity)
+                LoomTransparencySnapSlider(opacity: $opacity)
 
                 Image(systemName: "capsule.on.rectangle.fill")
                     .foregroundStyle(.secondary)
@@ -223,7 +201,7 @@ struct LiquidGlassTransparencyControl: View {
     }
 }
 
-private struct LiquidGlassSnapSlider: View {
+private struct LoomTransparencySnapSlider: View {
     private static let snapTolerance = 0.04
 
     @Binding var opacity: Double
@@ -233,15 +211,15 @@ private struct LiquidGlassSnapSlider: View {
         VStack(spacing: 1) {
             Slider(value: $opacity, in: 0...1)
                 .tint(Theme.systemAccent)
-                .accessibilityLabel("Liquid Glass transparency")
+                .accessibilityLabel("Window transparency")
                 .accessibilityValue(Text(opacity, format: .percent))
 
             HStack(spacing: 0) {
-                LiquidGlassSnapDot(isSelected: opacity == 0)
+                LoomTransparencySnapDot(isSelected: opacity == 0)
                 Spacer(minLength: 0)
-                LiquidGlassSnapDot(isSelected: opacity == 0.5)
+                LoomTransparencySnapDot(isSelected: opacity == 0.5)
                 Spacer(minLength: 0)
-                LiquidGlassSnapDot(isSelected: opacity == 1)
+                LoomTransparencySnapDot(isSelected: opacity == 1)
             }
             .padding(.horizontal, 7)
         }
@@ -276,7 +254,7 @@ private struct LiquidGlassSnapSlider: View {
     }
 }
 
-private struct LiquidGlassSnapDot: View {
+private struct LoomTransparencySnapDot: View {
     let isSelected: Bool
 
     var body: some View {

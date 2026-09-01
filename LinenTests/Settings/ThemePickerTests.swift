@@ -42,8 +42,8 @@ struct ThemePickerTests {
         defer { suite.removePersistentDomain(forName: suite.description) }
 
         #expect(BrowserSettings(defaults: suite).loomStyle == .standard)
-        BrowserSettings(defaults: suite).loomStyle = .liquidGlass
-        #expect(BrowserSettings(defaults: suite).loomStyle == .liquidGlass)
+        BrowserSettings(defaults: suite).loomStyle = .transparent
+        #expect(BrowserSettings(defaults: suite).loomStyle == .transparent)
     }
 
     @Test func websiteTintPersistsIndependentlyOfWindowStyle() throws {
@@ -51,11 +51,11 @@ struct ThemePickerTests {
         defer { suite.removePersistentDomain(forName: suite.description) }
 
         let settings = BrowserSettings(defaults: suite)
-        settings.loomStyle = .liquidGlass
+        settings.loomStyle = .transparent
         settings.matchesWebsiteColor = true
 
         let restored = BrowserSettings(defaults: suite)
-        #expect(restored.loomStyle == .liquidGlass)
+        #expect(restored.loomStyle == .transparent)
         #expect(restored.matchesWebsiteColor)
     }
 

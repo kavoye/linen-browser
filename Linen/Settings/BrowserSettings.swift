@@ -18,7 +18,7 @@ final class BrowserSettings {
         static let websiteTint = "appearance.websiteTint"
         static let websiteColor = "appearance.websiteColor"
         static let loomStyle = "appearance.loomStyle"
-        static let liquidGlassOpacity = "appearance.liquidGlassOpacity"
+        static let transparency = "appearance.transparency"
         static let pageZoom = "content.defaultZoom"
         static let newTab = "startup.newTab"
         static let sleepsInactiveTabs = "tabs.sleep"
@@ -123,10 +123,10 @@ final class BrowserSettings {
         }
     }
 
-    var liquidGlassOpacity: Double {
+    var transparency: Double {
         didSet {
-            guard liquidGlassOpacity != oldValue else { return }
-            write(liquidGlassOpacity, forKey: Key.liquidGlassOpacity)
+            guard transparency != oldValue else { return }
+            write(transparency, forKey: Key.transparency)
         }
     }
 
@@ -488,7 +488,7 @@ final class BrowserSettings {
         appearance = string(Key.appearance)
             .flatMap(AppearanceMode.init(rawValue:)) ?? .system
         let storedLoomStyle = string(Key.loomStyle)
-        loomStyle = storedLoomStyle == LoomStyle.liquidGlass.rawValue ? .liquidGlass : .standard
+        loomStyle = storedLoomStyle == LoomStyle.transparent.rawValue ? .transparent : .standard
         if let storedWebsiteTint = object(Key.websiteTint) as? Bool {
             matchesWebsiteColor = storedWebsiteTint
         } else if storedLoomStyle == "websiteTint" {
@@ -498,9 +498,9 @@ final class BrowserSettings {
         } else {
             matchesWebsiteColor = false
         }
-        liquidGlassOpacity = object(Key.liquidGlassOpacity) == nil
+        transparency = object(Key.transparency) == nil
             ? 0.5
-            : min(max(double(Key.liquidGlassOpacity), 0), 1)
+            : min(max(double(Key.transparency), 0), 1)
         showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
         showsLyrics = object(Key.lyrics) as? Bool ?? true
         refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? false
@@ -624,7 +624,7 @@ final class BrowserSettings {
         appearance = .system
         loomStyle = .standard
         matchesWebsiteColor = false
-        liquidGlassOpacity = 0.5
+        transparency = 0.5
         refractsTabColor = false
         pageZoom = 1
         newTab = .startPage
