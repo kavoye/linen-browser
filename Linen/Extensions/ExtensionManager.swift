@@ -45,6 +45,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     @ObservationIgnored private var lastPopupDismissal = Date.distantPast
     @ObservationIgnored private var reloadedForEmptyPopup: Set<String> = []
     @ObservationIgnored private var backgroundStarts: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored private let nativeMessaging = NativeMessagingService()
     private(set) var appsOutOfReach: Set<String> = []
 
     init(browser: BrowserModel, library: ExtensionLibrary = ExtensionLibrary()) {
@@ -53,6 +54,10 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: nil))
         super.init()
         controller.delegate = self
+        nativeMessaging.geckoID = { [weak self] id in
+            guard let self else { return nil }
+            return NativeMessagingManifest.geckoID(inPackage: self.library.packageURL(for: id))
+        }
 
         let window = ExtensionWindowAdapter(browser: browser, manager: self)
         windowAdapter = window
@@ -323,6 +328,13 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         for context: WKWebExtensionContext,
         replyHandler: @escaping (Any?, (any Error)?) -> Void
     ) {
+        let handled = nativeMessaging.sendOnce(
+            message: message,
+            applicationIdentifier: applicationIdentifier,
+            for: context,
+            reply: replyHandler
+        )
+        guard !handled else { return }
         replyHandler(nil, refuseReachingApp(for: context))
     }
 
@@ -332,7 +344,14 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         for context: WKWebExtensionContext,
         completionHandler: @escaping ((any Error)?) -> Void
     ) {
-        completionHandler(refuseReachingApp(for: context))
+        switch nativeMessaging.connect(port: port, for: context) {
+        case .connected:
+            completionHandler(nil)
+        case .failed(let error):
+            completionHandler(error)
+        case .unavailable:
+            completionHandler(refuseReachingApp(for: context))
+        }
     }
 
     private func unload(id: String) {
