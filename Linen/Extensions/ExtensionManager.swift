@@ -235,7 +235,9 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             if let path = record.bundlePath, let bundle = Bundle(path: path) {
                 webExtension = try await WKWebExtension(appExtensionBundle: bundle)
             } else {
-                webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: record.id))
+                let package = library.packageURL(for: record.id)
+                ExtensionShims.ensureApplied(at: package)
+                webExtension = try await WKWebExtension(resourceBaseURL: package)
             }
             if let icon = webExtension.icon(for: CGSize(width: 32, height: 32)) {
                 iconCache[record.id] = icon
