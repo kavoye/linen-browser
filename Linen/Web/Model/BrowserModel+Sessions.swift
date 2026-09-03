@@ -15,6 +15,7 @@ extension BrowserModel {
 
         var id: UUID
         var title: String
+        var customTitle: String?
         var url: String
         var state: Data?
         var pinnedURL: URL?
@@ -157,7 +158,8 @@ extension BrowserModel {
             }
             return TabRecord(
                 id: tab.id,
-                title: tab.title,
+                title: tab.pageTitle,
+                customTitle: tab.customTitle.isEmpty ? nil : tab.customTitle,
                 url: tab.urlString,
                 state: isRestated ? tab.sessionState : nil,
                 pinnedURL: tab.pinnedURL,
@@ -233,11 +235,12 @@ extension BrowserModel {
             try db.execute(
                 sql: """
                     INSERT INTO sessionTab
-                        (id, title, url, state, pinnedURL, pinnedTitle,
+                        (id, title, customTitle, url, state, pinnedURL, pinnedTitle,
                          internalPage, isActive)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         title = excluded.title,
+                        customTitle = excluded.customTitle,
                         url = excluded.url,
                         \(writesState ? "state = excluded.state," : "")
                         pinnedURL = excluded.pinnedURL,
@@ -246,7 +249,8 @@ extension BrowserModel {
                         isActive = excluded.isActive
                     """,
                 arguments: [
-                    tab.id, tab.title, tab.url, tab.state, tab.pinnedURL, tab.pinnedTitle,
+                    tab.id, tab.title, tab.customTitle, tab.url, tab.state,
+                    tab.pinnedURL, tab.pinnedTitle,
                     tab.internalPage?.rawValue, tab.isActive,
                 ]
             )
@@ -334,7 +338,8 @@ extension BrowserModel {
                 id: record.id,
                 restoring: !onScreen.contains(record.id)
             )
-            tab.title = record.title
+            tab.pageTitle = record.title
+            tab.customTitle = record.customTitle ?? ""
             tab.urlString = restoredURL.map(\.absoluteString) ?? record.url
             tab.pinnedURL = record.pinnedURL
             tab.pinnedTitle = record.pinnedTitle ?? ""

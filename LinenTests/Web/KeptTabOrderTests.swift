@@ -6,7 +6,7 @@ import Testing
 
 @testable import Linen
 
-/// A bookmarked tab is the one you meant to keep, so a new tab opens under it
+/// A pinned tab is the one you meant to keep, so a new tab opens under it
 /// rather than pushing it down the list.
 @MainActor
 struct KeptTabOrderTests {
@@ -21,15 +21,15 @@ struct KeptTabOrderTests {
         }
     }
 
-    private func bookmark(_ tab: BrowserTab, _ address: String, in model: BrowserModel) {
+    private func pin(_ tab: BrowserTab, _ address: String, in model: BrowserModel) {
         tab.urlString = address
         model.pin(tab)
     }
 
-    @Test func aNewTabOpensUnderTheBookmarkedOnes() {
+    @Test func aNewTabOpensUnderThePinnedOnes() {
         let model = model()
         let kept = model.newTab(url: URL(string: "https://kept.example/"))
-        bookmark(kept, "https://kept.example/", in: model)
+        pin(kept, "https://kept.example/", in: model)
 
         let fresh = model.newTab(url: URL(string: "https://fresh.example/"))
         fresh.urlString = "https://fresh.example/"
@@ -37,12 +37,12 @@ struct KeptTabOrderTests {
         #expect(order(model) == ["https://kept.example/", "https://fresh.example/"])
     }
 
-    @Test func everyBookmarkedTabKeepsItsPlace() {
+    @Test func everyPinnedTabKeepsItsPlace() {
         let model = model()
         let first = model.newTab(url: URL(string: "https://one.example/"))
-        bookmark(first, "https://one.example/", in: model)
+        pin(first, "https://one.example/", in: model)
         let second = model.newTab(url: URL(string: "https://two.example/"))
-        bookmark(second, "https://two.example/", in: model)
+        pin(second, "https://two.example/", in: model)
 
         let fresh = model.newTab(url: URL(string: "https://fresh.example/"))
         fresh.urlString = "https://fresh.example/"
@@ -52,15 +52,15 @@ struct KeptTabOrderTests {
         #expect(addresses.count == 3)
     }
 
-    /// The report this rule came from: a link opened from a bookmarked tab
-    /// landed right under its opener, splitting the bookmarked run and making
+    /// The report this rule came from: a link opened from a pinned tab
+    /// landed right under its opener, splitting the pinned run and making
     /// the tabs pushed below the newcomer read as unpinned.
-    @Test func aTabOpenedFromABookmarkedTabLandsUnderTheLine() {
+    @Test func aTabOpenedFromAPinnedTabLandsUnderTheLine() {
         let model = model()
         let first = model.newTab(url: URL(string: "https://one.example/"))
-        bookmark(first, "https://one.example/", in: model)
+        pin(first, "https://one.example/", in: model)
         let second = model.newTab(url: URL(string: "https://two.example/"))
-        bookmark(second, "https://two.example/", in: model)
+        pin(second, "https://two.example/", in: model)
 
         let fresh = model.newTab(url: URL(string: "https://fresh.example/"), after: first)
         fresh.urlString = "https://fresh.example/"
@@ -72,10 +72,10 @@ struct KeptTabOrderTests {
         ])
     }
 
-    @Test func openingFromABookmarkLandsAboveTheLooseTabs() {
+    @Test func openingFromAPinLandsAboveTheLooseTabs() {
         let model = model()
         let kept = model.newTab(url: URL(string: "https://kept.example/"))
-        bookmark(kept, "https://kept.example/", in: model)
+        pin(kept, "https://kept.example/", in: model)
         let loose = model.newTab(url: URL(string: "https://loose.example/"))
         loose.urlString = "https://loose.example/"
 
@@ -94,7 +94,7 @@ struct KeptTabOrderTests {
     @Test func openingFromALooseTabStaysBesideIt() {
         let model = model()
         let kept = model.newTab(url: URL(string: "https://kept.example/"))
-        bookmark(kept, "https://kept.example/", in: model)
+        pin(kept, "https://kept.example/", in: model)
         let older = model.newTab(url: URL(string: "https://older.example/"))
         older.urlString = "https://older.example/"
         let newer = model.newTab(url: URL(string: "https://newer.example/"))
@@ -111,9 +111,9 @@ struct KeptTabOrderTests {
         ])
     }
 
-    /// A bookmark below the line is an ordinary opener; only the run at the
-    /// top redirects newcomers.
-    @Test func openingFromABookmarkOutsideTheTopRunStaysBesideIt() {
+    /// Pinning lifts the tab into the pinned run, so the newcomer lands under
+    /// the line rather than beside its opener.
+    @Test func pinningATabLiftsItIntoThePinnedRun() {
         let model = model()
         let deep = model.newTab(url: URL(string: "https://deep.example/"))
         deep.urlString = "https://deep.example/"
@@ -125,14 +125,14 @@ struct KeptTabOrderTests {
         fresh.urlString = "https://fresh.example/"
 
         #expect(order(model) == [
-            "https://loose.example/",
             "https://deep.example/",
             "https://fresh.example/",
+            "https://loose.example/",
         ])
     }
 
-    /// With nothing bookmarked, a new tab still opens at the top.
-    @Test func aNewTabStillOpensFirstWhenNothingIsBookmarked() {
+    /// With nothing pinned, a new tab still opens at the top.
+    @Test func aNewTabStillOpensFirstWhenNothingIsPinned() {
         let model = model()
         let older = model.newTab(url: URL(string: "https://older.example/"))
         older.urlString = "https://older.example/"
@@ -143,23 +143,22 @@ struct KeptTabOrderTests {
         #expect(order(model).first == "https://fresh.example/")
     }
 
-    /// Only the run at the top holds a new tab back. A bookmark further down
-    /// the list is not a lid over everything above it.
-    @Test func onlyTheBookmarkedRunAtTheTopHoldsANewTabBack() {
+    /// Unpinning drops the tab out of the run, to the top of the loose tabs.
+    @Test func unpinningDropsTheTabBelowTheLine() {
         let model = model()
-        let deep = model.newTab(url: URL(string: "https://deep.example/"))
-        deep.urlString = "https://deep.example/"
+        let first = model.newTab(url: URL(string: "https://one.example/"))
+        pin(first, "https://one.example/", in: model)
+        let second = model.newTab(url: URL(string: "https://two.example/"))
+        pin(second, "https://two.example/", in: model)
         let loose = model.newTab(url: URL(string: "https://loose.example/"))
         loose.urlString = "https://loose.example/"
-        model.pin(deep)
 
-        let fresh = model.newTab(url: URL(string: "https://fresh.example/"))
-        fresh.urlString = "https://fresh.example/"
+        model.unpin(first)
 
         #expect(order(model) == [
-            "https://fresh.example/",
+            "https://two.example/",
+            "https://one.example/",
             "https://loose.example/",
-            "https://deep.example/",
         ])
     }
 }

@@ -264,6 +264,10 @@ nonisolated struct TabSplit: Equatable, Sendable, Codable {
         TabSplit(root: root.evenlyDivided()) ?? self
     }
 
+    var stackedSidebarShape: TabSplit {
+        TabSplit(root: .group(.stacked, root.pages.map { .page($0) })) ?? sidebarShape
+    }
+
     var sidebarLineCount: Int {
         root.stackedLineCount
     }

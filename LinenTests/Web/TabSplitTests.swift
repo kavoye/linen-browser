@@ -388,6 +388,18 @@ struct TabSplitTests {
         #expect(row.root.children.allSatisfy { abs($0.share - 1 / 3) < 0.001 })
     }
 
+    @Test func theCompactRowGivesEveryPageALineOfItsOwn() throws {
+        let grid = pair()
+            .inserting(c, beside: b, edge: .right)
+            .inserting(d, beside: a, edge: .bottom)
+        let row = try #require(grid.split(containing: a)?.stackedSidebarShape)
+
+        #expect(row.root.axis == .stacked)
+        #expect(row.sidebarLineCount == 4)
+        #expect(row.tabs == grid.split(containing: a)?.tabs)
+        #expect(row.root.children.allSatisfy { $0.pageID != nil })
+    }
+
     // MARK: - Writing it down
 
     /// The arrangement is stored as its tree, so anything that survives a

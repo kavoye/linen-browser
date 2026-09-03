@@ -228,7 +228,7 @@ enum CommandPaletteCatalog {
         let perform: (CommandPaletteAction) -> Void
 
         var tabs: [CommandPaletteCommand] {
-            let pinTitle: LocalizedStringResource = context.isShowingPin ? "Remove Bookmark" : "Bookmark This Page"
+            let pinTitle: LocalizedStringResource = context.isShowingPin ? "Unpin Tab" : "Pin This Page"
             return [
                 make(
                     .newTab,
@@ -289,16 +289,16 @@ enum CommandPaletteCatalog {
                     .togglePin,
                     group: .tabs,
                     title: pinTitle,
-                    symbol: context.isShowingPin ? "bookmark.slash" : "bookmark",
+                    symbol: context.isShowingPin ? "pin.slash" : "pin",
                     shortcut: "⌘D",
-                    aliases: ["pin", "favourite", "favorite", "keep"],
+                    aliases: ["bookmark", "favourite", "favorite", "keep"],
                     isAvailable: context.hasActiveTab
                 ),
                 make(
                     .returnToPin,
                     group: .tabs,
-                    title: "Back to Bookmarked Page",
-                    symbol: "bookmark",
+                    title: "Back to Pinned Page",
+                    symbol: "pin",
                     shortcut: "⇧⌘D",
                     isAvailable: context.isAwayFromPin
                 ),

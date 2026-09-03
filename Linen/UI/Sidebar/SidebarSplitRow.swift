@@ -42,6 +42,8 @@ struct SidebarSplitRow: View {
         context.isArmed(item)
     }
 
+    @Environment(\.sidebarStyle) private var sidebarStyle
+
     @State private var hoveringRow = false
     @State private var windowFrame: CGRect = .zero
 
@@ -62,8 +64,12 @@ struct SidebarSplitRow: View {
         depth == 0 ? Theme.Radius.hover : FolderSection.rowRadius(depth: depth - 1)
     }
 
+    private var shape: TabSplit {
+        sidebarStyle == .icons ? split.stackedSidebarShape : split.sidebarShape
+    }
+
     private var lineCount: Int {
-        split.sidebarLineCount
+        shape.sidebarLineCount
     }
 
     private var height: CGFloat {
@@ -76,7 +82,7 @@ struct SidebarSplitRow: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let layout = SplitLayout(grid: split.sidebarShape, size: proxy.size, gutter: 1)
+            let layout = SplitLayout(grid: shape, size: proxy.size, gutter: 1)
             ZStack(alignment: .topLeading) {
                 ForEach(split.tabs, id: \.self) { id in
                     if let tab = browser.tab(id: id), let rect = layout.slot(of: id) {
@@ -259,12 +265,14 @@ private struct SplitRowCell: View {
                 SplitRowPinReturn(help: String(localized: "Back to \(pinnedPageName(of: tab))")) {
                     browser.returnToPin(tab)
                 }
-            } else if sidebarStyle == .full, tab.isPlayingAudio || tab.isMuted {
+            } else {
+                TabIcon(tab: tab)
+            }
+
+            if sidebarStyle == .full, tab.isPlayingAudio || tab.isMuted {
                 SidebarTabMuteButton(isMuted: tab.isMuted) {
                     coordinator.toggleMute(tab: tab)
                 }
-            } else {
-                TabIcon(tab: tab)
             }
 
             if sidebarStyle == .full, !isNarrow {
@@ -293,7 +301,7 @@ private struct SplitRowCell: View {
         .onTapGesture { onTap(tab) }
         .onMiddleClick {
             coordinator.tabPreview.dismiss()
-            browser.close(tab)
+            coordinator.closeAskingIfPinned(tab)
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
             windowFrame = frame

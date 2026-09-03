@@ -103,42 +103,42 @@ struct SplitViewModelTests {
         #expect(rows[rows.firstIndex(of: .tab(left.id))! + 1] == .tab(third.id))
     }
 
-    // MARK: - A link opened beside its page
+    // MARK: - A peek kept beside its page
 
-    /// Shift-clicking a link puts it beside the page it was on, and focus goes
-    /// with it - the click asked for that page.
-    @Test func aLinkOpenedBesideItsPageMakesASplit() throws {
+    /// Keeping a peek beside the page puts it in a split with the page it was
+    /// opened from, and focus goes with it - the button asked for that page.
+    @Test func aPeekKeptBesideItsPageMakesASplit() throws {
         let model = makeModel()
         let reading = model.newTab(url: URL(string: "https://example.com/article"))
         model.activate(reading)
 
-        let open = try #require(reading.onOpenInSplit)
-        open(URL(string: "https://example.com/reference")!)
+        let peeked = model.makePeekTab(URL(string: "https://example.com/reference")!)
+        model.keepPeekTab(peeked, besidePage: reading)
 
         let split = try #require(model.activeSplit)
         #expect(split.count == 2)
         #expect(split.leader == reading.id)
-        #expect(model.activeTabID != reading.id)
+        #expect(model.activeTabID == peeked.id)
     }
 
     /// And it joins a grid that already exists rather than starting a second.
-    @Test func aLinkOpenedBesideAGridJoinsIt() throws {
+    @Test func aPeekKeptBesideAGridJoinsIt() {
         let model = makeModel()
         let left = model.newTab(url: URL(string: "https://example.com/a"))
         let right = model.newTab(url: URL(string: "https://example.com/b"))
         model.split(left, with: right, axis: .sideBySide)
         model.activate(right)
 
-        let open = try #require(right.onOpenInSplit)
-        open(URL(string: "https://example.com/c")!)
+        let peeked = model.makePeekTab(URL(string: "https://example.com/c")!)
+        model.keepPeekTab(peeked, besidePage: right)
 
         #expect(model.activeSplit?.count == 3)
         #expect(model.splits.splits.count == 1)
     }
 
-    /// A grid at the page ceiling has nowhere to put it, and the page the link
-    /// was on must not be the one that gives way.
-    @Test func aLinkOpenedBesideAFullGridOpensAnOrdinaryTab() throws {
+    /// A grid at the page ceiling has nowhere to put it, and the page the peek
+    /// came from must not be the one that gives way.
+    @Test func aPeekKeptBesideAFullGridBecomesAnOrdinaryTab() {
         let model = makeModel()
         let a = model.newTab(url: URL(string: "https://example.com/a"))
         let b = model.newTab(url: URL(string: "https://example.com/b"))
@@ -149,11 +149,12 @@ struct SplitViewModelTests {
         model.insertIntoSplit(d, beside: c, edge: .right)
         model.activate(b)
 
-        let open = try #require(b.onOpenInSplit)
-        open(URL(string: "https://example.com/e")!)
+        let peeked = model.makePeekTab(URL(string: "https://example.com/e")!)
+        model.keepPeekTab(peeked, besidePage: b)
 
         #expect(model.splits.contains(b.id))
         #expect(model.splits.split(containing: a.id)?.count == 4)
+        #expect(model.tab(id: peeked.id) === peeked)
         #expect(model.activeSplit == nil)
     }
 

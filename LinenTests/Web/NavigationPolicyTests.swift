@@ -150,10 +150,10 @@ struct NavigationPolicyTests {
         #expect(opened?.1 == true)
     }
 
-    @Test func shiftClickingALinkOpensItBesideThePage() {
+    @Test func shiftClickingALinkPeeksAtIt() {
         let (tab, delegate) = subject()
-        var split: URL?
-        tab.onOpenInSplit = { split = $0 }
+        var peeked: URL?
+        tab.onOpenInPeek = { url, _ in peeked = url }
         tab.onOpenInNewTab = { _, _ in Issue.record("shift alone must not open a tab") }
 
         let policy = decide(delegate, tab, action(
@@ -161,13 +161,13 @@ struct NavigationPolicyTests {
         ))
 
         #expect(policy == .cancel)
-        #expect(split?.absoluteString == "https://example.com/target")
+        #expect(peeked?.absoluteString == "https://example.com/target")
     }
 
-    @Test func commandShiftIsATabRatherThanASplit() {
+    @Test func commandShiftIsATabRatherThanAPeek() {
         let (tab, delegate) = subject()
         tab.onOpenInNewTab = { _, _ in }
-        tab.onOpenInSplit = { _ in Issue.record("command-shift must not split") }
+        tab.onOpenInPeek = { _, _ in Issue.record("command-shift must not peek") }
 
         _ = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.command, .shift]
@@ -192,7 +192,7 @@ struct NavigationPolicyTests {
         let (tab, delegate) = subject()
         var opened: (URL, Bool)?
         tab.onOpenInNewTab = { opened = ($0, $1) }
-        tab.onOpenInSplit = { _ in Issue.record("shift with the middle button must not split") }
+        tab.onOpenInPeek = { _, _ in Issue.record("shift with the middle button must not peek") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target",
@@ -219,7 +219,7 @@ struct NavigationPolicyTests {
     @Test func modifiersAreIgnoredWhenThePageNavigatesItself() {
         let (tab, delegate) = subject()
         tab.onOpenInNewTab = { _, _ in Issue.record("a redirect must not open a tab") }
-        tab.onOpenInSplit = { _ in Issue.record("a redirect must not split") }
+        tab.onOpenInPeek = { _, _ in Issue.record("a redirect must not peek") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .other, modifiers: [.command, .shift]

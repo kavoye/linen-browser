@@ -100,9 +100,9 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(command("Reopen Last Closed Tab", #selector(reopenClosedTab), key: "t", modifiers: [.command, .shift]))
         menu.addItem(command("Close Tab", #selector(closeTab), key: "w"))
         menu.addItem(.separator())
-        menu.addItem(command("Bookmark This Page", #selector(pinPage), key: "d"))
+        menu.addItem(command("Pin This Page", #selector(pinPage), key: "d"))
         menu.addItem(command(
-            "Back to Bookmarked Page",
+            "Back to Pinned Page",
             #selector(returnToPin),
             key: "d",
             modifiers: [.command, .shift]
@@ -261,7 +261,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.leavePrivateBrowsing()
     }
     @objc private func closeTab() {
-        coordinator.closeActiveTabAskingIfBookmarked()
+        coordinator.closeActiveTabAskingIfPinned()
     }
     @objc private func reopenClosedTab() {
         coordinator.browser.reopenLastClosedTab()

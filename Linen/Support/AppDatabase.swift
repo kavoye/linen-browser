@@ -138,12 +138,19 @@ struct AppDatabase: Sendable {
         try db.create(table: "sessionTab", options: .ifNotExists) {  t in
             t.primaryKey("id", .blob)
             t.column("title", .text).notNull()
+            t.column("customTitle", .text)
             t.column("url", .text).notNull()
             t.column("state", .blob)
             t.column("pinnedURL", .text)
             t.column("pinnedTitle", .text)
             t.column("internalPage", .text)
             t.column("isActive", .boolean).notNull().defaults(to: false)
+        }
+
+        if try !db.columns(in: "sessionTab").contains(where: { $0.name == "customTitle" }) {
+            try db.alter(table: "sessionTab") { t in
+                t.add(column: "customTitle", .text)
+            }
         }
 
         try db.create(table: "sessionItem", options: .ifNotExists) {  t in

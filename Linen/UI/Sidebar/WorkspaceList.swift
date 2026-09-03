@@ -246,6 +246,8 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             }
         }
 
+        browser.settlePins(drag.items)
+
         withAnimation(.spring(response: 0.24, dampingFraction: 0.85)) {
             model.drag?.landing = true
         }

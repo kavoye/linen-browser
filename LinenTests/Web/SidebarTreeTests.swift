@@ -318,6 +318,23 @@ struct SidebarDragTests {
         #expect(sidebar.openWidth(in: container) == SidebarMetrics.iconsWidth)
     }
 
+    @Test func aPeekingCompactColumnKeepsTheRoomItHasWhenDocked() {
+        let sidebar = layout()
+        sidebar.setStyle(.icons)
+        let docked = SidebarMetrics.contentWidth(
+            sidebar.openWidth(in: container), style: .icons, isFloating: false
+        )
+
+        sidebar.toggleVisible()
+        sidebar.isPeeking = true
+        #expect(sidebar.isFloating)
+        #expect(sidebar.openWidth(in: container) == SidebarMetrics.floatingIconsWidth)
+        #expect(
+            SidebarMetrics.contentWidth(sidebar.openWidth(in: container), style: .icons, isFloating: true)
+                == docked
+        )
+    }
+
     @Test func theFloorNeverPushesPastTheWindowsOwnCeiling() {
         let sidebar = layout()
         // A window too small for the sidebar's usual room: the fraction of the

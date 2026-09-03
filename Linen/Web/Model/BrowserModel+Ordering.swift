@@ -11,12 +11,32 @@ extension BrowserModel {
         guard let url = URL(string: tab.urlString), !tab.urlString.isEmpty else { return }
         tab.pinnedURL = url
         tab.pinnedTitle = tab.title
+        moveToPinnedBoundary(tab)
         scheduleSave()
     }
 
     func unpin(_ tab: BrowserTab) {
+        guard tab.pinnedURL != nil else { return }
         tab.pinnedURL = nil
         tab.pinnedTitle = ""
+        moveToPinnedBoundary(tab)
+        scheduleSave()
+    }
+
+    func setPin(_ url: URL, title: String? = nil, for tab: BrowserTab) {
+        let wasPinned = tab.pinnedURL != nil
+        tab.pinnedURL = url
+        tab.pinnedTitle = title ?? (tab.pinnedTitle.isEmpty ? tab.title : tab.pinnedTitle)
+        if !wasPinned {
+            moveToPinnedBoundary(tab)
+        }
+        scheduleSave()
+    }
+
+    func renameTab(_ tab: BrowserTab, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != tab.customTitle else { return }
+        tab.customTitle = trimmed == tab.pageTitle ? "" : trimmed
         scheduleSave()
     }
 
@@ -32,8 +52,47 @@ extension BrowserModel {
         return run
     }
 
-    func lastKeptTabAtTop() -> BrowserTab? {
-        keptRunAtTop().last
+    private func pinnedBoundary(in root: [SidebarItem], ignoring moved: Set<SidebarItem>) -> Int {
+        for (index, item) in root.enumerated() where !moved.contains(item) {
+            guard case .tab(let id) = item, tabsByID[id]?.pinnedURL != nil else { return index }
+        }
+        return root.count
+    }
+
+    private func moveToPinnedBoundary(_ tab: BrowserTab) {
+        let item = SidebarItem.tab(tab.id)
+        let rest = reconciledTree().root.filter { $0 != item }
+        let boundary = pinnedBoundary(in: rest, ignoring: [])
+        move([item], into: nil, before: rest.indices.contains(boundary) ? rest[boundary] : nil)
+    }
+
+    func settlePins(_ items: [SidebarItem]) {
+        let moved = Set(items)
+        let tree = reconciledTree()
+        let root = tree.root
+        let boundary = pinnedBoundary(in: root, ignoring: moved)
+        let hasSection = root.prefix(boundary).contains { !moved.contains($0) }
+
+        var changed = false
+        for item in items {
+            guard case .tab(let id) = item, let tab = tabsByID[id] else { continue }
+            let index = root.firstIndex(of: item)
+            let isPinnedPlace = (hasSection || tab.pinnedURL != nil)
+                && index.map { $0 < boundary } ?? false
+            if isPinnedPlace, tab.pinnedURL == nil {
+                guard let url = URL(string: tab.urlString), !tab.urlString.isEmpty else { continue }
+                tab.pinnedURL = url
+                tab.pinnedTitle = tab.title
+                changed = true
+            } else if !isPinnedPlace, tab.pinnedURL != nil {
+                tab.pinnedURL = nil
+                tab.pinnedTitle = ""
+                changed = true
+            }
+        }
+        if changed {
+            scheduleSave()
+        }
     }
 
     func returnToPin(_ tab: BrowserTab) {
@@ -395,6 +454,11 @@ extension BrowserModel {
         if let folder {
             folder.isExpanded = true
             autoName(folder)
+            for case .tab(let id) in tree.expanded(Set(moved)) {
+                guard let tab = tabsByID[id], tab.pinnedURL != nil else { continue }
+                tab.pinnedURL = nil
+                tab.pinnedTitle = ""
+            }
         }
         syncTabOrder()
         scheduleSave()

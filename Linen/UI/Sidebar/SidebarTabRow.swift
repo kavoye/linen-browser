@@ -8,7 +8,7 @@ func pinnedPageName(of tab: BrowserTab) -> String {
     if !tab.pinnedTitle.isEmpty {
         return tab.pinnedTitle
     }
-    return tab.pinnedURL?.host() ?? String(localized: "the bookmarked page")
+    return tab.pinnedURL?.host() ?? String(localized: "the pinned page")
 }
 
 struct SidebarTabRow: View {
@@ -43,15 +43,23 @@ struct SidebarTabRow: View {
 
     @Environment(\.sidebarStyle) private var sidebarStyle
     @State private var hovering = false
+    @State private var returnHovering = false
+    @State private var isRenaming = false
+    @State private var draftTitle = ""
+    @FocusState private var renameFocused: Bool
     @State private var windowFrame: CGRect = .zero
     @State private var controlsWidth: CGFloat = 0
 
     private var showsTrailingControls: Bool {
-        hovering
+        hovering && !isRenaming
     }
 
     private var showsPinSegment: Bool {
         sidebarStyle == .full && tab.isAwayFromPin
+    }
+
+    private var showsSpeaker: Bool {
+        sidebarStyle == .full && (tab.isPlayingAudio || tab.isMuted)
     }
 
     private var returnHelp: String {
@@ -74,6 +82,29 @@ struct SidebarTabRow: View {
         }
     }
 
+    private func titleTapped() {
+        let modifiers = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard isActive, modifiers.isEmpty else {
+            tapped()
+            return
+        }
+        beginRename()
+    }
+
+    private func beginRename() {
+        coordinator.tabPreview.dismiss()
+        draftTitle = tab.title
+        isRenaming = true
+        renameFocused = true
+    }
+
+    private func commitRename() {
+        guard isRenaming else { return }
+        isRenaming = false
+        renameFocused = false
+        browser.renameTab(tab, to: draftTitle)
+    }
+
     private func activate() {
         coordinator.tabPreview.dismiss()
         if isActive, tab.isAwayFromPin {
@@ -93,12 +124,12 @@ struct SidebarTabRow: View {
         Group {
             if tab.pinnedURL == nil {
                 CloseButton {
-                    coordinator.closeAskingIfBookmarked(tab)
+                    coordinator.closeAskingIfPinned(tab)
                 }
             } else {
                 ChromeIcon.rowControl(
                     symbol: "minus",
-                    help: String(localized: "Remove Bookmark")
+                    help: String(localized: "Unpin Tab")
                 ) {
                     browser.unpin(tab)
                 }
@@ -128,8 +159,14 @@ struct SidebarTabRow: View {
         .allowsHitTesting(false)
     }
 
+    private var peekedTab: BrowserTab? {
+        guard coordinator.peek.belongs(to: tab.id) else { return nil }
+        return coordinator.peek.tab
+    }
+
     private var titleMask: some View {
-        let covered = showsTrailingControls ? controlsWidth : 0
+        let badge = peekedTab == nil ? 0 : PeekRowBadge.extent + 4
+        let covered = (showsTrailingControls ? controlsWidth : 0) + badge
         return HStack(spacing: 0) {
             Rectangle()
             LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
@@ -141,25 +178,63 @@ struct SidebarTabRow: View {
 
     @ViewBuilder private var leadingIcon: some View {
         if sidebarStyle == .full {
-            Group {
-                if tab.isPlayingAudio || tab.isMuted {
-                    SidebarTabMuteButton(isMuted: tab.isMuted) {
-                        coordinator.toggleMute(tab: tab)
-                    }
-                } else {
-                    TabIcon(tab: tab)
-                }
-            }
-            .frame(width: SidebarMetrics.rowIconSize)
+            TabIcon(tab: tab)
+                .frame(width: SidebarMetrics.rowIconSize)
         } else {
             TabIcon(tab: tab)
         }
     }
 
+    @ViewBuilder private var titleColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if isRenaming {
+                TextField("", text: $draftTitle)
+                    .textFieldStyle(.plain)
+                    .font(Theme.Font.title)
+                    .focused($renameFocused)
+                    .onSubmit(commitRename)
+                    .onKeyPress(.escape) {
+                        isRenaming = false
+                        renameFocused = false
+                        return .handled
+                    }
+                    .onChange(of: renameFocused) { _, focused in
+                        if !focused {
+                            commitRename()
+                        }
+                    }
+                    .onChange(of: isActive) { _, active in
+                        if !active {
+                            commitRename()
+                        }
+                    }
+            } else {
+                HStack(spacing: 0) {
+                    Text(verbatim: tab.title)
+                        .font(Theme.Font.title)
+                        .foregroundStyle(isActive ? Color.primary : Color.secondary)
+                        .lineLimit(1)
+                        .contentShape(Rectangle())
+                        .onTapGesture { titleTapped() }
+                    Spacer(minLength: 0)
+                }
+            }
+
+            if returnHovering {
+                Text("Back to Pinned Page")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .mask(alignment: .leading) { titleMask }
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             if showsPinSegment {
-                PinReturnSegment(tab: tab, help: returnHelp) {
+                PinReturnSegment(tab: tab, help: returnHelp, isHovering: $returnHovering) {
                     coordinator.tabPreview.dismiss()
                     browser.returnToPin(tab)
                 }
@@ -171,19 +246,26 @@ struct SidebarTabRow: View {
             HStack(spacing: SidebarMetrics.rowIconSpacing) {
                 leadingIcon
 
+                if showsSpeaker {
+                    SidebarTabMuteButton(isMuted: tab.isMuted) {
+                        coordinator.toggleMute(tab: tab)
+                    }
+                    .frame(width: SidebarMetrics.rowIconSize)
+                }
+
                 if sidebarStyle == .full {
-                    Text(verbatim: tab.title)
-                        .font(Theme.Font.title)
-                        .foregroundStyle(isActive ? Color.primary : Color.secondary)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .mask(alignment: .leading) { titleMask }
+                    titleColumn
                 }
             }
             .overlay(alignment: .trailing) {
                 if sidebarStyle == .full {
-                    trailingControls
-                        .padding(.trailing, SidebarMetrics.rowControlEdgeOffset(style: sidebarStyle))
+                    HStack(spacing: 4) {
+                        trailingControls
+                        if let peekedTab {
+                            PeekRowBadge(tab: peekedTab) { coordinator.openTab(tab) }
+                        }
+                    }
+                    .padding(.trailing, SidebarMetrics.rowControlEdgeOffset(style: sidebarStyle))
                 }
             }
             .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
@@ -222,11 +304,11 @@ struct SidebarTabRow: View {
         .onTapGesture { tapped() }
         .onMiddleClick {
             coordinator.tabPreview.dismiss()
-            browser.close(tab)
+            coordinator.closeAskingIfPinned(tab)
         }
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
-            if over {
+            if over, !isRenaming {
                 coordinator.tabPreview.hover(tab, anchor: windowFrame)
             } else {
                 coordinator.tabPreview.unhover(tab.id)
@@ -246,6 +328,11 @@ struct SidebarTabRow: View {
     private var menu: some View {
         SidebarLinkMenuItems(tabs: [tab], coordinator: coordinator)
 
+        Button {
+            beginRename()
+        } label: {
+            Label("Rename", systemImage: "pencil")
+        }
         Button {
             browser.duplicate(tab)
         } label: {
@@ -267,27 +354,31 @@ struct SidebarTabRow: View {
         }
         Divider()
 
-        SidebarBookmarkMenuItems(tab: tab, browser: browser)
+        SidebarPinMenuItems(tab: tab, browser: browser)
         SidebarAudioMenuItems(tab: tab, coordinator: coordinator)
         SidebarFolderMenuItems(items: [item], browser: browser)
 
-        Button(role: .destructive) {
-            browser.close(tab)
-        } label: {
-            Label("Close Tab", systemImage: "xmark")
-        }
-        if browser.tabs.count > 1 {
+        if tab.pinnedURL != nil {
+            SidebarUnpinButton(tab: tab, browser: browser)
+        } else {
             Button(role: .destructive) {
-                let count = browser.tabs.count - 1
-                Task {
-                    guard await ConfirmAlert.destructive(
-                        "Close \(count) tabs?",
-                        verb: "Close Tabs"
-                    ) else { return }
-                    browser.closeOthers(tab)
-                }
+                browser.close(tab)
             } label: {
-                Label("Close Other Tabs", systemImage: "xmark.square")
+                Label("Close Tab", systemImage: "xmark")
+            }
+            if browser.tabs.count > 1 {
+                Button(role: .destructive) {
+                    let count = browser.tabs.count - 1
+                    Task {
+                        guard await ConfirmAlert.destructive(
+                            "Close \(count) tabs?",
+                            verb: "Close Tabs"
+                        ) else { return }
+                        browser.closeOthers(tab)
+                    }
+                } label: {
+                    Label("Close Other Tabs", systemImage: "xmark.square")
+                }
             }
         }
     }
@@ -296,6 +387,7 @@ struct SidebarTabRow: View {
 private struct PinReturnSegment: View {
     let tab: BrowserTab
     let help: String
+    @Binding var isHovering: Bool
     let action: () -> Void
 
     @State private var hovering = false
@@ -335,7 +427,10 @@ private struct PinReturnSegment: View {
             )
         )
         .onHover { over in
-            withAnimation(Theme.Motion.quick) { hovering = over }
+            withAnimation(Theme.Motion.quick) {
+                hovering = over
+                isHovering = over
+            }
         }
         .help(Text(verbatim: help))
         .task(id: tab.pinnedURL) {
@@ -403,7 +498,7 @@ struct PinBadge: View {
         if tab.isAwayFromPin {
             return "arrow.uturn.backward"
         }
-        return tab.isShowingPin ? "bookmark.fill" : "bookmark"
+        return tab.isShowingPin ? "pin.fill" : "pin"
     }
 
     private func helpText(for tab: BrowserTab) -> String {
@@ -411,8 +506,8 @@ struct PinBadge: View {
             return String(localized: "Back to \(pinnedPageName(of: tab))")
         }
         let help: LocalizedStringResource = tab.isShowingPin
-            ? "Remove Bookmark"
-            : "Add Bookmark"
+            ? "Unpin Tab"
+            : "Pin This Page"
         return String(localized: help)
     }
 }

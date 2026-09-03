@@ -27,7 +27,7 @@ struct SidebarLinkMenuItems: View {
     }
 }
 
-struct SidebarBookmarkMenuItems: View {
+struct SidebarPinMenuItems: View {
     let tab: BrowserTab
     let browser: BrowserModel
 
@@ -36,7 +36,7 @@ struct SidebarBookmarkMenuItems: View {
             Button {
                 browser.pin(tab)
             } label: {
-                Label("Bookmark This Page", systemImage: "bookmark")
+                Label("Pin This Page", systemImage: "pin")
             }
             .disabled(tab.urlString.isEmpty)
         } else {
@@ -44,21 +44,40 @@ struct SidebarBookmarkMenuItems: View {
                 Button {
                     browser.returnToPin(tab)
                 } label: {
-                    Label("Back to Bookmarked Page", systemImage: "arrow.uturn.backward")
+                    Label("Back to Pinned Page", systemImage: "arrow.uturn.backward")
                 }
+            }
+            Menu {
                 Button {
                     browser.pin(tab)
                 } label: {
-                    Label("Move Bookmark to This Page", systemImage: "bookmark")
+                    Label("Move Pin to This Page", systemImage: "pin")
                 }
-            }
-            Button {
-                browser.unpin(tab)
+                .disabled(!tab.isAwayFromPin)
+
+                Button {
+                    PinEditor.edit(tab, in: browser)
+                } label: {
+                    Label("Edit…", systemImage: "pencil")
+                }
             } label: {
-                Label("Remove Bookmark", systemImage: "bookmark.slash")
+                Label("Edit Pinned Page", systemImage: "pin.circle")
             }
         }
         Divider()
+    }
+}
+
+struct SidebarUnpinButton: View {
+    let tab: BrowserTab
+    let browser: BrowserModel
+
+    var body: some View {
+        Button {
+            browser.unpin(tab)
+        } label: {
+            Label("Unpin Tab", systemImage: "pin.slash")
+        }
     }
 }
 
