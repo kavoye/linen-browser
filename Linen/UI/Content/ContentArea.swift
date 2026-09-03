@@ -84,7 +84,7 @@ struct ContentArea: View {
                     )
                     .transition(.identity)
                 } else if let tab = browser.activeTab, !showStartPage {
-                    ActiveWebSurface(tab: tab)
+                    ActiveWebSurface(tab: tab, coordinator: coordinator)
                         .transition(.identity)
                         .offset(y: pullState.offset)
                         .overlay(alignment: .top) {
@@ -133,6 +133,9 @@ struct ContentArea: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
+            PeekSurface(browser: browser, coordinator: coordinator)
+                .zIndex(8)
+
             if pullsAWebPage {
                 PullIndicator(state: pullState)
                     .frame(maxWidth: .infinity)
@@ -174,6 +177,7 @@ private struct KeptAliveTabs: View {
 
 private struct ActiveWebSurface: View {
     let tab: BrowserTab
+    let coordinator: AppCoordinator
 
     var body: some View {
         WebViewRepresentable(
@@ -190,7 +194,14 @@ private struct ActiveWebSurface: View {
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                LinkPreview(address: tab.hoveredLink?.absoluteString)
+                LinkPreview(
+                    address: tab.hoveredLink?.absoluteString,
+                    intent: .of(coordinator.linkModifiers),
+                    ground: tab.canvasColor
+                )
+            }
+            .overlay {
+                LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id)
             }
     }
 }

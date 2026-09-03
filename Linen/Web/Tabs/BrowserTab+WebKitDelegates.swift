@@ -42,13 +42,13 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             onOpenInNewTab(url, navigationAction.modifierFlags.contains(.shift))
             return
         }
-        if let tab, let onOpenInSplit = tab.onOpenInSplit,
+        if let tab, let onOpenInPeek = tab.onOpenInPeek,
            navigationAction.navigationType == .linkActivated,
            navigationAction.modifierFlags == .shift,
            navigationAction.targetFrame?.isMainFrame != false,
            let url = navigationAction.request.url {
             decisionHandler(.cancel)
-            onOpenInSplit(url)
+            onOpenInPeek(url, Self.pointer(in: webView))
             return
         }
         if let tab, navigationAction.targetFrame?.isMainFrame != false {
@@ -144,7 +144,15 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
            hitTestResult.responds(to: NSSelectorFromString("absoluteLinkURL")) {
             url = hitTestResult.value(forKey: "absoluteLinkURL") as? URL
         }
-        tab?.noteHoveredLink(url)
+        tab?.noteHoveredLink(url, modifiers: flags, at: Self.pointer(in: webView))
+    }
+
+    private static func pointer(in webView: WKWebView) -> CGPoint {
+        guard let window = webView.window else { return .zero }
+        let inWindow = window.convertPoint(fromScreen: NSEvent.mouseLocation)
+        let inView = webView.convert(inWindow, from: nil)
+        guard !webView.isFlipped else { return inView }
+        return CGPoint(x: inView.x, y: webView.bounds.height - inView.y)
     }
 
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
@@ -281,6 +289,9 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         }
         tab?.provisionalNavigation = navigation
         tab?.refreshChrome()
+        if let url = webView.url {
+            tab?.onNavigationStarted?(url)
+        }
     }
 
     // MARK: - Authentication
@@ -330,7 +341,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab?.noteHoveredLink(nil)
         tab?.clearPageActivity()
         if let tab, tab.isShowingRealPage, !tab.hasPresentedContent {
-            tab.awaitFirstPresentation()
+            tab.coverUntilPresented()
         }
         tab?.holdPageColorUntilLoaded()
         tab?.refreshChrome()

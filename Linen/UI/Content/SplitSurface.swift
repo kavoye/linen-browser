@@ -353,8 +353,15 @@ private struct WebPane: View {
             .clipped()
             .overlay(alignment: .bottomLeading) {
                 if !showsStartPage {
-                    LinkPreview(address: tab.hoveredLink?.absoluteString)
+                    LinkPreview(
+                        address: tab.hoveredLink?.absoluteString,
+                        intent: .of(coordinator.linkModifiers),
+                        ground: tab.canvasColor
+                    )
                 }
+            }
+            .overlay {
+                LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id)
             }
     }
 }

@@ -160,8 +160,12 @@ final class WebViewContainer: NSView {
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
-        guard installedWebView?.superview === self else { return }
-        installedWebView?.frame = bounds
+        guard let installedWebView, installedWebView.superview === self else { return }
+        // Re-setting the frame rebuilds WebKit's tracking areas, which drops the
+        // link cursor for a frame.
+        if installedWebView.frame != bounds {
+            installedWebView.frame = bounds
+        }
         reportReadyIfPossible()
     }
 
