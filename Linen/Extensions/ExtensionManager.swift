@@ -21,6 +21,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     private(set) var installed: [InstalledExtension] = []
     private(set) var systemExtensions: [InstalledExtension] = []
     private(set) var contexts: [String: WKWebExtensionContext] = [:]
+    private var wakingBackgrounds: Set<String> = []
     private(set) var actionRevision = 0
     var installState: StoreInstallState = .idle
     var updateChecks: [String: UpdateCheck] = [:]
@@ -85,6 +86,24 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             guard let self, let newTab else { return }
             let previous = previousTab.flatMap { tabAdapters[$0.id] }
             controller.didActivateTab(adapter(for: newTab), previousActiveTab: previous)
+        }
+        browser.onNavigationStarted = { [weak self] _, url in
+            self?.wakeBackgrounds(for: url)
+        }
+    }
+
+    func wakeBackgrounds(for url: URL) {
+        for (id, context) in contexts {
+            let webExtension = context.webExtension
+            guard webExtension.hasBackgroundContent, !webExtension.hasPersistentBackgroundContent,
+                  !wakingBackgrounds.contains(id),
+                  webExtension.allRequestedMatchPatterns.contains(where: { $0.matches(url) })
+            else { continue }
+            wakingBackgrounds.insert(id)
+            Task { [weak self] in
+                try? await context.loadBackgroundContent()
+                self?.wakingBackgrounds.remove(id)
+            }
         }
     }
 
@@ -237,6 +256,8 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             } else {
                 let package = library.packageURL(for: record.id)
                 ExtensionShims.ensureApplied(at: package)
+                ExtensionExternalConnect.ensureRelayApplied(at: package)
+                ExtensionPageAssets.ensureReporterApplied(at: package)
                 webExtension = try await WKWebExtension(resourceBaseURL: package)
             }
             if let icon = webExtension.icon(for: CGSize(width: 32, height: 32)) {

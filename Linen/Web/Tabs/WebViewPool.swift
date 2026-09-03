@@ -63,6 +63,8 @@ final class TabWebView: WKWebView {
     var onFaviconDeclarationChange: (() -> Void)?
     var hasFaviconWatcher = false
     var hasClickWatcher = false
+    var hasSiteGuard = false
+    var onPopupBlocked: ((URL?) -> Void)?
 
     var onZoomChanged: (() -> Void)?
 
@@ -401,6 +403,15 @@ final class WebViewPool {
         }
 
         ContentBlocker.shared.apply(to: contentController)
+        if extensionController != nil {
+            for source in [ExtensionPageAssets.script, ExtensionExternalConnect.pageScript] {
+                contentController.addUserScript(WKUserScript(
+                    source: source,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: false
+                ))
+            }
+        }
 
         configuration.userContentController = contentController
         configuration.setURLSchemeHandler(SystemPageSchemeHandler(), forURLScheme: SystemPages.scheme)
