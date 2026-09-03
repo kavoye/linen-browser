@@ -368,8 +368,8 @@ start it nor tag anything. The workflow:
 
 1. Reads the version: the last `v` tag, then the number of commits after it,
    such as `0.1.2 (4)`.
-2. Stops if that count is zero, because the commit is the release itself and
-   already carries the same build.
+2. Uses the tag alone when that count is zero, such as `0.1.2`. The commit is
+   the release itself.
 3. Builds an archive, signs the app, and sends it to Apple for notarization.
 4. Builds a zip file, and no disk image.
 5. Signs the app for Sparkle and writes `appcast-tip.xml`.
@@ -411,6 +411,10 @@ the tag name never changes.
 - **The `tip` tag is not a version tag.** The workflow reads the last version
   with `git describe --match 'v[0-9]*.[0-9]*'`. Without the pattern, `git
   describe` finds `tip`, and the count becomes zero at each build.
+- **The commit a release tags still builds a preview.** A release writes to the
+  release feed only. If the preview build stops at that commit, the preview
+  channel stays on the release before it, and everything since sits in no
+  preview feed until the next commit lands on `main`.
 - **A preview build uses the signing keys.** The certificate, the notarization
   key and the Sparkle key are used on every green commit on `main`, not only at
   a release.

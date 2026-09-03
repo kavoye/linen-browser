@@ -32,7 +32,6 @@ jobs:
     timeout-minutes: 5
 
     outputs:
-      build: ${{ steps.compute.outputs.build }}
       marketing: ${{ steps.compute.outputs.marketing }}
       file: ${{ steps.compute.outputs.file }}
       number: ${{ steps.compute.outputs.number }}
@@ -54,18 +53,22 @@ jobs:
           BASE="$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*' 2>/dev/null || echo v0.0.0)"
           COUNT="$(git rev-list --count "$BASE"..HEAD 2>/dev/null || git rev-list --count HEAD)"
 
+          SHORT="${BASE#v}"
           if [ "$COUNT" -eq 0 ]; then
-            echo "::notice::HEAD is $BASE itself. The release already carries this build."
-            echo "build=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            # A release tag sits on this commit. The preview feed is a feed of
+            # its own, and a release never writes to it, so the build still has
+            # to go out or the preview channel keeps the release before this one.
+            MARKETING="$SHORT"
+            FILE="$SHORT"
+          else
+            # `+` is semver's build metadata. The About panel adds the build
+            # number in brackets of its own, so brackets here read as two.
+            MARKETING="$SHORT+$COUNT"
+            FILE="$SHORT-$COUNT"
           fi
 
-          SHORT="${BASE#v}"
-          echo "build=true"                              >> "$GITHUB_OUTPUT"
-          # `+` is semver's build metadata. The About panel adds the build
-          # number in brackets of its own, so brackets here read as two.
-          echo "marketing=$SHORT+$COUNT"                 >> "$GITHUB_OUTPUT"
-          echo "file=$SHORT-$COUNT"                      >> "$GITHUB_OUTPUT"
+          echo "marketing=$MARKETING"                    >> "$GITHUB_OUTPUT"
+          echo "file=$FILE"                              >> "$GITHUB_OUTPUT"
           # Sparkle orders updates by this number, and it must never go back.
           # It counts every commit, so a release always sorts above the previews
           # before it.
@@ -74,7 +77,6 @@ jobs:
 
   preview:
     needs: version
-    if: needs.version.outputs.build == 'true'
     runs-on: macos-26
     timeout-minutes: 60
 
@@ -259,15 +261,19 @@ jobs:
 
           mkdir -p build
           {
-            git log --no-merges --max-count="$LIMIT" \
-              --pretty=format:"- %s ([%h](https://github.com/$GITHUB_REPOSITORY/commit/%H))" \
-              "$BASE"..HEAD
-            printf '\n'
-            if [ "$TOTAL" -gt "$LIMIT" ]; then
-              printf '\n…and %s more.\n' "$((TOTAL - LIMIT))"
+            if [ "$TOTAL" -eq 0 ]; then
+              printf 'This preview is release %s itself. Nothing has landed on main since.\n\n' "$BASE"
+            else
+              git log --no-merges --max-count="$LIMIT" \
+                --pretty=format:"- %s ([%h](https://github.com/$GITHUB_REPOSITORY/commit/%H))" \
+                "$BASE"..HEAD
+              printf '\n'
+              if [ "$TOTAL" -gt "$LIMIT" ]; then
+                printf '\n…and %s more.\n' "$((TOTAL - LIMIT))"
+              fi
+              printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n\n' \
+                "$GITHUB_REPOSITORY" "$BASE" "$TIP"
             fi
-            printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n\n' \
-              "$GITHUB_REPOSITORY" "$BASE" "$TIP"
             cat <<'NOTES'
           Preview builds come from the newest commit on main. They get less
           testing than a release. To receive them, set **Update channel** to
@@ -288,9 +294,12 @@ jobs:
           gh release upload "$TIP" dist/appcast-tip.xml --clobber
 
           # Old builds stay long enough that a download in flight still lands.
-          gh release view "$TIP" --json assets --jq '.assets[].name' \
-            | grep "^$APP-.*\.zip$" | sort -V | head -n -5 \
+          # `head -n -5` is a GNU extension, and the runner is a Mac.
+          gh release view "$TIP" --json assets \
+            --jq '.assets | sort_by(.createdAt) | reverse | .[].name' \
+            | grep "^$APP-.*\.zip$" | tail -n +6 \
             | while read -r asset; do
+                echo "Deleting $asset"
                 gh release delete-asset "$TIP" "$asset" -y
               done
 
