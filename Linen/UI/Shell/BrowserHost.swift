@@ -25,6 +25,8 @@ final class BrowserHost: NSObject, NSWindowDelegate {
 
     private(set) var isVisible = false
 
+    private var bloom: Bloom?
+
     init(coordinator: AppCoordinator) {
         self.coordinator = coordinator
         content = NSHostingView(rootView: BrowserRootView(coordinator: coordinator))
@@ -67,6 +69,48 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         isVisible = true
         publish()
     }
+
+    // MARK: - Opening
+
+    func seedBloom() {
+        let window = ensureWindow()
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        let target = window.frame
+        bloom = Bloom(target: target, minSize: window.minSize)
+        window.setFrameAutosaveName("")
+        window.minSize = .zero
+        window.setFrame(
+            NSRect(
+                x: target.midX - Self.bloomSize.width / 2,
+                y: target.midY - Self.bloomSize.height / 2,
+                width: Self.bloomSize.width,
+                height: Self.bloomSize.height
+            ),
+            display: false
+        )
+    }
+
+    func bloomOpen() {
+        guard let window, let bloom else { return }
+        self.bloom = nil
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.8
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
+            window.animator().setFrame(bloom.target, display: true)
+        } completionHandler: { [weak window] in
+            MainActor.assumeIsolated {
+                window?.minSize = bloom.minSize
+                window?.setFrameAutosaveName(Self.frameKey)
+            }
+        }
+    }
+
+    private struct Bloom {
+        let target: NSRect
+        let minSize: NSSize
+    }
+
+    private static let bloomSize = NSSize(width: 480, height: 360)
 
     // MARK: - Window
 

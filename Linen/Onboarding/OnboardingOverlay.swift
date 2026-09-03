@@ -8,16 +8,27 @@ struct OnboardingOverlay: View {
     let coordinator: AppCoordinator
     let model: OnboardingModel
 
+    @State private var clock = ShimmerClock()
+
     var body: some View {
         ZStack {
             Theme.windowBackground
-            OnboardingUI.StepView(coordinator: coordinator, model: model)
+            OnboardingShimmer(clock: clock)
+            OnboardingUI.StepView(coordinator: coordinator, model: model, clock: clock)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             OnboardingUI.HUD(model: model)
         }
         .ignoresSafeArea()
         .contentShape(Rectangle())
         .onTapGesture {}
+        .onContinuousHover(coordinateSpace: .local) { phase in
+            switch phase {
+            case .active(let location):
+                clock.movePointer(to: location)
+            case .ended:
+                clock.releasePointer()
+            }
+        }
         .task {
             if !AnyLanguageModelAgent.isSystemModelAvailable {
                 model.modelChoice = .remote
@@ -31,17 +42,22 @@ enum OnboardingUI {
     static let columnWidth: CGFloat = 540
     static let actionWidth: CGFloat = 168
 
-    static func advance(model: OnboardingModel, coordinator: AppCoordinator) {
+    static func advance(model: OnboardingModel, coordinator: AppCoordinator, clock: ShimmerClock) {
         if model.step == .model {
             applyModelChoice(model: model, coordinator: coordinator)
         }
 
         guard model.isLastStep else {
-            model.advance()
+            clock.emphasize()
+            withAnimation(.default) { model.advance() }
             return
         }
 
         finish(model: model, coordinator: coordinator)
+    }
+
+    static func back(model: OnboardingModel) {
+        withAnimation(.default) { model.back() }
     }
 
     static func finish(model: OnboardingModel, coordinator: AppCoordinator) {
@@ -90,6 +106,8 @@ extension OnboardingUI {
 
                 Spacer(minLength: 0)
             }
+            .opacity(model.showsNavigation ? 1 : 0)
+            .animation(Theme.Motion.drift, value: model.showsNavigation)
         }
 
         private func dotStyle(for dot: OnboardingModel.Step) -> Color {
@@ -104,18 +122,54 @@ extension OnboardingUI {
     struct StepView: View {
         let coordinator: AppCoordinator
         let model: OnboardingModel
+        let clock: ShimmerClock
+
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
         var body: some View {
+            screen
+                .id(model.step)
+                .transition(reduceMotion ? .opacity : Self.rise)
+        }
+
+        @ViewBuilder
+        private var screen: some View {
             switch model.step {
             case .welcome:
-                WelcomeScreen(coordinator: coordinator, model: model)
+                WelcomeScreen(coordinator: coordinator, model: model, clock: clock)
             case .model:
-                ModelScreen(coordinator: coordinator, model: model)
+                ModelScreen(coordinator: coordinator, model: model, clock: clock)
+            case .extensions:
+                ExtensionsScreen(coordinator: coordinator, model: model, clock: clock)
             case .bookmarks:
-                BookmarksScreen(coordinator: coordinator, model: model)
+                BookmarksScreen(coordinator: coordinator, model: model, clock: clock)
+            case .finish:
+                FinishScreen(coordinator: coordinator, model: model)
             case nil:
                 EmptyView()
             }
+        }
+
+        private static var rise: AnyTransition {
+            .asymmetric(
+                insertion: AnyTransition
+                    .modifier(active: Rise(offset: 30), identity: Rise(offset: 0))
+                    .animation(.easeOut(duration: 0.3).delay(0.05)),
+                removal: AnyTransition
+                    .modifier(active: Rise(offset: -30), identity: Rise(offset: 0))
+                    .animation(.easeIn(duration: 0.2))
+            )
+        }
+    }
+
+    private struct Rise: ViewModifier {
+        let offset: CGFloat
+
+        func body(content: Content) -> some View {
+            content
+                .offset(y: offset)
+                .blur(radius: offset == 0 ? 0 : 8)
+                .opacity(offset == 0 ? 1 : 0)
         }
     }
 }

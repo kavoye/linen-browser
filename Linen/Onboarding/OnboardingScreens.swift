@@ -8,23 +8,29 @@ extension OnboardingUI {
     struct WelcomeScreen: View {
         let coordinator: AppCoordinator
         let model: OnboardingModel
+        let clock: ShimmerClock
 
         var body: some View {
             Screen {
-                AppMark()
-                    .padding(.bottom, 24)
+                WelcomeIntro(model: model) { revealed in
+                    VStack(spacing: 0) {
+                        Heading(
+                            title: "Welcome to Linen",
+                            caption: "A quiet browser with an assistant built in."
+                        )
+                        .introReveal(revealed, delay: 0)
 
-                Heading(
-                    title: "Welcome to Linen",
-                    caption: "A quiet browser with an assistant built in. Setup takes two choices."
-                )
-
-                Actions(
-                    primary: "Continue",
-                    primaryAction: { OnboardingUI.advance(model: model, coordinator: coordinator) },
-                    secondary: "Skip Setup",
-                    secondaryAction: { OnboardingUI.finish(model: model, coordinator: coordinator) }
-                )
+                        Actions(
+                            primary: "Continue",
+                            primaryAction: {
+                                OnboardingUI.advance(model: model, coordinator: coordinator, clock: clock)
+                            },
+                            secondary: "Skip Setup",
+                            secondaryAction: { OnboardingUI.finish(model: model, coordinator: coordinator) }
+                        )
+                        .introReveal(revealed, delay: 0.12)
+                    }
+                }
             }
         }
     }
@@ -32,6 +38,7 @@ extension OnboardingUI {
     struct ModelScreen: View {
         let coordinator: AppCoordinator
         let model: OnboardingModel
+        let clock: ShimmerClock
 
         var body: some View {
             Screen {
@@ -72,7 +79,48 @@ extension OnboardingUI {
 
                 Actions(
                     primary: "Continue",
-                    primaryAction: { OnboardingUI.advance(model: model, coordinator: coordinator) }
+                    primaryAction: {
+                        OnboardingUI.advance(model: model, coordinator: coordinator, clock: clock)
+                    },
+                    secondary: "Back",
+                    secondaryAction: { OnboardingUI.back(model: model) }
+                )
+            }
+        }
+    }
+
+    struct ExtensionsScreen: View {
+        let coordinator: AppCoordinator
+        let model: OnboardingModel
+        let clock: ShimmerClock
+
+        var body: some View {
+            Screen {
+                Heading(
+                    title: "Add extensions",
+                    caption: "These come from the Chrome and Firefox stores. Visit either store to add more."
+                )
+
+                SettingsCard {
+                    ForEach(Array(ExtensionPicks.all.enumerated()), id: \.element.id) { index, pick in
+                        if index > 0 {
+                            RowSeparator()
+                        }
+
+                        ExtensionPickRow(manager: coordinator.extensions, pick: pick)
+                    }
+                }
+                .frame(width: OnboardingUI.columnWidth)
+                .multilineTextAlignment(.leading)
+                .padding(.top, 24)
+
+                Actions(
+                    primary: "Continue",
+                    primaryAction: {
+                        OnboardingUI.advance(model: model, coordinator: coordinator, clock: clock)
+                    },
+                    secondary: "Back",
+                    secondaryAction: { OnboardingUI.back(model: model) }
                 )
             }
         }
@@ -81,6 +129,7 @@ extension OnboardingUI {
     struct BookmarksScreen: View {
         let coordinator: AppCoordinator
         let model: OnboardingModel
+        let clock: ShimmerClock
 
         var body: some View {
             Screen {
@@ -122,10 +171,141 @@ extension OnboardingUI {
                 }
 
                 Actions(
-                    primary: "Done",
-                    primaryAction: { OnboardingUI.advance(model: model, coordinator: coordinator) }
+                    primary: "Continue",
+                    primaryAction: {
+                        OnboardingUI.advance(model: model, coordinator: coordinator, clock: clock)
+                    },
+                    secondary: "Back",
+                    secondaryAction: { OnboardingUI.back(model: model) }
                 )
             }
+        }
+    }
+
+    struct FinishScreen: View {
+        let coordinator: AppCoordinator
+        let model: OnboardingModel
+
+        @State private var revealed = false
+
+        var body: some View {
+            Screen {
+                AppMark(size: 64)
+                    .padding(.bottom, 24)
+                    .introReveal(revealed, delay: 0)
+
+                Heading(title: "You’re set", caption: "Three things to try.")
+                    .introReveal(revealed, delay: 0.08)
+
+                FirstMoves()
+                    .padding(.top, 26)
+                    .introReveal(revealed, delay: 0.16)
+
+                Actions(
+                    primary: "Start Browsing",
+                    primaryAction: { OnboardingUI.finish(model: model, coordinator: coordinator) },
+                    secondary: "Back",
+                    secondaryAction: { OnboardingUI.back(model: model) }
+                )
+                .introReveal(revealed, delay: 0.24)
+            }
+            .task { revealed = true }
+        }
+    }
+
+    struct FirstMoves: View {
+        private struct Move: Identifiable {
+            let id: String
+            let symbol: String
+            let text: LocalizedStringResource
+        }
+
+        private static let moves: [Move] = [
+            .init(
+                id: "search",
+                symbol: "magnifyingglass",
+                text: "Press ⌘K to search, open a page, or ask a question."
+            ),
+            .init(
+                id: "summary",
+                symbol: "cursorarrow",
+                text: "Hold Shift and point at a link to read what the page says."
+            ),
+            .init(
+                id: "peek",
+                symbol: "rectangle.on.rectangle",
+                text: "Hold Shift and click a link to read it over the page."
+            ),
+        ]
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(Self.moves) { move in
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Image(systemName: move.symbol)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 18)
+                            .accessibilityHidden(true)
+
+                        Text(move.text)
+                            .font(Theme.Font.row)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+extension OnboardingUI {
+    struct ExtensionPickRow: View {
+        let manager: ExtensionManager
+        let pick: ExtensionPick
+
+        var body: some View {
+            HStack(spacing: 12) {
+                Image(systemName: pick.symbol)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22)
+                    .accessibilityHidden(true)
+
+                DetailRow(verbatimTitle: pick.name, verbatimCaption: caption) {
+                    control
+                }
+            }
+        }
+
+        private var caption: String {
+            if case .failed(let id, let message) = manager.installState, id == pick.id {
+                return message
+            }
+            return String(localized: pick.caption)
+        }
+
+        private var isInstalling: Bool {
+            manager.installState == .installing(id: pick.id)
+        }
+
+        @ViewBuilder
+        private var control: some View {
+            Group {
+                if isInstalling {
+                    Spinner(size: 12)
+                        .foregroundStyle(.secondary)
+                } else if manager.isInstalled(pick.id) {
+                    SettingsButton(title: "Added", minWidth: OnboardingUI.actionWidth) {}
+                        .disabled(true)
+                } else {
+                    SettingsButton(title: "Add", minWidth: OnboardingUI.actionWidth) {
+                        Task { await manager.install(id: pick.id, from: pick.store) }
+                    }
+                }
+            }
+            .frame(width: OnboardingUI.actionWidth, alignment: .trailing)
         }
     }
 }
@@ -189,11 +369,13 @@ extension OnboardingUI {
     }
 
     struct AppMark: View {
+        var size: CGFloat = 104
+
         var body: some View {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .interpolation(.high)
-                .frame(width: 104, height: 104)
+                .frame(width: size, height: size)
                 .accessibilityHidden(true)
         }
     }

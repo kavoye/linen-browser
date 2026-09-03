@@ -490,9 +490,6 @@
     "A new profile starts with no history, tabs, or sign-ins." : {
       "comment" : "Caption on the new-profile page, saying what the profile will contain."
     },
-    "A quiet browser with an assistant built in. Setup takes two choices." : {
-      "comment" : "Caption under the Welcome to Linen heading on the first onboarding screen. Quiet describes the browser as calm and unobtrusive. The two choices are the screens that follow: which model to use, and what to import."
-    },
     "A specific profile" : {
       "comment" : "One of two choices for which profile the browser opens in."
     },
@@ -4074,6 +4071,21 @@
     },
     "Zoom Out" : {
       "comment" : "Menu bar command under View, shortcut ⌘-, and the same command in the site controls menu; it makes the web page smaller. Title Case, imperative verb."
+    },
+    "A quiet browser with an assistant built in." : {
+      "comment" : "Caption under the Welcome to Linen heading on the first onboarding screen. Quiet describes the browser as calm and unobtrusive."
+    },
+    "Three things to try." : {
+      "comment" : "Caption under the You’re set heading on the last onboarding screen, introducing the three lines below it."
+    },
+    "Press ⌘K to search, open a page, or ask a question." : {
+      "comment" : "First of three things to try, on the last onboarding screen. ⌘K opens the command palette; keep the shortcut as it is."
+    },
+    "Hold Shift and point at a link to read what the page says." : {
+      "comment" : "Second of three things to try, on the last onboarding screen. Pointing at a link with Shift held shows a summary of the page."
+    },
+    "Hold Shift and click a link to read it over the page." : {
+      "comment" : "Third of three things to try, on the last onboarding screen. Shift and click opens the link in a panel above the current page."
     }
   },
   "version" : "1.0"
