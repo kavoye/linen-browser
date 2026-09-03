@@ -29,7 +29,13 @@ final class BrowserTab: Identifiable {
     static let placeholderTitle = String(localized: "New Tab")
 
     let id: UUID
-    var title = BrowserTab.placeholderTitle
+    var pageTitle = BrowserTab.placeholderTitle
+    var customTitle = ""
+
+    var title: String {
+        get { customTitle.isEmpty ? pageTitle : customTitle }
+        set { pageTitle = newValue }
+    }
     var urlString = ""
     var isLoading = false
     var favicon: NSImage?
@@ -50,7 +56,12 @@ final class BrowserTab: Identifiable {
 
     private(set) var hoveredLink: URL?
 
-    func noteHoveredLink(_ url: URL?) {
+    func noteHoveredLink(
+        _ url: URL?,
+        modifiers: NSEvent.ModifierFlags = [],
+        at anchor: CGPoint = .zero
+    ) {
+        onLinkHovered?(url, modifiers, anchor)
         guard hoveredLink != url else { return }
         hoveredLink = url
     }
@@ -214,17 +225,20 @@ final class BrowserTab: Identifiable {
         adopt(view)
         return view
     }
+    var onNavigationStarted: ((URL) -> Void)?
     var onNavigationFinished: ((Bool) -> Void)?
     var onNavigationOutsideExtension: ((URL) -> Void)?
     var onNewWindow: ((WKWebView, Bool) -> Void)?
     var onOpenInNewTab: ((URL, Bool) -> Void)?
-    var onOpenInSplit: ((URL) -> Void)?
+    var onOpenInPeek: ((URL, CGPoint) -> Void)?
     var onCloseRequested: (() -> Void)?
     var onPictureInPictureChanged: ((Bool) -> Void)?
     var onPictureReturnExpected: (() -> Void)?
     var onDownload: ((WKDownload, URL?) -> Void)?
+    var onLinkHovered: ((URL?, NSEvent.ModifierFlags, CGPoint) -> Void)?
 
     let extensionBaseURL: URL?
+    let popups: TabPopupPolicy
 
     private var navigationDelegate: TabNavigationDelegate?
     let permissions: TabPermissionCenter
@@ -258,6 +272,7 @@ final class BrowserTab: Identifiable {
     ) {
         self.id = id
         isPrivate = privately
+        popups = TabPopupPolicy(store: sitePermissions)
         permissions = TabPermissionCenter(store: sitePermissions)
         assistantAccess = TabAssistantAccessCenter(store: sitePermissions)
         permissions.persistsAnswers = !privately
@@ -270,7 +285,7 @@ final class BrowserTab: Identifiable {
         } else if let extensionHost {
             liveView = WebViewPool.shared.makeView(configuration: extensionHost.configuration)
             extensionBaseURL = extensionHost.baseURL
-            title = extensionHost.name
+            pageTitle = extensionHost.name
             favicon = extensionHost.icon
         } else {
             liveView = restoring ? nil : WebViewPool.shared.acquire()
@@ -316,6 +331,10 @@ final class BrowserTab: Identifiable {
             }
             FaviconWatcher.shared.install(in: tabView)
             PageClickWatcher.shared.install(in: tabView)
+            tabView.onPopupBlocked = { [weak self] url in
+                self?.popups.note(url)
+            }
+            SiteContentGuard.shared.install(in: tabView)
         }
         progressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] _, change in
             let value = change.newValue ?? 1
@@ -379,6 +398,7 @@ final class BrowserTab: Identifiable {
         permissions.pageChanged(url: webView.url ?? (urlString.isEmpty ? nil : URL(string: urlString)))
         assistantAccess.pageChanged(url: webView.url ?? (urlString.isEmpty ? nil : URL(string: urlString)))
         applySiteZoom()
+        applySitePopups()
         (webView as? TabWebView)?.onZoomChanged = { [weak self] in
             self?.zoomDidChange()
         }
@@ -469,6 +489,7 @@ final class BrowserTab: Identifiable {
             assistantAccess.pageChanged(url: webView.url)
         }
         applySiteZoom()
+        applySitePopups()
         refreshChrome()
         guard urlString != previous else { return }
         refreshPageColor(from: webView)
@@ -487,15 +508,17 @@ final class BrowserTab: Identifiable {
     func detach() {
         guard !isClosed else { return }
         isClosed = true
+        onNavigationStarted = nil
         onNavigationFinished = nil
         onNavigationOutsideExtension = nil
         onNewWindow = nil
         onOpenInNewTab = nil
-        onOpenInSplit = nil
+        onOpenInPeek = nil
         onCloseRequested = nil
         onPictureInPictureChanged = nil
         onPictureReturnExpected = nil
         onDownload = nil
+        onLinkHovered = nil
         onSameDocumentNavigation = nil
         onContentProcessTerminated = nil
         onLocationRevoked = nil
@@ -523,122 +546,9 @@ final class BrowserTab: Identifiable {
 
     // MARK: - Page colour
 
-    private(set) var holdsPageColor = false
-
-    func holdPageColorUntilLoaded() {
-        guard isShowingRealPage else {
-            clearPageColor()
-            return
-        }
-        holdsPageColor = true
-    }
-
-    func releasePageColorHold() {
-        holdsPageColor = false
-    }
-
-    func refreshPageColor(from webView: WKWebView) {
-        guard isShowingRealPage else {
-            clearPageColor()
-            return
-        }
-        guard provisionalNavigation == nil, !holdsPageColor else { return }
-        guard hasPresentedContent else {
-            setPageColor(nil)
-            return
-        }
-        measureBandUnderBar()
-    }
-
-    private var isMeasuringBand = false
-    private var needsBandRemeasure = false
-
-    func measureBandUnderBar() {
-        guard isShowingRealPage, hasPresentedContent, !holdsPageColor, webView.window != nil,
-              webView.bounds.height > 0 else { return }
-        guard !isMeasuringBand else {
-            // The first presentation can still contain the old/blank frame.
-            // Keep the didFinish request instead of dropping it behind that
-            // early snapshot.
-            needsBandRemeasure = true
-            return
-        }
-        isMeasuringBand = true
-        needsBandRemeasure = false
-        let requestedURL = urlString
-        let bandFraction = Theme.topBarHeight / webView.bounds.height
-        let configuration = WKSnapshotConfiguration()
-        configuration.snapshotWidth = 48
-        configuration.afterScreenUpdates = true
-        webView.takeSnapshot(with: configuration) { [weak self] image, _ in
-            guard let self else { return }
-            isMeasuringBand = false
-            let shouldRemeasure = needsBandRemeasure
-            needsBandRemeasure = false
-            defer {
-                if shouldRemeasure {
-                    measureBandUnderBar()
-                }
-            }
-            guard urlString == requestedURL, provisionalNavigation == nil,
-                  hasPresentedContent, !holdsPageColor,
-                  let image,
-                  let average = Self.averageOfTopBand(of: image, fraction: bandFraction)
-            else { return }
-            setPageColor(average)
-        }
-    }
-
-    func webViewDidBecomeVisible() {
-        refreshCanvas(from: webView)
-        refreshPageColor(from: webView)
-    }
-
-    static func averageOfTopBand(of image: NSImage, fraction: CGFloat) -> NSColor? {
-        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
-              cg.height > 0
-        else { return nil }
-        let bandHeight = max(1, Int(CGFloat(cg.height) * min(max(fraction, 0), 1)))
-        guard let band = cg.cropping(to: CGRect(x: 0, y: 0, width: cg.width, height: bandHeight)),
-              let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let context = CGContext(
-                  data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
-                  space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              )
-        else { return nil }
-        context.interpolationQuality = .medium
-        context.draw(band, in: CGRect(x: 0, y: 0, width: 1, height: 1))
-        guard let data = context.data else { return nil }
-        let pixel = data.bindMemory(to: UInt8.self, capacity: 4)
-        return NSColor(
-            srgbRed: CGFloat(pixel[0]) / 255,
-            green: CGFloat(pixel[1]) / 255,
-            blue: CGFloat(pixel[2]) / 255,
-            alpha: 1
-        )
-    }
-
-    fileprivate func clearPageColor() {
-        setPageColor(nil)
-    }
-
-    private func setPageColor(_ color: NSColor?) {
-        guard !Self.perceptuallyEqual(pageColor, color) else { return }
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            pageColor = color
-        }
-    }
-
-    private static func perceptuallyEqual(_ a: NSColor?, _ b: NSColor?) -> Bool {
-        guard let a = a?.usingColorSpace(.sRGB), let b = b?.usingColorSpace(.sRGB) else {
-            return (a == nil) && (b == nil)
-        }
-        return abs(a.redComponent - b.redComponent) < 0.02
-            && abs(a.greenComponent - b.greenComponent) < 0.02
-            && abs(a.blueComponent - b.blueComponent) < 0.02
-    }
+    var holdsPageColor = false
+    var isMeasuringBand = false
+    var needsBandRemeasure = false
 
     // MARK: - Zoom
 
@@ -849,18 +759,28 @@ final class BrowserTab: Identifiable {
         processState.finishReload()
     }
 
-    fileprivate func refreshCanvas(from webView: WKWebView) {
+    func refreshCanvas(from webView: WKWebView) {
         canvasColor = isShowingRealPage && hasPresentedContent
             ? webView.underPageBackgroundColor
             : nil
     }
 
     private static let presentationUpdateSelector = Selector(("_doAfterNextPresentationUpdate:"))
+    private static let coverCeiling: Duration = .milliseconds(400)
 
-    func awaitFirstPresentation() {
+    @ObservationIgnored private var coverHold: Task<Void, Never>?
+
+    func coverUntilPresented() {
+        hasPresentedContent = false
+        coverHold?.cancel()
+        coverHold = nil
+        awaitPresentation()
+    }
+
+    private func awaitPresentation() {
         guard webView.window != nil else { return }
         guard webView.responds(to: Self.presentationUpdateSelector) else {
-            didPresentContent()
+            uncover()
             return
         }
         let done: @convention(block) () -> Void = { [weak self] in
@@ -871,9 +791,42 @@ final class BrowserTab: Identifiable {
 
     func didPresentContent() {
         guard !hasPresentedContent else { return }
+        guard presentedFrameWouldFlash else {
+            uncover()
+            return
+        }
+        if coverHold == nil {
+            coverHold = Task { [weak self] in
+                try? await Task.sleep(for: Self.coverCeiling)
+                guard !Task.isCancelled else { return }
+                self?.uncover()
+            }
+        }
+        awaitPresentation()
+    }
+
+    private func uncover() {
+        guard !hasPresentedContent else { return }
+        coverHold?.cancel()
+        coverHold = nil
         hasPresentedContent = true
         refreshCanvas(from: webView)
         refreshPageColor(from: webView)
+    }
+
+    private var presentedFrameWouldFlash: Bool {
+        Self.wouldFlash(
+            painting: webView.underPageBackgroundColor,
+            inDark: webView.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        )
+    }
+
+    static func wouldFlash(painting color: NSColor?, inDark: Bool) -> Bool {
+        guard let painted = color?.usingColorSpace(.sRGB) else { return false }
+        let luminance = 0.2126 * painted.redComponent
+            + 0.7152 * painted.greenComponent
+            + 0.0722 * painted.blueComponent
+        return inDark ? luminance > 0.5 : luminance < 0.5
     }
 
     func refreshChrome() {
@@ -950,9 +903,7 @@ final class BrowserTab: Identifiable {
         }
         if let cached = FaviconLoader.shared.cached(for: host) {
             favicon = cached
-            if !FaviconLoader.shared.isGuessedIcon(for: host) {
-                return
-            }
+            guard FaviconLoader.shared.isGuessedIcon(for: host) else { return }
         }
         Task { [weak self] in
             guard let self else { return }
