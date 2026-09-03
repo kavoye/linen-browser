@@ -67,7 +67,7 @@ struct Sidebar: View {
         guard sidebarStyle == .full else {
             return EdgeInsets(top: 0, leading: LoomChrome.canvasInset, bottom: 0, trailing: 0)
         }
-        let inset = SidebarMetrics.contentInset(style: .full)
+        let inset = SidebarMetrics.fullContentInset
         let balance = LoomChrome.sidebarContentBalanceOffset
         return EdgeInsets(
             top: 0,

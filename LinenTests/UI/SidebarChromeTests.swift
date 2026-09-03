@@ -434,7 +434,7 @@ struct SplitFoldCommitTests {
 @MainActor
 struct SidebarTrayControlWidthTests {
     private var compactContentWidth: CGFloat {
-        SidebarMetrics.iconsWidth - SidebarMetrics.contentInset(style: .icons) * 2
+        SidebarMetrics.contentWidth(SidebarMetrics.iconsWidth, style: .icons, isFloating: false)
     }
 
     @Test func everyCompactControlFillsTheColumn() {
@@ -447,7 +447,9 @@ struct SidebarTrayControlWidthTests {
         #expect(SidebarMetrics.controlMaxWidth(style: .full) == SidebarMetrics.controlHeight)
     }
 
-    @Test func theCompactColumnIsWiderThanTheSquareTheyHeldTo() {
-        #expect(compactContentWidth > SidebarMetrics.controlHeight)
+    /// The column is as thin as the toolbar band, so a control that fills it is
+    /// exactly the square it used to be pinned to — never narrower.
+    @Test func noCompactControlIsNarrowerThanTheSquareTheyHeldTo() {
+        #expect(compactContentWidth >= SidebarMetrics.controlHeight)
     }
 }

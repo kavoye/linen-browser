@@ -10,11 +10,17 @@ enum SidebarStyle: String {
 }
 
 enum SidebarMetrics {
-    static let minWidth: CGFloat = 190
+    static let minWidth: CGFloat = 160
     static let maxWidth: CGFloat = 420
     static let maxWindowFraction: CGFloat = 0.4
 
-    static let iconsWidth: CGFloat = 56
+    nonisolated static var iconsWidth: CGFloat {
+        Theme.topBarHeight - LoomChrome.canvasInset
+    }
+
+    nonisolated static var floatingIconsWidth: CGFloat {
+        iconsWidth + LoomChrome.canvasInset
+    }
 
     static func splitEndWidth(style: SidebarStyle) -> CGFloat {
         style == .icons ? 8 : 14
@@ -27,8 +33,6 @@ enum SidebarMetrics {
     nonisolated static var fullContentInset: CGFloat {
         LoomChrome.canvasInset - LoomChrome.sidebarContentBalanceOffset
     }
-
-    nonisolated static let iconsContentInset: CGFloat = 8
 
     static var profileLeading: CGFloat {
         max(0, rowContentPadding(style: .full) + rowIconSize / 2 - 14)
@@ -44,10 +48,6 @@ enum SidebarMetrics {
         (rowHeight - rowControlExtent) / 2 - rowContentPadding(style: style)
     }
 
-    nonisolated static func contentInset(style: SidebarStyle) -> CGFloat {
-        style == .icons ? iconsContentInset : fullContentInset
-    }
-
     nonisolated static func contentInsets(style: SidebarStyle, isFloating: Bool) -> EdgeInsets {
         if isFloating {
             let inset = LoomChrome.canvasInset
@@ -56,7 +56,7 @@ enum SidebarMetrics {
         guard style == .full else {
             return EdgeInsets(top: 0, leading: LoomChrome.canvasInset, bottom: 0, trailing: 0)
         }
-        let inset = contentInset(style: .full)
+        let inset = fullContentInset
         let balance = LoomChrome.sidebarContentBalanceOffset
         return EdgeInsets(
             top: 0,
@@ -83,7 +83,7 @@ enum SidebarMetrics {
     static let defaultWidth: CGFloat = 268
     static let defaultSnapDistance: CGFloat = 8
 
-    static let iconsSnap: CGFloat = 150
+    static let iconsSnap: CGFloat = 140
 
     static func clampWidth(_ width: CGFloat, container: CGFloat) -> CGFloat {
         let ceiling = container > 0
@@ -186,7 +186,9 @@ final class SidebarLayout {
         if let dragWidth {
             return dragWidth
         }
-        guard style == .full else { return SidebarMetrics.iconsWidth }
+        guard style == .full else {
+            return isFloating ? SidebarMetrics.floatingIconsWidth : SidebarMetrics.iconsWidth
+        }
         return SidebarMetrics.clampWidth(width, container: container)
     }
 
@@ -317,7 +319,10 @@ struct LoomColumnResizeHandle: View {
     let onDragEnded: (CGFloat) -> Void
     let onReset: () -> Void
 
+    private static let revealDelay: Duration = .milliseconds(250)
+
     @State private var isHovering = false
+    @State private var revealsPill = false
 
     var body: some View {
         ZStack {
@@ -325,7 +330,7 @@ struct LoomColumnResizeHandle: View {
 
             LoomResizePill(
                 axis: .vertical,
-                isVisible: isDragging || isHovering,
+                isVisible: isDragging || revealsPill,
                 isDragging: isDragging,
                 onLightPage: onLightPage
             )
@@ -337,9 +342,18 @@ struct LoomColumnResizeHandle: View {
         .onHover { inside in
             isHovering = inside
         }
+        .task(id: isHovering) {
+            guard isHovering else {
+                revealsPill = false
+                return
+            }
+            try? await Task.sleep(for: Self.revealDelay)
+            guard !Task.isCancelled else { return }
+            revealsPill = true
+        }
         .gesture(drag)
         .onTapGesture(count: 2) { onReset() }
-        .animation(Theme.Motion.quick, value: isHovering)
+        .animation(Theme.Motion.quick, value: revealsPill)
         .animation(Theme.Motion.quick, value: isDragging)
         .help("Drag to resize · double-click to reset")
     }
