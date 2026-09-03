@@ -342,7 +342,7 @@ struct EnginePopover: View {
 
     private func choose(effort: LLMSettings.ReasoningEffort) {
         guard effort != coordinator.selectedEffort else { return }
-        LLMSettings.reasoningEffort = effort
+        LLMSettings.setReasoningEffort(effort, for: provider)
         coordinator.configureEngines()
     }
 

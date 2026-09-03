@@ -3,7 +3,9 @@
 
 import SwiftUI
 
-struct AssistantGrantsSection: View {
+struct AssistantGrantsPage: View {
+    let onBack: () -> Void
+
     private var policy: AgentActionPolicy {
         .shared
     }
@@ -11,8 +13,21 @@ struct AssistantGrantsSection: View {
     @State private var confirmingRevokeAll = false
     @State private var revokingHost: String?
 
+    @MainActor
+    static var summary: LocalizedStringResource {
+        let count = AgentActionPolicy.shared.grantsByHost.count
+        return count == 0 ? "None" : "\(count) websites"
+    }
+
     var body: some View {
-        SettingsSection(title: "Allowed without asking", symbol: "hand.raised") {
+        SubPageHeader(backTitle: "Assistant", onBack: onBack)
+
+        SettingsPageHeader(
+            title: "Allowed without asking",
+            caption: "Websites the assistant may act on without asking."
+        )
+
+        SettingsCard {
             if policy.grants.isEmpty {
                 SettingsEmptyState(
                     symbol: "hand.raised",
@@ -38,7 +53,7 @@ struct AssistantGrantsSection: View {
                 }
             }
         }
-        .settingsAnchor("privacy.assistant")
+        .padding(.top, 6)
 
         if !policy.grants.isEmpty {
             SectionActions {

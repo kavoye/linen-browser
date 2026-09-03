@@ -34,6 +34,12 @@ struct SettingsSearchTests {
         #expect(voice.allSatisfy { $0.category == .provider })
     }
 
+    @Test func theLinkSummaryRowLivesOnTheAssistantPage() {
+        let entry = SettingsIndex.all.first { $0.id == "assistant.linkPeek" }
+        #expect(entry?.category == .provider)
+        #expect(SettingsIndex.search("summarize").contains { $0.id == "assistant.linkPeek" })
+    }
+
     @Test func searchMatchesWordsInsideTitles() {
         #expect(SettingsIndex.search("links").contains { $0.id == "general.defaultBrowser" })
     }

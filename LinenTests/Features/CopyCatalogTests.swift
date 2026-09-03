@@ -100,13 +100,14 @@ struct CopyCatalogTests {
         #expect(offenders.isEmpty, "\(offenders)")
     }
 
-    /// The page a tab returns to is a bookmark. "Pin" survives in two other
-    /// senses only: the sidebar toggle that fixes the sidebar open, and the
-    /// chip that puts an extension back on the toolbar.
-    @Test func theTabsAnchorPageIsCalledABookmark() {
+    /// The page a tab returns to is a pin. "Bookmark" survives in one other
+    /// sense only: importing another browser's bookmarks file, which makes a
+    /// folder of tabs rather than an anchor.
+    @Test func theTabsAnchorPageIsCalledAPin() {
         let offenders = Self.displayStrings
-            .filter { $0.contains(/\b[Uu]?n?[Pp]in(ned|s)?\b/) }
-            .filter { $0 != "Pin Sidebar" && $0 != "Pin" }
+            .filter { $0.contains(/\b[Bb]ookmark(ed)?\b/) }
+            // The singular of the imported-file count, not the anchor.
+            .filter { $0 != "%lld bookmark" }
         #expect(offenders.isEmpty, "\(offenders)")
     }
 
@@ -123,8 +124,9 @@ struct CopyCatalogTests {
     private static let intentionalCasePairs: Set<String> = [
         "all time", "assistant access", "background scripts", "browsing history",
         "cached files", "cookies and site data", "local storage", "money transfers",
-        "new tab", "on this mac", "posting and sending", "reset settings",
-        "show lyrics", "show sidebar", "software update", "start page",
+        "new tab", "on this mac", "page zoom", "posting and sending",
+        "reset settings", "show lyrics", "show sidebar", "software update",
+        "start page",
     ]
 
     /// Two keys that differ only in case are one label about to fork - the
@@ -156,7 +158,7 @@ struct SettingsIndexParityTests {
     private static let intentionalDivergence: Set<String> = [
         "general.agentOnly",        // the page caption names the chosen model
         "search.engine",            // the page caption names the chosen model
-        "assistant.tools",          // the page caption names the chosen model
+        "provider.tools",           // the page caption names the chosen model
         "voice.readAloud",          // the page caption adds a System Settings link
         "about.updates",            // the About page renders version state, not a caption
         "about.updates.channel",    // the page caption names the chosen channel; the index covers both
@@ -168,7 +170,7 @@ struct SettingsIndexParityTests {
         "search.custom", "appearance.theme", "profiles.list", "profiles.current",
         "provider.model", "provider.connected",
         "appearance.sidebar", "appearance.sidebarStyle", "advanced.reset",
-        "privacy.history", "privacy.assistant",
+        "privacy.history",
         "websites.javascript", "privacy.trackers", "websites.list",
         "websites.permissions", "downloads.folder", "downloads.ask",
         "downloads.list", "websites.popups",
@@ -196,7 +198,7 @@ struct SettingsIndexParityTests {
         "Linen/Settings/Pages/ProfileSettings.swift",
         "Linen/Settings/Pages/IntelligenceSettings.swift",
         "Linen/Settings/Pages/SearchSettings.swift",
-        "Linen/Settings/Pages/AssistantGrantsSection.swift",
+        "Linen/Settings/Pages/AssistantGrantsPage.swift",
         "Linen/Extensions/ExtensionsSettingsSection.swift",
         "Linen/Updates/UpdateBanner.swift",
     ]

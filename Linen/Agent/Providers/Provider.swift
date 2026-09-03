@@ -283,7 +283,7 @@ extension ProviderCatalog {
     nonisolated static let appleOnDevice = Provider(
         id: "apple",
         name: "Apple Intelligence",
-        blurb: String(localized: "Runs on this Mac. No API key required."),
+        blurb: String(localized: "Runs on this Mac."),
         symbol: "apple.logo",
         baseURL: nil,
         wire: .appleOnDevice,
@@ -443,6 +443,10 @@ nonisolated enum LLMSettings {
         "llm.model.\(provider.id)"
     }
 
+    private static func reasoningKey(for provider: Provider) -> String {
+        "llm.reasoningEffort.\(provider.id)"
+    }
+
     static var providerID: String {
         get { defaults.string(forKey: providerKey) ?? ProviderCatalog.openAI.id }
         set { defaults.set(newValue, forKey: providerKey) }
@@ -508,5 +512,17 @@ nonisolated enum LLMSettings {
             ReasoningEffort(rawValue: defaults.string(forKey: reasoningKey) ?? "") ?? .low
         }
         set { defaults.set(newValue.rawValue, forKey: reasoningKey) }
+    }
+
+    static func reasoningEffort(for provider: Provider) -> ReasoningEffort {
+        let stored = defaults.string(forKey: reasoningKey(for: provider))
+        guard let stored, let effort = ReasoningEffort(rawValue: stored) else {
+            return reasoningEffort
+        }
+        return effort
+    }
+
+    static func setReasoningEffort(_ effort: ReasoningEffort, for provider: Provider) {
+        defaults.set(effort.rawValue, forKey: reasoningKey(for: provider))
     }
 }

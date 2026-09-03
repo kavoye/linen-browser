@@ -22,6 +22,8 @@ struct AssistantSettings: View {
                 CustomProviderEditor(model: model)
             case .tools:
                 AgentToolsPage(model: model)
+            case .grants:
+                AssistantGrantsPage(onBack: { model.showOverview() })
             }
         }
         .task { await model.onAppear() }
@@ -37,34 +39,10 @@ private struct AssistantOverview: View {
     var body: some View {
         SettingsPageHeader(
             title: "Assistant",
-            caption: "Which provider answers, and what it may do on its own."
+            caption: "Who answers, how it behaves, and what it may do without asking."
         )
 
-        SettingsCard {
-            AnsweringRow(model: model, coordinator: coordinator)
-
-            if !model.selected.isOnDevice {
-                RowSeparator()
-                ModelControl(model: model)
-            }
-
-            RowSeparator()
-
-            DrillInRow(
-                title: "Tools",
-                detail: "\(model.enabledTools.count) of \(AgentToolCatalog.all.count)"
-            ) {
-                model.showTools()
-            }
-            .settingsAnchor("assistant.tools")
-        }
-        .padding(.top, 6)
-
-        if model.supportsReasoningEffort {
-            ThinkingSection(model: model)
-        }
-
-        VoiceSection(coordinator: coordinator)
+        AnsweringNotice(model: model, coordinator: coordinator)
 
         SettingsSection(title: "Providers", symbol: "link") {
             ForEach(model.connected) { provider in
@@ -82,14 +60,25 @@ private struct AssistantOverview: View {
             AddRow(title: "Add Provider…") { model.showPicker() }
         }
         .settingsAnchor("provider.connected")
+        .padding(.top, 6)
 
-        AssistantGrantsSection()
+        BehaviourSection(coordinator: coordinator)
+
+        SettingsSection(title: "Acting on websites", symbol: "hand.raised") {
+            DrillInRow(
+                title: "Allowed without asking",
+                detail: AssistantGrantsPage.summary
+            ) {
+                model.showGrants()
+            }
+            .settingsAnchor("privacy.assistant")
+        }
 
         Footnote(AIDisclosure.settingsCaption)
     }
 }
 
-private struct AnsweringRow: View {
+private struct AnsweringNotice: View {
     @Bindable var model: IntelligenceViewModel
     let coordinator: AppCoordinator
 
@@ -98,30 +87,19 @@ private struct AnsweringRow: View {
     }
 
     var body: some View {
-        if let active, active.id == model.selectedID {
-            HStack(spacing: 11) {
-                ProviderBrandIcon(providerID: active.id, size: 20)
-                    .frame(width: 26, height: 26)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: active.name)
-                        .font(Theme.Font.rowTitle)
-
-                    Text(verbatim: readyCaption(active))
-                        .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-
-                Spacer(minLength: 8)
-
-                if !active.isOnDevice {
-                    CatalogRefreshButton(model: model)
-                }
+        if active?.id == model.selectedID {
+            EmptyView()
+        } else {
+            SettingsCard {
+                state
             }
-            .padding(.vertical, SettingsMetrics.rowPaddingV)
-        } else if let active {
+            .padding(.top, 6)
+        }
+    }
+
+    @ViewBuilder
+    private var state: some View {
+        if let active {
             StatusRow(
                 tint: Theme.warning,
                 symbol: "exclamationmark",
@@ -145,26 +123,21 @@ private struct AnsweringRow: View {
             }
         }
     }
-
-    private func readyCaption(_ provider: Provider) -> String {
-        if provider.isOnDevice {
-            return provider.blurb
-        }
-        return LLMSettings.model(for: provider)
-    }
 }
 
-private struct VoiceSection: View {
+private struct BehaviourSection: View {
     let coordinator: AppCoordinator
+
+    @Bindable private var settings = BrowserSettings.shared
 
     @State private var talk = ActivationSettings.talk
     @State private var recording: String?
 
     var body: some View {
-        SettingsSection(title: "Voice", symbol: "waveform") {
+        SettingsSection(title: "How it behaves", symbol: "slider.horizontal.3") {
             DetailRow(
                 title: "Read aloud",
-                caption: "Speak answers as they arrive. Change the voice or speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)."
+                caption: "Set the voice and speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)."
             ) {
                 SettingsToggle(Binding(
                     get: { !coordinator.isSpeechMuted },
@@ -196,6 +169,16 @@ private struct VoiceSection: View {
                 }
             }
             .settingsAnchor("voice.talk")
+
+            RowSeparator()
+
+            DetailRow(
+                title: "Summarize a link on hover",
+                caption: "Hold Shift and point at a link to read the page first."
+            ) {
+                SettingsToggle($settings.peeksAtLinks)
+            }
+            .settingsAnchor("assistant.linkPeek")
         }
         .onChange(of: recording) { _, listening in
             coordinator.setActivationSuspended(listening != nil)
@@ -207,11 +190,7 @@ private struct ThinkingSection: View {
     @Bindable var model: IntelligenceViewModel
 
     var body: some View {
-        SettingsSection(
-            title: "Thinking",
-            symbol: "brain",
-            footnote: "Applies to every provider that supports it."
-        ) {
+        SettingsSection(title: "Thinking", symbol: "brain") {
             OptionList(
                 options: model.availableEfforts.map {
                     .init(value: $0, label: $0.label, caption: $0.caption)
@@ -279,6 +258,9 @@ private struct ProviderPage: View {
     private var readiness: ProviderReadiness {
         model.readiness(for: provider)
     }
+    private var showsReadiness: Bool {
+        readiness.level != .ready
+    }
 
     private var endpoint: String? {
         guard let url = provider.baseURL else { return nil }
@@ -288,11 +270,7 @@ private struct ProviderPage: View {
     }
 
     var body: some View {
-        SubPageHeader(backTitle: "Assistant", onBack: { model.showOverview() }) {
-            if !provider.isCustom, model.keySource == .keychain {
-                RemoveKeyButton(model: model)
-            }
-        }
+        SubPageHeader(backTitle: "Assistant", onBack: { model.showOverview() })
 
         HStack(alignment: .top, spacing: 12) {
             SettingsPageHeader(
@@ -313,10 +291,15 @@ private struct ProviderPage: View {
         }
 
         SettingsCard {
-            ReadinessRow(model: model)
+            if showsReadiness {
+                ReadinessRow(model: model)
+
+                if !provider.isOnDevice {
+                    RowSeparator()
+                }
+            }
 
             if !provider.isOnDevice {
-                RowSeparator()
                 ModelControl(model: model)
 
                 if let window = model.detectedContextWindow(for: provider) {
@@ -343,7 +326,9 @@ private struct ProviderPage: View {
                 }
             }
 
-            RowSeparator()
+            if showsReadiness || !provider.isOnDevice {
+                RowSeparator()
+            }
 
             DrillInRow(
                 title: "Tools",
@@ -363,6 +348,9 @@ private struct ProviderPage: View {
                 .padding(.top, -20)
         }
 
+        if model.supportsReasoningEffort {
+            ThinkingSection(model: model)
+        }
     }
 
     @ViewBuilder
@@ -370,7 +358,7 @@ private struct ProviderPage: View {
         DetailRow(title: "Endpoint") {
             HStack(spacing: 7) {
                 SettingsButton(title: "Edit") { model.editCustomProvider(provider) }
-                SettingsButton(title: "Remove", isDestructive: true, symbol: "trash") {
+                SettingsButton(title: "Remove…", isDestructive: true, symbol: "trash") {
                     confirmingEndpointRemoval = true
                 }
                 Tag(provider.adapterLabel)
@@ -400,17 +388,8 @@ private struct ReadinessRow: View {
 
     var body: some View {
         switch model.readiness(for: provider) {
-        case .ready(let detail):
-            StatusRow(
-                tint: Theme.success,
-                symbol: "checkmark",
-                title: "Ready",
-                verbatimCaption: detail
-            ) {
-                if !provider.isOnDevice {
-                    refresh
-                }
-            }
+        case .ready:
+            EmptyView()
 
         case .needsKey:
             StatusRow(
@@ -450,11 +429,12 @@ private struct ReadinessRow: View {
 
 private struct CatalogRefreshButton: View {
     @Bindable var model: IntelligenceViewModel
+    var help: LocalizedStringResource = "Check this provider again"
 
     var body: some View {
         IconButton(
             symbol: "arrow.clockwise",
-            help: "Check this provider again",
+            help: help,
             isBusy: model.isLoadingCatalog
         ) {
             Task { await model.loadCatalog(force: true) }
@@ -469,7 +449,7 @@ private struct RemoveKeyButton: View {
     @State private var confirming = false
 
     var body: some View {
-        SettingsButton(title: "Remove Key", isDestructive: true, symbol: "trash") {
+        SettingsButton(title: "Remove…", isDestructive: true, symbol: "trash") {
             confirming = true
         }
         .confirmationDialog(
@@ -573,7 +553,7 @@ private struct APIKeyRow: View {
     }
 
     var body: some View {
-        DetailRow(title: "API key", caption: caption) {
+        DetailRow(title: "API key", caption: caption, controlWidth: nil) {
             HStack(spacing: 7) {
                 if let console = provider.consoleURL {
                     SettingsButton(title: "Get a Key", symbol: "arrow.up.forward") {
@@ -589,6 +569,10 @@ private struct APIKeyRow: View {
                 }
                 .popover(isPresented: $entering, arrowEdge: .bottom) {
                     APIKeyEntry(model: model, dismiss: { entering = false })
+                }
+
+                if !provider.isCustom, model.keySource == .keychain {
+                    RemoveKeyButton(model: model)
                 }
             }
         }
@@ -650,7 +634,10 @@ private struct ModelControl: View {
     var body: some View {
         Group {
             DetailRow(title: "Model") {
-                menu
+                HStack(spacing: 7) {
+                    menu
+                    CatalogRefreshButton(model: model, help: "Check for new models")
+                }
             }
             .settingsAnchor("provider.model")
 

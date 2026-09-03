@@ -13,6 +13,7 @@ final class IntelligenceViewModel {
         case picker
         case editor
         case tools
+        case grants
     }
 
     private let catalog: any ProviderCatalogProtocol
@@ -87,16 +88,16 @@ final class IntelligenceViewModel {
     }
 
     var supportsReasoningEffort: Bool {
-        modelProviders.resolve(selected).capabilities.contains(.reasoning)
+        modelProviders.resolve(subject).capabilities.contains(.reasoning)
     }
 
     var availableEfforts: [LLMSettings.ReasoningEffort] {
-        let offered = ReasoningCatalog.efforts(for: selected, model: selectedModel)
+        let offered = ReasoningCatalog.efforts(for: subject, model: selectedModel)
         return offered.isEmpty ? ReasoningCatalog.standard : offered
     }
 
     var resolvedEffort: LLMSettings.ReasoningEffort {
-        ReasoningCatalog.resolve(reasoningEffort, for: selected, model: selectedModel)
+        ReasoningCatalog.resolve(reasoningEffort, for: subject, model: selectedModel)
     }
 
     func onAppear() async {
@@ -206,6 +207,12 @@ final class IntelligenceViewModel {
         customError = nil
         refreshTools()
         destination = .tools
+    }
+
+    func showGrants() {
+        customDraft = nil
+        customError = nil
+        destination = .grants
     }
 
     func leaveTools() {
@@ -329,6 +336,7 @@ final class IntelligenceViewModel {
     private func adoptSubject() {
         let provider = subject
         selectedModel = LLMSettings.model(for: provider)
+        reasoningEffort = LLMSettings.reasoningEffort(for: provider)
         customModelDraft = selectedModel
         isEditingCustomModel = false
         keyDraft = ""
@@ -390,8 +398,10 @@ final class IntelligenceViewModel {
     func selectReasoningEffort(_ effort: LLMSettings.ReasoningEffort) {
         guard effort != reasoningEffort else { return }
         reasoningEffort = effort
-        LLMSettings.reasoningEffort = effort
-        onConfigurationChanged()
+        LLMSettings.setReasoningEffort(effort, for: subject)
+        if isSubjectInUse {
+            onConfigurationChanged()
+        }
     }
 
     func loadCatalog(force: Bool = false) async {
