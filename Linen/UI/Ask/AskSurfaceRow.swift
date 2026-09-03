@@ -85,6 +85,7 @@ struct AskSurfaceRow: View {
                         .frame(width: placement.iconSlot)
                     PermissionBadge(browser: model.browser)
                         .frame(width: placement.iconSlot)
+                    PopupBadge(browser: model.browser, coordinator: model.coordinator)
                     PinBadge(browser: model.browser)
                         .frame(width: placement.iconSlot)
                     SiteControlsMenu(browser: model.browser)

@@ -55,29 +55,57 @@ private struct SiteControlsPanel: View {
     let browser: BrowserModel
     let tab: BrowserTab
 
+    private var siteOrigin: String {
+        browser.siteOrigin(for: tab)
+    }
+
+    private var blockableHost: String? {
+        guard BrowserSettings.shared.blocksTrackers,
+              let host = URL(string: tab.urlString)?.host(),
+              !host.isEmpty
+        else { return nil }
+        return host
+    }
+
+    private var showsSafety: Bool {
+        blockableHost != nil || !tab.permissions.origin.isEmpty
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             SiteControlsHeader(tab: tab)
 
-            sectionRule
+            SiteHandlingSection(browser: browser, tab: tab)
 
-            SiteZoomSection(tab: tab)
+            if !siteOrigin.isEmpty {
+                SiteMediaSection(browser: browser, tab: tab)
+            }
 
-            sectionRule
-
-            SiteBehaviorSection(browser: browser, tab: tab)
-
-            if !tab.permissions.origin.isEmpty {
-                sectionRule
-                SitePermissionsSection(tab: tab)
+            if showsSafety {
+                SiteSafetySection(tab: tab, blockableHost: blockableHost)
             }
         }
+        .padding(.bottom, 6)
         .frame(width: 340)
         .background(.ultraThickMaterial)
     }
+}
 
-    private var sectionRule: some View {
-        Divider().padding(.horizontal, SiteControlsMetrics.inset)
+private struct SiteControlGroup<Content: View>: View {
+    let title: LocalizedStringResource
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(Theme.Font.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, SiteControlsMetrics.inset)
+                .padding(.top, 16)
+                .padding(.bottom, 4)
+
+            content
+        }
     }
 }
 
@@ -112,17 +140,49 @@ private struct SiteControlsHeader: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Website Settings")
                     .font(.system(size: 13, weight: .semibold))
-                Text(verbatim: host)
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                HStack(spacing: 4) {
+                    SiteCertificateButton(tab: tab)
+                    Text(verbatim: host)
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
 
             Spacer(minLength: 0)
         }
         .padding(.horizontal, SiteControlsMetrics.inset)
         .padding(.vertical, 12)
+    }
+}
+
+private struct SiteCertificateButton: View {
+    let tab: BrowserTab
+
+    @State private var hovering = false
+
+    private var symbol: String? {
+        tab.security.symbol
+    }
+
+    var body: some View {
+        if let symbol {
+            let opens = CertificatePanel.canShow(for: tab)
+            Button {
+                CertificatePanel.show(for: tab)
+            } label: {
+                Image(systemName: symbol)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(tab.security.tint)
+                    .opacity(hovering && opens ? 0.7 : 1)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!opens)
+            .onHover { hovering = $0 }
+            .help(opens ? Text("Show Certificate") : Text(verbatim: ""))
+        }
     }
 }
 
@@ -134,43 +194,36 @@ private struct SiteZoomSection: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Label("Page zoom", systemImage: "magnifyingglass")
-                .font(.system(size: 12.5, weight: .medium))
-
-            Spacer(minLength: 12)
-
+        SiteControlRow(symbol: "textformat.size", title: "Page Zoom") {
             HStack(spacing: 0) {
                 zoomButton("minus", help: "Zoom Out") {
                     tab.zoomOut()
                 }
 
                 Divider()
-                    .frame(height: 18)
+                    .frame(height: 12)
 
                 Button {
                     tab.resetZoom()
                 } label: {
                     Text(verbatim: percentage)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(Theme.Font.label)
                         .monospacedDigit()
-                        .frame(width: 48, height: 28)
+                        .frame(width: 40, height: 22)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Reset Zoom")
 
                 Divider()
-                    .frame(height: 18)
+                    .frame(height: 12)
 
                 zoomButton("plus", help: "Zoom In") {
                     tab.zoomIn()
                 }
             }
-            .background(.quaternary, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
-        .padding(.horizontal, SiteControlsMetrics.inset)
-        .padding(.vertical, 10)
     }
 
     private func zoomButton(
@@ -180,8 +233,8 @@ private struct SiteZoomSection: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 30, height: 28)
+                .font(.system(size: 10, weight: .semibold))
+                .frame(width: 24, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -189,7 +242,7 @@ private struct SiteZoomSection: View {
     }
 }
 
-private struct SiteBehaviorSection: View {
+private struct SiteHandlingSection: View {
     let browser: BrowserModel
     let tab: BrowserTab
 
@@ -197,16 +250,10 @@ private struct SiteBehaviorSection: View {
         browser.siteOrigin(for: tab)
     }
 
-    private var blockableHost: String? {
-        guard BrowserSettings.shared.blocksTrackers,
-              let host = URL(string: tab.urlString)?.host(),
-              !host.isEmpty
-        else { return nil }
-        return host
-    }
-
     var body: some View {
         VStack(spacing: 0) {
+            SiteZoomSection(tab: tab)
+
             if !tab.assistantAccess.origin.isEmpty {
                 SiteControlRow(symbol: "sparkles", title: "Assistant Access") {
                     AssistantAccessMenu(tab: tab)
@@ -215,48 +262,95 @@ private struct SiteBehaviorSection: View {
 
             if BrowserSettings.shared.sleepsInactiveTabs, !siteOrigin.isEmpty {
                 SiteControlRow(symbol: "bolt", title: "Keep Website Loaded") {
-                    Toggle("", isOn: Binding(
-                        get: { browser.keepsActive(tab) },
+                    SiteControlToggle(
+                        isOn: browser.keepsActive(tab),
                         set: { browser.setKeepsActive($0, for: tab) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
+                    )
+                }
+            }
+        }
+        .padding(.bottom, 6)
+    }
+}
+
+private struct SiteMediaSection: View {
+    let browser: BrowserModel
+    let tab: BrowserTab
+
+    var body: some View {
+        SiteControlGroup(title: "Media and windows") {
+            SiteControlRow(symbol: "play.rectangle", title: "Auto-Play") {
+                SitePolicyMenu(
+                    options: AutoplayPolicy.allCases.map { ($0, String(localized: $0.label)) },
+                    selection: browser.autoplay(for: tab)
+                ) {
+                    browser.setAutoplay($0, for: tab)
                 }
             }
 
-            if BrowserSettings.shared.automaticPictureInPicture, !siteOrigin.isEmpty {
+            SiteControlRow(symbol: "macwindow.on.rectangle", title: "Pop-up Windows") {
+                SitePolicyMenu(
+                    options: PopupPolicy.allCases.map { ($0, String(localized: $0.label)) },
+                    selection: browser.popups(for: tab)
+                ) {
+                    browser.setPopups($0, for: tab)
+                }
+            }
+
+            if BrowserSettings.shared.automaticPictureInPicture {
                 SiteControlRow(symbol: "pip", title: "Automatic Picture in Picture") {
-                    Toggle("", isOn: Binding(
-                        get: { browser.allowsAutomaticPicture(tab) },
+                    SiteControlToggle(
+                        isOn: browser.allowsAutomaticPicture(tab),
                         set: { browser.setAllowsAutomaticPicture($0, for: tab) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
+                    )
                 }
             }
+        }
+    }
+}
 
+private struct SiteSafetySection: View {
+    let tab: BrowserTab
+    let blockableHost: String?
+
+    var body: some View {
+        SiteControlGroup(title: "Trackers and permissions") {
             if let blockableHost {
                 SiteControlRow(symbol: "shield", title: "Block Trackers") {
                     HStack(spacing: 7) {
                         TrackerInfoButton(tab: tab, host: blockableHost)
 
-                        Toggle("", isOn: Binding(
-                            get: { !ContentBlocker.shared.isExempt(blockableHost) },
+                        SiteControlToggle(
+                            isOn: !ContentBlocker.shared.isExempt(blockableHost),
                             set: { blocks in
                                 ContentBlocker.shared.setExempt(!blocks, for: blockableHost)
                                 tab.webView.reload()
                             }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
+                        )
+                    }
+                }
+            }
+
+            if !tab.permissions.origin.isEmpty {
+                ForEach(WebPermission.allCases, id: \.self) { permission in
+                    SiteControlRow(symbol: permission.symbol, title: permission.label) {
+                        PermissionPolicyMenu(tab: tab, permission: permission)
                     }
                 }
             }
         }
-        .padding(.vertical, 4)
+    }
+}
+
+private struct SiteControlToggle: View {
+    let isOn: Bool
+    let set: (Bool) -> Void
+
+    var body: some View {
+        Toggle("", isOn: Binding(get: { isOn }, set: { set($0) }))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.mini)
     }
 }
 
@@ -468,28 +562,6 @@ private struct AssistantAccessMenu: View {
     }
 }
 
-private struct SitePermissionsSection: View {
-    let tab: BrowserTab
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Permissions")
-                .font(Theme.Font.caption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, SiteControlsMetrics.inset)
-                .padding(.top, 9)
-                .padding(.bottom, 3)
-
-            ForEach(WebPermission.allCases, id: \.self) { permission in
-                SiteControlRow(symbol: permission.symbol, title: permission.label) {
-                    PermissionPolicyMenu(tab: tab, permission: permission)
-                }
-            }
-        }
-        .padding(.bottom, 4)
-    }
-}
-
 private struct PermissionPolicyMenu: View {
     let tab: BrowserTab
     let permission: WebPermission
@@ -518,6 +590,42 @@ private struct PermissionPolicyMenu: View {
             }
         } label: {
             Text(center.menuPolicy(for: permission).label)
+                .font(Theme.Font.label)
+        }
+        .menuStyle(.button)
+        .controlSize(.small)
+        .fixedSize()
+    }
+}
+
+private struct SitePolicyMenu<Value: Hashable>: View {
+    let options: [(value: Value, label: String)]
+    let selection: Value
+    let choose: (Value) -> Void
+
+    private var selectedLabel: String {
+        options.first { $0.value == selection }?.label ?? ""
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(options, id: \.value) { option in
+                Button {
+                    choose(option.value)
+                } label: {
+                    if option.value == selection {
+                        Label {
+                            Text(verbatim: option.label)
+                        } icon: {
+                            Image(systemName: "checkmark")
+                        }
+                    } else {
+                        Text(verbatim: option.label)
+                    }
+                }
+            }
+        } label: {
+            Text(verbatim: selectedLabel)
                 .font(Theme.Font.label)
         }
         .menuStyle(.button)
@@ -600,6 +708,34 @@ struct TabPictureBadge: View {
             }
         }
         .animation(.spring(response: 0.32, dampingFraction: 0.7), value: face)
+    }
+}
+
+struct PopupBadge: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+
+    private var blocked: (tab: BrowserTab, url: URL)? {
+        guard let tab = browser.activeTab, let url = tab.popups.blocked else { return nil }
+        return (tab, url)
+    }
+
+    var body: some View {
+        Group {
+            if let blocked {
+                ChromeIcon(
+                    symbol: "macwindow.badge.plus",
+                    weight: .semibold,
+                    tint: Theme.systemAccent,
+                    help: String(localized: "Show Blocked Pop-up")
+                ) {
+                    blocked.tab.popups.clear()
+                    coordinator.openNewTab(url: blocked.url)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.6)))
+            }
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.7), value: blocked?.url)
     }
 }
 

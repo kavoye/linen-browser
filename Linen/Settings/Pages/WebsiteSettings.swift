@@ -319,6 +319,10 @@ private struct SiteDetailPage: View {
         grants.grantsByHost.first { $0.host == host }?.categories ?? []
     }
 
+    private var popupFallback: PopupPolicy {
+        settings.blocksPopups ? .blockAndNotify : .allow
+    }
+
     var body: some View {
         SubPageHeader(backTitle: "Websites", onBack: onBack) {
             SettingsButton(title: "Reset This Website…", isDestructive: true) {
@@ -417,6 +421,40 @@ private struct SiteDetailPage: View {
             }
         }
 
+        SettingsSection(title: "Media and windows", symbol: "play.rectangle") {
+            DetailRow(
+                title: "Auto-Play",
+                caption: "What this website may start playing on its own."
+            ) {
+                SettingsMenu(
+                    options: AutoplayPolicy.allCases.map {
+                        .init(value: $0, label: String(localized: $0.label))
+                    },
+                    selection: Binding(
+                        get: { permissions.autoplay(for: origin) ?? settings.autoplay },
+                        set: { permissions.setAutoplay($0 == settings.autoplay ? nil : $0, for: origin) }
+                    )
+                )
+            }
+
+            RowSeparator()
+
+            DetailRow(
+                title: "Pop-up Windows",
+                caption: "What happens when this website opens a window by itself."
+            ) {
+                SettingsMenu(
+                    options: PopupPolicy.allCases.map {
+                        .init(value: $0, label: String(localized: $0.label))
+                    },
+                    selection: Binding(
+                        get: { permissions.popups(for: origin) ?? popupFallback },
+                        set: { permissions.setPopups($0 == popupFallback ? nil : $0, for: origin) }
+                    )
+                )
+            }
+        }
+
         SettingsSection(title: "Permissions", symbol: "hand.raised") {
             ForEach(Array(WebPermission.allCases.enumerated()), id: \.element) { index, permission in
                 if index > 0 {
@@ -454,6 +492,8 @@ private struct SiteDetailPage: View {
         permissions.setAssistantAccess(.ask, for: origin)
         permissions.setKeepsActive(false, for: origin)
         permissions.setAllowsAutomaticPicture(true, for: origin)
+        permissions.setAutoplay(nil, for: origin)
+        permissions.setPopups(nil, for: origin)
         blocker.setExempt(false, for: host)
     }
 }

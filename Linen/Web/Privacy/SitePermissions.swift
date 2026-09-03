@@ -93,6 +93,38 @@ nonisolated enum PermissionPolicy: String, Codable, Sendable {
     }
 }
 
+nonisolated enum PopupPolicy: String, Codable, CaseIterable, Sendable {
+    case blockAndNotify
+    case block
+    case allow
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .blockAndNotify:
+            "Block and Notify"
+        case .block:
+            "Block"
+        case .allow:
+            "Allow"
+        }
+    }
+
+    var caption: LocalizedStringResource {
+        switch self {
+        case .blockAndNotify:
+            "A blocked pop-up appears in the toolbar so you can open it."
+        case .block:
+            "Pop-ups never open."
+        case .allow:
+            "A website may open pop-ups by itself."
+        }
+    }
+
+    var blocks: Bool {
+        self != .allow
+    }
+}
+
 nonisolated enum AssistantAccessPolicy: String, Codable, CaseIterable, Sendable {
     case ask
     case readOnly
@@ -136,6 +168,10 @@ final class SitePermissions {
 
     private var noAutomaticPictureOriginSet: Set<String> = []
     private(set) var noAutomaticPictureOrigins: [String] = []
+
+    private(set) var autoplayRecords: [String: AutoplayPolicy] = [:]
+
+    private(set) var popupRecords: [String: PopupPolicy] = [:]
 
     private let file: URL
     private var saveTask: Task<Void, Never>?
@@ -183,6 +219,22 @@ final class SitePermissions {
 
     func allowsAutomaticPicture(_ origin: String) -> Bool {
         !noAutomaticPictureOriginSet.contains(normalize(origin))
+    }
+
+    func autoplay(for origin: String) -> AutoplayPolicy? {
+        autoplayRecords[normalize(origin)]
+    }
+
+    func popups(for origin: String) -> PopupPolicy? {
+        popupRecords[normalize(origin)]
+    }
+
+    var autoplayOrigins: [String] {
+        autoplayRecords.keys.sorted()
+    }
+
+    var popupOrigins: [String] {
+        popupRecords.keys.sorted()
     }
 
     // MARK: - Writing
@@ -253,15 +305,25 @@ final class SitePermissions {
         scheduleSave()
     }
 
-    func removeAllKeptActiveOrigins() {
-        keptActiveOriginSet = []
-        keptActiveOrigins = []
+    func setAutoplay(_ policy: AutoplayPolicy?, for origin: String) {
+        let origin = normalize(origin)
+        guard !origin.isEmpty else { return }
+        autoplayRecords[origin] = policy
+        scheduleSave()
+    }
+
+    func setPopups(_ policy: PopupPolicy?, for origin: String) {
+        let origin = normalize(origin)
+        guard !origin.isEmpty else { return }
+        popupRecords[origin] = policy
         scheduleSave()
     }
 
     func removeEverything() {
         records = [:]
         assistantRecords = [:]
+        autoplayRecords = [:]
+        popupRecords = [:]
         keptActiveOriginSet = []
         keptActiveOrigins = []
         noAutomaticPictureOriginSet = []
@@ -338,6 +400,8 @@ final class SitePermissions {
         var assistantAccess: [String: AssistantAccessPolicy] = [:]
         var keptActive: Set<String> = []
         var noAutomaticPicture: Set<String> = []
+        var autoplay: [String: AutoplayPolicy] = [:]
+        var popups: [String: PopupPolicy] = [:]
 
         init(
             records: [String: [WebPermission: PermissionPolicy]],
@@ -345,13 +409,17 @@ final class SitePermissions {
                 [WebPermission: PermissionPolicy],
             assistantAccess: [String: AssistantAccessPolicy],
             keptActive: Set<String>,
-            noAutomaticPicture: Set<String>
+            noAutomaticPicture: Set<String>,
+            autoplay: [String: AutoplayPolicy],
+            popups: [String: PopupPolicy]
         ) {
             self.records = records
             self.defaults = defaults
             self.assistantAccess = assistantAccess
             self.keptActive = keptActive
             self.noAutomaticPicture = noAutomaticPicture
+            self.autoplay = autoplay
+            self.popups = popups
         }
 
         init(from decoder: Decoder) throws {
@@ -376,6 +444,14 @@ final class SitePermissions {
                 Set<String>.self,
                 forKey: .noAutomaticPicture
             ) ?? []
+            autoplay = try values.decodeIfPresent(
+                [String: AutoplayPolicy].self,
+                forKey: .autoplay
+            ) ?? [:]
+            popups = try values.decodeIfPresent(
+                [String: PopupPolicy].self,
+                forKey: .popups
+            ) ?? [:]
         }
     }
 
@@ -383,7 +459,11 @@ final class SitePermissions {
         guard let data = try? Data(contentsOf: file),
               let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data)
         else { return 0 }
-        return Set(snapshot.records.keys).union(snapshot.assistantAccess.keys).count
+        return Set(snapshot.records.keys)
+            .union(snapshot.assistantAccess.keys)
+            .union(snapshot.autoplay.keys)
+            .union(snapshot.popups.keys)
+            .count
     }
 
     private func scheduleSave() {
@@ -394,7 +474,9 @@ final class SitePermissions {
                 defaults,
             assistantAccess: assistantRecords,
             keptActive: keptActiveOriginSet,
-            noAutomaticPicture: noAutomaticPictureOriginSet
+            noAutomaticPicture: noAutomaticPictureOriginSet,
+            autoplay: autoplayRecords,
+            popups: popupRecords
         )
         let url = file
         saveTask = Task {
@@ -431,6 +513,18 @@ final class SitePermissions {
             }
         }
         noAutomaticPictureOrigins = noAutomaticPictureOriginSet.sorted()
+        for (key, policy) in snapshot.autoplay {
+            let origin = normalize(key)
+            if !origin.isEmpty, autoplayRecords[origin] == nil {
+                autoplayRecords[origin] = policy
+            }
+        }
+        for (key, policy) in snapshot.popups {
+            let origin = normalize(key)
+            if !origin.isEmpty, popupRecords[origin] == nil {
+                popupRecords[origin] = policy
+            }
+        }
     }
 
     private static var defaultFile: URL {

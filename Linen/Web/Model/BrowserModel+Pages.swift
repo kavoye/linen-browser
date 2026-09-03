@@ -81,8 +81,33 @@ extension BrowserModel {
         let settings = BrowserSettings.shared
         for tab in tabs where tab.isMaterialised {
             settings.apply(to: tab.webView)
+            tab.refreshPopupPolicy()
         }
         WebViewPool.shared.discardIdle()
+    }
+
+    func autoplay(for tab: BrowserTab) -> AutoplayPolicy {
+        let origin = siteOrigin(for: tab)
+        guard !origin.isEmpty else { return BrowserSettings.shared.autoplay }
+        return sitePermissions.autoplay(for: origin) ?? BrowserSettings.shared.autoplay
+    }
+
+    func setAutoplay(_ policy: AutoplayPolicy, for tab: BrowserTab) {
+        let origin = siteOrigin(for: tab)
+        guard !origin.isEmpty else { return }
+        sitePermissions.setAutoplay(policy == BrowserSettings.shared.autoplay ? nil : policy, for: origin)
+    }
+
+    func popups(for tab: BrowserTab) -> PopupPolicy {
+        tab.popups.effective
+    }
+
+    func setPopups(_ policy: PopupPolicy, for tab: BrowserTab) {
+        let origin = siteOrigin(for: tab)
+        guard !origin.isEmpty else { return }
+        let fallback: PopupPolicy = BrowserSettings.shared.blocksPopups ? .blockAndNotify : .allow
+        sitePermissions.setPopups(policy == fallback ? nil : policy, for: origin)
+        tab.refreshPopupPolicy()
     }
 
     // MARK: - The browser's own pages

@@ -11,6 +11,8 @@ struct SiteSettingsEntry: Identifiable, Equatable {
     var keepsActive = false
     var blocksAutomaticPicture = false
     var allowsTrackers = false
+    var autoplay: AutoplayPolicy?
+    var popups: PopupPolicy?
     var assistantGrants: [SensitiveAction.Category] = []
 
     var id: String {
@@ -27,6 +29,8 @@ struct SiteSettingsEntry: Identifiable, Equatable {
             && !keepsActive
             && !blocksAutomaticPicture
             && !allowsTrackers
+            && autoplay == nil
+            && popups == nil
             && assistantGrants.isEmpty
     }
 
@@ -73,6 +77,26 @@ struct SiteSettingsEntry: Identifiable, Equatable {
 
         if allowsTrackers {
             phrases.append(String(localized: "trackers allowed"))
+        }
+
+        switch autoplay {
+        case .allow:
+            phrases.append(String(localized: "auto-play allowed"))
+        case .silent:
+            phrases.append(String(localized: "auto-play muted"))
+        case .block:
+            phrases.append(String(localized: "auto-play blocked"))
+        case nil:
+            break
+        }
+
+        switch popups {
+        case .allow:
+            phrases.append(String(localized: "pop-ups allowed"))
+        case .block, .blockAndNotify:
+            phrases.append(String(localized: "pop-ups blocked"))
+        case nil:
+            break
         }
 
         return phrases
@@ -123,6 +147,18 @@ enum SiteSettingsIndex {
         for origin in permissions.noAutomaticPictureOrigins {
             var found = entry(for: origin)
             found.blocksAutomaticPicture = true
+            byOrigin[origin] = found
+        }
+
+        for origin in permissions.autoplayOrigins {
+            var found = entry(for: origin)
+            found.autoplay = permissions.autoplay(for: origin)
+            byOrigin[origin] = found
+        }
+
+        for origin in permissions.popupOrigins {
+            var found = entry(for: origin)
+            found.popups = permissions.popups(for: origin)
             byOrigin[origin] = found
         }
 
