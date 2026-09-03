@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import Foundation
 import GRDB
 import Observation
@@ -54,11 +55,14 @@ final class BrowserModel {
     }
     var extensionPageHost: ((URL) -> ExtensionPageHost?)?
     var onTabOpened: ((BrowserTab) -> Void)?
+    var onNavigationStarted: ((BrowserTab, URL) -> Void)?
     var onTabClosed: ((BrowserTab) -> Void)?
     var onActiveTabChanged: ((BrowserTab?, BrowserTab?) -> Void)?
     var onSpaceAnchorChanged: ((UUID, UUID) -> Void)?
     var onContentProcessTerminated: ((BrowserTab) -> Void)?
     var onPictureInPictureChanged: ((BrowserTab, Bool) -> Void)?
+    var onLinkHovered: ((BrowserTab, URL?, NSEvent.ModifierFlags, CGPoint) -> Void)?
+    var onOpenInPeek: ((BrowserTab?, URL, CGPoint) -> Void)?
     var onPictureReturnExpected: ((BrowserTab) -> Void)?
 
     var activeTab: BrowserTab? {
@@ -83,6 +87,10 @@ final class BrowserModel {
             privately: privately,
             sitePermissions: sitePermissions
         )
+        tab.onNavigationStarted = { [weak self, weak tab] url in
+            guard let tab else { return }
+            self?.onNavigationStarted?(tab, url)
+        }
         tab.onNavigationFinished = { [weak self, weak tab] wasRestore in
             self?.scheduleSave()
             guard !wasRestore, let tab, !tab.isPrivate else { return }
@@ -109,20 +117,8 @@ final class BrowserModel {
             guard let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }
-        tab.onOpenInSplit = { [weak self, weak tab] url in
-            guard let self, let tab else { return }
-            let full = splits.split(containing: tab.id)?.isFull == true
-            let opened = newTab(url: url, activate: full, after: tab, transition: .link)
-            if !full {
-                if splits.contains(tab.id) {
-                    insertIntoSplit(opened, beside: tab, edge: .right)
-                } else {
-                    split(tab, with: opened, axis: .sideBySide)
-                }
-                activate(opened)
-            }
-            guard let origin = lastVisitID[tab.id] else { return }
-            lastVisitID[opened.id] = origin
+        tab.onOpenInPeek = { [weak self, weak tab] url, origin in
+            self?.onOpenInPeek?(tab, url, origin)
         }
         tab.onCloseRequested = { [weak self, weak tab] in
             guard let tab else { return }
@@ -131,6 +127,10 @@ final class BrowserModel {
         tab.onPictureInPictureChanged = { [weak self, weak tab] isOut in
             guard let tab else { return }
             self?.onPictureInPictureChanged?(tab, isOut)
+        }
+        tab.onLinkHovered = { [weak self, weak tab] url, modifiers, anchor in
+            guard let tab else { return }
+            self?.onLinkHovered?(tab, url, modifiers, anchor)
         }
         tab.onPictureReturnExpected = { [weak self, weak tab] in
             guard let tab else { return }
@@ -186,6 +186,19 @@ final class BrowserModel {
     ) -> BrowserTab {
         let url = adopting == nil ? (url ?? BrowserSettings.shared.newTabURL) : url
         let tab = makeTab(for: url, adopting: adopting)
+        insert(tab, after: opener)
+        onTabOpened?(tab)
+        if activate {
+            activeTabID = tab.id
+        }
+        if let url {
+            tab.load(url, transition: transition)
+        }
+        scheduleSave()
+        return tab
+    }
+
+    private func insert(_ tab: BrowserTab, after opener: BrowserTab?) {
         let keptRun = keptRunAtTop()
         if let anchor = opener.flatMap(insertionAnchor(after:)),
            !keptRun.contains(where: { $0 === anchor }),
@@ -201,15 +214,44 @@ final class BrowserModel {
             place([.tab(tab.id)], in: nil, before: reconciledTree().root.first)
         }
         sidebarDidChange()
-        onTabOpened?(tab)
-        if activate {
-            activeTabID = tab.id
-        }
-        if let url {
-            tab.load(url, transition: transition)
-        }
-        scheduleSave()
+    }
+
+    // MARK: - Peek
+
+    /// A peeked page is a tab no list holds: it reaches neither the sidebar,
+    /// the session file nor the extensions until you keep it.
+    func makePeekTab(_ url: URL) -> BrowserTab {
+        let tab = makeTab(for: url)
+        tab.onOpenInPeek = nil
+        tab.load(url, transition: .link)
         return tab
+    }
+
+    func keepPeekTab(_ tab: BrowserTab, after opener: BrowserTab?) {
+        insert(tab, after: opener)
+        onTabOpened?(tab)
+        activeTabID = tab.id
+        scheduleSave()
+    }
+
+    func keepPeekTab(_ tab: BrowserTab, besidePage anchor: BrowserTab) {
+        keepPeekTab(tab, after: anchor)
+        guard splits.split(containing: anchor.id)?.isFull != true else { return }
+        if splits.contains(anchor.id) {
+            insertIntoSplit(tab, beside: anchor, edge: .right)
+        } else {
+            split(anchor, with: tab, axis: .sideBySide)
+        }
+        activate(tab)
+    }
+
+    func dismissPeekTab(_ tab: BrowserTab) {
+        if tab.isMaterialised {
+            tab.webView.stopLoading()
+            tab.webView.load(URLRequest(url: URL(string: "about:blank")!))
+            tab.webView.removeFromSuperview()
+        }
+        tab.detach()
     }
 
     private func insertionAnchor(after opener: BrowserTab) -> BrowserTab? {
@@ -246,7 +288,8 @@ final class BrowserModel {
     @discardableResult
     func duplicate(_ tab: BrowserTab) -> BrowserTab {
         let copy = makeTab(for: URL(string: tab.urlString))
-        copy.title = tab.title
+        copy.pageTitle = tab.pageTitle
+        copy.customTitle = tab.customTitle
         copy.urlString = tab.urlString
         if let state = tab.webView.interactionState as? Data {
             copy.webView.interactionState = state

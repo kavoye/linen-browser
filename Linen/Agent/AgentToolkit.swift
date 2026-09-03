@@ -791,6 +791,7 @@ final class AgentToolkit {
         configuration.websiteDataStore = .nonPersistent()
         configuration.webExtensionController = extensionController
         BrowserSettings.shared.apply(to: configuration)
+        configuration.mediaTypesRequiringUserActionForPlayback = .all
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
         configuration.preferences.inactiveSchedulingPolicy = .none
         return configuration

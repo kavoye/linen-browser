@@ -61,11 +61,28 @@ extension AppCoordinator {
         browser.onActiveTabChanged = { [weak self] newTab, previousTab in
             notifyExtensions?(newTab, previousTab)
             self?.followMedia(to: newTab, from: previousTab)
+            self?.applyHoverShield()
         }
         browser.onSpaceAnchorChanged = { [weak self] from, to in
             self?.agentTurns.reassignSpace(from: from, to: to)
         }
+        browser.onLinkHovered = { [weak self] tab, url, modifiers, anchor in
+            guard let self else { return }
+            noteLinkModifiers(modifiers)
+            linkPeek.hovered(url, flags: modifiers, tabID: tab.id, anchor: anchor)
+        }
+        browser.onOpenInPeek = { [weak self] tab, url, origin in
+            self?.openPeek(url: url, from: tab, at: origin)
+        }
+        linkPeek.begin()
+        onboarding.beginIfNeeded()
+        if onboarding.isPresented {
+            prepareWindowBloom()
+        }
         showBrowser()
+        if onboarding.isPresented {
+            bloomWindowOpen()
+        }
         if !AppDatabase.ownsSession {
             show(notice: String(localized: "Another copy of Linen is open. Nothing here is saved."))
         }
@@ -96,8 +113,6 @@ extension AppCoordinator {
         }
         activation.start()
         installKeyMonitors()
-
-        onboarding.beginIfNeeded()
 
         configureEngines()
 
@@ -142,7 +157,7 @@ extension AppCoordinator {
         selectedProvider = ProviderCatalog.shared.selected
         selectedModel = LLMSettings.model(for: selectedProvider)
         selectedEffort = ReasoningCatalog.resolve(
-            LLMSettings.reasoningEffort,
+            LLMSettings.reasoningEffort(for: selectedProvider),
             for: selectedProvider,
             model: selectedModel
         )
@@ -170,7 +185,7 @@ extension AppCoordinator {
             let configuration = provider.configuration
             let built = provider.makeAgent(
                 model: LLMSettings.model(for: configuration),
-                reasoningEffort: LLMSettings.reasoningEffort,
+                reasoningEffort: LLMSettings.reasoningEffort(for: configuration),
                 toolkit: toolkit,
                 log: conversationLog
             )
@@ -266,6 +281,7 @@ extension AppCoordinator {
         tabSwitchMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             MainActor.assumeIsolated {
                 self?.controlChanged(isDown: event.modifierFlags.contains(.control), at: event.timestamp)
+                self?.noteLinkModifiers(event.modifierFlags)
             }
             return event
         }
@@ -278,6 +294,12 @@ extension AppCoordinator {
                 self?.controlChanged(isDown: false, at: ProcessInfo.processInfo.systemUptime)
             }
         }
+    }
+
+    func noteLinkModifiers(_ flags: NSEvent.ModifierFlags) {
+        let wanted = flags.intersection([.command, .shift])
+        guard wanted != linkModifiers else { return }
+        linkModifiers = wanted
     }
 
     private func controlChanged(isDown: Bool, at timestamp: TimeInterval) {
@@ -294,13 +316,26 @@ extension AppCoordinator {
     private func installEscapeHandler() {
         guard escapeMonitor == nil else { return }
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard event.keyCode == 53 else { return event }
             var claimed = false
             MainActor.assumeIsolated {
-                claimed = self?.handleEscape() ?? false
+                claimed = self?.handleKey(event) ?? false
             }
             return claimed ? nil : event
         }
+    }
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        if let responder = NSApp.keyWindow?.firstResponder, responder is NSText {
+            return false
+        }
+        if peek.isOpen,
+           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           event.charactersIgnoringModifiers == "o" {
+            keepPeek()
+            return true
+        }
+        guard event.keyCode == 53 else { return false }
+        return handleEscape()
     }
 
     private func handleEscape() -> Bool {
@@ -313,6 +348,9 @@ extension AppCoordinator {
         }
         if isProfileSwitcherOpen {
             isProfileSwitcherOpen = false
+            return true
+        }
+        if closePeek() {
             return true
         }
         let closedInspector = sidePanel.close()

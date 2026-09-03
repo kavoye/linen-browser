@@ -82,6 +82,8 @@ final class AppCoordinator {
     let sidePanel = SidePanelModel()
     #endif
     let tabPreview = TabPreviewModel()
+    let linkPeek = LinkPeek()
+    let peek = PeekPanel()
     let sidebarDrag = SidebarDragModel()
     let researchPreview = ResearchPreview()
     let settings = BrowserSettings.shared
@@ -224,9 +226,16 @@ final class AppCoordinator {
             isPanelVisible: sidePanel.isVisible,
             isPanelExpanded: sidePanel.isExpanded
         )
+        let peeked = shownPeek?.webView
         for view in TabWebView.liveInstances.allObjects {
             guard view.window != nil else {
                 view.setHoverParked(false)
+                continue
+            }
+            // A page under the peek must not answer the pointer: hover reaches
+            // it through its own tracking areas, whatever is drawn on top.
+            if let peeked, view !== peeked {
+                view.setHoverParked(true)
                 continue
             }
             let viewMaxX = view.convert(view.bounds, to: nil).maxX
@@ -246,6 +255,9 @@ final class AppCoordinator {
     private func tabDidClose(_ tab: BrowserTab) {
         playedPages[tab.id] = nil
         FaviconTint.forget(tab.id)
+        if peek.belongs(to: tab.id) {
+            closePeek()
+        }
         if media.controlledTabID == tab.id {
             media.releaseControl()
             dockSuccessor(to: tab.id)
@@ -407,6 +419,59 @@ final class AppCoordinator {
     var playedPages: [UUID: String] = [:]
     var lyricsPinnedTabID: UUID?
 
+    // MARK: - Peek
+
+    /// The panel is only on screen over the page it was opened from.
+    var isPeekOnScreen: Bool {
+        guard let owner = peek.ownerID else { return false }
+        return browser.activeTabID == owner || browser.activeSplit?.contains(owner) == true
+    }
+
+    var shownPeek: BrowserTab? {
+        isPeekOnScreen ? peek.tab : nil
+    }
+
+    func openPeek(url: URL, from owner: BrowserTab?, at origin: CGPoint) {
+        linkPeek.forget()
+        showBrowser()
+        if let standing = peek.tab, peek.ownerID == owner?.id {
+            peek.aim(at: origin)
+            standing.load(url, transition: .link)
+            return
+        }
+        closePeek()
+        peek.show(browser.makePeekTab(url), from: owner?.id, at: origin)
+        applyHoverShield()
+    }
+
+    /// The panel is still on screen while it shrinks back into its link.
+    private static let peekDeparture: Duration = .milliseconds(260)
+
+    @discardableResult
+    func closePeek() -> Bool {
+        guard let held = peek.take() else { return false }
+        applyHoverShield()
+        Task { [browser] in
+            try? await Task.sleep(for: Self.peekDeparture)
+            browser.dismissPeekTab(held)
+        }
+        return true
+    }
+
+    func keepPeek() {
+        guard let tab = peek.take(quietly: true) else { return }
+        browser.keepPeekTab(tab, after: browser.activeTab)
+        applyHoverShield()
+    }
+
+    func keepPeekBesideCurrentPage() {
+        guard let anchor = browser.activeTab, let tab = peek.take(quietly: true) else { return }
+        browser.keepPeekTab(tab, besidePage: anchor)
+        applyHoverShield()
+    }
+
+    var linkModifiers: NSEvent.ModifierFlags = []
+
     func togglePin() {
         guard let tab = browser.activeTab else { return }
         if tab.isShowingPin {
@@ -493,6 +558,7 @@ final class AppCoordinator {
         showBrowser()
         paletteToken += 1
         isPaletteOpen = true
+        linkPeek.suppress()
     }
 
     func togglePalette() {
@@ -505,6 +571,7 @@ final class AppCoordinator {
 
     func closePalette() {
         isPaletteOpen = false
+        linkPeek.resume()
     }
 
     func confirmClearHistory() {
@@ -559,24 +626,27 @@ final class AppCoordinator {
         }
     }
 
-    func closeAskingIfBookmarked(_ tab: BrowserTab) {
+    func closeAskingIfPinned(_ tab: BrowserTab) {
         guard tab.pinnedURL != nil else {
             browser.close(tab)
             return
         }
         Task {
             guard await ConfirmAlert.destructive(
-                "Close this bookmarked tab?",
-                detail: "Its bookmark is removed when the tab closes.",
+                "Close this pinned tab?",
+                detail: "Closing this tab also removes its pin. You can pin the page again later.",
                 verb: "Close Tab"
             ) else { return }
             browser.close(tab)
         }
     }
 
-    func closeActiveTabAskingIfBookmarked() {
+    func closeActiveTabAskingIfPinned() {
+        if closePeek() {
+            return
+        }
         guard let tab = browser.activeTab else { return }
-        closeAskingIfBookmarked(tab)
+        closeAskingIfPinned(tab)
     }
 
     func showHistory() {
@@ -630,6 +700,14 @@ final class AppCoordinator {
     func hostDidChange(visible: Bool, controlsInset: CGFloat) {
         browserVisible = visible
         windowControlsInset = controlsInset
+    }
+
+    func prepareWindowBloom() {
+        ensureHost().seedBloom()
+    }
+
+    func bloomWindowOpen() {
+        host?.bloomOpen()
     }
 
     private func ensureHost() -> BrowserHost {
