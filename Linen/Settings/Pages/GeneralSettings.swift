@@ -48,7 +48,7 @@ struct GeneralSettings: View {
 
             DetailRow(
                 title: "Sleep inactive tabs",
-                caption: "Frees memory when the Mac runs low. Tabs reload when you return to them."
+                caption: "Frees memory when the Mac runs low. Tabs reload on return."
             ) {
                 SettingsToggle($settings.sleepsInactiveTabs)
             }
@@ -84,8 +84,8 @@ struct GeneralSettings: View {
 
         SettingsSection(title: "Browsing", symbol: "cursorarrow.rays") {
             DetailRow(
-                title: "Show link preview",
-                caption: "Hold the pointer over a link to see its address at the bottom of the page."
+                title: "Show link address",
+                caption: "See where a link goes, at the bottom of the page."
             ) {
                 SettingsToggle($settings.showsLinkPreview)
             }
@@ -95,7 +95,7 @@ struct GeneralSettings: View {
         SettingsSection(title: "Media", symbol: "play.rectangle", footnote: mediaFootnote) {
             DetailRow(
                 title: "Show media player",
-                caption: "The sidebar shows what’s playing, so you can pause or skip from any tab."
+                caption: "Pause or skip what’s playing from any tab."
             ) {
                 SettingsToggle($settings.showsMediaPlayer)
             }
@@ -105,7 +105,7 @@ struct GeneralSettings: View {
 
             DetailRow(
                 title: "Automatic Picture in Picture",
-                caption: "Video moves into a floating window when you leave its tab or switch to another app."
+                caption: "Video keeps playing in a floating window when you leave its tab."
             ) {
                 SettingsToggle($settings.automaticPictureInPicture)
             }
@@ -116,7 +116,7 @@ struct GeneralSettings: View {
 
             DetailRow(
                 title: "Show lyrics",
-                caption: "Linen looks up lyrics on LRCLIB. Only the song and artist names leave your Mac, and never from a private tab."
+                caption: "Only the song and artist go to LRCLIB, never from a private tab."
             ) {
                 SettingsToggle($settings.showsLyrics)
             }

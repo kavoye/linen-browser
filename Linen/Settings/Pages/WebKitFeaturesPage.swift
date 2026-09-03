@@ -32,7 +32,7 @@ struct WebKitFeaturesPage: View {
 
         SettingsPageHeader(
             title: "Feature flags",
-            caption: "These WebKit features are still in development and can break websites. Reload a page to apply your changes."
+            caption: "Still in development, and able to break websites. Reload a page to apply."
         )
 
         SearchFieldChrome {

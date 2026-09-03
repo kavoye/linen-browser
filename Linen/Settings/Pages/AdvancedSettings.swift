@@ -34,7 +34,7 @@ struct AdvancedSettings: View {
 
             DetailRow(
                 title: "Certificate exceptions",
-                caption: "Continue past a certificate macOS rejects. Forgotten when you quit."
+                caption: "Continue past a certificate macOS rejects. Forgotten on quit."
             ) {
                 SettingsToggle($settings.allowsCertificateExceptions)
             }
@@ -45,7 +45,7 @@ struct AdvancedSettings: View {
 
                 DrillInRow(
                     title: "Feature flags",
-                    caption: "WebKit’s own experiments. Changing one can break websites."
+                    caption: "WebKit’s own experiments, which can break websites."
                 ) {
                     readingFeatures = true
                 }
@@ -56,7 +56,7 @@ struct AdvancedSettings: View {
 
             DetailRow(
                 title: "User agent",
-                caption: "Linen uses the system user agent. Changing this can break websites."
+                caption: "Changing this can break websites."
             ) {
                 SegmentedControl(
                     items: UserAgentMode.allCases.map { .init(value: $0, label: $0.label) },

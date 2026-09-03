@@ -27,7 +27,7 @@ struct AppearanceSettings: View {
 
             DetailRow(
                 title: "Page zoom",
-                caption: "The default for every website. Individual tabs can still be zoomed."
+                caption: "The default for every website. Tabs can still be zoomed."
             ) {
                 SettingsMenu(
                     options: Self.sizes.map {
@@ -64,9 +64,6 @@ struct AppearanceSettings: View {
                 ))
             }
             .settingsAnchor("appearance.sidebarStyle")
-
-            RowSeparator()
-
         }
     }
 }
@@ -113,7 +110,7 @@ private struct WindowStyleSettingsSection: View {
 
                     DetailRow(
                         title: "Transparency",
-                        caption: "Clear shows more of what’s behind Linen. Tinted adds contrast to content and controls.",
+                        caption: "Clear shows more of what’s behind Linen; tinted adds contrast.",
                         layout: .stacked
                     ) {
                         LoomTransparencyControl(opacity: $settings.transparency)

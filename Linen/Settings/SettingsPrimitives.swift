@@ -255,6 +255,9 @@ struct DetailRow<Content: View>: View {
     private var caption: Text?
     var layout: Layout = .trailing
     var isMuted = false
+    /// `nil` lets the controls keep their own width, for a row that carries
+    /// more than one of them.
+    var controlWidth: CGFloat? = SettingsMetrics.controlWidth
 
     @ViewBuilder let content: Content
 
@@ -265,11 +268,13 @@ struct DetailRow<Content: View>: View {
         title: LocalizedStringResource? = nil,
         caption: LocalizedStringResource? = nil,
         layout: Layout = .trailing,
+        controlWidth: CGFloat? = SettingsMetrics.controlWidth,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title.map(Text.init)
         self.caption = caption.map(Text.init)
         self.layout = layout
+        self.controlWidth = controlWidth
         self.content = content()
     }
 
@@ -307,8 +312,7 @@ struct DetailRow<Content: View>: View {
                     label
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    content
-                        .frame(maxWidth: SettingsMetrics.controlWidth, alignment: .trailing)
+                    trailingContent
                 }
             case .stacked:
                 VStack(alignment: .leading, spacing: 10) {
@@ -320,6 +324,17 @@ struct DetailRow<Content: View>: View {
             }
         }
         .padding(.vertical, SettingsMetrics.rowPaddingV)
+    }
+
+    @ViewBuilder
+    private var trailingContent: some View {
+        if let controlWidth {
+            content
+                .frame(maxWidth: controlWidth, alignment: .trailing)
+        } else {
+            content
+                .fixedSize(horizontal: true, vertical: false)
+        }
     }
 
     private var isLit: Bool {
@@ -413,7 +428,7 @@ struct SettingsButton: View {
             return AnyShapeStyle(.tertiary)
         }
         if isDestructive {
-            return AnyShapeStyle(Theme.danger.opacity(0.95))
+            return hovering ? AnyShapeStyle(Theme.danger) : AnyShapeStyle(.primary)
         }
         if let tint {
             return AnyShapeStyle(tint)
@@ -422,13 +437,7 @@ struct SettingsButton: View {
     }
 
     private var hoverGlassTint: Color? {
-        if isDestructive {
-            return Theme.danger
-        }
-        if let tint {
-            return tint
-        }
-        return nil
+        isDestructive ? nil : tint
     }
 
     var body: some View {
@@ -441,6 +450,7 @@ struct SettingsButton: View {
                 titleText
                     .font(.system(size: 12, weight: isProminent ? .semibold : .medium))
             }
+            .fixedSize(horizontal: true, vertical: false)
             .foregroundStyle(label)
             .padding(.horizontal, 12)
             .frame(minWidth: minWidth)

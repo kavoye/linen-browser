@@ -97,7 +97,7 @@ struct SearchSettings: View {
         SettingsSection(title: "Address bar", symbol: "character.cursor.ibeam") {
             DetailRow(
                 title: "Always ask the assistant",
-                caption: "Questions go to \(coordinator.agentDisplayName). Links still open normally."
+                caption: "Questions go to \(coordinator.agentDisplayName); links still open."
             ) {
                 SettingsToggle($settings.agentOnlyInput)
             }

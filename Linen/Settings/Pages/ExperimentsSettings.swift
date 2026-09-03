@@ -15,7 +15,7 @@ struct ExperimentsSettings: View {
         SettingsCard {
             DetailRow(
                 title: "Show video in the player",
-                caption: "When you leave a playing tab, its video moves into the sidebar player. Automatic Picture in Picture turns off while this is on."
+                caption: "Video from a tab you leave moves into the sidebar player."
             ) {
                 SettingsToggle($settings.showsVideoInPlayer)
             }

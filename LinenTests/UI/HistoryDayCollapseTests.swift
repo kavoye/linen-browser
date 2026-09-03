@@ -6,9 +6,9 @@ import Testing
 
 @testable import Linen
 
-/// The History page shows a page once per day however often it was visited,
-/// the way Chrome does: the latest visit fronts the row, and the row stands
-/// for every visit of that page on that day.
+/// The History page shows a page once per day however often it was visited:
+/// the latest visit fronts the row, and the row stands for every visit of that
+/// page on that day.
 @MainActor
 struct HistoryDayCollapseTests {
     private let calendar = Calendar.current

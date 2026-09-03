@@ -412,7 +412,27 @@
       }
     },
     "%lld websites" : {
-      "comment" : "Count beside a permission row, saying how many websites have an answer saved for it. %lld is the number; use a plural variation if the language needs one."
+      "comment" : "Count beside a permission row, saying how many websites have an answer saved for it. %lld is the number; use a plural variation if the language needs one.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld website"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld websites"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "%lld websites are storing data." : {
       "comment" : "Caption under the Website data row, saying how many websites hold cookies or storage on this Mac. %lld is the count; use a plural variation if the language needs one. Website is one word."
@@ -472,6 +492,9 @@
     "A blank page, with the address bar ready." : {
       "comment" : "Caption for the new-tab choice that opens a blank tab."
     },
+    "A blocked pop-up appears in the toolbar so you can open it." : {
+      "comment" : "Caption for the Block and Notify pop-up choice. One sentence."
+    },
     "A day" : {
       "comment" : "An option in the Keep history for pop-up menu on the Privacy settings page; it completes “Keep history for …”. Sits with A week, A month, A year and Forever."
     },
@@ -493,6 +516,9 @@
     "A specific profile" : {
       "comment" : "One of two choices for which profile the browser opens in."
     },
+    "A website may open pop-ups by itself." : {
+      "comment" : "Caption for the Allow pop-up choice. One sentence."
+    },
     "A website you choose." : {
       "comment" : "Caption for the new-tab choice that opens a homepage."
     },
@@ -513,6 +539,9 @@
     },
     "Acknowledgements" : {
       "comment" : "Row on the About settings page, and the title of the page it opens: the open source packages that ship inside Linen, with the license text of each. Use the established word for a credits list of this kind; Title Case."
+    },
+    "Acting on websites" : {
+
     },
     "Actions" : {
       "comment" : "Section heading in the ⌘K palette over the app's own commands (New Tab, Settings, Clear History…). Plural noun, Title Case."
@@ -541,8 +570,8 @@
     "Add an API key for %@ in Settings, or enable Apple Intelligence" : {
       "comment" : "Status message when the chosen provider has no key and there is no fallback. %@ is the provider's name, e.g. OpenAI, Anthropic or Ollama. “Apple Intelligence” is Apple's product name and “Settings” is the app's Settings window."
     },
-    "Add Bookmark" : {
-      "comment" : "Tooltip on the bookmark button in the toolbar when the current page is not bookmarked. Uses Apple’s concise, action-first toolbar wording. Title Case."
+    "Add extensions" : {
+      "comment" : "Heading of the third onboarding screen, where the reader installs browser extensions in one click. An extension is an add-on that changes how websites behave."
     },
     "Add Key…" : {
       "comment" : "Button in the API key row in Settings > Provider that opens the key-entry popover; it reads Change… once a key is stored. Title Case; the trailing character is a real ellipsis (…) promising a popover, so keep it."
@@ -555,6 +584,12 @@
     },
     "Add Provider…" : {
       "comment" : "Settings → Assistant. Row that opens the list of providers not yet set up. Matches \"Add Profile…\" on the Profiles page."
+    },
+    "Added" : {
+      "comment" : "Label of a disabled button on the onboarding extensions screen, shown in place of Add once that extension is installed. Title Case."
+    },
+    "Address" : {
+      "comment" : "Placeholder in the text field of the sheet that edits a pinned page: the web address the tab returns to. One word, Title Case."
     },
     "Address and search" : {
       "comment" : "Accessibility label for the combined address and search field in the browser toolbar. Keep it short and name both functions."
@@ -581,6 +616,9 @@
       "comment" : "AI disclosure pinned at the foot of the agent activity column. Must stay short enough to fit one line at the column’s minimum width."
     },
     "AI reply: %@" : {
+
+    },
+    "AI summary, can be wrong" : {
 
     },
     "all time" : {
@@ -711,9 +749,6 @@
     "Apple Intelligence unavailable, using OpenAI" : {
       "comment" : "Status message shown when the on-device model cannot answer and Linen falls back to OpenAI. Both are product/vendor names — leave as is."
     },
-    "Applies to every provider that supports it." : {
-      "comment" : "Settings → Assistant. Footnote under the thinking-effort choice, saying the setting is shared rather than per provider."
-    },
     "Apply" : {
       "comment" : "Button beside the field where a model identifier is typed by hand in Settings > Provider. A verb (a command)."
     },
@@ -789,6 +824,18 @@
     "Auto" : {
       "comment" : "Theme choice that automatically follows the Mac’s Light or Dark appearance. A short label beneath a visual preview."
     },
+    "Auto-Play" : {
+      "comment" : "Row title in Website Settings for what a website may start playing on its own. Title Case, hyphenated as Safari writes it."
+    },
+    "auto-play allowed" : {
+      "comment" : "One phrase in the summary line under a website in the changed-websites list. Phrases are joined with “ · ”, so this is lowercase and never a sentence."
+    },
+    "auto-play blocked" : {
+      "comment" : "One phrase in the summary line under a website in the changed-websites list. Phrases are joined with “ · ”, so this is lowercase and never a sentence."
+    },
+    "auto-play muted" : {
+      "comment" : "One phrase in the summary line under a website in the changed-websites list. Phrases are joined with “ · ”, so this is lowercase and never a sentence."
+    },
     "Automatic Picture in Picture" : {
       "comment" : "Title of the row that makes video float in its own window on its own: on the General settings page, in Settings search, on a single website’s page under Websites, and in the Site Settings menu in the toolbar. “Picture in Picture” is the macOS name of that window — use the system’s own wording. Title Case."
     },
@@ -813,8 +860,8 @@
     "Back to %@" : {
       "comment" : "Tooltip on the return arrow of a bookmarked tab that has wandered off its anchor — on the sidebar row and on the toolbar's bookmark button. %@ is the bookmarked page's own title or host, or the fallback phrase “the bookmarked page”, so it drops in mid-sentence. “Back” is directional, not the browser's Back command."
     },
-    "Back to Bookmarked Page" : {
-      "comment" : "Command that returns a tab to the page bookmarked in it: a File menu item, a search palette command, and a tab context-menu item. Title Case, as menu commands are."
+    "Back to Pinned Page" : {
+      "comment" : "Command that returns a tab to the page pinned in it: a File menu item, a search palette command, and a tab context-menu item. Title Case, as menu commands are."
     },
     "background scripts" : {
       "comment" : "The same kind of data named partway through a sentence, joined with others into a summary under a website's name. Lower case; never shown alone."
@@ -833,6 +880,12 @@
     },
     "Blank" : {
       "comment" : "Option in the New tab segmented control on the General settings page: new tabs open with an empty page. An adjective; space in a segment is tight, so keep it to one short word."
+    },
+    "Block" : {
+      "comment" : "Pop-up choice: the window does not open and nothing is shown. One word, Title Case. Sits beside “Block and Notify” and “Allow”."
+    },
+    "Block and Notify" : {
+      "comment" : "Pop-up choice: the window does not open, and Linen shows a button in the toolbar that opens it. Title Case."
     },
     "Block and rewrite network requests" : {
       "comment" : "One line in the bulleted list of what an extension will be able to do, in the install confirmation sheet. It completes “It will also be able to:”."
@@ -855,11 +908,11 @@
     "Blocked on this page" : {
 
     },
+    "Blocks ads and trackers." : {
+      "comment" : "Caption for the uBlock Origin Lite row on the onboarding extensions screen. A tracker is a script that follows the reader between websites. Keep it to one line — the text column beside the button is narrow."
+    },
     "Blue" : {
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
-    },
-    "Bookmark This Page" : {
-      "comment" : "Command that makes the page now open the tab's anchor, so the tab can always return to it. Three surfaces share it: the context menu of a tab row in the sidebar, the search palette, and the File menu on ⌘D. Title Case. “Bookmark” is the browser's noun for that anchor; there is no separate bookmarks list."
     },
     "Bookmarks" : {
       "comment" : "Title of the row that imports bookmarks, in the Import section of the General settings page and on the last onboarding screen. A noun."
@@ -868,7 +921,7 @@
       "comment" : "Standard macOS item at the bottom of the Window menu. Use the system's own wording. Title Case."
     },
     "Bring your bookmarks over" : {
-      "comment" : "Heading of the last onboarding screen, where the user imports bookmarks from another browser and makes Linen the default browser. An invitation, not a command."
+      "comment" : "Heading of the fourth onboarding screen, where the reader imports bookmarks from another browser and makes Linen the default browser. An invitation, not a command."
     },
     "Browse Chrome extensions to install" : {
 
@@ -939,8 +992,14 @@
     "Change…" : {
       "comment" : "Button that reopens the API key popover once a key is stored; it reads Add Key… when none is. A verb, with a real ellipsis (…) promising a popover."
     },
+    "Changing this can break websites." : {
+      "comment" : "Caption under the User agent row on the Advanced settings page, beside a segmented control offering the system agent, Linen's own, or a custom one. One short sentence; the row title already says what it is."
+    },
     "cheapest" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the least expensive to use. Lowercase superlative, and the space is very tight."
+    },
+    "Check for new models" : {
+
     },
     "Check for Updates" : {
       "comment" : "Button in the update row on the About settings page that asks the update server whether a newer release exists. Title Case; a command."
@@ -1056,8 +1115,8 @@
     "Clear Search" : {
 
     },
-    "Clear shows more of what’s behind Linen. Tinted adds contrast to content and controls." : {
-
+    "Clear shows more of what’s behind Linen; tinted adds contrast." : {
+      "comment" : "Caption under the Transparency slider on the Appearance settings page. “Clear” and “tinted” are the two ends of that slider, so keep whatever words the slider's own ends use."
     },
     "Clear the download list?" : {
       "comment" : "Heading of the confirmation sheet for emptying the list of finished downloads, raised from the downloads popover and from the Downloads settings page. Only the list is emptied, not the files."
@@ -1124,6 +1183,9 @@
     "Close Other Tabs" : {
       "comment" : "Tab context menu in the sidebar: closes every tab except the one that was right-clicked. Asks first. Title case, no count — the confirmation names the number."
     },
+    "Close Peek" : {
+      "comment" : "Tooltip on the button beside a Peek that closes it without keeping the page. Peek is the name of the panel a Shift-click opens over the page. Title Case."
+    },
     "Close Tab" : {
       "comment" : "Command that closes the current tab: a File menu item and a tab context-menu item. Title Case, as menu commands are."
     },
@@ -1136,11 +1198,11 @@
     "Close These Tabs" : {
       "comment" : "Destructive context-menu command on a sidebar row that holds two to four pages shown at once; it closes all of them. Title Case."
     },
-    "Close this bookmarked tab?" : {
-      "comment" : "Title of the alert shown when ⌘W would close a tab that carries a bookmark. The bookmark lives on the tab, so both go. Sentence case, question mark."
-    },
     "Close This Page" : {
       "comment" : "Destructive context-menu command on a page shown beside another; it closes that page's tab. Title Case. This distinguishes it from Close Other Page directly below it."
+    },
+    "Close this pinned tab?" : {
+      "comment" : "Title of the alert shown when ⌘W would close a tab that carries a pin. The pin lives on the tab, so both go. Sentence case, question mark."
     },
     "Close Window" : {
       "comment" : "Standard macOS File menu item that closes the window. Use the system's own wording. Title Case."
@@ -1150,6 +1212,9 @@
     },
     "Closing the video…" : {
       "comment" : "Line in the assistant's live activity feed while it closes a video it had opened. Present participle; real ellipsis."
+    },
+    "Closing this tab also removes its pin. You can pin the page again later." : {
+      "comment" : "Body of the alert that asks before closing a pinned tab. It says what is lost and nothing else; the title above already asks the question."
     },
     "Collapse Side Panel" : {
       "comment" : "Tooltip on the arrows button while the side panel fills the window. It puts the panel back to its narrow width beside the page. Pairs with “Expand Side Panel”. Title Case."
@@ -1184,8 +1249,8 @@
     "Continue only if you expected this — a development server, or a proxy your organization runs. The exception lasts until you quit." : {
 
     },
-    "Continue past a certificate macOS rejects. Forgotten when you quit." : {
-
+    "Continue past a certificate macOS rejects. Forgotten on quit." : {
+      "comment" : "Caption under Certificate exceptions on the Advanced settings page. The second sentence says the exception lasts only for this run of the app. Two short sentences."
     },
     "cookies" : {
       "comment" : "The same kind of data named partway through a sentence, joined with others into a summary under a website's name. Lower case; never shown alone."
@@ -1199,7 +1264,7 @@
     "Cookies and site data" : {
       "comment" : "Name of one of the three kinds of data listed with tick boxes on the Privacy settings page. A noun phrase at the head of a row; a separate lowercase variant exists for use inside sentences."
     },
-    "Cookies, site data, and cached files, every time Linen closes." : {
+    "Cookies, site data, and cached files, on every quit." : {
       "comment" : "Caption for the Clear on quit row on the Privacy settings page: what is deleted each time the app quits. A sentence fragment; site data is a fixed compound."
     },
     "Copy" : {
@@ -1240,6 +1305,9 @@
     },
     "Couldn’t start the microphone: %@" : {
       "comment" : "Status message shown when voice input cannot start. %@ is the system's own error description, which arrives already translated. Keep the colon."
+    },
+    "Couldn’t summarize this page." : {
+
     },
     "Couldn’t transcribe the recording." : {
       "comment" : "Brief status line shown when speech recognition fails. The recording is what the user just said."
@@ -1384,8 +1452,14 @@
     "Edit endpoint" : {
       "comment" : "Heading of the Settings page for a custom model server when an existing one is being changed; it reads “Custom endpoint” when a new one is being added. Sentence case; “Edit” is a verb."
     },
+    "Edit Pinned Page" : {
+      "comment" : "Submenu in the context menu of a pinned tab row, holding the two ways to change what the tab returns to. Title Case."
+    },
     "Edit Question" : {
 
+    },
+    "Edit the pinned page" : {
+      "comment" : "Title of the sheet that lets the user type the address a pinned tab returns to. Sentence case, no question mark."
     },
     "Edit this question" : {
 
@@ -1546,7 +1620,7 @@
     "Forward 15 seconds" : {
       "comment" : "Tooltip on the skip-forward button in the media player docked at the foot of the sidebar. The player jumps ahead exactly fifteen seconds; keep the number. “Forward” is directional, not the browser's Forward command."
     },
-    "Frees memory when the Mac runs low. Tabs reload when you return to them." : {
+    "Frees memory when the Mac runs low. Tabs reload on return." : {
       "comment" : "Caption under the “Sleep inactive tabs” switch on the General settings page, and the same wording in Settings search. Two short sentences: what it gains, then the reassurance that nothing is lost."
     },
     "Frees up space. Pages load more slowly the next time." : {
@@ -1636,7 +1710,7 @@
     "History and website data" : {
       "comment" : "Heading of the Privacy settings group holding how long history is kept and how much websites have stored. A noun phrase covering both, not an instruction."
     },
-    "History, cookies, and cached files, over a chosen time range." : {
+    "History, cookies, and cached files, over a time range." : {
       "comment" : "Caption for the Clear browsing data row in Settings search results: what that section can delete and that a time span can be picked."
     },
     "hold" : {
@@ -1645,8 +1719,8 @@
     "Hold %@ again to speak." : {
       "comment" : "Status message shown right after the user allows the microphone. %@ is the push-to-talk shortcut drawn as text, e.g. “⌥Space”. Again means the first press only asked for permission, so the key has to be held once more."
     },
-    "Hold the pointer over a link to see its address at the bottom of the page." : {
-      "comment" : "Caption under the Show link preview toggle, also its entry in settings search. One sentence."
+    "Hold Shift and point at a link to read the page first." : {
+      "comment" : "Caption under “Summarize a link on hover”. Shift is the key that shows the summary card. One sentence."
     },
     "Hold while speaking. Release to send." : {
       "comment" : "Caption under Push to talk in Settings > Voice, and the caption of that same row in Settings search. Both sentences are imperatives about holding a key down."
@@ -1658,6 +1732,9 @@
       "comment" : "Used twice: as an option in the New tab segmented control on the General settings page, and as the title of the row where the homepage address is typed. One word, as browsers write it."
     },
     "How are markets today?" : {
+
+    },
+    "How it behaves" : {
 
     },
     "How long finished downloads stay in the list." : {
@@ -1831,9 +1908,6 @@
         }
       }
     },
-    "Its bookmark is removed when the tab closes." : {
-      "comment" : "Body of the alert that asks before closing a bookmarked tab. It says what is lost and nothing else; the title above already asks the question. One sentence."
-    },
     "Its name and URL are removed. The server itself isn’t affected." : {
       "comment" : "Explanatory text in the confirmation sheet for removing a custom provider endpoint. “Its” refers to that endpoint; the machine it points at is untouched. Curly apostrophe."
     },
@@ -1842,6 +1916,12 @@
     },
     "just now" : {
       "comment" : "Relative time on a task card and in the agent activity panel, used for anything less than 45 seconds old; older ages are written by the system in the reader's own locale. Lowercase fragment on a metadata line."
+    },
+    "Keep as a Tab" : {
+      "comment" : "Tooltip on the button beside a Peek that turns the peeked page into an ordinary tab. Title Case."
+    },
+    "Keep Beside This Page" : {
+      "comment" : "Tooltip on the button beside a Peek that turns the peeked page into a tab and puts it in a split with the page the Peek was opened from. Title Case."
     },
     "Keep history for" : {
       "comment" : "Title of the row on the Privacy settings page whose pop-up menu holds A day, A week, A month, A year and Forever — the title and the chosen value read as one phrase, so leave room for the value to follow. Sentence case."
@@ -1948,9 +2028,6 @@
     "Linen isn’t your default browser." : {
       "comment" : "Caption under the Open links from other apps row, shown while Linen is not the default browser. The alternative caption, shown once it is, is Linen is your default browser. Linen is the application name and is never translated; curly apostrophe."
     },
-    "Linen looks up lyrics on LRCLIB. Only the song and artist names leave your Mac, and never from a private tab." : {
-      "comment" : "Caption under the “Show lyrics” switch on the General settings page, and the same sentence in settings search. It says what the feature does and what leaves the Mac, since nothing else asks the user first. LRCLIB is the name of the website and is never translated. Two full sentences."
-    },
     "Linen opens in" : {
       "comment" : "Heading on Profiles over the choice of which profile Linen starts in."
     },
@@ -1962,9 +2039,6 @@
     },
     "Linen updates when a version is ready for everyone." : {
       "comment" : "Caption under the Update channel menu in Settings > About while Release is chosen. Describes the chosen channel, not the other one. Must stay on one line — about 57 characters."
-    },
-    "Linen uses the system user agent. Changing this can break websites." : {
-
     },
     "Link Copied" : {
       "comment" : "Brief notice confirming the page's address is now on the clipboard. Title Case, as the app's other short notices are; a past participle, not a command."
@@ -2053,6 +2127,9 @@
     "Media" : {
       "comment" : "Section title on the Tools settings page."
     },
+    "Media and windows" : {
+      "comment" : "Heading of the group that holds Auto-Play, Pop-up Windows and Automatic Picture in Picture. Two places share it: a website's settings page and the Website Settings popover in the toolbar. Sentence case."
+    },
     "Medium" : {
       "comment" : "The third of the four Thinking levels in Settings > Provider (None, Low, Medium, High). One segment of a segmented control, so space is tight."
     },
@@ -2139,11 +2216,11 @@
     "Move between the tabs in the conversation." : {
       "comment" : "Caption for the Switch Tabs tool in assistant settings."
     },
-    "Move Bookmark to This Page" : {
-      "comment" : "Item in the context menu of a tab row that already has a bookmarked page: it hands the tab's single anchor to the page now open, replacing the old one. Use the same noun for “bookmark” as in “Bookmark This Page”. Title Case."
-    },
     "Move Linen to the Applications folder?" : {
       "comment" : "Title of the alert Linen shows at launch when it runs from anywhere other than an Applications folder. Sentence case, and the question mark is the only closing punctuation macOS dialog titles take."
+    },
+    "Move Pin to This Page" : {
+      "comment" : "Item in the Edit Pinned Page submenu of a tab row: it hands the tab's single anchor to the page now open, replacing the old one. Use the same noun for “pin” as in “Pin This Page”. Title Case."
     },
     "Move the video into Picture in Picture and back." : {
       "comment" : "Caption for the Picture in Picture tool in assistant settings."
@@ -2406,8 +2483,20 @@
     "on-device" : {
       "comment" : "Small tag beside a provider in Settings, naming the kind of connection it uses — in this case a model running on the Mac itself rather than over the network. Deliberately lowercase and technical; the other tags in the same place are responses and OpenAI compatible. Very tight space."
     },
+    "Only images and video on this page." : {
+
+    },
+    "Only the song and artist go to LRCLIB, never from a private tab." : {
+      "comment" : "Caption under the “Show lyrics” switch on the General settings page, and the same sentence in settings search. It says what the feature does and what leaves the Mac, since nothing else asks the user first. LRCLIB is the name of the website and is never translated. Two full sentences."
+    },
     "Open" : {
       "comment" : "Button beside a finished download in Settings that opens the downloaded file. Imperative verb, not the adjective, and space is tight next to a file name."
+    },
+    "Open %@ in a new tab" : {
+      "comment" : "Shown at the bottom of the page while the pointer rests on a link and Command is held: Command-clicking opens the link in a new tab. %@ is the link's address, which is shown in a lighter ink than the rest of the sentence. Sentence case, no full stop."
+    },
+    "Open %@ in Peek" : {
+      "comment" : "Shown at the bottom of the page while the pointer rests on a link and Shift is held: Shift-clicking opens the link in a Peek. %@ is the link's address, which is shown in a lighter ink than the rest of the sentence. Sentence case, no full stop."
     },
     "Open a new tab when you ask for one." : {
       "comment" : "Caption for the Open Tabs tool in assistant settings."
@@ -2529,6 +2618,9 @@
     "Page zoom" : {
       "comment" : "Title of the Appearance settings row that sets the default zoom level for web pages, and the same wording in the Settings search index. Sentence case; page means a web page."
     },
+    "Page Zoom" : {
+      "comment" : "Row title in the Website Settings popover for how large this website is drawn, beside the minus / percentage / plus control. Title Case, as the other rows in that popover are."
+    },
     "Pages" : {
       "comment" : "Heading over the group of Settings pages matched by a search, shown beside a separate group of individual settings. Plural noun meaning the pages of the Settings window. Narrow column, keep it short."
     },
@@ -2562,8 +2654,14 @@
     "Pause and Close" : {
       "comment" : "Tooltip on the close button in the media dock. It pauses what is playing and puts the player away; the tab it was playing from stays open. Title Case."
     },
+    "Pause or skip what’s playing from any tab." : {
+      "comment" : "Caption under the “Show media player” switch on the General settings page, and the same sentence in settings search. The player is a strip in the sidebar naming the track and carrying the transport buttons; it does not move the sound or the picture out of the tab. One full sentence."
+    },
     "Pause the video and close the media player." : {
       "comment" : "Caption for the Close the Player tool in assistant settings."
+    },
+    "Peeking at “%@”" : {
+      "comment" : "Tooltip on the small icon at the right of a tab row that says a Peek is open on that page. %@ is the peeked page's own title, so it is not translated. Sentence fragment, no full stop; the quotation marks are typographic."
     },
     "permanently deletes something" : {
       "comment" : "Clause that completes the sentence This … and usually can’t be undone. in the dialog asking the user to approve an action the assistant wants to take. Lowercase, third person singular, and the implied subject is the action being approved."
@@ -2585,6 +2683,9 @@
     },
     "Pin" : {
       "comment" : "Small button in the extensions overflow popover that puts the extension’s button back on the toolbar. Imperative verb, in the sense of fixing something in place. Very tight space — a chip only a few characters wide."
+    },
+    "Pin This Page" : {
+      "comment" : "Command that fixes the page to the tab, so the tab can always return to it and sits in the pinned rows at the top of the sidebar. Three surfaces share it: the context menu of a tab row in the sidebar, the search palette, and the File menu on ⌘D. Title Case. “Pin” is the browser's verb for that anchor; there is no separate bookmarks list."
     },
     "Pink" : {
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
@@ -2609,6 +2710,18 @@
     },
     "Play Videos" : {
       "comment" : "Tool name in assistant settings: finding and playing a video."
+    },
+    "Pop-up Windows" : {
+      "comment" : "Row title in Website Settings for windows a website opens by itself. Title Case, hyphenated as Safari writes it."
+    },
+    "pop-ups allowed" : {
+      "comment" : "One phrase in the summary line under a website in the changed-websites list. Phrases are joined with “ · ”, so this is lowercase and never a sentence."
+    },
+    "pop-ups blocked" : {
+      "comment" : "One phrase in the summary line under a website in the changed-websites list. Phrases are joined with “ · ”, so this is lowercase and never a sentence."
+    },
+    "Pop-ups never open." : {
+      "comment" : "Caption for the Block pop-up choice. One sentence."
     },
     "posting and sending" : {
       "comment" : "Lowercase name of one category of assistant permission, inserted mid-sentence into a list under a website’s name, which reads roughly: Allowed without asking: deletions and posting and sending. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised label Posting and sending is a separate string."
@@ -2691,10 +2804,10 @@
     "Put appearance, search, privacy, websites, and downloads back to their defaults." : {
       "comment" : "Description of the Reset settings row, shown only in the Settings search results. The five nouns name Settings pages, so translate them the same way their page titles are translated. Imperative with a final full stop."
     },
-    "Questions go to %@. Links still open normally." : {
+    "Questions go to %@; links still open." : {
       "comment" : "Caption under the Ask instead of search row. %@ is the configured assistant's display name, for example OpenAI (gpt-5.6-luna), and is not translated."
     },
-    "Questions go to the assistant. Links still open normally." : {
+    "Questions go to the assistant; links still open." : {
       "comment" : "Settings search caption for Ask instead of search. The page caption names the chosen model instead."
     },
     "Quit Linen" : {
@@ -2733,8 +2846,8 @@
     "Reading the page…" : {
       "comment" : "Status line under the assistant’s reply while it reads the contents of the current web page. Real ellipsis."
     },
-    "Ready" : {
-      "comment" : "Settings → Assistant → a provider page. Readiness status when the provider can answer."
+    "Reading this page…" : {
+
     },
     "Ready to install" : {
       "comment" : "Status line under the Software Update heading in Settings once the update has been downloaded and unpacked. An adjective phrase describing the update, not an instruction."
@@ -2813,9 +2926,6 @@
     },
     "Remove All…" : {
       "comment" : "Button in the Websites permissions list that opens the confirmation dialog for clearing one permission setting for every website. The real ellipsis is the promise that a dialog follows, so keep it."
-    },
-    "Remove Bookmark" : {
-      "comment" : "Command that removes the tab's bookmarked page. Four surfaces share it: the context menu of a tab row, the minus button on a bookmarked row, the toolbar button while the bookmarked page is on screen, and the search palette. Title Case."
     },
     "Remove download list items" : {
 
@@ -2987,8 +3097,11 @@
     "Running, but no models are loaded yet." : {
       "comment" : "Status line under a locally hosted provider such as Ollama in the Provider settings: the server answered, but it is serving no models. Running describes the server, not the user."
     },
-    "Runs on this Mac. No API key required." : {
-      "comment" : "One-line description of the Apple Intelligence provider in the provider picker. The implied subject of Runs is the model. Apple Intelligence is a product name and is not in this string."
+    "Runs on this Mac." : {
+
+    },
+    "Runs userscripts on websites." : {
+      "comment" : "Caption for the Violentmonkey row on the onboarding extensions screen. A userscript is a small program the reader installs to change a website. Keep it to one line — the text column beside the button is narrow."
     },
     "Safari" : {
       "comment" : "Apple’s browser, offered as one choice of what Linen reports itself as to websites. Product name — leave exactly as is."
@@ -3086,6 +3199,9 @@
     "See the titles of every tab in the window." : {
 
     },
+    "See where a link goes, at the bottom of the page." : {
+      "comment" : "Caption under “Show link address” on the General settings page: the address of the link under the pointer appears in a chip at the bottom-left of the page. One sentence."
+    },
     "See your location" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
@@ -3116,6 +3232,9 @@
     "Set as Default…" : {
       "comment" : "Button beside the Open links from other apps row that asks macOS to make Linen the default browser. The ellipsis is there because a system panel opens to confirm; keep it as the single ellipsis character. Title case, as a button naming a command."
     },
+    "Set the voice and speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)." : {
+      "comment" : "Caption under the Read aloud toggle. The bracketed words are a link that opens the Spoken Content pane of System Settings; translate the words, never the address in parentheses."
+    },
     "Set Up…" : {
       "comment" : "Settings → Assistant. Button that opens the page of the chosen provider so its key or server can be fixed."
     },
@@ -3143,6 +3262,12 @@
     "Show Assistant" : {
 
     },
+    "Show Blocked Pop-up" : {
+      "comment" : "Tooltip on the toolbar button that appears after a website's pop-up was blocked. Pressing it opens that window in a new tab. Title Case."
+    },
+    "Show Certificate" : {
+      "comment" : "Tooltip on the lock beside the address in the Website Settings popover. Opening it shows the website's certificate in the system panel. Title Case."
+    },
     "Show Extension" : {
       "comment" : "Command in the right-click menu of an extension’s toolbar button, which puts the button back on the toolbar. The same item reads Hide Extension when it is already there, so the two should stay parallel. Title Case, Show is a verb."
     },
@@ -3152,8 +3277,8 @@
     "Show Last Tab" : {
       "comment" : "Hidden menu command under Window, shortcut ⌘9, which switches to the last tab in the row. Title Case and established platform terminology."
     },
-    "Show link preview" : {
-      "comment" : "Toggle on the General settings page. The link preview is the capsule at the bottom of the page naming a hovered link's address. Title reads as a command; Sentence case after the first word."
+    "Show link address" : {
+
     },
     "Show lyrics" : {
       "comment" : "Title of the switch on the General settings page that adds the lyrics button to the media player, and its settings-search title. Sentence case, as settings rows are."
@@ -3272,9 +3397,6 @@
     "Speak answers as they arrive." : {
       "comment" : "Settings search caption for Read aloud. The page caption adds a System Settings link."
     },
-    "Speak answers as they arrive. Change the voice or speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)." : {
-
-    },
     "Split" : {
 
     },
@@ -3296,6 +3418,9 @@
     "Standard" : {
       "comment" : "Name of the conventional non-Liquid Glass window style in Appearance settings. It follows the selected light or dark theme and can optionally use Website tint."
     },
+    "Start Browsing" : {
+      "comment" : "Primary button on the last onboarding screen; it closes onboarding and hands the reader the browser. Title Case."
+    },
     "Start it with `ollama serve`, then pull a tool-capable model such as `qwen3.5` or `llama3.1`." : {
       "comment" : "Setup hint shown when Ollama is installed but not reachable. Everything inside backticks is literal and must be kept exactly: ollama serve is a command the user types, and qwen3.5 and llama3.1 are model names. Pull is Ollama’s word for downloading a model; tool-capable means the model can call the browser’s tools."
     },
@@ -3307,6 +3432,9 @@
     },
     "Start Page" : {
       "comment" : "Heading of the popover that chooses which sections the start page shows. It is the app's name for the page a new tab opens on. Title Case."
+    },
+    "Still in development, and able to break websites. Reload a page to apply." : {
+      "comment" : "Caption of the WebKit feature flags page: these are WebKit's own experimental switches, and a page has to be reloaded before a change takes effect."
     },
     "Stop" : {
       "comment" : "Serves two places: the menu bar command under View that stops the page loading, shortcut ⌘., and the tooltip on the small cross that cancels a download in progress. Imperative verb in both."
@@ -3359,6 +3487,9 @@
     },
     "Suggestions from your search engine as you type." : {
       "comment" : "Description of the Search suggestions row, shown only in the Settings search results, where the chosen engine is not known and is named generically. Sentence case with a final full stop."
+    },
+    "Summarize a link on hover" : {
+
     },
     "Swap Pages" : {
       "comment" : "The same command as Swap Panes, on the context menu of a page and of a sidebar row holding two tabs. Title Case. It says pages here because the menu is on the page itself."
@@ -3448,9 +3579,6 @@
     "The assistant will ask again before acting on this website." : {
       "comment" : "Message inside the dialog confirming that the assistant permissions saved for one website will be withdrawn. Singular counterpart of the plural sentence used for the withdraw-everything dialog."
     },
-    "the bookmarked page" : {
-      "comment" : "Last-resort name for a tab's bookmarked page when it has neither title nor host, dropped into “Back to %@”. Deliberately lowercase and with an article because it lands mid-sentence; capitalise only if your language demands it."
-    },
     "The bookmarks go into a new folder in the sidebar." : {
       "comment" : "Second sentence of the confirmation dialog shown before bookmarks are imported. It says where they land."
     },
@@ -3463,7 +3591,7 @@
     "The connection dropped" : {
       "comment" : "Headline on the error page shown when the network connection was lost part way through loading. A short sentence in sentence case, displayed large above a longer explanation."
     },
-    "The default for every website. Individual tabs can still be zoomed." : {
+    "The default for every website. Tabs can still be zoomed." : {
       "comment" : "Caption under the Page zoom row, saying the chosen percentage applies everywhere but does not stop a single tab being zoomed on its own. Two sentences; website is one word."
     },
     "The downloaded add-on didn’t match its checksum" : {
@@ -3544,6 +3672,9 @@
     "The page moved to another website. Use Read Page before the assistant reads or controls it." : {
       "comment" : "Message shown in the agent activity panel when the page navigated away before the assistant could act. Read Page is the name of one of the assistant’s tools — keep its capitalisation."
     },
+    "the pinned page" : {
+      "comment" : "Last-resort name for a tab's pinned page when it has neither title nor host, dropped into “Back to %@”. Deliberately lowercase and with an article because it lands mid-sentence; capitalise only if your language demands it."
+    },
     "the research page" : {
       "comment" : "Last-resort stand-in for a host name, dropped into “Browsing %@…” and “Finished on %@” in the agent activity column when the page the assistant is on has no host to show. Deliberately lowercase with an article because it lands mid-sentence."
     },
@@ -3559,14 +3690,14 @@
     "The server refused the connection or isn’t running." : {
       "comment" : "Explanation on the error page shown when the site could not be reached, below the headline. Curly apostrophe."
     },
-    "The sidebar shows what’s playing, so you can pause or skip from any tab." : {
-      "comment" : "Caption under the “Show media player” switch on the General settings page, and the same sentence in settings search. The player is a strip in the sidebar naming the track and carrying the transport buttons; it does not move the sound or the picture out of the tab. One full sentence."
-    },
     "The speech engine is still warming up." : {
       "comment" : "Brief status line shown when the user tries to speak before the speech recogniser has finished starting up. Conversational and reassuring."
     },
     "The start page, your homepage, or nothing." : {
       "comment" : "Description of the New tabs open with row, shown only in the Settings search results. Start page is the app's own new-tab page and homepage is the address the person chose; nothing means an empty tab. Sentence case with a final full stop."
+    },
+    "The tab returns to this address." : {
+      "comment" : "Body of the sheet that edits a pinned page. It says what the address below is for. One sentence."
     },
     "The text in this form was written by AI, not by you. Publishing it puts AI-generated text out under your name." : {
 
@@ -3583,8 +3714,8 @@
     "Theme" : {
       "comment" : "Title of the Appearance settings row that chooses light, dark or automatic, and the same word in the Settings search index. Noun; a short row title."
     },
-    "These WebKit features are still in development and can break websites. Reload a page to apply your changes." : {
-
+    "These come from the Chrome and Firefox stores. Visit either store to add more." : {
+      "comment" : "Caption under the Add extensions heading. These refers to the extensions listed below it. Chrome and Firefox are browser names and are never translated; their stores are the websites the extensions are downloaded from, and opening a store page in Linen is how the reader installs more."
     },
     "Things to try" : {
 
@@ -3649,6 +3780,12 @@
     "This page does not reference known tracker domains." : {
 
     },
+    "This page has no text to summarize." : {
+
+    },
+    "This page is still loading." : {
+
+    },
     "This provider has no endpoint set." : {
       "comment" : "Message shown for a user-added provider whose server address is missing, both as a reason it is unavailable and as an error when its model list is fetched. Provider means the AI provider; endpoint is the technical term for the server address."
     },
@@ -3693,6 +3830,9 @@
     },
     "trackers allowed" : {
       "comment" : "Fragment in the one-line summary under a website, meaning tracker blocking is switched off there. Lower case: joined with other fragments."
+    },
+    "Trackers and permissions" : {
+      "comment" : "Heading of the last group in the Website Settings popover: tracker blocking, then what the website may use (location, camera, microphone, notifications). Sentence case, as the other group headings in that popover are."
     },
     "Transparency" : {
 
@@ -3768,6 +3908,9 @@
     },
     "Unmute This Tab" : {
       "comment" : "Tooltip on the toolbar's speaker button once the current tab has been silenced. Title Case."
+    },
+    "Unpin Tab" : {
+      "comment" : "Command that takes the pin off a tab, which then drops out of the pinned rows. Four surfaces share it: the context menu of a pinned tab row, the minus button on that row, the toolbar button while the pinned page is on screen, and the search palette. Title Case."
     },
     "Unsupported CRX container version %lld" : {
       "comment" : "Error shown when an extension package uses a file format version the app cannot read. %lld is the version number found in the file. CRX is the name of Chrome’s extension package format — leave as is. No final full stop."
@@ -3880,7 +4023,10 @@
     "Video and audio may start playing as soon as a page loads." : {
       "comment" : "Caption for the most permissive choice of the Autoplay setting, describing what that choice allows websites to do."
     },
-    "Video moves into a floating window when you leave its tab or switch to another app." : {
+    "Video from a tab you leave moves into the sidebar player." : {
+      "comment" : "Caption under the Show video in the player row on the Experiments settings page, and the caption of that same row in Settings search. The video only moves while the user is on a different tab, and turning this row on turns the Automatic Picture in Picture row off. “Picture in Picture” is the macOS name of the floating video window — use the system’s own wording. Two full sentences."
+    },
+    "Video keeps playing in a floating window when you leave its tab." : {
       "comment" : "Caption under the Automatic Picture in Picture row on the General settings page, and the caption of that same row in Settings search. It names the two moments the video floats. One full sentence."
     },
     "Video plays without sound until you click." : {
@@ -3891,9 +4037,6 @@
     },
     "View on GitHub" : {
       "comment" : "Button in the release notes sheet that opens the release page in a browser. View is a verb; GitHub is a product name — leave as is."
-    },
-    "Voice" : {
-      "comment" : "Heading of the Voice section on the Assistant page in Settings. Noun, meaning speaking to the app and hearing it reply. Sits above two rows, so keep it short."
     },
     "Watch every network request the browser makes" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Watch means observe. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
@@ -3910,8 +4053,8 @@
     "WebKit doesn’t provide some of what this extension uses, so parts of it may not work:" : {
       "comment" : "Heading above a bulleted list in the sheet that confirms installing a browser extension. WebKit is the name of the engine Linen runs extensions on and is never translated. The list items are API names and stay in English. Ends in a colon."
     },
-    "WebKit’s own experiments. Changing one can break websites." : {
-
+    "WebKit’s own experiments, which can break websites." : {
+      "comment" : "Caption on the Feature flags row of the Advanced settings page, which opens the list of WebKit's experimental switches. One sentence."
     },
     "Webpages can carry hidden instructions aimed at the assistant. Allow this only if it’s what you asked for." : {
 
@@ -3961,6 +4104,9 @@
     "What %@ may do in the browser. Every tool takes a share of the model’s context." : {
       "comment" : "Caption under the Tools page title. %@ is the provider name."
     },
+    "What happens when this website opens a window by itself." : {
+      "comment" : "Caption under the Pop-up Windows row on a website's own settings page. One sentence."
+    },
     "what the assistant is doing" : {
       "comment" : "Caption under the Show Agent Activity command in the command palette; the panel lists the steps the assistant is taking. Sentence fragment, lower case."
     },
@@ -3973,6 +4119,9 @@
     "What the current profile stores." : {
       "comment" : "Settings search result for the card describing the current profile."
     },
+    "What this website may start playing on its own." : {
+      "comment" : "Caption under the Auto-Play row on a website's own settings page. One sentence."
+    },
     "What you’ve downloaded, and where it was saved." : {
       "comment" : "Caption describing the Recent downloads list in the Settings search results. Where it was saved means which folder the file went to."
     },
@@ -3981,9 +4130,6 @@
     },
     "When Linen quits" : {
 
-    },
-    "When you leave a playing tab, its video moves into the sidebar player. Automatic Picture in Picture turns off while this is on." : {
-      "comment" : "Caption under the Show video in the player row on the Experiments settings page, and the caption of that same row in Settings search. The video only moves while the user is on a different tab, and turning this row on turns the Automatic Picture in Picture row off. “Picture in Picture” is the macOS name of the floating video window — use the system’s own wording. Two full sentences."
     },
     "Where downloaded files are saved." : {
       "comment" : "Caption describing the Save files to setting in the Settings search results. A sentence fragment."
@@ -4000,9 +4146,6 @@
     "Which profile Linen opens in." : {
       "comment" : "Settings search result caption for the choice of which profile Linen starts in. Sentence fragment."
     },
-    "Which provider answers, and what it may do on its own." : {
-      "comment" : "Settings → Assistant. Page caption."
-    },
     "Which version is running, and whether a newer one exists." : {
       "comment" : "Caption describing the Software update section in the Settings search results. A sentence fragment naming what the section reports."
     },
@@ -4011,6 +4154,9 @@
     },
     "Whichever you choose, you’re talking to AI, not a person. Replies can be wrong, so check anything important." : {
       "comment" : "AI disclosure under the model choice cards in onboarding. “Whichever you choose” refers to the on-device and remote model options above it."
+    },
+    "Who answers, how it behaves, and what it may do without asking." : {
+
     },
     "Window" : {
       "comment" : "Title of one of the menus in the menu bar. Use Apple’s own wording for the standard Window menu in the target language."
@@ -4047,6 +4193,9 @@
     },
     "You’re offline" : {
       "comment" : "Headline on the error page shown when the Mac has no internet connection. A short sentence in sentence case, displayed large above a longer explanation. Curly apostrophe."
+    },
+    "You’re set" : {
+      "comment" : "Heading of the last onboarding screen, shown once every choice is made. Warm and brief — the reader is finished. Keep it short: it is set in large type."
     },
     "You’re signed out of %lld websites, and their preferences are removed. Your history and downloads stay." : {
       "comment" : "Message in that confirmation. %lld is the number of websites; use a plural variation if the language needs one. The last sentence names what survives, which is the thing people worry about."
