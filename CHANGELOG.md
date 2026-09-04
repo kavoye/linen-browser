@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.6.0
+
+### New
+
+- Hold Shift and point at a link to read a summary of the page before you
+  open it.
+- Shift-click a link to open it in a panel over the page. Keep it as a tab,
+  or press Escape to close it.
+- Rename a tab: click the name of the tab you are on, or choose Rename in its
+  menu.
+- Drag a tab into the pinned section to pin it, and out of it to unpin it.
+- Choose what a website may auto-play, and what its pop-ups do, in Website
+  Settings.
+- Setup offers a few extensions to add.
+
+### Improved
+
+- Bookmarks are now called pins.
+- Each provider keeps its own Thinking setting.
+- Assistant settings are now three groups: who answers, how it behaves, and
+  what it may do without asking.
+- The link address at the foot of the page says what a ⌘-click or a ⇧-click
+  does.
+- Extensions wake up when you open a website they work on.
+
+### Fixed
+
+- A dark website flashed white as it opened.
+
 ## 0.5.0
 
 ### New
