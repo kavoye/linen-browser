@@ -117,3 +117,10 @@ final class SidebarNewFolderDrop {
     @ObservationIgnored var frame: CGRect = .zero
     var isArmed = false
 }
+
+@MainActor
+@Observable
+final class SidebarPinDrop {
+    @ObservationIgnored var frame: CGRect = .zero
+    var isArmed = false
+}

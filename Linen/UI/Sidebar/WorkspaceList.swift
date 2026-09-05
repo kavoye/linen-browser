@@ -8,6 +8,10 @@ private enum WorkspaceListCoordinateSpace {
     static let name = "sidebar-workspace"
 }
 
+private enum SpringLoad {
+    static let dwell: Duration = .milliseconds(250)
+}
+
 private struct WorkspaceListFadeMask: View {
     var body: some View {
         VStack(spacing: 0) {
@@ -33,14 +37,17 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
     let coordinator: AppCoordinator
     let selection: SidebarSelection
     let newFolderDrop: SidebarNewFolderDrop
+    let pinDrop: SidebarPinDrop
     let frames: SidebarFrames
     let bottomClearance: CGFloat
     let topBar: TopBar
     let bottomBar: BottomBar
     let contentInsets: EdgeInsets
 
-    @State private var armed: SidebarDropIntent?
-    @State private var armCandidate: (intent: SidebarDropIntent, since: Date)?
+    @State private var pinsCarried = false
+    @State private var reopening: [UUID] = []
+    @State private var dwelling: UUID?
+    @State private var dwell: Task<Void, Never>?
 
     private var model: SidebarDragModel {
         coordinator.sidebarDrag
@@ -52,15 +59,34 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         model.listOriginInWindow
     }
 
+    private var plan: SidebarSectionPlan {
+        let carried = drag?.covered ?? []
+        return SidebarSectionPlan(
+            rows: browser.sidebarItems.map { item in
+                SidebarSectionPlan.Row(
+                    item: item,
+                    isKept: browser.isKept(item, ignoring: carried),
+                    isCarried: carried.contains(item)
+                )
+            },
+            wasKept: drag?.wasKept == true
+        )
+    }
+
+    private var sections: (kept: [SidebarItem], loose: [SidebarItem]) {
+        let items = browser.sidebarItems
+        let cut = plan.cut(pinsCarried: pinsCarried)
+        guard cut > 0 else { return ([], items) }
+        return (Array(items.prefix(cut)), Array(items.dropFirst(cut)))
+    }
+
     private var context: SidebarRowContext {
         SidebarRowContext(
             browser: browser,
             coordinator: coordinator,
             selection: selection,
             drag: drag,
-            armed: armed,
-            candidate: armCandidate?.intent,
-            offersSplit: model.carriedTabID != nil,
+            pinsCarried: pinsCarried,
             space: WorkspaceListCoordinateSpace.name,
             frames: frames
         )
@@ -94,7 +120,13 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 2) {
-                SidebarRows(items: browser.sidebarItems, depth: 0, context: context)
+                let sections = sections
+                if !sections.kept.isEmpty {
+                    SidebarRows(items: sections.kept, depth: 0, context: context)
+                    SidebarSectionSeam()
+                }
+
+                SidebarRows(items: sections.loose, depth: 0, context: context)
 
                 Color.clear
                     .frame(height: 26 + bottomClearance)
@@ -144,6 +176,16 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         }
     }
 
+    private func collapse(_ items: [SidebarItem]) -> [UUID] {
+        var closed: [UUID] = []
+        for case .folder(let id) in items {
+            guard let folder = browser.folder(id: id), folder.isExpanded else { continue }
+            folder.isExpanded = false
+            closed.append(id)
+        }
+        return closed
+    }
+
     private func isExpanded(_ folderID: UUID) -> Bool {
         browser.folder(id: folderID)?.isExpanded ?? false
     }
@@ -153,6 +195,16 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             tabIDs: Set(browser.tabs.map(\.id)).subtracting(browser.hiddenSidebarTabIDs),
             folderIDs: Set(browser.folders.map(\.id))
         )
+        .filter { item, _ in isShowing(item) }
+    }
+
+    private func isShowing(_ item: SidebarItem) -> Bool {
+        var parent = browser.sidebarTree.parent(of: item)
+        while let id = parent {
+            guard browser.folder(id: id)?.isExpanded == true else { return false }
+            parent = browser.sidebarTree.parent(of: .folder(id))
+        }
+        return true
     }
 
     private func dragChanged(_ value: DragGesture.Value) {
@@ -167,9 +219,16 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
                 items: carried,
                 lead: hit.key,
                 origin: hit.value,
-                tree: browser.sidebarTree
+                tree: browser.sidebarTree,
+                keepsSection: browser.sidebarItems.contains { item in
+                    guard case .tab(let id) = item else { return false }
+                    return browser.tab(id: id)?.pinnedURL != nil
+                },
+                wasKept: carried.contains { browser.isKept($0) }
             )
+            pinsCarried = model.drag?.wasKept == true
             model.source = .row
+            reopening = collapse(carried)
             coordinator.tabPreview.beginSuppression()
         }
         model.drag?.translation = value.translation
@@ -179,8 +238,12 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         if overButton != newFolderDrop.isArmed {
             withAnimation(Theme.Motion.quick) { newFolderDrop.isArmed = overButton }
         }
-        guard !overButton else {
-            disarm()
+        let overShelf = !overButton && model.acceptsPin && pinDrop.frame.contains(inWindow)
+        if overShelf != pinDrop.isArmed {
+            withAnimation(Theme.Motion.quick) { pinDrop.isArmed = overShelf }
+        }
+        guard !overButton, !overShelf else {
+            rest()
             return
         }
 
@@ -190,34 +253,30 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             model.target = nil
         }
         guard !model.contentFrameInWindow.contains(inWindow) else {
-            disarm()
+            rest()
             return
         }
 
-        if let drag {
-            react(
-                at: CGPoint(
-                    x: value.location.x,
-                    y: SidebarDropGeometry.probeY(
-                        cursorY: value.location.y,
-                        carriedMidY: drag.origin.midY + drag.translation.height,
-                        carriedHeight: drag.origin.height
-                    )
-                ),
-                in: slots
-            )
+        if drag != nil {
+            react(at: value.location, in: slots)
         }
     }
 
     private func dragEnded(_ value: DragGesture.Value) {
         defer {
-            disarm()
+            rest()
             newFolderDrop.isArmed = false
+            pinDrop.isArmed = false
+            for id in reopening {
+                browser.folder(id: id)?.isExpanded = true
+            }
+            reopening = []
             coordinator.tabPreview.endSuppression()
             model.clearDrop()
         }
         guard let drag, !drag.landing else { return }
         let lead = drag.lead
+        var settled = false
 
         if model.zone != .none, let id = model.carriedTabID, let tab = browser.tab(id: id) {
             coordinator.dropOnPage(tab, onto: model.targetPaneID, zone: model.zone)
@@ -225,28 +284,15 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         } else if newFolderDrop.isArmed {
             browser.createFolder(containing: drag.items)
             selection.clear()
-        } else if let armed {
-            switch armed {
-            case .fold(.folder(let folderID)):
-                if let folder = browser.folder(id: folderID) {
-                    browser.move(drag.items, into: folder)
-                }
-            case .fold(.tab(let targetID)):
-                browser.createFolder(containing: browser.withSplitMembers([.tab(targetID)]) + drag.items)
-                selection.clear()
-            case .split(.tab(let targetID), let leading):
-                if let target = browser.tab(id: targetID),
-                   let carried = model.carriedTabID.flatMap({ browser.tab(id: $0) }) {
-                    coordinator.dropOnPage(carried, onto: targetID, zone: leading ? .left : .right)
-                    _ = target
-                }
-                selection.clear()
-            case .split(.folder, _):
-                break
-            }
+            settled = true
+        } else if pinDrop.isArmed {
+            browser.pinAtTop(drag.items)
+            settled = true
         }
 
-        browser.settlePins(drag.items)
+        if !settled {
+            browser.setPinned(pinsCarried, for: drag.items)
+        }
 
         withAnimation(.spring(response: 0.24, dampingFraction: 0.85)) {
             model.drag?.landing = true
@@ -261,62 +307,49 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
 
     private func react(at point: CGPoint, in slots: [SidebarItem: CGRect]) {
         guard let drag else { return }
+        spring(under: point, in: slots)
 
         guard let hit = slots.first(where: {
             !drag.carries($0.key) && $0.value.minY <= point.y && point.y < $0.value.maxY
         }) else {
             if let lowest = slots.values.map(\.maxY).max(), point.y > lowest {
-                disarm()
+                pinsCarried = false
                 browser.move(drag.items, into: nil, before: nil)
             }
             return
         }
-        let frame = hit.value
-        let tree = browser.sidebarTree
+        let before = SidebarDropGeometry.band(y: point.y, in: hit.value) == .before
 
-        let band: SidebarDropBand
-        let foldable: Bool
-        switch hit.key {
-        case .folder(let folderID):
-            band = SidebarDropGeometry.folderBand(y: point.y, in: frame)
-            foldable = tree.canHold(folderID, drag.items)
-                && drag.items.first.flatMap({ tree.parent(of: $0) }) != folderID
-        case .tab:
-            if tree.parent(of: hit.key) != nil {
-                band = SidebarDropGeometry.folderedTabBand(y: point.y, in: frame)
-                foldable = false
-            } else {
-                foldable = !drag.carriesFolder
-                band = SidebarDropGeometry.looseTabBand(
-                    at: point,
-                    in: frame,
-                    canFold: foldable,
-                    canSplit: canSplit(with: hit.key),
-                    splitEndWidth: SidebarMetrics.splitEndWidth(style: coordinator.sidebar.style)
-                )
-            }
+        if !before, case .folder(let id) = hit.key, let folder = browser.folder(id: id),
+           folder.isExpanded, browser.sidebarTree.canHold(id, drag.items) {
+            pinsCarried = keepsSection(hit.key)
+            browser.move(
+                drag.items,
+                into: folder,
+                before: browser.rows(in: folder).first { !drag.carries($0) },
+                settlingPins: false
+            )
+            return
         }
 
-        switch band {
-        case .before, .after:
-            disarm()
-            place(drag.items, before: band == .before, of: hit.key)
-        case .fold:
-            if foldable {
-                considerArming(.fold(hit.key))
-            } else {
-                disarm()
-            }
-        case .split(let leading):
-            considerArming(.split(hit.key, leading: leading))
-        }
+        pinsCarried = lands(before: before, of: hit.key)
+        place(drag.items, before: before, of: hit.key)
     }
 
-    private func canSplit(with target: SidebarItem) -> Bool {
-        guard let carried = model.carriedTabID, case .tab(let targetID) = target else { return false }
-        guard carried != targetID else { return false }
-        guard let grid = browser.splits.split(containing: targetID) else { return true }
-        return !grid.isFull && !grid.contains(carried)
+    private func keepsSection(_ item: SidebarItem) -> Bool {
+        browser.isKept(item, ignoring: drag?.covered ?? [])
+    }
+
+    private func lands(before isBefore: Bool, of anchor: SidebarItem) -> Bool {
+        guard browser.sidebarTree.parent(of: anchor) == nil else { return keeps(anchor) }
+        return plan.lands(before: isBefore, of: anchor)
+    }
+
+    private func keeps(_ anchor: SidebarItem) -> Bool {
+        guard let parent = browser.sidebarTree.parent(of: anchor) else {
+            return keepsSection(anchor)
+        }
+        return keepsSection(.folder(parent))
     }
 
     private func place(_ items: [SidebarItem], before: Bool, of anchor: SidebarItem) {
@@ -327,36 +360,51 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         let target: SidebarItem? = before
             ? anchor
             : (index + 1 < siblings.endIndex ? siblings[index + 1] : nil)
-        browser.move(items, into: home.flatMap(browser.folder(id:)), before: target)
+        browser.move(
+            items,
+            into: home.flatMap(browser.folder(id:)),
+            before: target,
+            settlingPins: false
+        )
     }
 
-    private func considerArming(_ target: SidebarDropIntent) {
-        guard armed != target else { return }
-        if let candidate = armCandidate, candidate.intent == target {
-            if Date.now.timeIntervalSince(candidate.since) >= 0.2 {
-                arm(target)
-            }
+    private func spring(under point: CGPoint, in slots: [SidebarItem: CGRect]) {
+        let target = shut(under: point, in: slots)
+        guard target != dwelling else { return }
+        dwell?.cancel()
+        dwelling = target
+        guard let target else {
+            dwell = nil
             return
         }
-        armCandidate = (target, Date.now)
-        Task {
-            try? await Task.sleep(for: .milliseconds(220))
-            guard let drag, !drag.landing, armCandidate?.intent == target else { return }
-            arm(target)
+        dwell = Task {
+            try? await Task.sleep(for: SpringLoad.dwell)
+            guard !Task.isCancelled else { return }
+            browser.folder(id: target)?.isExpanded = true
+            dwelling = nil
+            dwell = nil
         }
     }
 
-    private func arm(_ target: SidebarDropIntent) {
-        guard armed != target else { return }
-        withAnimation(Theme.Motion.quick) { armed = target }
+    private func rest() {
+        dwell?.cancel()
+        dwell = nil
+        dwelling = nil
     }
 
-    private func disarm() {
-        armCandidate = nil
-        if armed != nil {
-            withAnimation(.easeOut(duration: 0.1)) { armed = nil }
-        }
+    private func shut(under point: CGPoint, in slots: [SidebarItem: CGRect]) -> UUID? {
+        guard case .folder(let id)? = row(under: point, in: slots),
+              browser.folder(id: id)?.isExpanded == false
+        else { return nil }
+        return id
     }
+
+    private func row(under point: CGPoint, in slots: [SidebarItem: CGRect]) -> SidebarItem? {
+        slots.first { item, frame in
+            drag?.carries(item) != true && point.y >= frame.minY && point.y < frame.maxY
+        }?.key
+    }
+
 }
 
 struct SidebarDragOverlay: View {
@@ -372,7 +420,6 @@ struct SidebarDragOverlay: View {
                 SidebarDragStack(drag: drag, browser: browser)
                     .frame(width: drag.origin.width, height: drag.origin.height)
                     .scaleEffect(drag.landing ? 1 : SidebarDragGhost.liftScale(style: sidebarStyle))
-                    .opacity(drag.landing ? 0 : 1)
                     .offset(
                         x: model.listOriginInWindow.x - origin.x + chipX(drag),
                         y: model.listOriginInWindow.y - origin.y + chipY(drag)
@@ -456,20 +503,22 @@ struct SidebarDragChip: View {
     let browser: BrowserModel
 
     @Environment(\.sidebarStyle) private var sidebarStyle
-    @Environment(\.chromeWash) private var wash
+    @Environment(\.windowColorScheme) private var windowColorScheme
+
+    private var glass: Glass {
+        .clear.tint(Theme.controlSurface.opacity(SidebarDragGhost.chipFillOpacity))
+    }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
         content
             .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                Theme.windowBackground.opacity(SidebarDragGhost.chipFillOpacity),
-                in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-            )
+            .glassEffect(glass, in: shape)
             .overlay {
-                RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-                    .strokeBorder(wash.layer(0.10), lineWidth: 0.5)
+                shape.strokeBorder(Color.primary.opacity(0.14), lineWidth: 0.5)
             }
+            .environment(\.colorScheme, windowColorScheme)
             .shadow(color: .black.opacity(0.3), radius: 11, y: 5)
     }
 

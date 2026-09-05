@@ -17,6 +17,7 @@ struct Sidebar: View {
     @Environment(\.colorScheme) private var scheme
     @State private var bottomObscuredHeight: CGFloat = 0
     @State private var newFolderDrop = SidebarNewFolderDrop()
+    @State private var pinDrop = SidebarPinDrop()
 
     private var selection: SidebarSelection {
         browser.sidebarSelection
@@ -83,13 +84,15 @@ struct Sidebar: View {
             coordinator: coordinator,
             selection: selection,
             newFolderDrop: newFolderDrop,
+            pinDrop: pinDrop,
             frames: frames,
             bottomClearance: bottomObscuredHeight,
             topBar: SidebarTopChrome(
                 browser: browser,
                 coordinator: coordinator,
                 selection: selection,
-                newFolderDrop: newFolderDrop
+                newFolderDrop: newFolderDrop,
+                pinDrop: pinDrop
             ),
             bottomBar: SidebarBottomChrome(
                 coordinator: coordinator,
@@ -128,6 +131,11 @@ private struct SidebarTopChrome: View {
     let coordinator: AppCoordinator
     let selection: SidebarSelection
     let newFolderDrop: SidebarNewFolderDrop
+    let pinDrop: SidebarPinDrop
+
+    private var offersPin: Bool {
+        coordinator.sidebarDrag.acceptsPin
+    }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -137,7 +145,15 @@ private struct SidebarTopChrome: View {
                 selection: selection,
                 newFolderDrop: newFolderDrop
             )
+
             NewTabRow(coordinator: coordinator)
+                .opacity(offersPin ? 0 : 1)
+                .overlay {
+                    if offersPin {
+                        SidebarDropMark(kind: .pin, isArmed: pinDrop.isArmed)
+                    }
+                }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { pinDrop.frame = $0 }
         }
         .frame(maxWidth: .infinity)
     }

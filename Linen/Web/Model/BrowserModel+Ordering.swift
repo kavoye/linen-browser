@@ -40,21 +40,30 @@ extension BrowserModel {
         scheduleSave()
     }
 
-    func keptRunAtTop() -> [BrowserTab] {
-        var run: [BrowserTab] = []
+    func isKept(_ item: SidebarItem, ignoring carried: Set<SidebarItem> = []) -> Bool {
+        switch item {
+        case .tab(let id):
+            tabsByID[id]?.pinnedURL != nil
+        case .folder(let id):
+            foldersByID[id].map { folder in
+                let held = allTabs(in: folder).filter { !carried.contains(.tab($0.id)) }
+                return !held.isEmpty && held.allSatisfy { $0.pinnedURL != nil }
+            } ?? false
+        }
+    }
+
+    func keptRunAtTop() -> [SidebarItem] {
+        var run: [SidebarItem] = []
         for item in sidebarTree.rows(in: nil) {
-            guard case .tab(let id) = item,
-                  let tab = tabs.first(where: { $0.id == id }),
-                  tab.pinnedURL != nil
-            else { break }
-            run.append(tab)
+            guard isKept(item) else { break }
+            run.append(item)
         }
         return run
     }
 
     private func pinnedBoundary(in root: [SidebarItem], ignoring moved: Set<SidebarItem>) -> Int {
         for (index, item) in root.enumerated() where !moved.contains(item) {
-            guard case .tab(let id) = item, tabsByID[id]?.pinnedURL != nil else { return index }
+            guard isKept(item) else { return index }
         }
         return root.count
     }
@@ -66,25 +75,24 @@ extension BrowserModel {
         move([item], into: nil, before: rest.indices.contains(boundary) ? rest[boundary] : nil)
     }
 
-    func settlePins(_ items: [SidebarItem]) {
+    func pinAtTop(_ items: [SidebarItem]) {
         let moved = Set(items)
-        let tree = reconciledTree()
-        let root = tree.root
-        let boundary = pinnedBoundary(in: root, ignoring: moved)
-        let hasSection = root.prefix(boundary).contains { !moved.contains($0) }
+        let rest = reconciledTree().root.filter { !moved.contains($0) }
+        let boundary = pinnedBoundary(in: rest, ignoring: [])
+        move(items, into: nil, before: rest.indices.contains(boundary) ? rest[boundary] : nil)
+        setPinned(true, for: items)
+    }
 
+    func setPinned(_ pinned: Bool, for items: [SidebarItem]) {
         var changed = false
-        for item in items {
-            guard case .tab(let id) = item, let tab = tabsByID[id] else { continue }
-            let index = root.firstIndex(of: item)
-            let isPinnedPlace = (hasSection || tab.pinnedURL != nil)
-                && index.map { $0 < boundary } ?? false
-            if isPinnedPlace, tab.pinnedURL == nil {
+        for case .tab(let id) in reconciledTree().expanded(Set(items)) {
+            guard let tab = tabsByID[id] else { continue }
+            if pinned, tab.pinnedURL == nil {
                 guard let url = URL(string: tab.urlString), !tab.urlString.isEmpty else { continue }
                 tab.pinnedURL = url
                 tab.pinnedTitle = tab.title
                 changed = true
-            } else if !isPinnedPlace, tab.pinnedURL != nil {
+            } else if !pinned, tab.pinnedURL != nil {
                 tab.pinnedURL = nil
                 tab.pinnedTitle = ""
                 changed = true
@@ -446,18 +454,22 @@ extension BrowserModel {
         }
     }
 
-    func move(_ items: [SidebarItem], into folder: TabFolder?, before target: SidebarItem? = nil) {
+    func move(
+        _ items: [SidebarItem],
+        into folder: TabFolder?,
+        before target: SidebarItem? = nil,
+        settlingPins: Bool = true
+    ) {
         let tree = reconciledTree()
         let moved = tree.normalized(items)
         guard !moved.isEmpty, let next = tree.moving(moved, into: folder?.id, before: target) else { return }
+        let entering = moved.filter { tree.parent(of: $0) != folder?.id }
         storedTree = next
         if let folder {
             folder.isExpanded = true
             autoName(folder)
-            for case .tab(let id) in tree.expanded(Set(moved)) {
-                guard let tab = tabsByID[id], tab.pinnedURL != nil else { continue }
-                tab.pinnedURL = nil
-                tab.pinnedTitle = ""
+            if settlingPins {
+                setPinned(false, for: entering)
             }
         }
         syncTabOrder()

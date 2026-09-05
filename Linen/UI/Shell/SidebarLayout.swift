@@ -22,10 +22,6 @@ enum SidebarMetrics {
         iconsWidth + LoomChrome.canvasInset
     }
 
-    static func splitEndWidth(style: SidebarStyle) -> CGFloat {
-        style == .icons ? 8 : 14
-    }
-
     static let rowIconSize: CGFloat = 16
     static let rowControlExtent: CGFloat = 20
 

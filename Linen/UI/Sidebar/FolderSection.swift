@@ -24,9 +24,6 @@ struct FolderSection: View {
     private var item: SidebarItem {
         .folder(folder.id)
     }
-    private var isArmed: Bool {
-        context.isArmed(item)
-    }
     private var isSelected: Bool {
         context.isSelected(item)
     }
@@ -56,10 +53,6 @@ struct FolderSection: View {
     private var audibleTab: BrowserTab? {
         guard !folder.isExpanded else { return nil }
         return browser.allTabs(in: folder).first { $0.isPlayingAudio }
-    }
-
-    private var isFoldCandidate: Bool {
-        context.isFoldCandidate(item)
     }
 
     @ViewBuilder
@@ -134,8 +127,6 @@ struct FolderSection: View {
             .sidebarRowSelectionEffect(
                 isSelected: isSelected,
                 isHovering: hovering,
-                isDropTarget: isArmed,
-                isDropCandidate: isFoldCandidate,
                 hoverTint: folder.color.tint,
                 radius: showsOutline ? Self.rowRadius(depth: depth) : Theme.Radius.hover
             )

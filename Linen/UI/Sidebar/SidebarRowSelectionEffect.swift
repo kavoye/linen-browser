@@ -7,8 +7,6 @@ import SwiftUI
 private struct SidebarRowSelectionEffect: ViewModifier {
     let isSelected: Bool
     let isHovering: Bool
-    var isDropTarget = false
-    var isDropCandidate = false
     var hoverTint: Color?
     var glassTint: Color?
     var radius = Theme.Radius.hover
@@ -18,12 +16,6 @@ private struct SidebarRowSelectionEffect: ViewModifier {
     @Environment(\.chromeWash) private var wash
 
     private var fill: AnyShapeStyle {
-        if isDropTarget {
-            return AnyShapeStyle(Theme.accent.opacity(0.16))
-        }
-        if isDropCandidate {
-            return AnyShapeStyle(Theme.accent.opacity(0.08))
-        }
         guard isHovering, !isSelected else { return AnyShapeStyle(.clear) }
         if let hoverTint {
             return AnyShapeStyle(hoverTint.opacity(0.18))
@@ -32,17 +24,7 @@ private struct SidebarRowSelectionEffect: ViewModifier {
     }
 
     private var wearsGlass: Bool {
-        isSelected && !isDropTarget && !isDropCandidate
-    }
-
-    private var dropStroke: AnyShapeStyle {
-        if isDropTarget {
-            return AnyShapeStyle(Theme.accent)
-        }
-        if isDropCandidate {
-            return AnyShapeStyle(Theme.accent.opacity(0.45))
-        }
-        return AnyShapeStyle(.clear)
+        isSelected
     }
 
     private var wearsPanelGlass: Bool {
@@ -85,11 +67,6 @@ private struct SidebarRowSelectionEffect: ViewModifier {
                 .environment(\.colorScheme, windowColorScheme)
                 .allowsHitTesting(false)
             }
-            .overlay(
-                shape
-                    .strokeBorder(dropStroke, lineWidth: isDropTarget ? 2 : 1)
-                    .allowsHitTesting(false)
-            )
     }
 }
 
@@ -108,8 +85,6 @@ extension View {
     func sidebarRowSelectionEffect(
         isSelected: Bool,
         isHovering: Bool,
-        isDropTarget: Bool = false,
-        isDropCandidate: Bool = false,
         hoverTint: Color? = nil,
         glassTint: Color? = nil,
         radius: CGFloat = Theme.Radius.hover
@@ -117,8 +92,6 @@ extension View {
         modifier(SidebarRowSelectionEffect(
             isSelected: isSelected,
             isHovering: isHovering,
-            isDropTarget: isDropTarget,
-            isDropCandidate: isDropCandidate,
             hoverTint: hoverTint,
             glassTint: glassTint,
             radius: radius

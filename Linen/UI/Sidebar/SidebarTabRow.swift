@@ -28,12 +28,6 @@ struct SidebarTabRow: View {
     private var isLifted: Bool {
         context.isLifted(item)
     }
-    private var isArmed: Bool {
-        context.isArmed(item)
-    }
-    private var armedSplitEdge: HorizontalEdge? {
-        context.armedSplitEdge(item)
-    }
     private var isSelected: Bool {
         context.isSelected(item)
     }
@@ -138,25 +132,6 @@ struct SidebarTabRow: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { controlsWidth = min($0, 20) }
         .opacity(showsTrailingControls ? 1 : 0)
         .allowsHitTesting(showsTrailingControls)
-    }
-
-    private func splitEnd(_ edge: HorizontalEdge) -> some View {
-        let opacity: Double = if armedSplitEdge == edge {
-            0.85
-        } else if context.candidateSplitEdge(item) == edge {
-            0.45
-        } else {
-            0.15
-        }
-        return UnevenRoundedRectangle(
-            topLeadingRadius: edge == .leading ? Theme.Radius.hover : 0,
-            bottomLeadingRadius: edge == .leading ? Theme.Radius.hover : 0,
-            bottomTrailingRadius: edge == .trailing ? Theme.Radius.hover : 0,
-            topTrailingRadius: edge == .trailing ? Theme.Radius.hover : 0
-        )
-        .fill(Theme.accent.opacity(opacity))
-        .frame(width: SidebarMetrics.splitEndWidth(style: sidebarStyle))
-        .allowsHitTesting(false)
     }
 
     private var peekedTab: BrowserTab? {
@@ -276,22 +251,11 @@ struct SidebarTabRow: View {
         .sidebarRowSelectionEffect(
             isSelected: isActive || isSelected,
             isHovering: hovering,
-            isDropTarget: isArmed,
-            isDropCandidate: context.isFoldCandidate(item),
             glassTint: context.refractsTabColor
                 ? FaviconTint.of(tab.favicon, heldBy: tab.id)
                 : nil,
             radius: depth == 0 ? Theme.Radius.hover : FolderSection.rowRadius(depth: depth - 1)
         )
-        .overlay {
-            if context.showsSplitEdges(item) {
-                HStack(spacing: 0) {
-                    splitEnd(.leading)
-                    Spacer(minLength: 0)
-                    splitEnd(.trailing)
-                }
-            }
-        }
         .opacity(isLifted ? 0 : 1)
         .contentShape(Rectangle())
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {

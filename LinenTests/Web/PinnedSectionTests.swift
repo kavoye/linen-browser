@@ -50,7 +50,7 @@ struct PinnedSectionTests {
         model.pin(kept)
 
         model.move([.tab(loose.id)], into: nil, before: .tab(kept.id))
-        model.settlePins([.tab(loose.id)])
+        model.setPinned(true, for: [.tab(loose.id)])
 
         #expect(loose.pinnedURL?.absoluteString == "https://loose.example/")
     }
@@ -64,7 +64,7 @@ struct PinnedSectionTests {
         model.pin(other)
 
         model.move([.tab(other.id)], into: nil, before: nil)
-        model.settlePins([.tab(other.id)])
+        model.setPinned(false, for: [.tab(other.id)])
 
         #expect(other.pinnedURL == nil)
         #expect(kept.pinnedURL != nil)
@@ -72,17 +72,231 @@ struct PinnedSectionTests {
         #expect(loose.pinnedURL == nil)
     }
 
-    /// With no pinned tab left there is no section to drop into, so the top of
-    /// the list is just the top of the list.
-    @Test func theTopOfAnUnpinnedListDoesNotPin() {
+    @Test func takingThePinLeavesTheOrderAlone() {
+        let model = model()
+        let kept = tab("https://kept.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        let last = tab("https://last.example/", in: model)
+        model.pin(kept)
+
+        model.move([.tab(last.id)], into: nil, before: .tab(loose.id))
+        model.setPinned(false, for: [.tab(last.id)])
+
+        #expect(last.pinnedURL == nil)
+        #expect(order(model) == [
+            "https://kept.example/",
+            "https://last.example/",
+            "https://loose.example/",
+        ])
+    }
+
+    @Test func theShelfStartsASectionAnUnpinnedListHasNot() {
         let model = model()
         let first = tab("https://one.example/", in: model)
         let second = tab("https://two.example/", in: model)
 
-        model.move([.tab(second.id)], into: nil, before: .tab(first.id))
-        model.settlePins([.tab(second.id)])
+        model.pinAtTop([.tab(second.id)])
 
-        #expect(second.pinnedURL == nil)
+        #expect(second.pinnedURL?.absoluteString == "https://two.example/")
+        #expect(first.pinnedURL == nil)
+        #expect(order(model) == ["https://two.example/", "https://one.example/"])
+    }
+
+    @Test func theShelfLandsUnderTheTabsAlreadyKept() {
+        let model = model()
+        let kept = tab("https://kept.example/", in: model)
+        let other = tab("https://other.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        model.pin(kept)
+        model.pin(other)
+
+        model.pinAtTop([.tab(loose.id)])
+
+        #expect(loose.pinnedURL?.absoluteString == "https://loose.example/")
+        #expect(order(model) == [
+            "https://kept.example/",
+            "https://other.example/",
+            "https://loose.example/",
+        ])
+    }
+
+    @Test func theShelfCannotPinATabWithNoPage() {
+        let model = model()
+        _ = tab("https://one.example/", in: model)
+        let blank = model.newTab()
+
+        model.pinAtTop([.tab(blank.id)])
+
+        #expect(blank.pinnedURL == nil)
+    }
+
+    // MARK: - Folders
+
+    @Test func aFolderIsKeptOnlyWhileEverythingInItIs() {
+        let model = model()
+        let one = tab("https://one.example/", in: model)
+        let two = tab("https://two.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [one, two])
+
+        #expect(!model.isKept(.folder(folder.id)))
+
+        model.setPinned(true, for: [.folder(folder.id)])
+
+        #expect(one.pinnedURL != nil)
+        #expect(two.pinnedURL != nil)
+        #expect(model.isKept(.folder(folder.id)))
+
+        model.setPinned(false, for: [.tab(two.id)])
+
+        #expect(!model.isKept(.folder(folder.id)))
+    }
+
+    @Test func anEmptyFolderIsNotKept() {
+        let model = model()
+        let folder = model.createFolder(named: "Work")
+
+        #expect(model.rows(in: folder).isEmpty)
+        #expect(!model.isKept(.folder(folder.id)))
+        #expect(model.keptRunAtTop().isEmpty)
+    }
+
+    @Test func aPinnedTabBelowALooseOneIsNotInTheRun() {
+        let model = model()
+        let kept = tab("https://kept.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        let below = tab("https://below.example/", in: model)
+        model.pin(kept)
+        model.move([.tab(below.id)], into: nil, before: nil)
+        model.setPinned(true, for: [.tab(below.id)])
+
+        #expect(order(model) == [
+            "https://kept.example/",
+            "https://loose.example/",
+            "https://below.example/",
+        ])
+        #expect(below.pinnedURL != nil)
+        #expect(model.keptRunAtTop() == [.tab(kept.id)])
+    }
+
+    @Test func theShelfPinsEveryTabAFolderHolds() {
+        let model = model()
+        let one = tab("https://one.example/", in: model)
+        let two = tab("https://two.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [one, two])
+
+        model.pinAtTop([.folder(folder.id)])
+
+        #expect(one.pinnedURL != nil)
+        #expect(two.pinnedURL != nil)
+        #expect(loose.pinnedURL == nil)
+        #expect(model.keptRunAtTop() == [.folder(folder.id)])
+    }
+
+    @Test func takingAFolderOutOfTheSectionUnpinsWhatItHolds() {
+        let model = model()
+        let one = tab("https://one.example/", in: model)
+        let two = tab("https://two.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [one, two])
+        model.pinAtTop([.folder(folder.id)])
+
+        model.setPinned(false, for: [.folder(folder.id)])
+
+        #expect(one.pinnedURL == nil)
+        #expect(two.pinnedURL == nil)
+        #expect(model.keptRunAtTop().isEmpty)
+    }
+
+    @Test func aKeptFolderTakesInWhatIsDroppedIntoIt() {
+        let model = model()
+        let held = tab("https://held.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [held])
+        model.pinAtTop([.folder(folder.id)])
+
+        let keeps = model.isKept(.folder(folder.id), ignoring: [.tab(loose.id)])
+        model.move([.tab(loose.id)], into: folder)
+        if keeps {
+            model.setPinned(true, for: [.tab(loose.id)])
+        }
+
+        #expect(keeps)
+        #expect(loose.pinnedURL?.absoluteString == "https://loose.example/")
+        #expect(model.isKept(.folder(folder.id)))
+    }
+
+    @Test func aFolderIgnoresTheRowsInTheAirWhenItAnswers() {
+        let model = model()
+        let held = tab("https://held.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [held, loose])
+        model.setPinned(true, for: [.tab(held.id)])
+
+        #expect(!model.isKept(.folder(folder.id)))
+        #expect(model.isKept(.folder(folder.id), ignoring: [.tab(loose.id)]))
+        #expect(!model.isKept(.folder(folder.id), ignoring: [.tab(held.id)]))
+    }
+
+    @Test func reorderingInsideAKeptFolderKeepsThePins() {
+        let model = model()
+        let one = tab("https://one.example/", in: model)
+        let two = tab("https://two.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [one, two])
+        model.pinAtTop([.folder(folder.id)])
+
+        model.move([.tab(two.id)], into: folder, before: .tab(one.id))
+
+        #expect(one.pinnedURL != nil)
+        #expect(two.pinnedURL != nil)
+        #expect(model.isKept(.folder(folder.id)))
+        #expect(model.tabs(in: folder).map(\.urlString) == [
+            "https://two.example/",
+            "https://one.example/",
+        ])
+    }
+
+    @Test func aKeptFolderHoldsItsPlaceWhileAnUnpinnedRowIsInTheAir() {
+        let model = model()
+        let held = tab("https://held.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [held])
+        model.pinAtTop([.folder(folder.id)])
+
+        model.move([.tab(loose.id)], into: folder)
+
+        #expect(!model.isKept(.folder(folder.id)))
+        #expect(model.isKept(.folder(folder.id), ignoring: [.tab(loose.id)]))
+    }
+
+    @Test func aDragKeepsThePinsItIsCarrying() {
+        let model = model()
+        let held = tab("https://held.example/", in: model)
+        let moving = tab("https://moving.example/", in: model)
+        let folder = model.createFolder(named: "Work", containing: [held])
+        model.pinAtTop([.folder(folder.id)])
+        model.pinAtTop([.tab(moving.id)])
+
+        model.move([.tab(moving.id)], into: folder, settlingPins: false)
+
+        #expect(moving.pinnedURL?.absoluteString == "https://moving.example/")
+        #expect(model.isKept(.folder(folder.id)))
+    }
+
+    @Test func foldingTwoKeptTabsMakesAKeptFolder() {
+        let model = model()
+        let one = tab("https://one.example/", in: model)
+        let two = tab("https://two.example/", in: model)
+        let loose = tab("https://loose.example/", in: model)
+        model.pinAtTop([.tab(one.id)])
+        model.pinAtTop([.tab(two.id)])
+
+        let gathered: [SidebarItem] = [.tab(one.id), .tab(two.id)]
+        let folder = model.createFolder(named: "Work", containing: gathered)
+        model.setPinned(true, for: gathered)
+
+        #expect(model.isKept(.folder(folder.id)))
+        #expect(model.keptRunAtTop() == [.folder(folder.id)])
+        #expect(loose.pinnedURL == nil)
     }
 
     @Test func filingAPinnedTabInAFolderUnpinsIt() {
@@ -103,7 +317,7 @@ struct PinnedSectionTests {
         let blank = model.newTab()
 
         model.move([.tab(blank.id)], into: nil, before: .tab(kept.id))
-        model.settlePins([.tab(blank.id)])
+        model.setPinned(true, for: [.tab(blank.id)])
 
         #expect(blank.pinnedURL == nil)
     }

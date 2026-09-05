@@ -9,22 +9,29 @@ struct SidebarDrag {
     let lead: SidebarItem
     let origin: CGRect
     let covered: Set<SidebarItem>
+    let keepsSection: Bool
+    let wasKept: Bool
     var translation: CGSize = .zero
     var landing = false
 
-    init(items: [SidebarItem], lead: SidebarItem, origin: CGRect, tree: SidebarTree) {
+    init(
+        items: [SidebarItem],
+        lead: SidebarItem,
+        origin: CGRect,
+        tree: SidebarTree,
+        keepsSection: Bool,
+        wasKept: Bool
+    ) {
         self.items = items
         self.lead = lead
         self.origin = origin
+        self.keepsSection = keepsSection
+        self.wasKept = wasKept
         covered = tree.expanded(Set(items))
     }
 
     var isSingle: Bool {
         items.count == 1
-    }
-
-    var carriesFolder: Bool {
-        items.contains { if case .folder = $0 { true } else { false } }
     }
 
     func carries(_ item: SidebarItem) -> Bool {
@@ -38,28 +45,6 @@ enum SidebarDragGhost {
     }
 
     static let chipFillOpacity: Double = 0.55
-}
-
-nonisolated enum SidebarDropIntent: Equatable {
-    case fold(SidebarItem)
-    case split(SidebarItem, leading: Bool)
-
-    var item: SidebarItem {
-        switch self {
-        case .fold(let item):
-            item
-        case .split(let item, _):
-            item
-        }
-    }
-
-    var isFold: Bool {
-        if case .fold = self {
-            true
-        } else {
-            false
-        }
-    }
 }
 
 @MainActor
@@ -127,6 +112,11 @@ final class SidebarDragModel {
         guard let drag, drag.items.count == 1, case .tab(let id) = drag.lead else { return nil }
         return id
     }
+
+    var acceptsPin: Bool {
+        guard let drag, !drag.landing else { return false }
+        return !drag.keepsSection
+    }
 }
 
 @MainActor
@@ -158,9 +148,7 @@ struct SidebarRowContext {
     let coordinator: AppCoordinator
     let selection: SidebarSelection
     let drag: SidebarDrag?
-    let armed: SidebarDropIntent?
-    let candidate: SidebarDropIntent?
-    let offersSplit: Bool
+    let pinsCarried: Bool
     let space: String
     let frames: SidebarFrames
 
@@ -172,36 +160,14 @@ struct SidebarRowContext {
         drag?.items.contains(item) == true
     }
 
-    func isArmed(_ item: SidebarItem) -> Bool {
-        armed == .fold(item)
+    func dropMark(_ item: SidebarItem) -> SidebarDropMark.Kind? {
+        guard let lead = drag?.lead, lead == item else { return nil }
+        if pinsCarried != browser.isKept(lead) {
+            return pinsCarried ? .pin : .unpin
+        }
+        return .move
     }
 
-    func isFoldCandidate(_ item: SidebarItem) -> Bool {
-        candidate == .fold(item) && armed != .fold(item)
-    }
-
-    func armedSplitEdge(_ item: SidebarItem) -> HorizontalEdge? {
-        guard case .split(let target, let leading) = armed, target == item else { return nil }
-        return leading ? .leading : .trailing
-    }
-
-    func candidateSplitEdge(_ item: SidebarItem) -> HorizontalEdge? {
-        guard case .split(let target, let leading) = candidate, target == item else { return nil }
-        return leading ? .leading : .trailing
-    }
-
-    func showsSplitEdges(_ item: SidebarItem) -> Bool {
-        Self.showsSplitEdges(offersSplit: offersSplit, item: item, candidate: candidate, armed: armed)
-    }
-
-    static func showsSplitEdges(
-        offersSplit: Bool,
-        item: SidebarItem,
-        candidate: SidebarDropIntent?,
-        armed: SidebarDropIntent?
-    ) -> Bool {
-        offersSplit && (candidate?.item == item || armed?.item == item)
-    }
     func isSelected(_ item: SidebarItem) -> Bool {
         selection.contains(item)
     }
@@ -212,47 +178,125 @@ struct SidebarRowContext {
     }
 }
 
+enum SidebarPinMetrics {
+    static let hairline = Theme.chrome(0.14)
+}
+
+struct SidebarSectionSeam: View {
+    var body: some View {
+        Capsule()
+            .fill(SidebarPinMetrics.hairline)
+            .frame(height: 1)
+            .padding(.horizontal, SidebarMetrics.rowContentPadding(style: .full))
+            .padding(.vertical, 3)
+    }
+}
+
+struct SidebarDropMark: View {
+    enum Kind {
+        case move
+        case pin
+        case unpin
+    }
+
+    let kind: Kind
+    var isArmed = false
+
+    @Environment(\.sidebarStyle) private var sidebarStyle
+    @Environment(\.windowColorScheme) private var windowColorScheme
+
+    private static let dash: [CGFloat] = [4, 3]
+
+    private var calls: Bool {
+        kind == .pin || kind == .unpin
+    }
+
+    private var tint: Color {
+        isArmed && calls ? Theme.accent : Color.primary.opacity(0.45)
+    }
+
+    private var symbol: String {
+        switch kind {
+        case .move:
+            "arrow.up.and.down"
+        case .pin:
+            "pin.fill"
+        case .unpin:
+            "pin.slash.fill"
+        }
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        switch kind {
+        case .move:
+            Text("Move")
+        case .pin:
+            Text("Pin")
+        case .unpin:
+            Text("Unpin")
+        }
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
+        HStack(spacing: SidebarMetrics.rowIconSpacing) {
+            Image(systemName: symbol)
+                .font(Theme.Font.control)
+                .frame(width: SidebarMetrics.rowIconSize)
+            if sidebarStyle == .full {
+                label
+                    .font(Theme.Font.title)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: sidebarStyle == .full ? .leading : .center)
+        .background { shape.fill(Theme.accent.opacity(isArmed && calls ? 0.16 : 0)) }
+        .overlay {
+            shape.strokeBorder(
+                tint.opacity(isArmed ? 1 : 0.5),
+                style: StrokeStyle(lineWidth: 1, dash: isArmed && calls ? [] : Self.dash)
+            )
+        }
+        .environment(\.colorScheme, windowColorScheme)
+        .allowsHitTesting(false)
+    }
+}
+
 struct SidebarRows: View {
     let items: [SidebarItem]
     let depth: Int
     let context: SidebarRowContext
 
-    private var keptRunLength: Int {
-        guard depth == 0 else { return 0 }
-        var count = 0
-        for item in items {
-            guard case .tab(let id) = item,
-                  context.browser.tab(id: id)?.pinnedURL != nil
-            else { break }
-            count += 1
+    var body: some View {
+        ForEach(Array(items.enumerated()), id: \.element) { _, item in
+            row(item)
+                .overlay {
+                    if let mark = context.dropMark(item) {
+                        SidebarDropMark(kind: mark, isArmed: true)
+                    }
+                }
         }
-        return count == items.count ? 0 : count
     }
 
-    var body: some View {
-        ForEach(Array(items.enumerated()), id: \.element) { index, item in
-            if index == keptRunLength, keptRunLength > 0 {
-                Rectangle()
-                    .fill(Theme.Wash.hairline)
-                    .frame(height: 1)
-                    .padding(.horizontal, SidebarMetrics.rowContentPadding(style: .full))
-                    .padding(.vertical, 3)
+    @ViewBuilder
+    private func row(_ item: SidebarItem) -> some View {
+        switch item {
+        case .folder(let id):
+            if let folder = context.browser.folder(id: id) {
+                FolderSection(folder: folder, depth: depth, context: context)
             }
-
-            switch item {
-            case .folder(let id):
-                if let folder = context.browser.folder(id: id) {
-                    FolderSection(folder: folder, depth: depth, context: context)
-                }
-            case .tab(let id):
-                if let tab = context.browser.tab(id: id) {
-                    if context.browser.splits.isFollower(id) {
-                        EmptyView()
-                    } else if let grid = context.browser.splits.splitLed(by: id) {
-                        SidebarSplitRow(leading: tab, split: grid, depth: depth, context: context)
-                    } else {
-                        SidebarTabRow(tab: tab, depth: depth, context: context)
-                    }
+        case .tab(let id):
+            if let tab = context.browser.tab(id: id) {
+                if context.browser.splits.isFollower(id) {
+                    EmptyView()
+                } else if let grid = context.browser.splits.splitLed(by: id) {
+                    SidebarSplitRow(leading: tab, split: grid, depth: depth, context: context)
+                } else {
+                    SidebarTabRow(tab: tab, depth: depth, context: context)
                 }
             }
         }

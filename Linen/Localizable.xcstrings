@@ -2225,6 +2225,9 @@
     "Move the video into Picture in Picture and back." : {
       "comment" : "Caption for the Picture in Picture tool in assistant settings."
     },
+    "Move" : {
+      "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop only changes where the row sits in the list. Imperative verb, one word. Very tight space — a sidebar row is a few characters wide."
+    },
     "Move to Applications" : {
       "comment" : "Default button of that alert. It puts Linen in the Applications folder and reopens it from there. Title Case; use the system name of the folder."
     },
@@ -3933,6 +3936,9 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
+    "Unpin" : {
+      "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop takes the row out of the pinned section. Imperative verb, one word, the same sense as Unpin Tab. Very tight space."
+    },
             "state" : "new",
             "value" : "Downloading %@"
           }

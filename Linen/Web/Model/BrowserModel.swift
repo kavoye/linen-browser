@@ -201,13 +201,13 @@ final class BrowserModel {
     private func insert(_ tab: BrowserTab, after opener: BrowserTab?) {
         let keptRun = keptRunAtTop()
         if let anchor = opener.flatMap(insertionAnchor(after:)),
-           !keptRun.contains(where: { $0 === anchor }),
+           !keptRun.contains(.tab(anchor.id)),
            let index = tabs.firstIndex(where: { $0 === anchor }) {
             tabs.insert(tab, at: tabs.index(after: index))
             storedTree = reconciledTree().inserting(.tab(tab.id), after: .tab(anchor.id))
         } else if let kept = keptRun.last {
             tabs.insert(tab, at: 0)
-            storedTree = reconciledTree().inserting(.tab(tab.id), after: .tab(kept.id))
+            storedTree = reconciledTree().inserting(.tab(tab.id), after: kept)
             syncTabOrder()
         } else {
             tabs.insert(tab, at: 0)

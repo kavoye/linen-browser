@@ -38,10 +38,6 @@ struct SidebarSplitRow: View {
     private var isLifted: Bool {
         context.isLifted(item)
     }
-    private var isArmed: Bool {
-        context.isArmed(item)
-    }
-
     @Environment(\.sidebarStyle) private var sidebarStyle
 
     @State private var hoveringRow = false
@@ -107,8 +103,6 @@ struct SidebarSplitRow: View {
         .sidebarRowSelectionEffect(
             isSelected: isOnScreen || isSelected,
             isHovering: interaction == .wholeRow && hoveringRow,
-            isDropTarget: isArmed,
-            isDropCandidate: context.isFoldCandidate(item),
             radius: radius
         )
         .opacity(isLifted ? 0 : 1)
