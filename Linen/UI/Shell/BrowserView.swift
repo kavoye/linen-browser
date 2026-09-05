@@ -216,10 +216,11 @@ struct BrowserView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.width
-        } action: {
-            containerWidth = $0
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .global)
+        } action: { frame in
+            containerWidth = frame.width
+            coordinator.noteShellFrame(frame)
         }
         .background(Color.clear)
         .environment(\.chromeIsLight, scheme == .light)

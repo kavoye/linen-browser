@@ -104,6 +104,7 @@ final class AppCoordinator {
     var mainMenu: MainMenu?
 
     @ObservationIgnored private var isAskingForMicrophone = false
+    @ObservationIgnored private var shellFrameInWindow: CGRect = .zero
     @ObservationIgnored private var appearanceObservation: NSKeyValueObservation?
     @ObservationIgnored private var iconScheme = FaviconLoader.shared.scheme
 
@@ -215,16 +216,24 @@ final class AppCoordinator {
         }
     }
 
+    func noteShellFrame(_ frame: CGRect) {
+        guard frame != shellFrameInWindow else { return }
+        shellFrameInWindow = frame
+        applyHoverShield()
+    }
+
     func applyHoverShield() {
-        let content = sidebarDrag.contentFrameInWindow
-        let width = sidebar.openWidth(in: content.width)
+        let shellFrame = shellFrameInWindow
+        guard shellFrame.width > 0 else { return }
+        let width = sidebar.openWidth(in: shellFrame.width)
+        let besideSidebar = shellFrame.width - (sidebar.isVisible ? width : 0)
         let shell = LoomShellGeometry(
-            containerWidth: content.width,
+            containerWidth: shellFrame.width,
             sidebarWidth: width,
-            preferredPanelWidth: sidePanel.openWidth(in: content.width),
-            isSidebarVisible: false,
+            preferredPanelWidth: sidePanel.openWidth(in: besideSidebar),
+            isSidebarVisible: sidebar.isVisible,
             isPanelVisible: sidePanel.isVisible,
-            isPanelExpanded: sidePanel.isExpanded
+            isPanelExpanded: sidePanel.isVisible && sidePanel.isExpanded
         )
         let peeked = shownPeek?.webView
         for view in TabWebView.liveInstances.allObjects {
@@ -238,7 +247,7 @@ final class AppCoordinator {
                 view.setHoverParked(true)
                 continue
             }
-            let viewMaxX = view.convert(view.bounds, to: nil).maxX
+            let viewMaxX = view.convert(view.bounds, to: nil).maxX - shellFrame.minX
             view.setHoverParked(
                 SidebarPeekShield.suppressesHover(
                     isVisible: sidebar.isVisible,
@@ -247,7 +256,7 @@ final class AppCoordinator {
                     width: width,
                     isMediaPicture: view === media.model.pictureWebView
                 )
-                    || shell.panelCoversPage(viewMaxX: viewMaxX - content.minX)
+                    || shell.panelCoversPage
             )
         }
     }

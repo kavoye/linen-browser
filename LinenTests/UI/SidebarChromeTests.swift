@@ -93,19 +93,31 @@ struct LoomChromeTests {
     }
 
     /// The bug: WebKit's tracking areas do not hit-test against what covers
-    /// them, so a page reaching under the panel kept answering the pointer.
-    @Test func aPageReachingUnderThePanelIsCovered() {
+    @Test func anExpandedPanelCoversThePage() {
         let shell = LoomShellGeometry(
             containerWidth: 1_200,
-            sidebarWidth: 0,
+            sidebarWidth: 268,
             preferredPanelWidth: 320,
-            isSidebarVisible: false,
+            isSidebarVisible: true,
+            isPanelVisible: true,
+            isPanelExpanded: true
+        )
+
+        #expect(shell.panelCoversPage)
+    }
+
+    @Test func aPanelBesideThePageCoversNothing() {
+        let shell = LoomShellGeometry(
+            containerWidth: 1_200,
+            sidebarWidth: 268,
+            preferredPanelWidth: 320,
+            isSidebarVisible: true,
             isPanelVisible: true,
             isPanelExpanded: false
         )
 
-        #expect(!shell.panelCoversPage(viewMaxX: shell.panelLeading - LoomChrome.canvasInset))
-        #expect(shell.panelCoversPage(viewMaxX: 1_200))
+        #expect(shell.canvasTrailingInset == 320 + LoomChrome.canvasInset)
+        #expect(!shell.panelCoversPage)
     }
 
     @Test func aClosedPanelCoversNothing() {
@@ -115,10 +127,10 @@ struct LoomChromeTests {
             preferredPanelWidth: 320,
             isSidebarVisible: false,
             isPanelVisible: false,
-            isPanelExpanded: false
+            isPanelExpanded: true
         )
 
-        #expect(!shell.panelCoversPage(viewMaxX: 1_200))
+        #expect(!shell.panelCoversPage)
     }
 
     @Test func expandedPanelStaysInsideBothCanvasEdges() {

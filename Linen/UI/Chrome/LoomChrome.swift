@@ -126,8 +126,8 @@ nonisolated struct LoomShellGeometry {
         containerWidth - panelWidth - LoomChrome.canvasInset
     }
 
-    func panelCoversPage(viewMaxX: CGFloat) -> Bool {
-        isPanelVisible && viewMaxX > panelLeading
+    var panelCoversPage: Bool {
+        isPanelVisible && isPanelExpanded
     }
 
     /// Leading edge for a resize target centred between the page canvas and
