@@ -5,6 +5,7 @@ import SwiftUI
 
 struct AssistantComposer: View {
     private static let effortWidth: CGFloat = 46
+    private static let pickerDrop: CGFloat = 3
 
     let coordinator: AppCoordinator
     @Binding var seed: String?
@@ -102,37 +103,40 @@ struct AssistantComposer: View {
                 onMove: move(by:jumping:)
             )
 
-            HStack(spacing: 2) {
-                AssistantPicker(sections: .providers, coordinator: coordinator) { _ in
-                    ProviderBrandIcon(providerID: coordinator.selectedProvider.id, size: 14)
-                }
-                .padding(.leading, -4)
-                .padding(.trailing, -4)
+            HStack(alignment: .bottom, spacing: 2) {
+                Group {
+                    AssistantPicker(sections: .providers, coordinator: coordinator) { _ in
+                        ProviderBrandIcon(providerID: coordinator.selectedProvider.id, size: 14)
+                    }
+                    .padding(.leading, -4)
+                    .padding(.trailing, -4)
 
-                AssistantPicker(
-                    sections: .models,
-                    coordinator: coordinator,
-                    isPickable: !coordinator.selectedProvider.isOnDevice
-                ) { hovering in
-                    Text(verbatim: modelLabel)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(hovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
-                .layoutPriority(-1)
-
-                if coordinator.supportsReasoningEffort {
-                    AssistantPicker(sections: .thinking, coordinator: coordinator) { hovering in
-                        EffortMeter(effort: coordinator.selectedEffort)
-
-                        Text(coordinator.selectedEffort.label)
-                            .font(Theme.Font.caption)
-                            .foregroundStyle(hovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                    AssistantPicker(
+                        sections: .models,
+                        coordinator: coordinator,
+                        isPickable: !coordinator.selectedProvider.isOnDevice
+                    ) { hovering in
+                        Text(verbatim: modelLabel)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(hovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
                             .lineLimit(1)
-                            .frame(width: Self.effortWidth, alignment: .leading)
+                            .truncationMode(.middle)
+                    }
+                    .layoutPriority(-1)
+
+                    if coordinator.supportsReasoningEffort {
+                        AssistantPicker(sections: .thinking, coordinator: coordinator) { hovering in
+                            EffortMeter(effort: coordinator.selectedEffort)
+
+                            Text(coordinator.selectedEffort.label)
+                                .font(Theme.Font.caption)
+                                .foregroundStyle(hovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                                .lineLimit(1)
+                                .frame(width: Self.effortWidth, alignment: .leading)
+                        }
                     }
                 }
+                .offset(y: Self.pickerDrop)
 
                 Spacer(minLength: 0)
 
@@ -147,7 +151,7 @@ struct AssistantComposer: View {
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
-        .padding(.bottom, 8)
+        .padding(.bottom, 12)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(Theme.Wash.hairline)
