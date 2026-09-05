@@ -217,3 +217,40 @@ struct LyricsMatchingTests {
         #expect(LRCLIB.userAgent.contains("github.com/kavoye"))
     }
 }
+
+/// The shortlist a search answers with. Every row that scores is a real
+/// candidate, so the list has to be cut somewhere the picker can show.
+struct LyricsShortlistTests {
+    private let query = LyricsQuery(track: "Creep", artist: "Radiohead", album: "", duration: 0)
+
+    private func rows(_ count: Int) -> Data {
+        let rows = (0..<count).map { index in
+            """
+            {"id":\(index),"trackName":"Creep","artistName":"Radiohead","albumName":"Pablo Honey",\
+            "duration":233,"instrumental":false,"plainLyrics":"verse \(index)","syncedLyrics":""}
+            """
+        }
+        return Data("[\(rows.joined(separator: ","))]".utf8)
+    }
+
+    @Test func everyRowThatScoresIsRanked() {
+        #expect(LRCLIB.ranked(in: rows(5), against: query).count == 5)
+    }
+
+    @Test func theShortlistStopsAtEight() {
+        #expect(LRCLIB.ranked(in: rows(9), against: query).count == 8)
+        #expect(LRCLIB.ranked(in: rows(40), against: query).count == 8)
+    }
+
+    @Test func aRowForAnotherSongIsNoChoice() {
+        let other = Data("""
+            [{"id":1,"trackName":"Paranoid Android","artistName":"Radiohead","albumName":"",\
+            "duration":233,"instrumental":false,"plainLyrics":"please could you stop","syncedLyrics":""}]
+            """.utf8)
+        #expect(LRCLIB.ranked(in: other, against: query).isEmpty)
+    }
+
+    @Test func aPayloadItCannotReadRanksNothing() {
+        #expect(LRCLIB.ranked(in: Data("not json".utf8), against: query).isEmpty)
+    }
+}

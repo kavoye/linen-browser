@@ -12,6 +12,7 @@ import Testing
 /// person would call the icon's colour, and it has to survive an icon that
 /// is mostly transparent.
 @MainActor
+@Suite(.serialized)
 struct FaviconTintTests {
     private func icon(_ draw: (NSSize) -> Void, size: CGFloat = 32) -> NSImage {
         let image = NSImage(size: NSSize(width: size, height: size))
@@ -82,5 +83,24 @@ struct FaviconTintTests {
         FaviconTint.forget(tab)
 
         #expect(FaviconTint.of(nil, heldBy: tab) == nil)
+    }
+
+    /// A tab that closes without being forgotten would hold its colour for as
+    /// long as the app runs, so the table is emptied rather than grown.
+    @Test func theHeldColoursAreLetGoRatherThanGrowingWithoutEnd() {
+        FaviconTint.forgetAll()
+        defer { FaviconTint.forgetAll() }
+
+        let icon = filled(.systemBlue)
+        let first = UUID()
+        _ = FaviconTint.of(icon, heldBy: first)
+        for _ in 0..<255 {
+            _ = FaviconTint.of(icon, heldBy: UUID())
+        }
+        #expect(FaviconTint.of(nil, heldBy: first) != nil, "a full table is not an overfull one")
+
+        _ = FaviconTint.of(icon, heldBy: UUID())
+
+        #expect(FaviconTint.of(nil, heldBy: first) == nil)
     }
 }

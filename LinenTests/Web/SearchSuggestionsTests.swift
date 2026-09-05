@@ -112,3 +112,35 @@ struct SuggestionFetchTests {
         #expect(query.first { $0.name == "q" }?.value == "a&b c")
     }
 }
+
+@MainActor
+/// What the cache holds between keystrokes. It answers from memory as a
+/// person backspaces, so it must not grow for as long as the window is open.
+struct SuggestionCacheTests {
+    private let engine = SearchEngine.duckDuckGo
+
+    @Test func theOldestQuestionIsLetGoRatherThanGrowing() {
+        let suggestions = SearchSuggestions()
+        for index in 0..<80 {
+            suggestions.store(["answer \(index)"], for: "query\(index)", engine: engine)
+        }
+
+        #expect(suggestions.cachedQueries.count == 80)
+        #expect(suggestions.cachedQueries.first?.hasSuffix("query0") == true)
+
+        suggestions.store(["answer 80"], for: "query80", engine: engine)
+
+        #expect(suggestions.cachedQueries.count == 80)
+        #expect(suggestions.cachedQueries.first?.hasSuffix("query1") == true)
+        #expect(suggestions.cachedQueries.last?.hasSuffix("query80") == true)
+    }
+
+    @Test func askingTheSameQuestionTwiceIsOneEntry() {
+        let suggestions = SearchSuggestions()
+        suggestions.store(["one"], for: "swift", engine: engine)
+        suggestions.store(["two"], for: "SWIFT", engine: engine)
+
+        #expect(suggestions.cachedQueries.count == 1)
+        #expect(suggestions.phrases == ["two"])
+    }
+}

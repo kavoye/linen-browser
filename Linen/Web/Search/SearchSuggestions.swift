@@ -52,13 +52,17 @@ final class SearchSuggestions {
         "\(engine.id)\u{1}\(query.lowercased())"
     }
 
+    var cachedQueries: [String] {
+        cacheOrder
+    }
+
     func clear() {
         fetchTask?.cancel()
         fetchTask = nil
         phrases = []
     }
 
-    private func store(_ fetched: [String], for query: String, engine: SearchEngine) {
+    func store(_ fetched: [String], for query: String, engine: SearchEngine) {
         let kept = Array(
             fetched
                 .filter { $0.caseInsensitiveCompare(query) != .orderedSame }

@@ -28,6 +28,10 @@ enum FaviconTint {
         held[tab] = nil
     }
 
+    static func forgetAll() {
+        held.removeAll(keepingCapacity: true)
+    }
+
     static func of(_ image: NSImage?) -> Color? {
         guard let image else { return nil }
         if let known = cache.object(forKey: image) {

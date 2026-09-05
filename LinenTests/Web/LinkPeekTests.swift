@@ -109,6 +109,64 @@ struct LinkPeekTests {
         #expect(peek.shown == nil)
     }
 
+    // MARK: - What a peek is worth keeping
+
+    private func summary(_ gist: String) -> LinkPeekSummary {
+        LinkPeekSummary(gist: gist, points: [])
+    }
+
+    private func addresses(_ count: Int) -> [URL] {
+        (0..<count).compactMap { URL(string: "https://example.com/\($0)") }
+    }
+
+    @Test @MainActor func theOldestPeekIsLetGoOnceTheMemoryIsFull() {
+        let peek = LinkPeek()
+        let urls = addresses(25)
+        for url in urls.prefix(24) {
+            peek.remember(summary(url.lastPathComponent), snapshot: nil, for: url)
+        }
+        #expect(peek.keptSummary(for: urls[0])?.gist == "0")
+
+        peek.remember(summary("24"), snapshot: nil, for: urls[24])
+
+        #expect(peek.keptSummary(for: urls[0]) == nil)
+        #expect(peek.keptSummary(for: urls[1])?.gist == "1")
+        #expect(peek.keptSummary(for: urls[24])?.gist == "24")
+    }
+
+    /// A snapshot is a few megabytes and the words beside it are not, so the
+    /// pictures are let go long before the summaries are.
+    @Test @MainActor func onlyTheRecentPeeksKeepTheirPicture() {
+        let peek = LinkPeek()
+        let urls = addresses(8)
+        for url in urls {
+            peek.remember(
+                summary(url.lastPathComponent),
+                snapshot: NSImage(size: NSSize(width: 2, height: 2)),
+                for: url
+            )
+        }
+
+        #expect(peek.keptSnapshot(for: urls[0]) == nil)
+        #expect(peek.keptSnapshot(for: urls[1]) == nil)
+        #expect(peek.keptSnapshot(for: urls[2]) != nil)
+        #expect(peek.keptSnapshot(for: urls[7]) != nil)
+        #expect(peek.keptSummary(for: urls[0])?.gist == "0", "the words are cheap enough to keep")
+    }
+
+    @Test @MainActor func peekingAPageAgainIsNotASecondThingToRemember() {
+        let peek = LinkPeek()
+        let urls = addresses(24)
+        for url in urls {
+            peek.remember(summary(url.lastPathComponent), snapshot: nil, for: url)
+        }
+
+        peek.remember(summary("again"), snapshot: nil, for: urls[0])
+
+        #expect(peek.keptSummary(for: urls[0])?.gist == "again")
+        #expect(peek.keptSummary(for: urls[1])?.gist == "1", "nothing was pushed out to make room")
+    }
+
     @Test @MainActor func aCardBelongsToTheTabItWasHoveredIn() {
         let peek = LinkPeek()
         peek.suppress()
