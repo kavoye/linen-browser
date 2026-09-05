@@ -513,6 +513,9 @@
     "A new profile starts with no history, tabs, or sign-ins." : {
       "comment" : "Caption on the new-profile page, saying what the profile will contain."
     },
+    "A quiet browser with an assistant built in." : {
+      "comment" : "Caption under the Welcome to Linen heading on the first onboarding screen. Quiet describes the browser as calm and unobtrusive."
+    },
     "A specific profile" : {
       "comment" : "One of two choices for which profile the browser opens in."
     },
@@ -1186,11 +1189,11 @@
     "Close Peek" : {
       "comment" : "Tooltip on the button beside a Peek that closes it without keeping the page. Peek is the name of the panel a Shift-click opens over the page. Title Case."
     },
-    "Close Tab" : {
-      "comment" : "Command that closes the current tab: a File menu item and a tab context-menu item. Title Case, as menu commands are."
-    },
     "Close Summary" : {
       "comment" : "Tooltip on the button in the corner of the card that says what a linked page is about, which puts the card away. Title Case."
+    },
+    "Close Tab" : {
+      "comment" : "Command that closes the current tab: a File menu item and a tab context-menu item. Title Case, as menu commands are."
     },
     "Close Tabs" : {
       "comment" : "Button that goes ahead and closes them, in the confirmation alert raised by “Close N Tabs”. Title Case. It names the action rather than saying OK."
@@ -1722,8 +1725,14 @@
     "Hold %@ again to speak." : {
       "comment" : "Status message shown right after the user allows the microphone. %@ is the push-to-talk shortcut drawn as text, e.g. “⌥Space”. Again means the first press only asked for permission, so the key has to be held once more."
     },
+    "Hold Shift and click a link to read it over the page." : {
+      "comment" : "Third of three things to try, on the last onboarding screen. Shift and click opens the link in a panel above the current page."
+    },
     "Hold Shift and point at a link to read the page first." : {
       "comment" : "Caption under “Summarize a link on hover”. Shift is the key that shows the summary card. One sentence."
+    },
+    "Hold Shift and point at a link to read what the page says." : {
+      "comment" : "Second of three things to try, on the last onboarding screen. Pointing at a link with Shift held shows a summary of the page."
     },
     "Hold while speaking. Release to send." : {
       "comment" : "Caption under Push to talk in Settings > Voice, and the caption of that same row in Settings search. Both sentences are imperatives about holding a key down."
@@ -2216,6 +2225,9 @@
     "most capable" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the strongest of the group. Lowercase, and the space is very tight."
     },
+    "Move" : {
+      "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop only changes where the row sits in the list. Imperative verb, one word. Very tight space — a sidebar row is a few characters wide."
+    },
     "Move between the tabs in the conversation." : {
       "comment" : "Caption for the Switch Tabs tool in assistant settings."
     },
@@ -2227,9 +2239,6 @@
     },
     "Move the video into Picture in Picture and back." : {
       "comment" : "Caption for the Picture in Picture tool in assistant settings."
-    },
-    "Move" : {
-      "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop only changes where the row sits in the list. Imperative verb, one word. Very tight space — a sidebar row is a few characters wide."
     },
     "Move to Applications" : {
       "comment" : "Default button of that alert. It puts Linen in the Applications folder and reopens it from there. Title Case; use the system name of the folder."
@@ -2534,6 +2543,9 @@
     "Open Link in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
     },
+    "Open Link in Peek" : {
+      "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It opens the link in a Peek, the panel a Shift-click opens over the page — the same thing, without the keyboard. Title Case."
+    },
     "Open links from other apps" : {
       "comment" : "Title of the Settings row that makes Linen the default browser. Open is a verb and links is its object: the row is about which app opens links clicked in other applications. Sentence case."
     },
@@ -2542,9 +2554,6 @@
     },
     "Open Location…" : {
       "comment" : "Menu bar command under File that puts the cursor in the address bar; shortcut ⌘L. Title Case and a real ellipsis character. Use established platform terminology."
-    },
-    "Open Link in Peek" : {
-      "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It opens the link in a Peek, the panel a Shift-click opens over the page — the same thing, without the keyboard. Title Case."
     },
     "Open models served fast enough for voice." : {
       "comment" : "One-line description of the Groq provider in the provider picker. Open models means open-weight AI models, and voice refers to spoken conversation with the assistant, where the reply has to arrive quickly."
@@ -2691,7 +2700,7 @@
       "comment" : "Tooltip on the button that floats the video in a system Picture in Picture window. It is used twice: beside the address field, left of the speaker, for the tab you are looking at, and on the media player in the sidebar. Apple feature name; use the platform glossary. Title Case."
     },
     "Pin" : {
-      "comment" : "Small button in the extensions overflow popover that puts the extension’s button back on the toolbar. Imperative verb, in the sense of fixing something in place. Very tight space — a chip only a few characters wide."
+      "comment" : "Two surfaces share it: the small button in the extensions overflow popover that puts the extension’s button back on the toolbar, and the label in the gap a dragged sidebar row will drop into when the drop pins the tab. Imperative verb, in the sense of fixing something in place. Very tight space — a chip only a few characters wide."
     },
     "Pin This Page" : {
       "comment" : "Command that fixes the page to the tab, so the tab can always return to it and sits in the pinned rows at the top of the sidebar. Three surfaces share it: the context menu of a tab row in the sidebar, the search palette, and the File menu on ⌘D. Title Case. “Pin” is the browser's verb for that anchor; there is no separate bookmarks list."
@@ -2746,6 +2755,9 @@
     },
     "Preparing…" : {
 
+    },
+    "Press ⌘K to search, open a page, or ask a question." : {
+      "comment" : "First of three things to try, on the last onboarding screen. ⌘K opens the command palette; keep the shortcut as it is."
     },
     "Press a shortcut. Press Escape to cancel." : {
       "comment" : "Instruction shown under the keyboard-shortcut field while it is listening for a keystroke. Escape is the name of the key — use the name printed on keyboards in the target language."
@@ -3500,6 +3512,9 @@
     "Summarize a link on hover" : {
 
     },
+    "Summarize Link" : {
+      "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It shows the card that says what the linked page is about, which a Shift-hover shows otherwise. Title Case, imperative verb."
+    },
     "Swap Pages" : {
       "comment" : "The same command as Swap Panes, on the context menu of a page and of a sidebar row holding two tabs. Title Case. It says pages here because the menu is on the page itself."
     },
@@ -3511,9 +3526,6 @@
     },
     "Switch Tabs" : {
       "comment" : "Tool name in assistant settings: switching between tabs."
-    },
-    "Summarize Link" : {
-      "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It shows the card that says what the linked page is about, which a Shift-hover shows otherwise. Title Case, imperative verb."
     },
     "Switch to Tab" : {
       "comment" : "Section heading in the address bar results list over rows for tabs that are already open; choosing one switches to it rather than loading a second copy. Title Case."
@@ -3822,6 +3834,9 @@
     "This website’s identity can’t be verified" : {
 
     },
+    "Three things to try." : {
+      "comment" : "Caption under the You’re set heading on the last onboarding screen, introducing the three lines below it."
+    },
     "Tint selected tab" : {
       "comment" : "Title of the Appearance settings switch that colors the selected sidebar tab using the website icon, and the same row in Settings search. Sentence case; tint is a verb."
     },
@@ -3921,6 +3936,9 @@
     "Unmute This Tab" : {
       "comment" : "Tooltip on the toolbar's speaker button once the current tab has been silenced. Title Case."
     },
+    "Unpin" : {
+      "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop takes the row out of the pinned section. Imperative verb, one word, the same sense as Unpin Tab. Very tight space."
+    },
     "Unpin Tab" : {
       "comment" : "Command that takes the pin off a tab, which then drops out of the pinned rows. Four surfaces share it: the context menu of a pinned tab row, the minus button on that row, the toolbar button while the pinned page is on screen, and the search palette. Title Case."
     },
@@ -3945,9 +3963,6 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-    "Unpin" : {
-      "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop takes the row out of the pinned section. Imperative verb, one word, the same sense as Unpin Tab. Very tight space."
-    },
             "state" : "new",
             "value" : "Downloading %@"
           }
@@ -4235,21 +4250,6 @@
     },
     "Zoom Out" : {
       "comment" : "Menu bar command under View, shortcut ⌘-, and the same command in the site controls menu; it makes the web page smaller. Title Case, imperative verb."
-    },
-    "A quiet browser with an assistant built in." : {
-      "comment" : "Caption under the Welcome to Linen heading on the first onboarding screen. Quiet describes the browser as calm and unobtrusive."
-    },
-    "Three things to try." : {
-      "comment" : "Caption under the You’re set heading on the last onboarding screen, introducing the three lines below it."
-    },
-    "Press ⌘K to search, open a page, or ask a question." : {
-      "comment" : "First of three things to try, on the last onboarding screen. ⌘K opens the command palette; keep the shortcut as it is."
-    },
-    "Hold Shift and point at a link to read what the page says." : {
-      "comment" : "Second of three things to try, on the last onboarding screen. Pointing at a link with Shift held shows a summary of the page."
-    },
-    "Hold Shift and click a link to read it over the page." : {
-      "comment" : "Third of three things to try, on the last onboarding screen. Shift and click opens the link in a panel above the current page."
     }
   },
   "version" : "1.0"
