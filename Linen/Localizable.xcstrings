@@ -1189,6 +1189,9 @@
     "Close Tab" : {
       "comment" : "Command that closes the current tab: a File menu item and a tab context-menu item. Title Case, as menu commands are."
     },
+    "Close Summary" : {
+      "comment" : "Tooltip on the button in the corner of the card that says what a linked page is about, which puts the card away. Title Case."
+    },
     "Close Tabs" : {
       "comment" : "Button that goes ahead and closes them, in the confirmation alert raised by “Close N Tabs”. Title Case. It names the action rather than saying OK."
     },
@@ -2540,6 +2543,9 @@
     "Open Location…" : {
       "comment" : "Menu bar command under File that puts the cursor in the address bar; shortcut ⌘L. Title Case and a real ellipsis character. Use established platform terminology."
     },
+    "Open Link in Peek" : {
+      "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It opens the link in a Peek, the panel a Shift-click opens over the page — the same thing, without the keyboard. Title Case."
+    },
     "Open models served fast enough for voice." : {
       "comment" : "One-line description of the Groq provider in the provider picker. Open models means open-weight AI models, and voice refers to spoken conversation with the assistant, where the reply has to arrive quickly."
     },
@@ -3505,6 +3511,9 @@
     },
     "Switch Tabs" : {
       "comment" : "Tool name in assistant settings: switching between tabs."
+    },
+    "Summarize Link" : {
+      "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It shows the card that says what the linked page is about, which a Shift-hover shows otherwise. Title Case, imperative verb."
     },
     "Switch to Tab" : {
       "comment" : "Section heading in the address bar results list over rows for tabs that are already open; choosing one switches to it rather than loading a second copy. Title Case."

@@ -56,6 +56,8 @@ final class TabWebView: WKWebView {
     }
 
     var onContextDownload: ((WKDownload, URL?) -> Void)?
+    var onPeekLink: ((URL) -> Void)?
+    var onSummarizeLink: ((URL, CGPoint?) -> Void)?
     var onPageActivity: ((PageActivitySignal) -> Void)?
     var hasPageActivityMonitor = false
     var onScrollPosition: ((Double) -> Void)?
@@ -114,8 +116,10 @@ final class TabWebView: WKWebView {
 
     private var contextImageURL: URL?
     private var contextLinkURL: URL?
+    private var contextLinkAnchor: CGPoint?
 
     private static let reloadItem = "WKMenuItemIdentifierReload"
+    private static let openLinkItem = "WKMenuItemIdentifierOpenLinkInNewWindow"
 
     private static let downloadItems: Set<String> = [
         "WKMenuItemIdentifierDownloadImage",
@@ -131,6 +135,7 @@ final class TabWebView: WKWebView {
 
         contextImageURL = nil
         contextLinkURL = nil
+        contextLinkAnchor = nil
         evaluateJavaScript(Self.hitTest(x: x, y: y)) { [weak self] value, _ in
             guard let self, let json = value as? String,
                   let data = json.data(using: .utf8),
@@ -138,6 +143,9 @@ final class TabWebView: WKWebView {
             else { return }
             contextImageURL = found["image"].flatMap(URL.init(string:))
             contextLinkURL = found["link"].flatMap(URL.init(string:))
+            contextLinkAnchor = found["linkBottom"]
+                .flatMap { Double($0) }
+                .map { CGPoint(x: local.x, y: $0 * zoom) }
         }
 
         super.rightMouseDown(with: event)
@@ -146,8 +154,13 @@ final class TabWebView: WKWebView {
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
         var reloadIndex: Int?
+        var linkIndex: Int?
         for (index, item) in menu.items.enumerated() {
             guard let identifier = item.identifier?.rawValue else { continue }
+
+            if identifier == Self.openLinkItem {
+                linkIndex = index
+            }
 
             if let title = Self.newWindowItems[identifier] {
                 item.title = String(localized: title)
@@ -164,12 +177,55 @@ final class TabWebView: WKWebView {
             }
         }
 
-        guard let reloadIndex else { return }
-        var index = reloadIndex + 1
-        for item in pageItems() {
-            menu.insertItem(item, at: index)
-            index += 1
+        var added = 0
+        if let linkIndex {
+            added = insert(linkItems(), into: menu, after: linkIndex)
         }
+        if let reloadIndex {
+            let shifted = linkIndex.map { $0 < reloadIndex ? added : 0 } ?? 0
+            _ = insert(pageItems(), into: menu, after: reloadIndex + shifted)
+        }
+        if linkIndex != nil {
+            TabContextMenu.sinkLinkTail(in: menu)
+        }
+        TabContextMenu.sinkInspect(in: menu)
+    }
+
+    @discardableResult
+    private func insert(_ items: [NSMenuItem], into menu: NSMenu, after index: Int) -> Int {
+        for (offset, item) in items.enumerated() {
+            menu.insertItem(item, at: index + 1 + offset)
+        }
+        return items.count
+    }
+
+    private func linkItems() -> [NSMenuItem] {
+        let peek = NSMenuItem(
+            title: String(localized: "Open Link in Peek"),
+            action: #selector(peekAtContextLink),
+            keyEquivalent: ""
+        )
+        peek.target = self
+        peek.image = NSImage(systemSymbolName: "rectangle.portrait.on.rectangle.portrait", accessibilityDescription: nil)
+
+        let summary = NSMenuItem(
+            title: String(localized: "Summarize Link"),
+            action: #selector(summarizeContextLink),
+            keyEquivalent: ""
+        )
+        summary.target = self
+        summary.image = NSImage(systemSymbolName: "text.line.first.and.arrowtriangle.forward", accessibilityDescription: nil)
+        return [peek, summary]
+    }
+
+    @objc private func peekAtContextLink() {
+        guard let url = contextLinkURL else { return }
+        onPeekLink?(url)
+    }
+
+    @objc private func summarizeContextLink() {
+        guard let url = contextLinkURL else { return }
+        onSummarizeLink?(url, contextLinkAnchor)
     }
 
     private func pageItems() -> [NSMenuItem] {
@@ -214,9 +270,12 @@ final class TabWebView: WKWebView {
           var img = el.tagName === 'IMG' ? el : el.closest('img');
           var media = el.tagName === 'VIDEO' || el.tagName === 'AUDIO' ? el : el.closest('video, audio');
           var anchor = el.closest('a[href]');
+          var box = anchor ? anchor.getBoundingClientRect() : null;
+          var under = box ? Math.min(box.bottom, \(y) + 28) : 0;
           return JSON.stringify({
             image: img ? (img.currentSrc || img.src || '') : (media ? (media.currentSrc || media.src || '') : ''),
-            link: anchor ? anchor.href : ''
+            link: anchor ? anchor.href : '',
+            linkBottom: box ? String(under) : ''
           });
         })();
         """

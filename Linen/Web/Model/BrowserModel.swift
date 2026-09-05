@@ -63,6 +63,7 @@ final class BrowserModel {
     var onPictureInPictureChanged: ((BrowserTab, Bool) -> Void)?
     var onLinkHovered: ((BrowserTab, URL?, NSEvent.ModifierFlags, CGPoint) -> Void)?
     var onOpenInPeek: ((BrowserTab?, URL, CGPoint) -> Void)?
+    var onSummarizeLink: ((BrowserTab?, URL, CGPoint) -> Void)?
     var onPictureReturnExpected: ((BrowserTab) -> Void)?
 
     var activeTab: BrowserTab? {
@@ -119,6 +120,9 @@ final class BrowserModel {
         }
         tab.onOpenInPeek = { [weak self, weak tab] url, origin in
             self?.onOpenInPeek?(tab, url, origin)
+        }
+        tab.onSummarizeLink = { [weak self, weak tab] url, anchor in
+            self?.onSummarizeLink?(tab, url, anchor)
         }
         tab.onCloseRequested = { [weak self, weak tab] in
             guard let tab else { return }
@@ -223,6 +227,7 @@ final class BrowserModel {
     func makePeekTab(_ url: URL) -> BrowserTab {
         let tab = makeTab(for: url)
         tab.onOpenInPeek = nil
+        tab.onSummarizeLink = nil
         tab.load(url, transition: .link)
         return tab
     }

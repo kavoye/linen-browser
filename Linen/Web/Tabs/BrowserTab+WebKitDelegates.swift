@@ -147,7 +147,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab?.noteHoveredLink(url, modifiers: flags, at: Self.pointer(in: webView))
     }
 
-    private static func pointer(in webView: WKWebView) -> CGPoint {
+    static func pointer(in webView: WKWebView) -> CGPoint {
         guard let window = webView.window else { return .zero }
         let inWindow = window.convertPoint(fromScreen: NSEvent.mouseLocation)
         let inView = webView.convert(inWindow, from: nil)

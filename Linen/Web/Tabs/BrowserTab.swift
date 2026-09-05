@@ -231,6 +231,7 @@ final class BrowserTab: Identifiable {
     var onNewWindow: ((WKWebView, Bool) -> Void)?
     var onOpenInNewTab: ((URL, Bool) -> Void)?
     var onOpenInPeek: ((URL, CGPoint) -> Void)?
+    var onSummarizeLink: ((URL, CGPoint) -> Void)?
     var onCloseRequested: (() -> Void)?
     var onPictureInPictureChanged: ((Bool) -> Void)?
     var onPictureReturnExpected: (() -> Void)?
@@ -316,6 +317,14 @@ final class BrowserTab: Identifiable {
         webView.uiDelegate = delegate
         (webView as? TabWebView)?.onContextDownload = { [weak self] download, source in
             self?.onDownload?(download, source)
+        }
+        (webView as? TabWebView)?.onPeekLink = { [weak self] url in
+            guard let self else { return }
+            onOpenInPeek?(url, TabNavigationDelegate.pointer(in: webView))
+        }
+        (webView as? TabWebView)?.onSummarizeLink = { [weak self] url, anchor in
+            guard let self else { return }
+            onSummarizeLink?(url, anchor ?? TabNavigationDelegate.pointer(in: webView))
         }
         if let tabView = webView as? TabWebView {
             tabView.onPageActivity = { [weak self] signal in
@@ -451,6 +460,8 @@ final class BrowserTab: Identifiable {
         outgoing.uiDelegate = nil
         (outgoing as? TabWebView)?.onZoomChanged = nil
         (outgoing as? TabWebView)?.onContextDownload = nil
+        (outgoing as? TabWebView)?.onPeekLink = nil
+        (outgoing as? TabWebView)?.onSummarizeLink = nil
         (outgoing as? TabWebView)?.onPageActivity = nil
         (outgoing as? TabWebView)?.onFaviconDeclarationChange = nil
         outgoing.removeFromSuperview()
@@ -514,6 +525,7 @@ final class BrowserTab: Identifiable {
         onNewWindow = nil
         onOpenInNewTab = nil
         onOpenInPeek = nil
+        onSummarizeLink = nil
         onCloseRequested = nil
         onPictureInPictureChanged = nil
         onPictureReturnExpected = nil
@@ -527,6 +539,8 @@ final class BrowserTab: Identifiable {
         view.navigationDelegate = nil
         view.uiDelegate = nil
         (view as? TabWebView)?.onContextDownload = nil
+        (view as? TabWebView)?.onPeekLink = nil
+        (view as? TabWebView)?.onSummarizeLink = nil
         (view as? TabWebView)?.onZoomChanged = nil
     }
 

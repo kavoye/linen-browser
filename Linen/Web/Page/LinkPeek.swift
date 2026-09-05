@@ -29,6 +29,7 @@ final class LinkPeek {
         var anchor: CGPoint
         var snapshot: NSImage?
         var phase: Phase
+        var isStreaming = false
 
         var host: String {
             url.displayHost ?? ""
@@ -61,6 +62,7 @@ final class LinkPeek {
     @ObservationIgnored private var remembered: [URL: Remembered] = [:]
     @ObservationIgnored private var order: [URL] = []
     @ObservationIgnored private var isSuppressed = false
+    private(set) var isHeld = false
 
     var isEnabled: Bool {
         BrowserSettings.shared.peeksAtLinks && LinkSummarizer.isAvailable
@@ -70,9 +72,13 @@ final class LinkPeek {
 
     func begin() {
         guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .scrollWheel]) { [weak self] event in
             MainActor.assumeIsolated {
-                self?.triggerChanged(isDown: event.modifierFlags.contains(Self.trigger))
+                if event.type == .scrollWheel {
+                    self?.scrolled()
+                } else {
+                    self?.triggerChanged(isDown: event.modifierFlags.contains(Self.trigger))
+                }
             }
             return event
         }
@@ -101,14 +107,24 @@ final class LinkPeek {
     func hovered(_ url: URL?, flags: NSEvent.ModifierFlags, tabID: UUID, anchor: CGPoint) {
         guard BrowserSettings.shared.peeksAtLinks, !isSuppressed else { return }
         guard let url, LinkPeekLoader.canPeek(url) else {
-            forget()
+            candidate = nil
+            release()
             return
         }
         candidate = Candidate(url: url, tabID: tabID, anchor: anchor)
         guard flags.contains(Self.trigger) else {
-            dismiss()
+            release()
             return
         }
+        isHeld = false
+        start()
+    }
+
+    func show(_ url: URL, tabID: UUID, anchor: CGPoint) {
+        guard BrowserSettings.shared.peeksAtLinks, !isSuppressed else { return }
+        guard LinkPeekLoader.canPeek(url), isEnabled else { return }
+        candidate = Candidate(url: url, tabID: tabID, anchor: anchor)
+        isHeld = true
         start()
     }
 
@@ -118,6 +134,16 @@ final class LinkPeek {
     }
 
     func dismiss() {
+        isHeld = false
+        clear()
+    }
+
+    private func release() {
+        guard !isHeld else { return }
+        clear()
+    }
+
+    private func clear() {
         guard shown != nil || pending != nil || work != nil else { return }
         work?.cancel()
         work = nil
@@ -137,9 +163,14 @@ final class LinkPeek {
         isSuppressed = false
     }
 
+    private func scrolled() {
+        guard shown != nil else { return }
+        dismiss()
+    }
+
     private func triggerChanged(isDown: Bool) {
         guard isDown else {
-            dismiss()
+            release()
             return
         }
         start()
@@ -179,7 +210,10 @@ final class LinkPeek {
                 settle(target.url, to: Self.emptyPhase(for: page))
                 return
             }
-            guard let summary = await LinkSummarizer.summarize(page, url: target.url) else {
+            let streamed = await LinkSummarizer.summarize(page, url: target.url) { [weak self] partial in
+                self?.stream(partial, for: target.url)
+            }
+            guard let summary = streamed else {
                 settle(target.url, to: .failed)
                 return
             }
@@ -204,14 +238,35 @@ final class LinkPeek {
         }
     }
 
+    private func stream(_ summary: LinkPeekSummary, for url: URL) {
+        guard !Task.isCancelled, shown?.url == url else { return }
+        guard case .ready = shown?.phase else {
+            withAnimation(Theme.Motion.settle) {
+                shown?.phase = .ready(summary)
+                shown?.isStreaming = true
+            }
+            return
+        }
+        shown?.phase = .ready(summary)
+    }
+
     private func settle(_ url: URL, to phase: Phase) {
         guard !Task.isCancelled, shown?.url == url else { return }
         withAnimation(Theme.Motion.settle) {
             shown?.phase = phase
+            shown?.isStreaming = false
         }
     }
 
-    private func remember(_ summary: LinkPeekSummary, snapshot: NSImage?, for url: URL) {
+    func keptSummary(for url: URL) -> LinkPeekSummary? {
+        remembered[url]?.summary
+    }
+
+    func keptSnapshot(for url: URL) -> NSImage? {
+        remembered[url]?.snapshot
+    }
+
+    func remember(_ summary: LinkPeekSummary, snapshot: NSImage?, for url: URL) {
         if remembered[url] == nil {
             order.append(url)
         }

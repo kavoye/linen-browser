@@ -49,6 +49,16 @@ struct LinkPeekTests {
         #expect(LinkSummarizer.summary(from: gist) == nil)
     }
 
+    @Test func aSummaryStandsOnEitherHalfAlone() {
+        let sentence = LinkGist(gist: "A hosted database with a free tier.", points: [])
+        #expect(LinkSummarizer.summary(from: sentence)?.gist == "A hosted database with a free tier.")
+        #expect(LinkSummarizer.summary(from: sentence)?.points.isEmpty == true)
+
+        let takeaways = LinkGist(gist: " ", points: ["Price: $12 a month"])
+        #expect(LinkSummarizer.summary(from: takeaways)?.gist.isEmpty == true)
+        #expect(LinkSummarizer.summary(from: takeaways)?.points.count == 1)
+    }
+
     @Test func aSummaryKeepsAtMostFourTakeaways() {
         let gist = LinkGist(
             gist: "A hosted database with a free tier.",

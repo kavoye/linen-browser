@@ -74,6 +74,10 @@ extension AppCoordinator {
         browser.onOpenInPeek = { [weak self] tab, url, origin in
             self?.openPeek(url: url, from: tab, at: origin)
         }
+        browser.onSummarizeLink = { [weak self] tab, url, anchor in
+            guard let self, let tab else { return }
+            linkPeek.show(url, tabID: tab.id, anchor: anchor)
+        }
         linkPeek.begin()
         onboarding.beginIfNeeded()
         if onboarding.isPresented {

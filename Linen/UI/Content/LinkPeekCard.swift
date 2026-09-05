@@ -13,20 +13,25 @@ struct LinkPeekOverlay: View {
     private static let gap: CGFloat = 18
     private static let margin: CGFloat = 12
     private static let pointerInset: CGFloat = 44
+    private static let streamedHeight: CGFloat = 260
 
     var body: some View {
         GeometryReader { proxy in
             if let shown = peek.shown, shown.tabID == tabID {
-                LinkPeekCard(shown: shown)
+                if peek.isHeld {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { peek.dismiss() }
+                }
+                LinkPeekCard(shown: shown, isHeld: peek.isHeld) { peek.dismiss() }
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { cardSize = $0 }
                     .offset(
                         x: horizontal(for: shown.anchor, in: proxy.size),
-                        y: vertical(for: shown.anchor, in: proxy.size)
+                        y: vertical(for: shown.anchor, in: proxy.size, streaming: shown.isStreaming)
                     )
                     .opacity(cardSize == .zero ? 0 : 1)
             }
         }
-        .allowsHitTesting(false)
     }
 
     private func horizontal(for anchor: CGPoint, in size: CGSize) -> CGFloat {
@@ -35,21 +40,24 @@ struct LinkPeekOverlay: View {
         return min(max(ideal, Self.margin), limit)
     }
 
-    private func vertical(for anchor: CGPoint, in size: CGSize) -> CGFloat {
+    private func vertical(for anchor: CGPoint, in size: CGSize, streaming: Bool) -> CGFloat {
+        let height = streaming ? max(cardSize.height, Self.streamedHeight) : cardSize.height
         let below = anchor.y + Self.gap
-        if below + cardSize.height + Self.margin <= size.height {
+        if below + height + Self.margin <= size.height {
             return below
         }
-        let above = anchor.y - Self.gap - cardSize.height
+        let above = anchor.y - Self.gap - height
         if above >= Self.margin {
             return above
         }
-        return max(size.height - cardSize.height - Self.margin, Self.margin)
+        return max(size.height - height - Self.margin, Self.margin)
     }
 }
 
 private struct LinkPeekCard: View {
     let shown: LinkPeek.Shown
+    let isHeld: Bool
+    let onClose: () -> Void
 
     static let width: CGFloat = 328
     private static let imageHeight: CGFloat = 132
@@ -77,6 +85,24 @@ private struct LinkPeekCard: View {
             in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
         )
         .shadow(color: .black.opacity(0.3), radius: 18, y: 8)
+        .allowsHitTesting(isHeld)
+        .overlay(alignment: .topTrailing) {
+            close
+        }
+    }
+
+    private var close: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 20, height: 20)
+                .background(Theme.windowBackground, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(Text("Close Summary"))
+        .padding(7)
     }
 
     @ViewBuilder
@@ -84,8 +110,7 @@ private struct LinkPeekCard: View {
         switch phase {
         case .loading:
             HStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
+                ComposingOrb(size: 16)
                 Text("Reading this page…")
                     .font(Theme.Font.body)
                     .foregroundStyle(.secondary)
@@ -149,10 +174,15 @@ private struct LinkPeekCard: View {
                     .font(Theme.Font.caption)
                     .foregroundStyle(.tertiary)
 
-                Text("AI summary, can be wrong")
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+                if shown.isStreaming {
+                    ComposingOrb(size: 12)
+                        .opacity(0.8)
+                } else {
+                    Text("AI summary, can be wrong")
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 0)
