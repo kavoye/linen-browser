@@ -97,6 +97,8 @@ nonisolated struct SplitDropPlan: Equatable, Sendable {
         }
     }
 
+    static let stackedBand: CGFloat = 0.25
+
     func target(at point: CGPoint) -> Target? {
         guard let (anchor, home) = panes.first(where: { $0.value.contains(point) }) else {
             return nearest(to: point, among: targets)
@@ -110,9 +112,9 @@ nonisolated struct SplitDropPlan: Equatable, Sendable {
         if fullWidth, fullHeight {
             let dx = (point.x - home.midX) / max(home.width, 1)
             let dy = (point.y - home.midY) / max(home.height, 1)
-            edge = abs(dx) >= abs(dy)
-                ? (dx < 0 ? .left : .right)
-                : (dy < 0 ? .top : .bottom)
+            edge = abs(dy) > Self.stackedBand && abs(dy) > abs(dx)
+                ? (dy < 0 ? .top : .bottom)
+                : (dx < 0 ? .left : .right)
         } else if fullWidth {
             edge = point.x < home.midX ? .left : .right
         } else if fullHeight {

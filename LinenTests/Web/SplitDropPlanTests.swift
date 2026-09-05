@@ -165,6 +165,27 @@ struct SplitDropPlanTests {
         #expect(plan.target(at: CGPoint(x: 500, y: 740))?.edge == .bottom)
     }
 
+    /// The band that stacks is a quarter of the page at either end. Nearer the
+    /// middle than that, a drop opens beside the page rather than under it.
+    @Test func theBandThatStacksIsAQuarterOfThePage() {
+        let plan = SplitDropPlan(singlePage: a, size: size)
+
+        #expect(plan.target(at: CGPoint(x: 500, y: 191))?.edge == .top)
+        #expect(plan.target(at: CGPoint(x: 500, y: 609))?.edge == .bottom)
+        #expect(plan.target(at: CGPoint(x: 490, y: 210))?.edge == .left)
+        #expect(plan.target(at: CGPoint(x: 510, y: 590))?.edge == .right)
+    }
+
+    @Test func theMiddleOfAPageStaysSideBySide() {
+        let plan = SplitDropPlan(singlePage: a, size: size)
+        for x in stride(from: CGFloat(40), through: 460, by: 60) {
+            #expect(plan.target(at: CGPoint(x: x, y: 300))?.edge == .left)
+            #expect(plan.target(at: CGPoint(x: size.width - x, y: 500))?.edge == .right)
+        }
+        #expect(plan.target(at: CGPoint(x: 40, y: 80))?.edge == .left)
+        #expect(plan.target(at: CGPoint(x: 960, y: 720))?.edge == .right)
+    }
+
     // MARK: - Two pages
 
     /// The window is four squares, and a drag sees nothing smaller: each
