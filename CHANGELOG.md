@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.6.1
+
+### New
+
+- Right-click a link for Open Link in Peek and Summarize Link.
+- Sign in to websites with a passkey.
+
+### Improved
+
+- Moving tabs, folders and tab pinning in the sidebar is clearer.
+- The assistant shows the same thinking mark in the side panel and on the
+  summary card.
+
+### Fixed
+
+- Linen could quit unexpectedly when a website stopped responding.
+- With the side panel open, the page ignored the pointer.
+
+### Removed
+
+- Intel Macs. Linen needs a Mac with Apple silicon.
+- Dropping a tab on another tab no longer makes a folder. Use New Folder, or
+  the tab’s menu.
+
 ## 0.6.0
 
 ### New
