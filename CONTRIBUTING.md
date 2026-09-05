@@ -20,8 +20,8 @@ xcodebuild test \
   CODE_SIGN_ENTITLEMENTS=
 ```
 
-The command removes the entitlements, because the keychain access group needs
-a provisioning profile. CI runs the same command. To build the app in Xcode,
+The command removes the entitlements. The keychain access group and the passkey
+entitlement both need a provisioning profile. CI runs the same command. To build the app in Xcode,
 set **Team** in **Signing & Capabilities** to your own Apple developer team
 first. See [Building](README.md#building).
 

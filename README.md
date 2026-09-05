@@ -131,9 +131,9 @@ Then set up signing:
 3. Build and run the `Linen` scheme. Swift Package Manager downloads the
    dependencies at the first build.
 
-The app declares entitlements for the microphone, the camera, location, and
-the keychain. Each one needs a signed build. To run the tests without a
-signing certificate, remove the entitlements:
+The app declares entitlements for the microphone, the camera, location, the
+keychain, and passkeys. Each one needs a signed build. To run the tests without
+a signing certificate, remove the entitlements:
 
 ```bash
 xcodebuild test -project Linen.xcodeproj -scheme Linen \
@@ -147,11 +147,23 @@ xcodebuild test -project Linen.xcodeproj -scheme Linen \
 A build without entitlements cannot store an API key in the keychain. Use a
 signed build to test the assistant.
 
+Apple approves the passkey entitlement for one team only. Your own team does not
+have it, and Xcode stops the build with a provisioning error. Remove these two
+lines from `Linen/Linen.entitlements` to build with your own team:
+
+```xml
+<key>com.apple.developer.web-browser.public-key-credential</key>
+<true/>
+```
+
+Passkeys do not work in that build. Everything else does.
+
 ## Known limitations
 
-**No password autofill, no passkeys.** macOS does not offer Password AutoFill
-to other browsers, and passkeys work only for websites tied to an app. Use a
-password manager extension everywhere else.
+**No password autofill.** macOS does not offer Password AutoFill to other
+browsers. Use a password manager extension. Passkeys are not affected. A website
+can make a passkey and sign you in with it, from the same iCloud Keychain that
+Safari uses.
 
 **Bookmarks are tabs.** There is no separate bookmarks manager. Pinned pages
 and folders do that job. To bring bookmarks in, export them to an HTML file

@@ -214,7 +214,7 @@ jobs:
 
           codesign --verify --deep --strict --verbose=2 "build/export/$APP.app"
 
-          # Both halves of the keychain grant, checked before the 30-minute
+          # Both halves of each grant, checked before the 30-minute
           # notarisation rather than by the `spctl` assessment after it.
           if [ ! -f "build/export/$APP.app/Contents/embedded.provisionprofile" ]; then
             echo "::error::No embedded profile. Gatekeeper will refuse to launch the app."
@@ -223,6 +223,9 @@ jobs:
           codesign -d --entitlements - --xml "build/export/$APP.app" 2>/dev/null \
             | plutil -extract keychain-access-groups raw -o - - > /dev/null 2>&1 \
             || { echo "::error::keychain-access-groups is missing: API keys cannot be saved."; exit 1; }
+          codesign -d --entitlements - --xml "build/export/$APP.app" 2>/dev/null \
+            | plutil -extract 'com\.apple\.developer\.web-browser\.public-key-credential' raw -o - - > /dev/null 2>&1 \
+            || { echo "::error::web-browser.public-key-credential is missing: passkeys cannot be used."; exit 1; }
 
       - name: Notarize and staple
         env:

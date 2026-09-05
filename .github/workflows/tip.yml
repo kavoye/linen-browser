@@ -191,6 +191,9 @@ jobs:
           codesign -d --entitlements - --xml "build/export/$APP.app" 2>/dev/null \
             | plutil -extract keychain-access-groups raw -o - - > /dev/null 2>&1 \
             || { echo "::error::keychain-access-groups is missing: API keys cannot be saved."; exit 1; }
+          codesign -d --entitlements - --xml "build/export/$APP.app" 2>/dev/null \
+            | plutil -extract 'com\.apple\.developer\.web-browser\.public-key-credential' raw -o - - > /dev/null 2>&1 \
+            || { echo "::error::web-browser.public-key-credential is missing: passkeys cannot be used."; exit 1; }
 
       # There is no disk image. A preview build only ever arrives through
       # Sparkle, and skipping it also skips a second notarisation.

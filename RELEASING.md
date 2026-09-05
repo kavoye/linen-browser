@@ -87,36 +87,46 @@ signs with `--timestamp`.
 
 ## One-time: the provisioning profile
 
-The app stores API keys in the data-protection keychain. That keychain refuses
-an item from code that has no keychain access group, so `Linen.entitlements`
-declares `keychain-access-groups`. A Developer ID signature can only carry that
-entitlement when an embedded profile authorizes it. Gatekeeper refuses to launch
-an app that declares the entitlement without the profile.
+`Linen.entitlements` declares two restricted entitlements. The app stores API
+keys in the data-protection keychain. That keychain refuses an item from code
+that has no keychain access group, so the file declares `keychain-access-groups`.
+The app also lets a website use a passkey, so the file declares
+`com.apple.developer.web-browser.public-key-credential`. A Developer ID
+signature can only carry a restricted entitlement when an embedded profile
+authorizes it. Gatekeeper refuses to launch an app that declares an entitlement
+without the profile.
 
 Once, in the Apple Developer portal:
 
 1. Open Certificates, Identifiers & Profiles › Identifiers.
 2. Select the `com.kavoye.Linen` App ID, or register it.
-3. Open Profiles. Add a profile.
-4. Select the Developer ID type, under Distribution.
-5. Select the `com.kavoye.Linen` App ID and your Developer ID Application
+3. Enable the Web Browser Public Key Credential Requests capability. Apple
+   assigns this capability to the account. You must also enable it on the
+   App ID.
+4. Open Profiles. Add a profile.
+5. Select the Developer ID type, under Distribution.
+6. Select the `com.kavoye.Linen` App ID and your Developer ID Application
    certificate.
-6. Give the profile a name, for example `Linen Developer ID`. Do not use the
+7. Give the profile a name, for example `Linen Developer ID`. Do not use the
    characters `&`, `<` or `>`. The export step puts the name in a plist.
-7. Download the profile as `Linen.provisionprofile`.
-8. Run this command. The output must contain `keychain-access-groups`:
+8. Download the profile as `Linen.provisionprofile`.
+9. Run this command. The output must contain `keychain-access-groups` and
+   `com.apple.developer.web-browser.public-key-credential`:
 
    ```bash
    security cms -D -i Linen.provisionprofile | plutil -extract Entitlements xml1 -o - -
    ```
 
-9. Put the profile in the `DEVELOPER_ID_PROVISIONING_PROFILE` secret below.
+10. Put the profile in the `DEVELOPER_ID_PROVISIONING_PROFILE` secret below.
 
 The App ID prefix gives the access group. The portal has no Keychain Sharing
 capability. That switch is in Xcode, and it only writes the entitlements file.
+The passkey capability is the opposite. Only the portal can enable it. A build
+fails at the provisioning step until you do.
 
-Make the profile again when it expires. The release then fails at the Install
-provisioning profile step, and at the two checks after the export.
+Make the profile again when it expires, and when you add a restricted
+entitlement. The release then fails at the Install provisioning profile step,
+and at the checks after the export.
 
 ## One-time: who can release
 
