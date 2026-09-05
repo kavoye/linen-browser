@@ -493,7 +493,7 @@ private struct ChatTurnFooter: View {
         HStack(spacing: 5) {
             if showsTheTime {
                 if isThinking {
-                    TypingDots()
+                    ComposingOrb(size: 15)
                         .frame(width: Metrics.action, height: Metrics.action)
                 } else if let providerID {
                     ProviderBrandIcon(providerID: providerID, size: 12)
@@ -580,26 +580,6 @@ private struct ChatAction: View {
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
         .help(Text(help))
-    }
-}
-
-private struct TypingDots: View {
-    @State private var pulsing = false
-
-    var body: some View {
-        HStack(spacing: 2.5) {
-            ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .frame(width: 3.5, height: 3.5)
-                    .opacity(pulsing ? 1 : 0.25)
-                    .animation(
-                        .easeInOut(duration: 0.55).repeatForever().delay(Double(index) * 0.18),
-                        value: pulsing
-                    )
-            }
-        }
-        .onAppear { pulsing = true }
-        .accessibilityHidden(true)
     }
 }
 
