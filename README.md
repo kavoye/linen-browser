@@ -24,7 +24,7 @@ and it is yours again.
 
 <a href="https://github.com/kavoye/linen-browser/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/kavoye/linen-browser/ci.yml?branch=main&style=flat-square&label=CI" alt="CI status"></a>
 <img src="https://img.shields.io/badge/macOS-26%2B-1c1c1e?style=flat-square" alt="macOS 26 or later">
-<img src="https://img.shields.io/badge/universal-Apple%20silicon%20%2B%20Intel-1c1c1e?style=flat-square" alt="Universal binary">
+<img src="https://img.shields.io/badge/Apple%20silicon-1c1c1e?style=flat-square" alt="Apple silicon">
 <img src="https://img.shields.io/badge/license-Apache%202.0-1c1c1e?style=flat-square" alt="Apache 2.0 license">
 
 https://github.com/user-attachments/assets/a4a28bdd-6751-4f02-84a5-f0f7fbb87153
@@ -111,12 +111,8 @@ one.
 ## Requirements
 
 - macOS 26 or later
-- A Mac with Apple silicon, or an Intel Mac that runs macOS 26
+- A Mac with Apple silicon
 - Xcode 26.5 or later, to build the app from source
-
-The app is a universal binary. An Intel Mac runs the browser, but voice input
-and Apple Intelligence need Apple silicon. On an Intel Mac, add a provider key
-to use the assistant.
 
 ## Building
 
@@ -167,10 +163,6 @@ in the sidebar. History does not come across.
 
 **No web push.** Website notifications work while Linen is open. Websites
 cannot send notifications after you quit.
-
-**No voice on Intel.** Apple ships the on-device speech and model frameworks
-only for Apple silicon. The browser runs on an Intel Mac. Add a provider key
-to use the assistant there.
 
 ## Project layout
 

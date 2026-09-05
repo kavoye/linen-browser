@@ -72,8 +72,6 @@ jobs:
       # No entitlements: `keychain-access-groups` needs a provisioning profile,
       # and demanding one here would mean a signing certificate for every test
       # run. Nothing under test reaches the keychain.
-      # ONLY_ACTIVE_ARCH=NO: only the release archive is universal, and a second
-      # xcodebuild rebuilds everything rather than reuse these objects.
       - name: Test
         run: |
           set -o pipefail
@@ -85,7 +83,6 @@ jobs:
             -enableCodeCoverage YES \
             -parallel-testing-enabled NO \
             -skipMacroValidation -skipPackagePluginValidation \
-            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
