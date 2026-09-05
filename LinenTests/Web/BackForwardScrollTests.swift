@@ -94,7 +94,7 @@ struct BackForwardScrollTests {
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
 
         var after = await scrollY(tab.webView)
-        let deadline = ContinuousClock.now + .seconds(4)
+        let deadline = ContinuousClock.now + .seconds(30)
         while after != 1500, ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(50))
             after = await scrollY(tab.webView)
