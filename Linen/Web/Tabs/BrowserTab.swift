@@ -783,6 +783,7 @@ final class BrowserTab: Identifiable {
     private static let coverCeiling: Duration = .milliseconds(400)
 
     @ObservationIgnored private var coverHold: Task<Void, Never>?
+    @ObservationIgnored private var isArmingPresentation = false
 
     func coverUntilPresented() {
         hasPresentedContent = false
@@ -798,9 +799,18 @@ final class BrowserTab: Identifiable {
             return
         }
         let done: @convention(block) () -> Void = { [weak self] in
-            MainActor.assumeIsolated { self?.didPresentContent() }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.isArmingPresentation {
+                    self.uncover()
+                } else {
+                    self.didPresentContent()
+                }
+            }
         }
+        isArmingPresentation = true
         _ = webView.perform(Self.presentationUpdateSelector, with: done)
+        isArmingPresentation = false
     }
 
     func didPresentContent() {
