@@ -593,6 +593,78 @@ struct BrowserPagesTests {
         #expect(!model.keepsActive(tab))
     }
 
+    // MARK: - What a website may play and open
+
+    private func permissionsFixture() -> SitePermissions {
+        SitePermissions(
+            storageURL: FileManager.default.temporaryDirectory
+                .appending(path: "BrowserPagesTests-\(UUID().uuidString).json")
+        )
+    }
+
+    /// An answer that matches the setting is not a website's own answer: it is
+    /// the setting, and it must follow the setting when that changes.
+    @Test func aWebsiteToldWhatEveryWebsiteIsToldRecordsNothing() {
+        let previous = BrowserSettings.shared.autoplay
+        BrowserSettings.shared.autoplay = .allow
+        defer { BrowserSettings.shared.autoplay = previous }
+
+        let permissions = permissionsFixture()
+        let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let tab = model.newTab()
+        tab.urlString = "https://example.com/page"
+
+        #expect(model.autoplay(for: tab) == .allow)
+
+        model.setAutoplay(.block, for: tab)
+        #expect(model.autoplay(for: tab) == .block)
+        #expect(permissions.autoplay(for: "https://example.com") == .block)
+
+        model.setAutoplay(.allow, for: tab)
+        #expect(permissions.autoplay(for: "https://example.com") == nil)
+        #expect(model.autoplay(for: tab) == .allow)
+    }
+
+    @Test func aPopUpAnswerThatMatchesTheSettingRecordsNothing() {
+        let permissions = permissionsFixture()
+        let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let tab = model.newTab()
+        tab.urlString = "https://example.com/page"
+
+        let previous = BrowserSettings.shared.blocksPopups
+        defer { BrowserSettings.shared.blocksPopups = previous }
+
+        BrowserSettings.shared.blocksPopups = true
+        model.setPopups(.allow, for: tab)
+        #expect(permissions.popups(for: "https://example.com") == .allow)
+        model.setPopups(.blockAndNotify, for: tab)
+        #expect(permissions.popups(for: "https://example.com") == nil)
+
+        BrowserSettings.shared.blocksPopups = false
+        model.setPopups(.blockAndNotify, for: tab)
+        #expect(permissions.popups(for: "https://example.com") == .blockAndNotify)
+        model.setPopups(.allow, for: tab)
+        #expect(permissions.popups(for: "https://example.com") == nil)
+    }
+
+    @Test func aTabWithNoWebsiteRecordsNoMediaAnswer() {
+        let previous = BrowserSettings.shared.autoplay
+        BrowserSettings.shared.autoplay = .allow
+        defer { BrowserSettings.shared.autoplay = previous }
+
+        let permissions = permissionsFixture()
+        let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let tab = model.newTab()
+        tab.urlString = "about:blank"
+
+        model.setAutoplay(.block, for: tab)
+        model.setPopups(.block, for: tab)
+
+        #expect(permissions.autoplayOrigins.isEmpty)
+        #expect(permissions.popupOrigins.isEmpty)
+        #expect(model.autoplay(for: tab) == .allow, "a page that is no website is under the setting")
+    }
+
     // MARK: - The tab list the assistant reads
 
     @Test func anEmptyWindowHasNoTabListToDescribe() {

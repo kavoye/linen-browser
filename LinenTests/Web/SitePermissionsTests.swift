@@ -174,12 +174,91 @@ struct SitePermissionsStoreTests {
         #expect(reader.noAutomaticPictureOrigins == ["https://example.com"])
     }
 
+    @Test func anAutoplayAnswerIsKeptPerOrigin() {
+        let store = temporaryStore()
+        store.setAutoplay(.block, for: "HTTPS://Example.COM.")
+        store.setAutoplay(.silent, for: "https://video.example.com")
+
+        #expect(store.autoplay(for: "https://example.com") == .block)
+        #expect(store.autoplay(for: "https://video.example.com") == .silent)
+        #expect(store.autoplay(for: "http://example.com") == nil)
+        #expect(store.autoplay(for: "https://nobody.example.com") == nil)
+        #expect(store.autoplayOrigins == ["https://example.com", "https://video.example.com"])
+    }
+
+    @Test func aPopUpAnswerIsKeptPerOrigin() {
+        let store = temporaryStore()
+        store.setPopups(.allow, for: "https://example.com")
+        store.setPopups(.block, for: "https://example.com:8443")
+
+        #expect(store.popups(for: "https://example.com") == .allow)
+        #expect(store.popups(for: "https://example.com:8443") == .block)
+        #expect(store.popups(for: "https://other.example.com") == nil)
+        #expect(store.popupOrigins == ["https://example.com", "https://example.com:8443"])
+    }
+
+    @Test func clearingAWebsitesMediaAnswersForgetsThem() {
+        let store = temporaryStore()
+        store.setAutoplay(.block, for: "https://example.com")
+        store.setPopups(.block, for: "https://example.com")
+
+        store.setAutoplay(nil, for: "https://example.com")
+        store.setPopups(nil, for: "https://example.com")
+
+        #expect(store.autoplay(for: "https://example.com") == nil)
+        #expect(store.popups(for: "https://example.com") == nil)
+        #expect(store.autoplayOrigins.isEmpty)
+        #expect(store.popupOrigins.isEmpty)
+    }
+
+    @Test func aPageThatIsNoWebsiteRecordsNothing() {
+        let store = temporaryStore()
+        store.setAutoplay(.block, for: "")
+        store.setPopups(.block, for: "")
+
+        #expect(store.autoplayOrigins.isEmpty)
+        #expect(store.popupOrigins.isEmpty)
+    }
+
+    @Test func mediaAnswersSurviveRelaunch() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SitePermissionsMedia-\(UUID().uuidString).json")
+        let writer = SitePermissions(storageURL: url)
+        writer.setAutoplay(.silent, for: "HTTPS://Example.COM.")
+        writer.setPopups(.allow, for: "https://example.com")
+        await writer.waitForPendingSave()
+
+        let reader = SitePermissions(storageURL: url)
+        #expect(reader.autoplay(for: "https://example.com") == .silent)
+        #expect(reader.popups(for: "https://example.com") == .allow)
+        #expect(reader.autoplayOrigins == ["https://example.com"])
+        #expect(reader.popupOrigins == ["https://example.com"])
+    }
+
     @Test func onlyATrustworthyOriginCanHoldAPermission() {
         #expect(SitePermissions.isPotentiallyTrustworthy(URL(string: "https://example.com")))
         #expect(SitePermissions.isPotentiallyTrustworthy(URL(string: "http://localhost:3000")))
         #expect(SitePermissions.isPotentiallyTrustworthy(URL(string: "http://127.0.0.53")))
         #expect(!SitePermissions.isPotentiallyTrustworthy(URL(string: "http://example.com")))
         #expect(!SitePermissions.isPotentiallyTrustworthy(URL(string: "http://notlocalhost.com")))
+    }
+
+    /// A literal address is one site written in brackets, and a socket scheme
+    /// carries the same default ports as the page scheme it belongs to.
+    @Test func anAddressIsReducedToTheSiteItBelongsTo() {
+        #expect(SitePermissions.origin(for: URL(string: "https://Example.COM./a/b?q=1")) == "https://example.com")
+        #expect(SitePermissions.origin(for: URL(string: "https://example.com:8443/")) == "https://example.com:8443")
+        #expect(SitePermissions.origin(for: URL(string: "https://[::1]:443/x")) == "https://[::1]")
+        #expect(SitePermissions.origin(for: URL(string: "http://[2001:db8::1]:8080/")) == "http://[2001:db8::1]:8080")
+        #expect(SitePermissions.origin(for: URL(string: "wss://chat.example.com:443/")) == "wss://chat.example.com")
+        #expect(SitePermissions.origin(for: URL(string: "ws://chat.example.com:80/")) == "ws://chat.example.com")
+        #expect(SitePermissions.origin(for: URL(string: "ws://chat.example.com:8080/")) == "ws://chat.example.com:8080")
+    }
+
+    @Test func anAddressWithNoSiteInItHasNoOrigin() {
+        #expect(SitePermissions.origin(for: nil).isEmpty)
+        #expect(SitePermissions.origin(for: URL(string: "file:///tmp/page.html")).isEmpty)
+        #expect(SitePermissions.origin(for: URL(string: "about:blank")).isEmpty)
     }
 
     /// The address bar's spelling for an ordinary site, the whole origin
@@ -214,6 +293,8 @@ struct SitePermissionsStoreTests {
         store.setAssistantAccess(.control, for: "https://example.com")
         store.setKeepsActive(true, for: "https://example.com")
         store.setAllowsAutomaticPicture(false, for: "https://example.com")
+        store.setAutoplay(.block, for: "https://example.com")
+        store.setPopups(.allow, for: "https://example.com")
 
         store.removeEverything()
 
@@ -221,6 +302,8 @@ struct SitePermissionsStoreTests {
         #expect(store.assistantOrigins.isEmpty)
         #expect(store.keptActiveOrigins.isEmpty)
         #expect(store.noAutomaticPictureOrigins.isEmpty)
+        #expect(store.autoplayOrigins.isEmpty)
+        #expect(store.popupOrigins.isEmpty)
     }
 }
 

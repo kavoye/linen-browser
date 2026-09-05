@@ -81,9 +81,12 @@ struct ProfileFactsTests {
         permissions.set(.allow, for: "https://example.com", .camera)
         permissions.set(.deny, for: "https://example.com", .microphone)
         permissions.set(.deny, for: "https://maps.example", .location)
+        permissions.setAssistantAccess(.readOnly, for: "https://notes.example")
+        permissions.setAutoplay(.block, for: "https://video.example")
+        permissions.setPopups(.allow, for: "https://ads.example")
         await permissions.waitForPendingSave()
 
-        #expect(SitePermissions.changedSiteCount(in: file) == 2)
+        #expect(SitePermissions.changedSiteCount(in: file) == 5)
     }
 
     @Test func readingAProfileNobodyOpenedNeverTouchesTheOpenOne() {
