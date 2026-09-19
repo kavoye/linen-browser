@@ -42,6 +42,10 @@ final class BrowserSettings {
         static let tabColorRefraction = "appearance.tabColorRefraction"
         static let automaticPiP = "media.automaticPiP"
         static let videoInPlayer = "experiments.videoInPlayer"
+        static let passwordAutofill = "autofill.passwords"
+        static let passwordExtension = "autofill.passwordExtension"
+        static let contactAutofill = "autofill.contacts"
+        static let paymentCardAutofill = "privacy.paymentCardAutofill"
         static let downloadFolder = "downloads.folder"
         static let askWhereToSave = "downloads.ask"
         static let downloadRetention = "downloads.retention"
@@ -59,6 +63,7 @@ final class BrowserSettings {
         Key.searchEngine, Key.customSearchName, Key.customSearchTemplate,
         Key.suggestions, Key.agentOnlyInput,
         Key.historyRetention, Key.clearOnQuit, Key.certificateExceptions,
+        Key.paymentCardAutofill, Key.contactAutofill, Key.passwordAutofill, Key.passwordExtension,
         Key.javaScript, Key.blockPopups, Key.blockTrackers, Key.autoplay,
         Key.startPageOrder, Key.startPageHidden, Key.startPageHiddenSites,
     ]
@@ -332,6 +337,34 @@ final class BrowserSettings {
         }
     }
 
+    var fillsPasswords: Bool {
+        didSet {
+            write(fillsPasswords, forKey: Key.passwordAutofill)
+            PasswordAutofill.shared.refreshPolicy()
+        }
+    }
+
+    var passwordExtensionID: String {
+        didSet {
+            write(passwordExtensionID, forKey: Key.passwordExtension)
+            PasswordAutofill.shared.refreshPolicy()
+        }
+    }
+
+    var fillsContacts: Bool {
+        didSet {
+            write(fillsContacts, forKey: Key.contactAutofill)
+            AutofillSaveCoordinator.shared.refreshPolicy()
+        }
+    }
+
+    var fillsPaymentCards: Bool {
+        didSet {
+            write(fillsPaymentCards, forKey: Key.paymentCardAutofill)
+            AutofillSaveCoordinator.shared.refreshPolicy()
+        }
+    }
+
     // MARK: - Downloads
 
     var downloadFolder: URL {
@@ -502,7 +535,7 @@ final class BrowserSettings {
         } else if storedLoomStyle == "websiteTint" {
             matchesWebsiteColor = true
         } else if storedLoomStyle == nil {
-            matchesWebsiteColor = object(Key.websiteColor) as? Bool ?? false
+            matchesWebsiteColor = object(Key.websiteColor) as? Bool ?? true
         } else {
             matchesWebsiteColor = false
         }
@@ -511,12 +544,16 @@ final class BrowserSettings {
             : min(max(double(Key.transparency), 0), 1)
         showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
         showsLyrics = object(Key.lyrics) as? Bool ?? true
-        refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? false
+        refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? true
         sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false
         showsLinkPreview = object(Key.linkPreview) as? Bool ?? true
         peeksAtLinks = object(Key.linkPeek) as? Bool ?? true
         automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
         showsVideoInPlayer = object(Key.videoInPlayer) as? Bool ?? false
+        fillsPasswords = object(Key.passwordAutofill) as? Bool ?? true
+        passwordExtensionID = object(Key.passwordExtension) as? String ?? ""
+        fillsContacts = object(Key.contactAutofill) as? Bool ?? true
+        fillsPaymentCards = object(Key.paymentCardAutofill) as? Bool ?? true
         updateChannel = string(Key.updateChannel)
             .flatMap(UpdateChannel.init(rawValue:)) ?? .release
         let storedZoom = double(Key.pageZoom)
@@ -561,11 +598,19 @@ final class BrowserSettings {
                 .compactMap(StartPageSection.init(rawValue:))
         )
         hiddenFrequentHosts = Set(stringArray(Key.startPageHiddenSites) ?? [])
+
+        if object(Key.websiteTint) == nil {
+            write(matchesWebsiteColor, forKey: Key.websiteTint)
+        }
     }
 
     func useSessionDefaults(_ defaults: UserDefaults) {
         guard defaults !== sessionDefaults else { return }
         sessionDefaults = defaults
+        fillsPasswords = object(Key.passwordAutofill) as? Bool ?? true
+        passwordExtensionID = object(Key.passwordExtension) as? String ?? ""
+        fillsContacts = object(Key.contactAutofill) as? Bool ?? true
+        fillsPaymentCards = object(Key.paymentCardAutofill) as? Bool ?? true
 
         newTab = string(Key.newTab).flatMap(NewTabBehavior.init(rawValue:)) ?? .startPage
         homepage = string(Key.homepage) ?? ""
@@ -618,6 +663,7 @@ final class BrowserSettings {
         // preference enables the page's own Inspect Element item.
         configuration.preferences.setValue(webInspectorEnabled, forKey: "developerExtrasEnabled")
         WebKitFeatures.apply(to: configuration.preferences)
+        NativeApplePay.apply(to: configuration.preferences)
     }
 
     func apply(to webView: WKWebView) {
@@ -630,11 +676,15 @@ final class BrowserSettings {
     }
 
     func resetToDefaults() {
+        fillsPasswords = true
+        passwordExtensionID = ""
+        fillsContacts = true
+        fillsPaymentCards = true
         appearance = .system
         loomStyle = .standard
-        matchesWebsiteColor = false
+        matchesWebsiteColor = true
         transparency = 0.5
-        refractsTabColor = false
+        refractsTabColor = true
         pageZoom = 1
         newTab = .startPage
         homepage = ""

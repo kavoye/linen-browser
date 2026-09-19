@@ -97,6 +97,10 @@ extension Profile {
         guard !profile.isOriginal else { return }
         if !profile.isPrivate {
             try? await WKWebsiteDataStore.remove(forIdentifier: profile.id)
+            try? await AutofillVaults.cards(for: profile.id).erase()
+            try? await AutofillVaults.contacts(for: profile.id).erase()
+            try? await AutofillVaults.passwords(for: profile.id).erase()
+            _ = await Task.detached { try? AutofillSaveIndex.erase(profileID: profile.id) }.value
         }
         await ExtensionManager.eraseData(for: profile)
         try? FileManager.default.removeItem(at: profile.supportDirectory)
