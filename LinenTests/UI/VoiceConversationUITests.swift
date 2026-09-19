@@ -19,21 +19,16 @@ struct VoiceConversationUITests {
         capture.usesEchoCancellation = false
         let player = ConversationPlaybackFixture()
         player.blocks = true
+        let now = Date()
         let session = OpenAIRealtimeConversation(settings: .init(), capture: capture,
-                                                 player: player, connect: { socket }) { _ in "" }
+                                                 player: player, now: { now }, connect: { socket }) { _ in "" }
         session.onTranscriptChanged = coordinator.conversationLog.voiceTranscriptWriter(tabID: space, providerID: "openai")
         coordinator.conversationVoice = session
         coordinator.isVoiceConversationPresented = true
         session.start()
         defer { coordinator.endVoiceConversation() }
         try #require(await waitUntil { session.phase == .listening })
-        let input = Task { @MainActor in
-            while !Task.isCancelled && session.isActive {
-                try capture.emit(value: 0.04)
-                try await Task.sleep(for: .milliseconds(100))
-            }
-        }
-        defer { input.cancel() }
+        try capture.emit(value: 0.04)
         await socket.push(["type": "conversation.item.input_audio_transcription.completed", "item_id": "user", "transcript": "Can you help me with this page?"])
         let window = NSWindow(contentRect: NSRect(x: 80, y: 80, width: 360, height: 600),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)

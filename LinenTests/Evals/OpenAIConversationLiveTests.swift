@@ -9,7 +9,7 @@ import Testing
 
 @MainActor
 struct OpenAIConversationLiveTests {
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["LINEN_OPENAI_LIVE_CONFIG"] != nil))
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["LINEN_OPENAI_LIVE_CONFIG"] != nil), .timeLimit(.minutes(2)))
     func syntheticAudioDelegatesThroughProductionConversationController() async throws {
         let path = try #require(ProcessInfo.processInfo.environment["LINEN_OPENAI_LIVE_CONFIG"])
         let config = try OpenAIJSON.decode(Data(contentsOf: URL(fileURLWithPath: path)))
@@ -38,7 +38,8 @@ struct OpenAIConversationLiveTests {
         let diagnostics = ConversationLiveDiagnostics()
         var usages: [OpenAIJSON] = []
         var requests = 0
-        let session = OpenAIRealtimeConversation(settings: options, capture: capture, player: player, connect: {
+        let now = Date()
+        let session = OpenAIRealtimeConversation(settings: options, capture: capture, player: player, now: { now }, connect: {
             ConversationLiveSocket(base: try connect(), diagnostics: diagnostics)
         }) { _ in
             requests += 1
@@ -46,11 +47,6 @@ struct OpenAIConversationLiveTests {
         }
         session.onUsage = { usages.append($0) }
         defer { session.stop() }
-        let timeout = Task {
-            try await Task.sleep(for: .seconds(120))
-            session.stop()
-        }
-        defer { timeout.cancel() }
         do {
             let speech = OpenAIVoiceClient(endpoint: endpoint, key: key, settings: options)
             var pcm = Data()
@@ -80,7 +76,6 @@ struct OpenAIConversationLiveTests {
                     buffer.floatChannelData?[0][index] = Float(Int16(bitPattern: bits)) / 32_768
                 }
                 capture.input?.yield(CapturedAudio(buffer: buffer))
-                try await Task.sleep(for: .milliseconds(200))
             }
             try await until { !session.isActive || (session.responseCount >= 2 && player.finishes > 0) }
             guard session.isActive, requests == 1, player.bytes > 0, usages.count >= 2,

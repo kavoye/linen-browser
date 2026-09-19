@@ -88,7 +88,6 @@ struct OpenAIVoiceLiveTests {
                         samples[index] = Float(Int16(bitPattern: bits)) / 32_768
                     }
                     input.yield(CapturedAudio(buffer: buffer))
-                    try await Task.sleep(for: .milliseconds(200))
                 }
                 input.finish()
                 try await engine.finishSession()

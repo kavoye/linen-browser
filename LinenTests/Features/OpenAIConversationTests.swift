@@ -305,10 +305,11 @@ private final class ConversationFixture {
             guard let self else { throw CancellationError() }
             requests.append(request)
             if blocksBrowser {
-                do { try await Task.sleep(for: .seconds(100)) } catch {
-                    browserCancelled = true
-                    throw error
-                }
+                let (pending, continuation) = AsyncStream<Void>.makeStream()
+                defer { continuation.finish() }
+                for await _ in pending {}
+                browserCancelled = Task.isCancelled
+                try Task.checkCancellation()
             }
             return "The page contains three links."
         }
