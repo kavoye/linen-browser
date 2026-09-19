@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.7.0
+
+### New
+
+- Save and fill passwords, payment cards, and contact details. Manage saved
+  entries in Settings > Autofill. Passwords and cards require system
+  authentication. You can also use a password manager extension.
+- Attach images, PDFs, and text files to assistant messages.
+- Have a voice conversation with the assistant through OpenAI. Choose a voice
+  in assistant settings, interrupt a reply, and review the conversation in chat.
+- Use OpenAI models to search the web, create images, and work with data.
+  Supported tools are available automatically. OpenAI usage charges apply.
+- Add documents for the OpenAI assistant to search, and connect external
+  services through MCP.
+- Let a supported OpenAI model use screenshots, clicks, and keyboard input to
+  interact with a page. Browser control requires your permission.
+- Connect an external assistant to Linen through its MCP server. Share selected
+  tabs with read-only access or permission to control them. Setup is available
+  for Codex, Claude Desktop, Claude Code, and Cursor.
+
+### Improved
+
+- The assistant saves progress so you can continue interrupted tasks. It checks
+  uncertain actions before retrying them and pauses when it keeps getting stuck.
+- Long conversations can compact their working context automatically or on
+  demand. A context indicator shows estimated usage.
+- Assistant activity now shows progress updates and groups completed work.
+- OpenAI settings have separate pages for voice, documents, connections, and
+  permissions. Advanced options are under Developer Settings.
+- Collapse a Peek preview and reopen it without losing the page.
+- Use the arrow keys in the address field to preview a suggested address before
+  opening it.
+- Website icons stay readable against light and dark backgrounds. New settings
+  default to website tint and tab color effects.
+- Website permission controls and download progress are easier to read.
+- Diagnostic logs omit page content, conversation text, and raw provider errors.
+
+### Fixed
+
+- Page commands now act on the visible Peek preview.
+- Updating a pinned page no longer moves it within the sidebar.
+- Starting a new tab no longer shows a loading state for its background warm-up.
+
 ## 0.6.1
 
 ### New
@@ -28,8 +71,7 @@
 
 ### New
 
-- Hold Shift and point at a link to read a summary of the page before you
-  open it.
+- Hold Shift over a link to see a summary before opening it.
 - Shift-click a link to open it in a panel over the page. Keep it as a tab,
   or press Escape to close it.
 - Rename a tab: click the name of the tab you are on, or choose Rename in its
@@ -43,11 +85,10 @@
 
 - Bookmarks are now called pins.
 - Each provider keeps its own Thinking setting.
-- Assistant settings are now three groups: who answers, how it behaves, and
-  what it may do without asking.
-- The link address at the foot of the page says what a ⌘-click or a ⇧-click
+- Assistant settings are now grouped by model, behavior and permissions.
+- The link address at the bottom of the page says what a ⌘-click or a ⇧-click
   does.
-- Extensions wake up when you open a website they work on.
+- Extensions activate when you open a supported website.
 
 ### Fixed
 
@@ -60,7 +101,7 @@
 - Extensions install from Firefox Add-ons as well as the Chrome Web Store.
 - Extensions can now exchange messages with a companion app on your Mac.
 - Middle-click a link to open it in a new tab.
-- Point at a link to see its address at the foot of the page.
+- Point at a link to see its address at the bottom of the page.
 - Settings, History and Downloads open in a tab of their own.
 - Turn Automatic Picture in Picture off for one website, in **Settings >
   Websites** or in Website Settings in the toolbar.
@@ -69,7 +110,7 @@
 
 ### Improved
 
-- Address bar suggestions favour the pages you visit most and most recently.
+- Address bar suggestions favor the pages you visit most and most recently.
 - History gathers a day’s repeat visits to one page into a single entry.
 - Open a history entry in a new tab with a middle-click or a ⌘-click.
 - Picture in Picture now works on websites that used to refuse it.
@@ -80,8 +121,8 @@
 
 ### Fixed
 
-- The toolbar took the colour of the page you were opening before that page
-  appeared, so it changed colour twice.
+- The toolbar took the color of the page you were opening before that page
+  appeared, so it changed color twice.
 - A link to a tracker domain did not open. Only the requests a page makes in
   the background are blocked.
 - Turning a Safari extension off in the toolbar menu took it off the list
@@ -104,10 +145,10 @@
 - Back to Bookmarked Page is now ⇧⌘D. macOS keeps ⌥⌘D for the Dock.
 - Control-click empty space in the sidebar for New Tab, New Folder and
   Organize Tabs.
-- The sidebar and the toolbar take much more colour from the website you are
+- The sidebar and the toolbar take much more color from the website you are
   reading when **Settings > Appearance > Website tint** is enabled.
-- Hover effect under the pointer now reads against that colour, so
-  highlights stay visible on a dark website and stay gentle on a light one.
+- Hover highlights now adapt to the website tint for visibility on dark and
+  light websites.
 
 ### Fixed
 
@@ -115,7 +156,7 @@
   the address.
 - The update notice stayed hidden while Settings was open.
 - The top of a chat faded out even with nothing scrolled above it.
-- The dots on the split view handle took the accent colour on the pane you were
+- The dots on the split view handle took the accent color on the pane you were
   using, instead of staying white.
 
 ## 0.4.1
@@ -132,8 +173,7 @@
 - When more than one tab is playing, a new button in the media player opens a
   list of them.
 - The loading bar now runs the full width of the page.
-- The thinking level now sits beside the Thinking heading, so the slider and
-  what it is set to read as one line.
+- The selected thinking level now appears beside the Thinking heading.
 - Hide Browser has gone from the View menu. ⌘H hides Linen and ⌘W closes the
   window, as in any Mac app.
 - “Report a bug” is now “Send feedback”.
@@ -152,9 +192,8 @@
 ### New
 
 - The side panel is now a chat with the assistant, and each tab keeps its own
-  thread. Choose which assistant answers, which model it uses, and how much it
-  thinks, under the message you are writing.
-- The assistant asks you a question when it needs one answered. Answer it, skip
+  thread. Choose the provider, model and reasoning level below the message field.
+- The assistant can ask for clarification. Answer it, skip
   the question, or let the assistant choose.
 - Type `@` in the panel to attach another tab to your question.
 - Answers arrive formatted. Copy one, hear it read aloud, ask it again, or edit
@@ -166,8 +205,8 @@
 - Suggestions on the start page are a section you can move or turn off.
 - Settings > Extensions lists the Safari extensions on your Mac, and each
   profile keeps its own.
-- Settings > Advanced > Feature flags lists the WebKit switches Safari keeps to
-  itself, with search and a reset.
+- Settings > Advanced > Feature flags lists WebKit feature flags,
+  with search and a reset.
 - Extensions from the Chrome Web Store update themselves once a day. Check for
   Updates in an extension’s menu checks right away, and an update that asks for
   more access waits for you.
@@ -177,8 +216,8 @@
 ### Improved
 
 - Switching profiles is five to eight times faster.
-- A background tab that has not been opened since Linen started now costs
-  nothing until you open it, so a large session comes back sooner.
+- Restored background tabs load only when opened, reducing startup time for
+  large sessions.
 - The profile switcher opens beside its button in the sidebar, and every profile
   icon is a circle.
 - The downloads button is always in the sidebar, and a file you download flies
@@ -188,8 +227,7 @@
   chevron rather than a button.
 - A setting that is off because another setting is off tells you which one, and
   takes you there.
-- Block known trackers now lives in Settings > Privacy, beside the rest of what
-  Linen keeps to itself.
+- Block known trackers moved to Settings > Privacy.
 - Keep loaded for a website is now Keep this website awake.
 - Each settings page keeps its own action, such as Reset, Remove All or Delete
   Profile, next to the button that takes you back.
@@ -198,7 +236,7 @@
 - A side panel conversation stays out of the address field.
 - Tab previews cover folders, split panes and Linen’s own pages.
 - Settings pages fit a narrow window.
-- Folder colors are quieter, and a folder’s menu matches them.
+- Folder colors are less saturated, and folder menus use the same colors.
 - The split view’s drag pill matches the sidebar and side panel pills.
 - Website Settings is off on Linen’s own pages.
 - Linen checks for updates in place, and again after finding one.
@@ -216,9 +254,9 @@
 - Sidebar rows sat at different distances from the edge.
 - Placeholder text jumped when a search field took focus.
 - The downloads button stayed selected after you opened downloads.
-- A live stream showed a scrubber and a lyrics button it had no use for.
+- Live streams showed an unusable playback slider and lyrics button.
 - The media player kept a picture from a page you had left.
-- A tab could wear the color of another website’s icon.
+- A tab could display the color of another website’s icon.
 - The address bar showed nothing while it checked a connection.
 
 ## 0.3.1
@@ -226,16 +264,14 @@
 ### New
 
 - Window style in Settings > Appearance sets how the toolbar and the sidebar are
-  drawn. Standard keeps them solid, and Liquid Glass makes them clear, so the
-  window takes on whatever sits behind it. With Liquid Glass, Glass transparency
-  decides how far it goes. Clear shows more of your desktop, and tinted gives
-  text and controls more contrast.
+  displayed. Standard uses an opaque background; Liquid Glass uses a
+  translucent one. Glass transparency offers Clear to show more of the desktop
+  and Tinted for stronger text and control contrast.
 
 ### Improved
 
 - Match website color is now Website tint, and Refract tab color is now Tint
-  selected tab. Both start off, so Linen keeps its own look on every website
-  until you ask for the website’s color.
+  selected tab. Both are off by default.
 - Appearance now comes before Search in Settings.
 
 ### Fixed
@@ -252,19 +288,18 @@
 
 ### New
 
-- Linen has a new look, built on Liquid Glass. The page floats on a soft,
-  translucent surface, and the sidebar, the side panel and Settings share it.
-- The window picks up a hint of color from the website you are on. Turn off
+- Linen uses Liquid Glass, with translucent backgrounds for the page, sidebar,
+  side panel and Settings.
+- The window uses a tint from the current website. Turn off
   Match website color in Settings > Appearance to keep Linen’s usual Light or
   Dark theme instead.
 - Turn on Refract tab color in Settings > Appearance, and the selected tab takes
   on the color of that website’s icon.
 - The theme picker shows you what Light, Dark and Auto look like before you
   choose.
-- Linen always brings back the tabs you had open. Your tabs are how you keep
-  pages, so nothing throws them away.
+- Linen restores open tabs when you launch the app.
 - Sleep inactive tabs in Settings > General frees memory when your Mac runs low.
-  It starts off.
+  It is off by default.
 - The address field is now on every page, including a new tab.
 - Website Settings is now a compact panel. It holds page zoom, assistant access,
   tracker blocking, and the camera, microphone, location and notification
@@ -278,9 +313,9 @@
 - You can make the window much narrower, and websites switch to their compact
   layouts when you do.
 - Tabs slide behind the top of the sidebar instead of fading away.
-- The side panel shows a music note only when there are words to follow.
+- The side panel shows a music note only when lyrics are available.
 - The edges you drag to resize the sidebar and the side panel are easier to see.
-- Settings is quieter, with lighter shadows and gentler highlights.
+- Settings uses lighter shadows and less prominent highlights.
 - Removing an extension is now a button in a menu beside it, along with that
   extension’s own settings.
 
@@ -289,9 +324,9 @@
 - Scrolling the sidebar or the side panel could reload the page behind it.
 - Pointing at the side panel could highlight things on the page underneath.
 - Dragging an extension button moved the whole window.
-- The address field corrected what you typed. A web address now arrives the way
-  you typed it.
-- A tab you pointed at with `@` came out blank.
+- The address field applied autocorrection to web addresses. It now preserves
+  what you type.
+- Tabs selected with `@` could return blank content.
 - A new tab said the assistant could read it.
 - Text in the toolbar was hard to read on some websites.
 - An answer from the assistant appeared behind the side panel.
@@ -307,21 +342,21 @@
 
 ### New
 
-- Linen finds the words to the song you are playing and lights each line as it
-  comes. Open them from the media player, from View > Show Lyrics, or with
-  ⌥⌘Y. Change the text size, nudge the timing, or pick a different match when
-  the first one is wrong. Only the song and artist names leave your Mac, and
+- Linen shows synced lyrics for the current song. Open them from the media
+  player, from View > Show Lyrics, or with ⌥⌘Y. Adjust text size and timing,
+  or choose a different match. Only the song and artist names leave your Mac, and
   never from a private tab. Turn this off in Settings > General.
 - Activity and Lyrics now share one panel on the right. One button in the
   toolbar opens it, and the arrows widen it to fill the window.
 - A button in the address field sends the video you are watching to a floating
   window. Turn on Automatic Picture in Picture in Settings > General and the
-  video leaves on its own when you move away, then comes back when you return.
+  video opens in Picture in Picture when you leave the tab and returns when
+  you reopen it.
 - The media player follows whichever tab is playing, so you can pause or skip
   from anywhere.
-- Settings > Experiments holds unfinished work you can try. Anything there can
-  change or disappear.
-- You can bring your bookmarks from any browser. Export a bookmarks file from
+- Settings > Experiments contains features in development. They may change or
+  be removed.
+- Import bookmarks from another browser. Export a bookmarks file from
   Safari, Chrome, Firefox or Edge, then choose it in Settings > General.
 - Save Page As… and Print Page… are in the menu you get when you right-click a
   page.
@@ -345,11 +380,12 @@
 
 - Settings > About lets you follow Preview builds instead of waiting for the
   next release. You can go back to Release at any time.
-- Install in the update banner does the whole job, and asks you once.
+- Install in the update banner downloads and installs the update without a
+  second confirmation.
 - The notes for a new version open in a tab after it arrives. To read them
   again, choose Linen > Release Notes.
 - ⌃⇥ returns you to your last tab, the way ⌘⇥ returns you to your last app. Hold
-  ⌃ to walk down the sidebar, and ⌃⇧⇥ to walk up.
+  ⌃ and press ⇥ to select the next tab, or ⇧⇥ to select the previous tab.
 - Click the orb and talk. Linen sends what you said once you stop. Click the orb
   again while the assistant is working to stop it.
 - In the command palette, ⌘↩ asks the assistant about what you typed, and ⇧↩
@@ -357,8 +393,7 @@
 
 ### Improved
 
-- A long conversation no longer breaks. The assistant carries on when it runs
-  out of room to remember.
+- The assistant can continue long conversations that exceed its context limit.
 
 ### Fixed
 
@@ -374,17 +409,17 @@ First release. Linen is a browser for macOS 26 and later.
 
 - The assistant works in the tabs you already have open. It searches, opens
   websites, reads them, clicks, types and scrolls.
-- Ask in the address field, or hold ⌥Space and speak. Click the page to take it
-  back.
+- Ask in the address field, or hold ⌥Space and speak. Click the page to stop the
+  assistant and use it yourself.
 - It asks you first before it buys, sends or signs in, and never fills in a
   password or a card number.
 
 ### Models
 
-- Apple Intelligence works on your Mac out of the box.
+- Apple Intelligence runs on your Mac without an API key.
 - Or add your own key for OpenAI, Anthropic, Gemini, DeepSeek, Groq, Mistral,
   OpenRouter or xAI.
-- Or point Linen at a local server, such as Ollama or LM Studio.
+- Or connect Linen to a local server, such as Ollama or LM Studio.
 
 ### The browser
 
@@ -399,4 +434,4 @@ First release. Linen is a browser for macOS 26 and later.
 - This is an early release. What Linen saves to disk can still change between
   versions.
 - Linen opens one window at a time, and does not yet fill in passwords or show
-  web notifications. The README lists everything.
+  web notifications. See the README for limitations.
