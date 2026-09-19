@@ -712,14 +712,14 @@ struct MediaScriptRectTests {
     }
 
     /// A detached player keeps its last currentTime and videoWidth.
-    @Test func aDetachedPlayerIsNotStillReported() async {
+    @Test func aDetachedPlayerIsNotStillReported() async throws {
         let (webView, collector) = await playerWebView()
         _ = await waitForRect(collector)
 
         _ = try? await webView.evaluateJavaScript("document.querySelector('video').remove()")
         collector.messages.removeAll()
         _ = try? await webView.evaluateJavaScript("window.postMessage('linen-resend', '*')")
-        try? await Task.sleep(for: .milliseconds(250))
+        try await webView.finishPendingPageMessages()
 
         #expect(!collector.messages.contains { $0.hasPrefix("state:") })
     }
@@ -727,11 +727,7 @@ struct MediaScriptRectTests {
     @Test func aLoadedPageAnnouncesItself() async {
         let (_, collector) = await playerWebView()
 
-        for _ in 0..<100 where !collector.messages.contains("hello") {
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-
-        #expect(collector.messages.contains("hello"))
+        #expect(await waitUntil { collector.messages.contains("hello") })
     }
 
     @Test func askingForTheRectReportsItAgainWithoutARequestToReveal() async {

@@ -3,6 +3,7 @@
 
 import AppKit
 import Foundation
+import Synchronization
 import Testing
 import WebKit
 
@@ -182,18 +183,20 @@ struct FaviconLoaderTests {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        StubIconProtocol.reset(with: try iconData())
-        defer { StubIconProtocol.reset(with: nil) }
+        let stub = StubIconProtocol.fixture(payload: try iconData(), held: true)
+        defer { stub.close() }
 
-        let loader = FaviconLoader(cacheDirectory: directory, session: StubIconProtocol.makeSession())
+        let loader = FaviconLoader(cacheDirectory: directory, session: stub.session)
         async let first = loader.load(forHost: "example.com")
         async let second = loader.load(forHost: "example.com")
 
+        try #require(await waitUntil { stub.responses.requestCount == 1 })
+        stub.responses.open()
         let firstIcon = await first
         let secondIcon = await second
         #expect(firstIcon != nil)
         #expect(secondIcon != nil)
-        #expect(StubIconProtocol.requestCount == 1)
+        #expect(stub.responses.requestCount == 1)
     }
 
     @Test func invalidImageDataIsNotCached() {
@@ -281,20 +284,6 @@ struct FaviconNavigationTests {
         return try #require(components.url)
     }
 
-    private func eventually(
-        timeout: Duration = .seconds(5),
-        _ condition: @escaping @MainActor () -> Bool
-    ) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if condition() {
-                return true
-            }
-            try? await Task.sleep(for: .milliseconds(10))
-        }
-        return condition()
-    }
-
     @Test func navigatingToAnotherHostFetchesThatSitesIcon() async throws {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -325,12 +314,12 @@ struct FaviconNavigationTests {
     @Test func aGuessAnnouncesItselfSoTheRowKeepsAsking() async throws {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        StubIconProtocol.reset(with: try iconData(side: 16))
-        defer { StubIconProtocol.reset(with: nil) }
+        let stub = StubIconProtocol.fixture(payload: try iconData(side: 16))
+        defer { stub.close() }
 
         let loader = FaviconLoader(
             cacheDirectory: directory,
-            session: StubIconProtocol.makeSession()
+            session: stub.session
         )
 
         #expect(!loader.isGuessedIcon(for: "example.com"))
@@ -346,12 +335,12 @@ struct FaviconNavigationTests {
     @Test func aGuessIsStillAGuessAfterARelaunch() async throws {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
-        StubIconProtocol.reset(with: try iconData(side: 16))
-        defer { StubIconProtocol.reset(with: nil) }
+        let stub = StubIconProtocol.fixture(payload: try iconData(side: 16))
+        defer { stub.close() }
 
         let first = FaviconLoader(
             cacheDirectory: directory,
-            session: StubIconProtocol.makeSession()
+            session: stub.session
         )
         #expect(await first.load(forHost: "example.com") != nil)
 
@@ -373,15 +362,15 @@ struct FaviconNavigationTests {
         // The guess is built as `https://<host>/favicon.ico`, with no port, so
         // it can never reach the fixture server. Both icon fetches go through
         // the stub instead; the page itself still comes from the server.
-        StubIconProtocol.reset(routes: [
+        let stub = StubIconProtocol.fixture(routes: [
             "/favicon.ico": try iconData(side: 16),
             "/declared.png": try iconData(side: 24),
         ])
-        defer { StubIconProtocol.reset(with: nil) }
+        defer { stub.close() }
 
         let loader = FaviconLoader(
             cacheDirectory: directory,
-            session: StubIconProtocol.makeSession()
+            session: stub.session
         )
         let host = try #require(server.url("/page").host())
 
@@ -430,10 +419,12 @@ struct FaviconNavigationTests {
     @Test func probeAnsweredByThePageBeingLeftNeverLandsOnTheNextHost() async throws {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
+        let response = ResponseGate()
+        defer { response.open() }
         let server = try await HTTPFixtureServer.start(routes: [
             "/a": .html(#"<link rel="icon" href="/icon-a.png"><h1>A</h1>"#),
             "/icon-a.png": .bytes(try iconData(side: 16), contentType: "image/png"),
-            "/b": .html(#"<link rel="icon" href="/icon-b.png"><h1>B</h1>"#, delay: 1.5),
+            "/b": .html(#"<link rel="icon" href="/icon-b.png"><h1>B</h1>"#, gate: response),
             "/icon-b.png": .bytes(try iconData(side: 24), contentType: "image/png"),
         ])
         let loader = FaviconLoader(cacheDirectory: directory)
@@ -445,11 +436,12 @@ struct FaviconNavigationTests {
         // The slow response holds this navigation provisional: `webView.url`
         // says localhost while the document is still A's.
         webView.load(URLRequest(url: try localhost(server.url("/b"))))
-        #expect(await eventually { webView.url?.host() == "localhost" })
+        #expect(await waitUntil { webView.url?.host() == "localhost" })
         let midNavigation = await loader.load(for: webView)
         #expect(midNavigation?.size.width != 16)
         #expect(loader.cached(for: "localhost")?.size.width != 16)
 
+        response.open()
         #expect(await PageSettle.untilIdle(webView, timeout: .seconds(30)))
         let landed = await loader.load(for: webView)
         #expect(landed?.size.width == 24)
@@ -457,65 +449,59 @@ struct FaviconNavigationTests {
     }
 }
 
-/// Answers every request with the same icon bytes, after a beat - long enough
-/// that a second caller arrives while the first request is still out - and
-/// counts how many requests were actually made.
 private nonisolated final class StubIconProtocol: URLProtocol, @unchecked Sendable {
-    private static let lock = NSLock()
-    // Guarded by `lock` throughout - the stub is driven from URLSession's own
-    // threads, not from the test's actor.
-    private nonisolated(unsafe) static var payload: Data?
-    private nonisolated(unsafe) static var routes: [String: Data] = [:]
-    private nonisolated(unsafe) static var count = 0
+    struct Fixture: Sendable {
+        let id: String
+        let session: URLSession
+        let responses: ResponseGate
 
-    static func reset(with data: Data?) {
-        lock.withLock {
-            payload = data
-            routes = [:]
-            count = 0
+        func close() {
+            responses.open()
+            session.invalidateAndCancel()
+            StubIconProtocol.fixtures.withLock { $0[id] = nil }
         }
     }
 
-    /// Keyed by path, for the tests that need two different icons to tell one
-    /// answer from the other.
-    static func reset(routes newRoutes: [String: Data]) {
-        lock.withLock {
-            payload = nil
-            routes = newRoutes
-            count = 0
+    private struct Reply: Sendable {
+        let payload: Data?
+        let routes: [String: Data]
+        let responses: ResponseGate
+    }
+
+    private static let header = "X-Linen-Test-Fixture"
+    private static let fixtures = Mutex<[String: Reply]>([:])
+
+    static func fixture(payload: Data? = nil, routes: [String: Data] = [:], held: Bool = false) -> Fixture {
+        let id = UUID().uuidString
+        let responses = ResponseGate()
+        if !held {
+            responses.open()
         }
-    }
-
-    static var requestCount: Int {
-        lock.withLock { count }
-    }
-
-    static func makeSession() -> URLSession {
+        fixtures.withLock { $0[id] = Reply(payload: payload, routes: routes, responses: responses) }
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubIconProtocol.self]
-        return URLSession(configuration: configuration)
+        configuration.httpAdditionalHeaders = [header: id]
+        return Fixture(id: id, session: URLSession(configuration: configuration), responses: responses)
     }
 
-    nonisolated override static func canInit(with request: URLRequest) -> Bool {
+    override static func canInit(with request: URLRequest) -> Bool {
         true
     }
 
-    nonisolated override static func canonicalRequest(for request: URLRequest) -> URLRequest {
+    override static func canonicalRequest(for request: URLRequest) -> URLRequest {
         request
     }
 
-    nonisolated override func startLoading() {
-        let path = request.url?.path() ?? ""
-        let data = Self.lock.withLock { () -> Data? in
-            Self.count += 1
-            return Self.routes.isEmpty ? Self.payload : Self.routes[path]
-        }
-        guard let data, let url = request.url else {
+    override func startLoading() {
+        guard let id = request.value(forHTTPHeaderField: Self.header),
+              let reply = Self.fixtures.withLock({ $0[id] }),
+              let url = request.url,
+              let data = reply.routes.isEmpty ? reply.payload : reply.routes[url.path()] else {
             client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
             return
         }
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        reply.responses.submit { [weak self] in
             guard let self else { return }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: data)
@@ -523,5 +509,5 @@ private nonisolated final class StubIconProtocol: URLProtocol, @unchecked Sendab
         }
     }
 
-    nonisolated override func stopLoading() {}
+    override func stopLoading() {}
 }

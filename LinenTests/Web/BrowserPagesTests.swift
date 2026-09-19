@@ -340,8 +340,10 @@ struct BrowserPagesTests {
     /// provisional load is dropped, so the back control did nothing until that
     /// load gave up — tens of seconds later.
     @Test(.boundedWebViews) func backLeavesTheOwnPageWhileTheViewIsStillLoading() async throws {
+        let response = ResponseGate()
+        defer { response.open() }
         let server = try await HTTPFixtureServer.start(routes: [
-            "/slow": .html("<title>Slow</title>", delay: 30),
+            "/slow": .html("<title>Slow</title>", gate: response),
         ])
         let model = makeModel()
         let previous = BrowserSettings.shared.newTab

@@ -30,7 +30,6 @@ struct NativeMessagingTests {
         #expect(sawClose, "a host that exits reports its close")
 
         connection.send(Data(#"{"late":true}"#.utf8))
-        try await Task.sleep(for: .milliseconds(200))
     }
 
     @Test func aHostThatFailsReportsItsExit() async throws {

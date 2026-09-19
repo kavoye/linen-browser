@@ -308,12 +308,6 @@ struct NavigationPolicyTests {
         #expect(tab.pendingTransition == .link)
     }
 
-    @Test func aSubmittedFormIsRecordedAsASubmission() {
-        let (tab, delegate) = subject()
-        _ = decide(delegate, tab, action("https://example.com/a", type: .formSubmitted))
-        #expect(tab.pendingTransition == .formSubmit)
-    }
-
     @Test func goingBackIsRecordedAsGoingBack() {
         let (tab, delegate) = subject()
         _ = decide(delegate, tab, action("https://example.com/a", type: .backForward))

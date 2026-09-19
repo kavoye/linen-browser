@@ -317,9 +317,7 @@ struct TabPermissionCenterTests {
         answering answer: TabPermissionCenter.AskAnswer
     ) async -> Bool {
         async let decision = center.decide(permission)
-        for _ in 0..<1000 where center.currentAsk == nil {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !(center.currentAsk == nil) })
         #expect(center.currentAsk?.permission == permission)
         #expect(center.isPopoverPresented)
         center.answer(answer)
@@ -348,9 +346,7 @@ struct TabPermissionCenterTests {
         async let first = center.decide(.location)
         async let second = center.decide(.location)
         async let third = center.decide(.location)
-        for _ in 0..<1000 where (center.pendingAsks.first?.waitingCount ?? 0) < 3 {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !((center.pendingAsks.first?.waitingCount ?? 0) < 3) })
         #expect(center.pendingAsks.count == 1)
         #expect(center.pendingAsks.first?.waitingCount == 3)
 
@@ -369,13 +365,9 @@ struct TabPermissionCenterTests {
         let center = TabPermissionCenter(store: temporaryStore())
         center.pageChanged(url: URL(string: "https://example.com/")!)
         async let camera = center.decide(.camera)
-        for _ in 0..<1000 where center.currentAsk == nil {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !(center.currentAsk == nil) })
         async let microphone = center.decide(.microphone)
-        for _ in 0..<1000 where center.pendingAsks.count < 2 {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !(center.pendingAsks.count < 2) })
 
         center.answer(.once)
         #expect(center.isPopoverPresented)
@@ -412,9 +404,7 @@ struct TabPermissionCenterTests {
         let center = TabPermissionCenter(store: store)
         center.pageChanged(url: URL(string: "https://example.com/")!)
         async let decision = center.decide(.camera)
-        for _ in 0..<1000 where center.currentAsk == nil {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !(center.currentAsk == nil) })
         center.pageChanged(url: URL(string: "https://elsewhere.com/")!)
         #expect(await decision == false)
         #expect(store.policy(for: "https://example.com", .camera) == .ask)

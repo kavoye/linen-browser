@@ -597,22 +597,31 @@ struct SerialTasksTests {
         var order: [Int] = []
     }
 
-    @Test func overlappingRunsBothRunInOrder() async {
+    @Test func overlappingRunsBothRunInOrder() async throws {
         let queue = SerialTasks()
         let recorder = Recorder()
 
+        let (release, continuation) = AsyncStream<Void>.makeStream()
+        defer { continuation.finish() }
         let first = Task {
             await queue.run {
                 recorder.order.append(1)
-                try? await Task.sleep(for: .milliseconds(30))
+                for await _ in release { }
                 recorder.order.append(2)
             }
         }
+        defer { first.cancel() }
+        try #require(await waitUntil { recorder.order == [1] })
+        var secondStarted = false
         let second = Task {
+            secondStarted = true
             await queue.run {
                 recorder.order.append(3)
             }
         }
+        defer { second.cancel() }
+        try #require(await waitUntil { secondStarted })
+        continuation.finish()
         await first.value
         await second.value
 

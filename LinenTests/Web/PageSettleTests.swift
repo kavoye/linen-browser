@@ -26,7 +26,7 @@ struct PageSettleTests {
     @Test func waitsForALoadAndThenReturns() async {
         let webView = makeWebView()
         webView.loadHTMLString(Self.page, baseURL: URL(string: "https://example.test/"))
-        let started = await loadStarted(webView)
+        let started = await waitUntil { webView.isLoading }
 
         let finished = await PageSettle.untilIdle(webView, timeout: .seconds(30))
 
@@ -37,78 +37,85 @@ struct PageSettleTests {
         #expect(text?.contains("Hello") == true)
     }
 
-    private func loadStarted(_ webView: WKWebView, within: Duration = .seconds(5)) async -> Bool {
-        let deadline = ContinuousClock.now + within
-        while ContinuousClock.now < deadline {
-            if webView.isLoading {
-                return true
-            }
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        return false
-    }
-
     @Test func returnsAtOnceWhenThereIsNoLoadInFlight() async {
         let webView = makeWebView()
         webView.loadHTMLString(Self.page, baseURL: nil)
         #expect(await PageSettle.untilIdle(webView, timeout: .seconds(30)))
 
-        let clock = ContinuousClock()
-        let elapsed = await clock.measure {
-            _ = await PageSettle.untilIdle(webView, timeout: .seconds(30))
-        }
-        #expect(elapsed < .milliseconds(50))
+        let clock = TestClock()
+        let start = clock.now
+        #expect(await PageSettle.untilIdle(webView, clock: clock))
+        #expect(clock.now == start)
+        #expect(clock.pendingCount == 0)
     }
 
-    @Test func aStaticDOMReturnsWellBeforeTheCeiling() async {
+    @Test func aStaticDOMReturnsWellBeforeTheCeiling() async throws {
         let webView = makeWebView()
         webView.loadHTMLString(Self.page, baseURL: nil)
         #expect(await PageSettle.untilIdle(webView, timeout: .seconds(30)))
 
-        let clock = ContinuousClock()
-        let elapsed = await clock.measure {
-            await PageSettle.untilQuiet(webView, ceiling: .seconds(5))
-        }
-        #expect(elapsed < .seconds(4), "a static page should not run to the five-second ceiling")
+        let clock = TestClock()
+        let interval = Duration.seconds(1)
+        let settling = Task { await PageSettle.untilQuiet(webView, ceiling: interval * 3, interval: interval, clock: clock) }
+        defer { settling.cancel() }
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        clock.advance(by: interval)
+        await settling.value
+        #expect(clock.pendingCount == 0)
     }
 
-    @Test func neverWaitsLongerThanItsCeiling() async {
+    @Test func aSamplingIntervalCannotCarryTheWaitPastItsCeiling() async throws {
         let webView = makeWebView()
-        webView.loadHTMLString("""
-        <!doctype html><html><body><div id="churn"></div><script>
-          setInterval(() => {
-            document.getElementById('churn').appendChild(document.createElement('span'));
-          }, 20);
-        </script></body></html>
-        """, baseURL: nil)
-        #expect(await PageSettle.untilIdle(webView, timeout: .seconds(30)))
-
-        let ceiling = Duration.milliseconds(600)
-        let clock = ContinuousClock()
-        let elapsed = await clock.measure {
-            await PageSettle.untilQuiet(webView, ceiling: ceiling)
-        }
-        // One sampling interval of slack: the deadline is checked at the top
-        // of the loop, so the last sleep can carry it just past.
-        #expect(elapsed < ceiling + .milliseconds(400))
+        webView.loadHTMLString(Self.page, baseURL: nil)
+        #expect(await PageSettle.untilIdle(webView))
+        let clock = TestClock()
+        let interval = Duration.seconds(1)
+        let ceiling = interval / 2
+        let settling = Task { await PageSettle.untilQuiet(webView, ceiling: ceiling, interval: interval, clock: clock) }
+        defer { settling.cancel() }
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        clock.advance(by: ceiling)
+        await settling.value
+        #expect(clock.pendingCount == 0)
     }
 
-    @Test func doesNotWaitForANavigationThatNeverStarts() async {
+    @Test func doesNotWaitForANavigationThatNeverStarts() async throws {
         let webView = makeWebView()
         webView.loadHTMLString(Self.page, baseURL: nil)
         #expect(await PageSettle.untilIdle(webView, timeout: .seconds(30)))
 
-        let clock = ContinuousClock()
-        let elapsed = await clock.measure {
-            await PageSettle.afterInteraction(
-                webView,
-                grace: .milliseconds(200),
-                quietCeiling: .milliseconds(600)
-            )
+        let clock = TestClock()
+        let grace = Duration.seconds(1)
+        let settling = Task {
+            await PageSettle.afterInteraction(webView, grace: grace, quietCeiling: .zero, clock: clock)
         }
-        #expect(elapsed >= .milliseconds(180))
-        #expect(elapsed < .seconds(3))
+        defer { settling.cancel() }
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        clock.advance(by: grace)
+        await settling.value
+        #expect(clock.pendingCount == 0)
         #expect(!webView.isLoading)
+    }
+
+    @Test func cancellingALoadWaitReleasesItsObservationAndDeadline() async throws {
+        let response = ResponseGate()
+        defer { response.open() }
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/": .html(Self.page, gate: response),
+        ])
+        let webView = makeWebView()
+        defer { webView.stopLoading() }
+        webView.load(URLRequest(url: try server.url()))
+        try #require(await waitUntil { webView.isLoading && response.requestCount == 1 })
+
+        let clock = TestClock()
+        let waiting = Task { await PageSettle.untilIdle(webView, clock: clock) }
+        defer { waiting.cancel() }
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        waiting.cancel()
+        #expect(await waiting.value == false)
+        #expect(clock.pendingCount == 0)
+        #expect(webView.isLoading)
     }
 
     @Test func survivesRepeatedWaitsOnTheSameView() async {

@@ -70,15 +70,18 @@ struct FirstPaintCoverTests {
         let inDark = view.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
         let tab = BrowserTab(adopting: view)
         view.loadHTMLString("<html><body style='background:\(inDark ? "#fff" : "#000")'></body></html>", baseURL: nil)
-        try await Task.sleep(for: .seconds(1))
+        try #require(await PageSettle.untilIdle(view))
+        let clock = TestClock()
+        tab.presentationClock = clock
         view.underPageBackgroundColor = inDark ? .white : .black
 
         tab.coverUntilPresented()
 
         #expect(!tab.hasPresentedContent)
-        try await Task.sleep(for: .milliseconds(120))
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        clock.advance(by: BrowserTab.coverCeiling / 2)
         #expect(!tab.hasPresentedContent)
-        try await Task.sleep(for: .seconds(1.5))
-        #expect(tab.hasPresentedContent)
+        clock.advance(by: BrowserTab.coverCeiling / 2)
+        #expect(await waitUntil { tab.hasPresentedContent })
     }
 }

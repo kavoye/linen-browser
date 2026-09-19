@@ -6,18 +6,20 @@ import WebKit
 
 @testable import Linen
 
-/// Every view is built from a copy of one template. The copy is what keeps a
-/// single process pool alive for the whole run — WebKit traps in
-/// `~WebProcessPool` on a pool it destroys — and the copy being shallow is the
-/// trap that comes with it.
 @MainActor
 struct WebViewConfigurationTests {
-    @available(macOS, deprecated: 12.0)
-    @Test func everyConfigurationSharesOneProcessPool() {
-        let first = WebViewPool.makeConfiguration()
-        let second = WebViewPool.makeConfiguration()
-
-        #expect(first.processPool === second.processPool)
+    @Test(.boundedWebViews) func configurationsSurviveOtherViewsBeingReleased() async throws {
+        let survivor = WKWebView(frame: .zero, configuration: WebViewPool.makeConfiguration())
+        weak var released: WKWebView?
+        do {
+            let temporary = WKWebView(frame: .zero, configuration: WebViewPool.makeConfiguration())
+            released = temporary
+            temporary.loadHTMLString("<title>Temporary</title>", baseURL: nil)
+            try #require(await waitUntil { !temporary.isLoading && temporary.title == "Temporary" })
+        }
+        try #require(await waitUntil { released == nil })
+        survivor.loadHTMLString("<title>Survivor</title>", baseURL: nil)
+        try #require(await waitUntil { !survivor.isLoading && survivor.title == "Survivor" })
     }
 
     /// A shallow copy hands out the template's own preferences, which would

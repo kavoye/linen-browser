@@ -8,19 +8,58 @@ import WebKit
 @testable import Linen
 
 @MainActor
+private func isolatedSystemTab() -> BrowserTab {
+    let configuration = WebViewPool.makeConfiguration()
+    configuration.websiteDataStore = .nonPersistent()
+    configuration.setURLSchemeHandler(SystemPageSchemeHandler(), forURLScheme: SystemPages.scheme)
+    let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+    return BrowserTab(adopting: view, opensBlank: false)
+}
+
+@MainActor
 @Suite(.serialized, .boundedWebViews)
 struct SystemPageReachTests {
+    private final class PolicyObserver: NSObject, WKNavigationDelegate {
+        let delegate: TabNavigationDelegate
+        var decision: WKNavigationActionPolicy?
+
+        init(delegate: TabNavigationDelegate) {
+            self.delegate = delegate
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+        ) {
+            delegate.webView(webView, decidePolicyFor: navigationAction) { policy in
+                self.decision = policy
+                decisionHandler(policy)
+            }
+        }
+    }
+
+    private func expectRefused(_ script: String, in tab: BrowserTab) async throws {
+        let delegate = try #require(tab.webView.navigationDelegate as? TabNavigationDelegate)
+        let observer = PolicyObserver(delegate: delegate)
+        tab.webView.navigationDelegate = observer
+        defer { tab.webView.navigationDelegate = delegate }
+        _ = try await tab.webView.evaluateJavaScript(script)
+        try #require(await waitUntil { observer.decision != nil })
+        #expect(observer.decision == .cancel)
+    }
+
     @Test func aWebsiteCannotSendTheTabToASystemPage() async throws {
         let server = try await HTTPFixtureServer.start(routes: [
             "/": .html("<title>Site</title><a id=\"go\" href=\"linen://settings\">go</a>"),
         ])
+        defer { withExtendedLifetime(server) {} }
         let page = try server.url()
-        let tab = BrowserTab(opensBlank: false)
+        let tab = isolatedSystemTab()
         tab.load(page)
-        #expect(await settled(tab, at: page))
+        try #require(await settled(tab, at: page))
 
-        _ = try? await tab.webView.evaluateJavaScript("location.href = 'linen://settings'")
-        await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(800))
+        try await expectRefused("location.href = 'linen://settings'", in: tab)
 
         #expect(tab.internalPage == nil, "a website reached one of Linen's own pages")
         #expect(tab.committedURL == page, "the tab left the website it was on")
@@ -30,13 +69,13 @@ struct SystemPageReachTests {
         let server = try await HTTPFixtureServer.start(routes: [
             "/": .html("<title>Site</title><a id=\"go\" href=\"linen://history\">go</a>"),
         ])
+        defer { withExtendedLifetime(server) {} }
         let page = try server.url()
-        let tab = BrowserTab(opensBlank: false)
+        let tab = isolatedSystemTab()
         tab.load(page)
-        #expect(await settled(tab, at: page))
+        try #require(await settled(tab, at: page))
 
-        _ = try? await tab.webView.evaluateJavaScript("document.getElementById('go').click()")
-        await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(800))
+        try await expectRefused("document.getElementById('go').click()", in: tab)
 
         #expect(tab.internalPage == nil)
         #expect(tab.committedURL == page)
@@ -48,16 +87,16 @@ struct SystemPageReachTests {
         let server = try await HTTPFixtureServer.start(routes: [
             "/": .html("<title>Site</title>"),
         ])
+        defer { withExtendedLifetime(server) {} }
         let page = try server.url()
-        let tab = BrowserTab(opensBlank: false)
+        let tab = isolatedSystemTab()
         tab.load(BrowserTab.InternalPage.history.url)
-        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        try #require(await settled(tab, at: BrowserTab.InternalPage.history.url))
 
         tab.load(page)
-        #expect(await settled(tab, at: page))
+        try #require(await settled(tab, at: page))
 
-        _ = try? await tab.webView.evaluateJavaScript("location.href = 'linen://settings'")
-        await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(800))
+        try await expectRefused("location.href = 'linen://settings'", in: tab)
 
         #expect(tab.internalPage == nil)
     }
@@ -68,16 +107,17 @@ struct SystemPageReachTests {
         let server = try await HTTPFixtureServer.start(routes: [
             "/": .html("<title>Site</title>"),
         ])
+        defer { withExtendedLifetime(server) {} }
         let page = try server.url()
-        let tab = BrowserTab(opensBlank: false)
+        let tab = isolatedSystemTab()
         tab.load(BrowserTab.InternalPage.history.url)
-        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        try #require(await settled(tab, at: BrowserTab.InternalPage.history.url))
         tab.load(page)
-        #expect(await settled(tab, at: page))
+        try #require(await settled(tab, at: page))
 
         tab.goBack()
 
-        #expect(await settled(tab, at: BrowserTab.InternalPage.history.url))
+        try #require(await settled(tab, at: BrowserTab.InternalPage.history.url))
         #expect(tab.internalPage == .history)
     }
 }
@@ -99,7 +139,7 @@ struct SystemPageAddressTests {
     }
 
     @Test func anAddressThatNamesNoPageDoesNotOpenOne() async {
-        let tab = BrowserTab(opensBlank: false)
+        let tab = isolatedSystemTab()
         tab.load(URL(string: "linen://nonsense")!)
         await PageSettle.untilQuiet(tab.webView, ceiling: .milliseconds(600))
 

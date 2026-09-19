@@ -14,19 +14,6 @@ import WebKit
 @MainActor
 @Suite(.serialized)
 struct BackForwardScrollTests {
-    private func eventually(
-        timeout: Duration = .seconds(10),
-        _ condition: @escaping @MainActor () -> Bool
-    ) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if condition() {
-                return true
-            }
-            try? await Task.sleep(for: .milliseconds(20))
-        }
-        return condition()
-    }
 
     private func scrollY(_ webView: WKWebView) async -> Double {
         (try? await webView.evaluateJavaScript("window.scrollY")) as? Double ?? -1
@@ -74,32 +61,26 @@ struct BackForwardScrollTests {
         defer { host.orderOut(nil) }
 
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
-        #expect(await eventually { tab.urlString == tall.absoluteString })
+        #expect(await waitUntil { tab.urlString == tall.absoluteString })
 
         _ = try? await tab.webView.evaluateJavaScript("window.scrollTo(0, 1500)")
         let before = await scrollY(tab.webView)
         #expect(before == 1500)
         // The scroll monitor reports on a short throttle; leaving the page
         // before it fires is not the gesture under test.
-        try? await Task.sleep(for: .milliseconds(300))
+        #expect(await waitUntil { tab.lastReportedScrollY == before })
 
         _ = try? await tab.webView.evaluateJavaScript(
             "document.getElementById('next').href = '\(other.absoluteString)'; document.getElementById('next').click()"
         )
-        #expect(await eventually { tab.urlString == other.absoluteString && tab.canGoBack })
+        #expect(await waitUntil { tab.urlString == other.absoluteString && tab.canGoBack })
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
 
         tab.goBack()
-        #expect(await eventually { tab.urlString == tall.absoluteString })
+        #expect(await waitUntil { tab.urlString == tall.absoluteString })
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
 
-        var after = await scrollY(tab.webView)
-        let deadline = ContinuousClock.now + .seconds(30)
-        while after != 1500, ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(50))
-            after = await scrollY(tab.webView)
-        }
-        #expect(after == 1500)
+        #expect(await waitUntil { await scrollY(tab.webView) == before })
     }
 
     // MARK: - The memory itself

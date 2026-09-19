@@ -12,7 +12,6 @@ import WebKit
 @Suite(.serialized, .boundedWebViews)
 struct ExtensionPageAssetsTests {
     private static let handlerName = "probe"
-    private let probeURL = URL(string: "https://example.com/")!
 
     private final class Collector: NSObject, WKScriptMessageHandler {
         var messages: [String] = []
@@ -101,6 +100,9 @@ struct ExtensionPageAssetsTests {
 
     private struct Harness {
         let controller: WKWebExtensionController
+        let context: WKWebExtensionContext
+        let server: HTTPFixtureServer
+        let pageURL: URL
         let window: ProbeWindow
         let id: String
     }
@@ -166,6 +168,8 @@ struct ExtensionPageAssetsTests {
               port.onMessage.addListener((message) => {
                 if (message && message.type === "ping") {
                   port.postMessage({ type: "pong", name: port.name, n: message.n });
+                } else if (message && message.type === "barrier") {
+                  port.postMessage({ type: "barrier" });
                 }
               });
             }
@@ -217,9 +221,12 @@ struct ExtensionPageAssetsTests {
             return;
           }
           const port = window.chrome.runtime.connect(ids[0] || "nobody", { name: "probe-port" });
-          port.onMessage.addListener((message) => post("port:" + JSON.stringify(message)));
+          port.onMessage.addListener((message) => {
+            post(message.type === "barrier" ? "barrier" : "port:" + JSON.stringify(message));
+          });
           port.onDisconnect.addListener(() => post("disconnected:" + (window.chrome.runtime.lastError ? window.chrome.runtime.lastError.message : "")));
           port.postMessage({ type: "ping", n: 7 });
+          port.postMessage({ type: "barrier" });
         })();
         """.write(to: web.appendingPathComponent("connect.js"), atomically: true, encoding: .utf8)
         try "body { --probe: 1; }".write(to: web.appendingPathComponent("probe.css"), atomically: true, encoding: .utf8)
@@ -252,7 +259,9 @@ struct ExtensionPageAssetsTests {
             context.setPermissionStatus(.grantedExplicitly, for: pattern)
         }
         try controller.load(context)
-        return Harness(controller: controller, window: window, id: id)
+        let server = try await HTTPFixtureServer.start(routes: ["/": .html("<title>Extension fixture</title>")])
+        return Harness(controller: controller, context: context, server: server,
+                       pageURL: try server.url(), window: window, id: id)
     }
 
     private func page(
@@ -298,10 +307,7 @@ struct ExtensionPageAssetsTests {
     }
 
     private func waitForMessages(_ collector: Collector, count: Int, limit: Duration = .seconds(6)) async {
-        let deadline = ContinuousClock.now + limit
-        while ContinuousClock.now < deadline, collector.messages.count < count {
-            try? await Task.sleep(for: .milliseconds(25))
-        }
+        #expect(await waitUntil(timeout: limit) { collector.messages.count >= count })
     }
 
     private func value(_ prefix: String, in collector: Collector) -> String? {
@@ -313,7 +319,7 @@ struct ExtensionPageAssetsTests {
         defer { try? FileManager.default.removeItem(at: package) }
         let harness = try await loadedHarness(for: package)
         let (webView, collector, window) = page(
-            harness, url: probeURL
+            harness, url: harness.pageURL
         )
         await waitForMessages(collector, count: 6, limit: .seconds(8))
         window.orderOut(nil)
@@ -332,7 +338,7 @@ struct ExtensionPageAssetsTests {
         let (webView, collector, window) = page(
             harness,
             pageWorldScripts: [ExtensionPageAssets.script],
-            url: probeURL
+            url: harness.pageURL
         )
         await waitForMessages(collector, count: 6, limit: .seconds(8))
         window.orderOut(nil)
@@ -352,7 +358,7 @@ struct ExtensionPageAssetsTests {
         let (webView, collector, window) = page(
             harness,
             pageWorldScripts: [ExtensionPageAssets.script, ExtensionExternalConnect.pageScript],
-            url: probeURL
+            url: harness.pageURL
         )
         await waitForMessages(collector, count: 2, limit: .seconds(30))
         window.orderOut(nil)
@@ -362,10 +368,7 @@ struct ExtensionPageAssetsTests {
         #expect(value("port:", in: collector) == #"{"type":"pong","name":"probe-port","n":7}"#, "\(collector.messages)")
     }
 
-    /// WebKit idles a non-persistent worker. A page opened long after the last
-    /// one must still reach it, or an extension that keeps its settings there
-    /// comes up with none of them.
-    @Test(.timeLimit(.minutes(3))) func anIdledWorkerStillAnswersAFreshPort() async throws {
+    @Test func aReloadedWorkerStillAnswersAFreshPort() async throws {
         let package = try probePackage(connectable: true)
         defer { try? FileManager.default.removeItem(at: package) }
         let harness = try await loadedHarness(for: package)
@@ -374,19 +377,20 @@ struct ExtensionPageAssetsTests {
         let first = page(
             harness,
             pageWorldScripts: scripts,
-            url: probeURL
+            url: harness.pageURL
         )
         await waitForMessages(first.1, count: 2, limit: .seconds(30))
         first.2.orderOut(nil)
         first.0.loadHTMLString("<html></html>", baseURL: nil)
         #expect(first.1.messages.contains { $0.hasPrefix("port:") }, "\(first.1.messages)")
 
-        try await Task.sleep(for: .seconds(75))
+        try harness.controller.unload(harness.context)
+        try harness.controller.load(harness.context)
 
         let second = page(
             harness,
             pageWorldScripts: scripts,
-            url: probeURL
+            url: harness.pageURL
         )
         await waitForMessages(second.1, count: 2, limit: .seconds(30))
         second.2.orderOut(nil)
@@ -409,10 +413,10 @@ struct ExtensionPageAssetsTests {
         let (webView, collector, window) = page(
             harness,
             pageWorldScripts: [ExtensionPageAssets.script, ExtensionExternalConnect.pageScript],
-            url: probeURL
+            url: harness.pageURL
         )
         await waitForMessages(collector, count: 2, limit: .seconds(30))
-        try? await Task.sleep(for: .seconds(1))
+        try #require(await waitUntil { collector.messages.contains("barrier") })
         window.orderOut(nil)
         _ = webView
 

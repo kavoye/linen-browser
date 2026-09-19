@@ -11,19 +11,6 @@ import WebKit
 @MainActor
 @Suite(.serialized, .boundedWebViews)
 struct BrowserSmokeTests {
-    private func eventually(
-        timeout: Duration = .seconds(5),
-        _ condition: @escaping @MainActor () -> Bool
-    ) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if condition() {
-                return true
-            }
-            try? await Task.sleep(for: .milliseconds(20))
-        }
-        return condition()
-    }
 
     private func permissions(_ name: String) -> SitePermissions {
         SitePermissions(
@@ -60,8 +47,8 @@ struct BrowserSmokeTests {
         let tab = browser.newTab(url: firstURL)
 
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
-        #expect(await eventually { tab.urlString == firstURL.absoluteString })
-        #expect(await eventually { tab.title == "First fixture" })
+        #expect(await waitUntil { tab.urlString == firstURL.absoluteString })
+        #expect(await waitUntil { tab.title == "First fixture" })
 
         tab.assistantAccess.persistsAnswers = false
         tab.assistantAccess.pageChanged(url: firstURL)
@@ -79,16 +66,31 @@ struct BrowserSmokeTests {
 
         let click = await toolkit.clickOnPage(ref: 0, label: "Next page")
         #expect(click.contains("Second page"))
-        #expect(await eventually { tab.urlString == secondURL.absoluteString && tab.canGoBack })
-        #expect(await eventually { tab.title == "Second fixture" })
+        #expect(await waitUntil { tab.urlString == secondURL.absoluteString && tab.canGoBack })
+        #expect(await waitUntil { tab.title == "Second fixture" })
 
         let back = await toolkit.goBack()
         #expect(back.contains("First page"))
-        #expect(await eventually { tab.urlString == firstURL.absoluteString && tab.canGoForward })
+        #expect(await waitUntil { tab.urlString == firstURL.absoluteString && tab.canGoForward })
 
         tab.goForward()
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
-        #expect(await eventually { tab.urlString == secondURL.absoluteString && tab.canGoBack })
+        #expect(await waitUntil { tab.urlString == secondURL.absoluteString && tab.canGoBack })
+    }
+
+    @Test func submittingARealFormNavigatesWithoutCrashing() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/form": .html("<title>Form</title><form action='/submitted'><input name='name' value='Ada'><button>Send</button></form>"),
+            "/submitted": .html("<title>Submitted</title>Saved"),
+        ])
+        let browser = BrowserModel(database: .temporary(), sitePermissions: permissions("FormSmoke"))
+        let tab = browser.newTab(url: try server.url("/form"))
+        defer { browser.closeAllTabs() }
+        try #require(await waitUntil { tab.title == "Form" && !tab.isLoading })
+        _ = try await tab.webView.evaluateJavaScript("document.forms[0].requestSubmit(); true")
+        try #require(await waitUntil { tab.title == "Submitted" && !tab.isLoading })
+        #expect(tab.pendingTransition == .formSubmit)
+        #expect(tab.urlString.hasPrefix(try server.url("/submitted").absoluteString))
     }
 
     @Test func relaunchRestoresALiveWebKitHistoryStack() async throws {
@@ -102,9 +104,9 @@ struct BrowserSmokeTests {
         let original = BrowserModel(database: database, sitePermissions: permissions("LaunchSmoke"))
         let tab = original.newTab(url: one)
 
-        #expect(await eventually(timeout: .seconds(10)) { tab.title == "Restored one" })
+        #expect(await waitUntil(timeout: .seconds(10)) { tab.title == "Restored one" })
         tab.load(two)
-        #expect(await eventually(timeout: .seconds(10)) {
+        #expect(await waitUntil(timeout: .seconds(10)) {
             tab.urlString == two.absoluteString && tab.title == "Restored two" && tab.canGoBack
         })
         original.saveBlocking()
@@ -114,14 +116,14 @@ struct BrowserSmokeTests {
         let restored = try #require(relaunched.tabs.first { $0.id == tab.id })
 
         #expect(relaunched.activeTabID == restored.id)
-        #expect(await eventually(timeout: .seconds(10)) {
+        #expect(await waitUntil(timeout: .seconds(10)) {
             restored.urlString == two.absoluteString
                 && restored.title == "Restored two"
                 && restored.canGoBack
         })
 
         restored.goBack()
-        #expect(await eventually(timeout: .seconds(10)) {
+        #expect(await waitUntil(timeout: .seconds(10)) {
             restored.urlString == one.absoluteString
                 && restored.title == "Restored one"
                 && restored.canGoForward
@@ -146,7 +148,7 @@ struct BrowserSmokeTests {
         )
         let tab = browser.newTab(url: try server.url("/file"))
 
-        #expect(await eventually(timeout: .seconds(10)) {
+        #expect(await waitUntil(timeout: .seconds(10)) {
             downloads.items.first?.state == .finished
         })
         let item = try #require(downloads.items.first)
@@ -177,7 +179,7 @@ struct BrowserSmokeTests {
                 adopting: webView(using: session.dataStore)
             )
 
-            #expect(await eventually(timeout: .seconds(10)) { tab.title == "Private state" })
+            #expect(await waitUntil(timeout: .seconds(10)) { tab.title == "Private state" })
             let cookie = try await tab.webView.evaluateJavaScript("document.cookie") as? String
             #expect(cookie?.contains("privateToken=secret") == true)
 
@@ -206,7 +208,7 @@ struct BrowserSmokeTests {
             url: try server.url("/read"),
             adopting: webView(using: fresh.dataStore)
         )
-        #expect(await eventually(timeout: .seconds(10)) { tab.title == "Fresh private state" })
+        #expect(await waitUntil(timeout: .seconds(10)) { tab.title == "Fresh private state" })
         let cookie = try await tab.webView.evaluateJavaScript("document.cookie") as? String
         #expect(cookie?.isEmpty == true)
     }
@@ -239,7 +241,7 @@ struct BrowserSmokeTests {
         #expect(disabledLibrary.records.first?.enabled == false)
 
         manager.setEnabled(true, id: id)
-        #expect(await eventually { manager.contexts[id] != nil })
+        #expect(await waitUntil { manager.contexts[id] != nil })
         #expect(manager.installed.first?.enabled == true)
         let enabledLibrary = ExtensionLibrary(baseDirectory: directory)
         enabledLibrary.load()

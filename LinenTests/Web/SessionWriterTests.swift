@@ -96,14 +96,12 @@ struct SessionWriterTests {
     @Test func achangingPageCannotHoldTheSessionUnwritten() async throws {
         let database = AppDatabase.temporary()
         let model = BrowserModel(database: database)
-        model.saveDebounce = .milliseconds(100)
-        model.saveDeadline = .milliseconds(300)
         _ = model.newTab(url: URL(string: "https://busy.example/"))
-
-        for _ in 0..<40 {
-            model.scheduleSave()
-            try await Task.sleep(for: .milliseconds(25))
-        }
+        let start = try #require(model.saveWaitingSince)
+        model.scheduleSave(now: start + model.saveDeadline / 2)
+        #expect(try storedTabCount(in: database) == 0)
+        model.scheduleSave(now: start + model.saveDeadline)
+        await model.saveTask?.value
         await model.saveChain?.value
 
         #expect(try storedTabCount(in: database) == 1)
@@ -118,12 +116,12 @@ struct SessionWriterTests {
 
         // Held open so both saves are waiting on the writer at once, which is
         // where the order used to be decided by whichever task woke first.
-        database.writer.asyncWriteWithoutTransaction { _ in
-            Thread.sleep(forTimeInterval: 0.2)
-        }
+        let releaseWriter = DispatchSemaphore(value: 0)
+        database.writer.asyncWriteWithoutTransaction { _ in releaseWriter.wait() }
         model.saveNow()
         _ = model.newTab(url: URL(string: "https://second.example/"))
         model.saveNow()
+        releaseWriter.signal()
         await model.saveChain?.value
 
         #expect(try storedTabCount(in: database) == 2)

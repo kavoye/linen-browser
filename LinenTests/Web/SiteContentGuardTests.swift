@@ -12,7 +12,18 @@ import WebKit
 /// media policy when a view is made, so nothing but this script enforces what
 /// a website was told.
 @Suite(.serialized, .boundedWebViews)
-struct SiteContentGuardTests {
+final class SiteContentGuardTests {
+    private let defaultsName = "SiteContentGuardTests-" + UUID().uuidString
+    private let settings: BrowserSettings
+
+    init() {
+        settings = BrowserSettings(defaults: UserDefaults(suiteName: defaultsName)!)
+    }
+
+    deinit {
+        UserDefaults.standard.removePersistentDomain(forName: defaultsName)
+    }
+
     private final class Reports {
         var count = 0
         var url: URL?
@@ -90,11 +101,9 @@ struct SiteContentGuardTests {
     // MARK: - Auto-play
 
     @Test func aWebsiteToldNeverIsStopped() async {
-        let previous = BrowserSettings.shared.autoplay
-        BrowserSettings.shared.autoplay = .block
-        defer { BrowserSettings.shared.autoplay = previous }
+        settings.autoplay = .block
 
-        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions()))
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
         await play(in: view)
 
         #expect(await pauses(in: view) == 1)
@@ -102,11 +111,9 @@ struct SiteContentGuardTests {
     }
 
     @Test func aWebsiteToldMutedPlaysWithoutSound() async {
-        let previous = BrowserSettings.shared.autoplay
-        BrowserSettings.shared.autoplay = .silent
-        defer { BrowserSettings.shared.autoplay = previous }
+        settings.autoplay = .silent
 
-        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions()))
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
         await play(in: view)
 
         #expect(await pauses(in: view) == 0, "a muted player is still a playing one")
@@ -114,11 +121,9 @@ struct SiteContentGuardTests {
     }
 
     @Test func aWebsiteToldAllowIsLeftAlone() async {
-        let previous = BrowserSettings.shared.autoplay
-        BrowserSettings.shared.autoplay = .allow
-        defer { BrowserSettings.shared.autoplay = previous }
+        settings.autoplay = .allow
 
-        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions()))
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
         await play(in: view)
 
         #expect(await pauses(in: view) == 0)
@@ -128,11 +133,9 @@ struct SiteContentGuardTests {
     /// The answer is about what a website starts by itself. A video the person
     /// pressed play on is theirs, whatever the website was told.
     @Test func aPlayerThePersonStartedIsNeverStopped() async {
-        let previous = BrowserSettings.shared.autoplay
-        BrowserSettings.shared.autoplay = .block
-        defer { BrowserSettings.shared.autoplay = previous }
+        settings.autoplay = .block
 
-        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions()))
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
         await play(in: view, startedByHand: true)
 
         #expect(await pauses(in: view) == 0)
@@ -140,16 +143,14 @@ struct SiteContentGuardTests {
 
     /// A website's own answer outranks the setting every other website is under.
     @Test func aWebsiteWithItsOwnAnswerIsNotUnderTheSetting() async throws {
-        let previous = BrowserSettings.shared.autoplay
-        BrowserSettings.shared.autoplay = .allow
-        defer { BrowserSettings.shared.autoplay = previous }
+        settings.autoplay = .allow
 
         let server = try await HTTPFixtureServer.start(routes: ["/": .html(Self.markup)])
         let address = try server.url()
         let permissions = temporaryPermissions()
         permissions.setAutoplay(.block, for: SitePermissions.origin(for: address))
 
-        let view = await page(guardedBy: SiteContentGuard(permissions: permissions), at: address)
+        let view = await page(guardedBy: SiteContentGuard(permissions: permissions, settings: settings), at: address)
         await play(in: view)
 
         #expect(await pauses(in: view) == 1)
@@ -158,11 +159,9 @@ struct SiteContentGuardTests {
     // MARK: - Pop-ups
 
     @Test func aBlockedPopUpIsReportedWithTheAddressItWanted() async {
-        let previous = BrowserSettings.shared.blocksPopups
-        BrowserSettings.shared.blocksPopups = true
-        defer { BrowserSettings.shared.blocksPopups = previous }
+        settings.blocksPopups = true
 
-        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions()))
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
         let reports = Reports()
         view.onPopupBlocked = {
             reports.url = $0
@@ -175,17 +174,15 @@ struct SiteContentGuardTests {
         #expect(reports.url == URL(string: "https://example.com/popup"))
     }
 
-    @Test func aWebsiteAllowedItsPopUpsReportsNothing() async {
-        let previous = BrowserSettings.shared.blocksPopups
-        BrowserSettings.shared.blocksPopups = false
-        defer { BrowserSettings.shared.blocksPopups = previous }
+    @Test func aWebsiteAllowedItsPopUpsReportsNothing() async throws {
+        settings.blocksPopups = false
 
-        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions()))
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
         let reports = Reports()
         view.onPopupBlocked = { _ in reports.count += 1 }
 
         _ = try? await view.evaluateJavaScript("window.open('https://example.com/popup'); true")
-        try? await Task.sleep(for: .milliseconds(400))
+        try await view.finishPendingPageMessages()
 
         #expect(reports.count == 0, "nothing was blocked, so there is nothing to say")
     }

@@ -92,8 +92,17 @@ struct ExtensionCompatibilityTests {
         )
         defer { try? FileManager.default.removeItem(at: package) }
 
-        let report = ExtensionCompatibility.report(forPackageAt: package, accepting: [])
+        let measured = OperatingSystemVersion(
+            majorVersion: ExtensionCompatibility.membersMeasuredThroughMacOS,
+            minorVersion: 0,
+            patchVersion: 0
+        )
+        let report = ExtensionCompatibility.report(forPackageAt: package, accepting: [], on: measured)
         #expect(report.members == ["runtime.onSuspend"])
+        let unmeasured = OperatingSystemVersion(
+            majorVersion: measured.majorVersion + 1, minorVersion: 0, patchVersion: 0
+        )
+        #expect(ExtensionCompatibility.report(forPackageAt: package, accepting: [], on: unmeasured).members.isEmpty)
     }
 
     @Test func theEventListStopsAssertingOnAnUnmeasuredSystem() {

@@ -51,12 +51,12 @@ struct PageActivityMonitorTests {
             field.dispatchEvent(new Event('input', { bubbles: true }));
             """
         )
-        await waitUntil { tab.hasEditedForm }
+        #expect(await waitUntil { tab.hasEditedForm })
         #expect(tab.hasEditedForm)
         #expect(!tab.canDiscardWebContent)
 
         try await tab.webView.evaluateJavaScript("document.getElementById('profile').reset()")
-        await waitUntil { !tab.hasEditedForm }
+        #expect(await waitUntil { !tab.hasEditedForm })
         #expect(!tab.hasEditedForm)
     }
 
@@ -71,7 +71,7 @@ struct PageActivityMonitorTests {
             field.dispatchEvent(new Event('input', { bubbles: true }));
             """
         )
-        await waitUntil { tab.hasEditedForm }
+        #expect(await waitUntil { tab.hasEditedForm })
 
         try await tab.webView.evaluateJavaScript(
             """
@@ -80,17 +80,8 @@ struct PageActivityMonitorTests {
             restoredField.dispatchEvent(new Event('input', { bubbles: true }));
             """
         )
-        await waitUntil { !tab.hasEditedForm }
+        #expect(await waitUntil { !tab.hasEditedForm })
         #expect(!tab.hasEditedForm)
     }
 
-    private func waitUntil(
-        _ condition: () -> Bool,
-        limit: Duration = .seconds(2)
-    ) async {
-        let deadline = ContinuousClock.now + limit
-        while ContinuousClock.now < deadline, !condition() {
-            try? await Task.sleep(for: .milliseconds(20))
-        }
-    }
 }
