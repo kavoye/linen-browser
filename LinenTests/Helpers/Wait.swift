@@ -14,14 +14,20 @@ import Foundation
 func waitUntil(
     timeout: Duration = .seconds(25),
     tick: Duration = .milliseconds(20),
-    _ condition: () async -> Bool
-) async -> Bool {
+    _ condition: () async throws -> Bool
+) async rethrows -> Bool {
     let deadline = ContinuousClock.now + timeout
     while ContinuousClock.now < deadline {
-        if await condition() {
+        guard !Task.isCancelled else { return false }
+        if try await condition() {
             return true
         }
-        try? await Task.sleep(for: tick)
+        do {
+            try await Task.sleep(for: tick)
+        } catch {
+            return false
+        }
     }
-    return await condition()
+    guard !Task.isCancelled else { return false }
+    return try await condition()
 }

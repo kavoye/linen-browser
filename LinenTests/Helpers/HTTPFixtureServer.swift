@@ -12,14 +12,12 @@ nonisolated final class HTTPFixtureServer: @unchecked Sendable {
         let status: String
         let headers: [String: String]
         let body: Data
-        /// Seconds to sit on the request before answering, so a test can hold
-        /// a navigation in its provisional state.
-        var delay: TimeInterval = 0
+        var gate: ResponseGate?
 
         static func html(
             _ body: String,
             headers additionalHeaders: [String: String] = [:],
-            delay: TimeInterval = 0
+            gate: ResponseGate? = nil
         ) -> Response {
             var headers = additionalHeaders
             headers["Content-Type"] = "text/html; charset=utf-8"
@@ -27,7 +25,7 @@ nonisolated final class HTTPFixtureServer: @unchecked Sendable {
                 status: "200 OK",
                 headers: headers,
                 body: Data(body.utf8),
-                delay: delay
+                gate: gate
             )
         }
 
@@ -162,8 +160,8 @@ nonisolated final class HTTPFixtureServer: @unchecked Sendable {
                 connection.cancel()
             })
         }
-        if response.delay > 0 {
-            queue.asyncAfter(deadline: .now() + response.delay, execute: send)
+        if let gate = response.gate {
+            gate.submit(send)
         } else {
             send()
         }
