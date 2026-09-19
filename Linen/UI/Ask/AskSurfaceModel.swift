@@ -26,7 +26,9 @@ final class AskSurfaceModel {
     private var isPreviewingSelection = false
     private var suggestionPreview = OmniboxSuggestionPreview()
 
-    var resultQuery: String { suggestionPreview.query ?? interaction.text }
+    var resultQuery: String {
+        suggestionPreview.query ?? interaction.text
+    }
 
     init(placement: AskSurface.Placement, browser: BrowserModel, coordinator: AppCoordinator) {
         self.placement = placement
@@ -114,7 +116,9 @@ final class AskSurfaceModel {
     }
 
     func resultSections() -> [OmniboxSection] {
-        if isFocused, !isListening, let sections = suggestionPreview.sections { return sections }
+        if isFocused, !isListening, let sections = suggestionPreview.sections {
+            return sections
+        }
         return AskSurfaceResults.sections(
             placement: placement,
             query: interaction.text,

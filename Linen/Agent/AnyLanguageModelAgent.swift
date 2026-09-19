@@ -17,33 +17,33 @@ final class AnyLanguageModelAgent: AgentRunner {
         return false
     }
 
-    private static let continuationPrompt = "Continue the task using the tool result."
+    static let continuationPrompt = "Continue the task using the tool result."
     private static let resumeInstructionID = "linen.internal.resume"
-    private static let answerPrompt = "Answer the user now, in plain words."
+    static let answerPrompt = "Answer the user now, in plain words."
     private static let scaffoldingPrompts: Set<String> = [continuationPrompt, answerPrompt]
-    private static let recoveryPrompt = """
+    static let recoveryPrompt = """
         Recent actions returned the same result or failed repeatedly. Read the current page for \
         fresh controls, inspect validation messages, and change your approach. Do not repeat the \
         same unsuccessful action. If you need the user, ask a specific question with askUser.
         """
-    private let modelID: String
-    private let reasoningEffort: String
-    private let executionPolicy: AgentExecutionPolicy?
+    let modelID: String
+    let reasoningEffort: String
+    let executionPolicy: AgentExecutionPolicy?
     private let toolOverrides: [any Tool]?
-    private let openAI: OpenAIResponsesClient?
+    let openAI: OpenAIResponsesClient?
 
-    private var acceptsImages: Bool
+    var acceptsImages: Bool
     private let onImageInputUnsupported: () -> Void
     private let model: any LanguageModel
-    private let options: GenerationOptions
-    private let answerOptions: GenerationOptions
+    let options: GenerationOptions
+    let answerOptions: GenerationOptions
     let budget: ContextBudget
     private let enabledToolIDs: Set<String>?
-    private let toolkit: AgentToolkit
-    private let log: ConversationLog
+    let toolkit: AgentToolkit
+    let log: ConversationLog
 
-    private var sessions: [UUID: LanguageModelSession] = [:]
-    private var discardedTabIDs = RecentIDs()
+    var sessions: [UUID: LanguageModelSession] = [:]
+    var discardedTabIDs = RecentIDs()
     private var prewarmedSession: LanguageModelSession?
 
     init(
@@ -139,278 +139,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         sessions[newTabID] = session
     }
 
-    func run(
-        utterance: String,
-        task: AgentTaskContext,
-        into reply: AgentReplyModel,
-        speech: any SpeechOutput
-    ) async {
-        toolkit.outputBudget = budget.toolOutput
-        toolkit.beginTask(task)
-        reply.beginStream()
-        reply.setActivity(String(localized: "Thinking…"))
-        let started = ContinuousClock.now
-        var diagnostics = AgentRunDiagnostics(model: modelID, reasoningEffort: reasoningEffort)
-        func event(_ kind: String, _ values: [String: String] = [:]) {
-            recordEvent(kind, values, diagnostics: &diagnostics, task: task)
-        }
-        var checkpoint = log.checkpoint(forTab: task.spaceID) ?? AgentCheckpoint()
-        var nativeState = openAI?.restoring(checkpoint.openAI)
-        nativeState?.presentation = .init()
-        checkpoint.progressUpdates = []
-        var session = session(for: task.spaceID)
-        var stop: AgentStopReason?
-        let policy = executionPolicy ?? .current
-        func checkCompactionBudget() throws {
-            if let limit = policy.maxModelRequests, diagnostics.modelRequests >= limit {
-                throw AgentRequestLimitReached()
-            }
-        }
-        var monitor = AgentProgressMonitor(policy: policy)
-        let observer = AgentToolProposalObserver()
-        var prompt = AssistantAttachment.prompt(
-            utterance, attachments: task.attachments, textOnly: task.attachmentTextOnly || !acceptsImages
-        )
-        if task.isContinuation { prompt = Self.continuationPrompt }
-        var images = AttachmentRequest.images(task.attachments, textOnly: task.attachmentTextOnly || !acceptsImages)
-        var barrenTurns = 0
-        var progressOnlyRounds = 0
-        var overflowRecovered = false
-        var finalText: String?
-        var submittedUtterance = false
-        var originalPrompt = prompt
-        var originalImages = images
-        var attachmentInput: OpenAIAttachmentInput?
-
-        func save() {
-            var history = Array(session.transcript)
-            if !submittedUtterance {
-                history.append(.prompt(.init(segments: [.text(.init(content: originalPrompt))] + originalImages.map { .image($0) })))
-            }
-            checkpoint.transcript = settledTranscript(Transcript(entries: history))
-            do { checkpoint.openAI = try nativeState?.synchronizing(checkpoint.transcript) } catch { checkpoint.openAI = nativeState; stop = .providerError }
-            log.saveCheckpoint(checkpoint, taskID: task.id)
-            log.recordContextEstimate(
-                tabID: task.spaceID,
-                tokens: (checkpoint.openAI?.contextTokens ?? Self.estimatedTokens(in: checkpoint.transcript)) + budget.toolSchemaTokens
-            )
-            if !discardedTabIDs.contains(task.spaceID) {
-                sessions[task.spaceID] = makeSession(transcript: checkpoint.transcript)
-            }
-        }
-
-        func publishProgress(_ raw: String) {
-            let text = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2_000))
-            guard !Task.isCancelled, !text.isEmpty,
-                  checkpoint.progressUpdates?.last?.text != text else { return }
-            checkpoint.progressUpdates?.append(AgentProgressUpdate(
-                text: text, afterStepCount: log.latestTrace(forTab: task.spaceID)?.steps.count ?? 0
-            ))
-            event("progress_update", ["status": "completed"])
-            save()
-        }
-
-        if !acceptsImages {
-            log.setAttachments(task.attachments, textOnly: true, taskID: task.id)
-        }
-        save()
-        do {
-            try AttachmentRequest.validate(
-                task.attachments, message: utterance, textOnly: task.attachmentTextOnly || !acceptsImages,
-                windowTokens: budget.windowTokens
-            )
-            if openAI != nil, !task.isContinuation {
-                attachmentInput = try OpenAIAttachmentInput.make(prompt: utterance, attachments: task.attachments,
-                    textOnly: task.attachmentTextOnly || !acceptsImages)
-            }
-            while !Task.isCancelled && stop == nil {
-                if let limit = policy.maxModelRequests, diagnostics.modelRequests >= limit {
-                    stop = .requestLimit
-                    break
-                }
-                let resumeCharacters = task.isContinuation ? AgentCheckpoint.resumePrompt.count + utterance.count : 0
-                if isOverBudget(session, nativeState: nativeState, promptCharacters: prompt.count + images.count * 6_400 + resumeCharacters) {
-                    event("context_compaction", ["reason": "input_budget"])
-                    session = try await compact(
-                        session, checkpoint: &checkpoint, nativeState: &nativeState, reply: reply,
-                        pendingPromptTokens: max(1, (prompt.count + resumeCharacters) / 4) + images.count * 1_600,
-                        beforeRequest: checkCompactionBudget, event: event
-                    )
-                    save()
-                }
-                if let limit = policy.maxModelRequests, diagnostics.modelRequests >= limit {
-                    stop = .requestLimit
-                    break
-                }
-                if task.isContinuation {
-                    session = sessionForContinuation(session, pageContext: utterance)
-                }
-                observer.calls = []
-                session.toolExecutionDelegate = observer
-                let transcriptBeforeRequest = session.transcript
-                let wasSubmitted = submittedUtterance
-                let prefix = session.transcript.count + 1
-                event("generation")
-                let answer: String
-                submittedUtterance = true
-                do {
-                    if let state = nativeState {
-                        nativeState = try state.synchronizing(session.transcript)
-                    }
-                    let freshApprovals = nativeState?.unsubmittedMCPApprovals ?? []
-                    if !freshApprovals.isEmpty {
-                        nativeState?.recordMCPApprovalAttempts(freshApprovals)
-                        save()
-                        try log.persistCheckpoint(taskID: task.id)
-                    }
-                    answer = try await OpenAIMCPExecutionScope.$freshApprovals.withValue(freshApprovals) {
-                        try await AgentToolProposalScope.$current.withValue(observer) {
-                            try await respond(
-                                with: &session, nativeState: &nativeState, to: prompt, images: images, attachmentInput: attachmentInput,
-                                options: barrenTurns > 0 ? answerOptions : options, task: task, reply: reply, event: event
-                            )
-                        }
-                    }
-                } catch where !observer.calls.isEmpty {
-                    answer = ""
-                } catch {
-                    if let fallback = try imageFallback(
-                        for: error, task: task, utterance: utterance,
-                        transcript: transcriptBeforeRequest, prompt: prompt, images: images
-                    ) {
-                        session = fallback.session
-                        prompt = fallback.prompt
-                        images = []
-                        attachmentInput = nil
-                        originalPrompt = fallback.originalPrompt
-                        originalImages = []
-                        submittedUtterance = wasSubmitted
-                        event("attachment_text_fallback")
-                        continue
-                    }
-                    guard Self.isContextWindowError(error), !overflowRecovered else { throw error }
-                    overflowRecovered = true
-                    event("overflow_recovery")
-                    session = try await compact(
-                        session, checkpoint: &checkpoint, nativeState: &nativeState, reply: reply,
-                        beforeRequest: checkCompactionBudget, event: event
-                    )
-                    save()
-                    prompt = Self.continuationPrompt
-                    images = []
-                    attachmentInput = nil
-                    continue
-                }
-                overflowRecovered = false
-                images = []
-                attachmentInput = nil
-                session = normalizedSession(session, expectedPrefixCount: prefix)
-                session = sessionRemovingEmptyResponses(from: session)
-                let calls = observer.calls
-                if calls.isEmpty {
-                    if !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        finalText = answer
-                        break
-                    }
-                    barrenTurns += 1
-                    guard barrenTurns < 2 else { throw AgentFailure.emptyResponse }
-                    prompt = Self.answerPrompt
-                    continue
-                }
-                barrenTurns = 0
-                if !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    publishProgress(answer)
-                }
-                progressOnlyRounds = calls.allSatisfy { $0.toolName == UpdateProgressTool.toolName }
-                    ? progressOnlyRounds + 1 : 0
-                if progressOnlyRounds > 3 {
-                    stop = .noProgress
-                    break
-                }
-                var needsRecovery = false
-                var entries = Array(session.transcript)
-                let existing = Set(entries.flatMap { entry -> [String] in
-                    if case .toolCalls(let calls) = entry {
-                        return calls.map(\.id)
-                    }
-                    return []
-                })
-                let missing = calls.filter { !existing.contains($0.id) }
-                if !missing.isEmpty {
-                    entries.append(.toolCalls(.init(missing)))
-                }
-                session = makeSession(transcript: Transcript(entries: entries))
-                save()
-                for call in calls {
-                    if Task.isCancelled || stop != nil || needsRecovery {
-                        break
-                    }
-                    if call.toolName == UpdateProgressTool.toolName {
-                        let arguments = try? UpdateProgressTool.Arguments(call.arguments)
-                        if let arguments { publishProgress(arguments.message) }
-                        entries.append(.toolOutput(.init(
-                            id: call.id, toolName: call.toolName,
-                            segments: [.text(.init(content: arguments == nil
-                                ? "Provide a message containing a short progress update."
-                                : "Progress update delivered. Continue with the task."))]
-                        )))
-                        session = makeSession(transcript: Transcript(entries: entries))
-                        save()
-                        continue
-                    }
-                    event("tool_proposed", ["name": call.toolName])
-                    let (output, failed) = await execute(call: call, reply: reply, event: event)
-                    entries.append(.toolOutput(output))
-                    session = makeSession(transcript: Transcript(entries: entries))
-                    if call.toolName == OpenAIComputerCall.toolName, toolkit.computerActionDeclined { stop = .interrupted }
-                    let text = Self.text(in: output.segments)
-                    if call.toolName == "askUser", !failed, !text.isEmpty {
-                        checkpoint.userAnswers.append(text)
-                    }
-                    save()
-                    let progress = inspectProgress(monitor.observe(
-                        name: call.toolName, arguments: call.arguments.jsonString, output: text, failed: failed
-                    ), event: event)
-                    needsRecovery = progress.recovery
-                    stop = progress.stop ?? stop
-                }
-                session = makeSession(transcript: settledTranscript(session.transcript))
-                prompt = needsRecovery ? Self.recoveryPrompt : Self.continuationPrompt
-                save()
-            }
-            if Task.isCancelled {
-                stop = .interrupted
-            }
-        } catch is CancellationError {
-            stop = .interrupted
-        } catch {
-            finalText = (error as? AttachmentFailure)?.errorDescription
-                ?? (error as? OpenAIFileLibraryFailure)?.errorDescription
-                ?? (error as? OpenAIMCPFailure)?.errorDescription ?? finalText
-            if error is AgentRequestLimitReached {
-                stop = .requestLimit
-            } else {
-                stop = Self.isContextWindowError(error) || error is AgentCompactionFailure ? .contextLimit : .providerError
-            }
-            if case AgentFailure.emptyResponse = error {
-                finalText = AgentFailure.emptyResponse.errorDescription
-            }
-            Pipeline.log.error("Assistant request stopped; see mechanical diagnostics")
-        }
-
-        save()
-        let committed = await finishReply(
-            stop: stop, text: finalText, session: session, nativeState: nativeState, task: task, reply: reply, speech: speech, event: event
-        )
-        diagnostics.elapsedMilliseconds = Self.milliseconds(since: started)
-        log.setDiagnostics(diagnostics, taskID: task.id)
-        log.saveNow()
-        toolkit.finishTask(task, commitResult: committed)
-        reply.setActivity(nil)
-        reply.endStream()
-    }
-
-    private func recordEvent(
+    func recordEvent(
         _ kind: String, _ values: [String: String], diagnostics: inout AgentRunDiagnostics, task: AgentTaskContext
     ) {
         let observation = AgentEvaluationEvent(kind: kind, values: values)
@@ -426,7 +155,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         onEvaluationEvent?(observation)
     }
 
-    private func inspectProgress(
+    func inspectProgress(
         _ decision: AgentProgressMonitor.Decision, event: (String, [String: String]) -> Void
     ) -> (recovery: Bool, stop: AgentStopReason?) {
         switch decision {
@@ -440,7 +169,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         }
     }
 
-    private func finishReply(
+    func finishReply(
         stop: AgentStopReason?, text: String?, session: LanguageModelSession, nativeState: OpenAIConversationState?,
         task: AgentTaskContext, reply: AgentReplyModel, speech: any SpeechOutput,
         event: (String, [String: String]) -> Void
@@ -467,7 +196,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return false
     }
 
-    private func imageFallback(
+    func imageFallback(
         for error: any Error, task: AgentTaskContext, utterance: String,
         transcript: Transcript, prompt: String, images: [Transcript.ImageSegment]
     ) throws -> (session: LanguageModelSession, prompt: String, originalPrompt: String)? {
@@ -484,7 +213,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return (makeSession(transcript: transcript), images.isEmpty ? prompt : original, original)
     }
 
-    private func execute(
+    func execute(
         call: Transcript.ToolCall, reply: AgentReplyModel,
         event: (String, [String: String]) -> Void
     ) async -> (Transcript.ToolOutput, Bool) {
@@ -533,31 +262,32 @@ final class AnyLanguageModelAgent: AgentRunner {
         return (output, failed)
     }
 
-    private nonisolated static func execute<T: Tool>(_ tool: T, arguments: GeneratedContent) async throws -> [Transcript.Segment] {
+    nonisolated static func execute<T: Tool>(_ tool: T, arguments: GeneratedContent) async throws -> [Transcript.Segment] {
         let output = try await tool.call(arguments: T.Arguments(arguments))
         return [.text(.init(content: output.promptRepresentation.description))]
     }
 
-    private static func milliseconds(since instant: ContinuousClock.Instant) -> Int {
+    static func milliseconds(since instant: ContinuousClock.Instant) -> Int {
         let components = instant.duration(to: .now).components
         return max(0, Int(components.seconds * 1_000 + components.attoseconds / 1_000_000_000_000_000))
     }
 
-    private func respond(
+    func respond(
         with session: inout LanguageModelSession,
         nativeState: inout OpenAIConversationState?,
         to prompt: String,
         images: [Transcript.ImageSegment],
         attachmentInput: OpenAIAttachmentInput?,
         options: GenerationOptions,
-        task: AgentTaskContext,
-        reply: AgentReplyModel,
+        onText: @escaping @MainActor (String) -> Void,
         event: (String, [String: String]) -> Void
     ) async throws -> String {
         let started = ContinuousClock.now
         defer { event("response", ["elapsed_ms": String(Self.milliseconds(since: started))]) }
         if var openAI, let state = nativeState {
-            if !acceptsImages { openAI.settings.useComputer = false }
+            if !acceptsImages {
+                openAI.settings.useComputer = false
+            }
             let previous = session.transcript
             var submitted = Array(previous)
             submitted.append(.prompt(.init(segments: [.text(.init(content: prompt))] + images.map { .image($0) })))
@@ -566,11 +296,7 @@ final class AnyLanguageModelAgent: AgentRunner {
                 let step = try await openAI.respond(
                     transcript: previous, prompt: prompt, images: images, state: state,
                     tools: tools(), maxTokens: budget.responseTokens, attachmentInput: attachmentInput,
-                    onText: { [log] text in
-                        guard !Task.isCancelled else { return }
-                        reply.update(text: text)
-                        log.updateResponse(text, taskID: task.id, closingSteps: false)
-                    }
+                    onText: onText
                 )
                 if let milliseconds = step.firstTextMilliseconds {
                     event("first_text", ["elapsed_ms": String(milliseconds)])
@@ -628,11 +354,11 @@ final class AnyLanguageModelAgent: AgentRunner {
         return response.content
     }
 
-    private func isOverBudget(_ session: LanguageModelSession, nativeState: OpenAIConversationState?, promptCharacters: Int) -> Bool {
+    func isOverBudget(_ session: LanguageModelSession, nativeState: OpenAIConversationState?, promptCharacters: Int) -> Bool {
         (nativeState?.contextTokens ?? Self.estimatedTokens(in: session.transcript)) + max(1, promptCharacters / 4) + budget.toolSchemaTokens > budget.inputTokens
     }
 
-    private func compact(
+    func compact(
         _ session: LanguageModelSession,
         checkpoint: inout AgentCheckpoint,
         nativeState: inout OpenAIConversationState?,
@@ -711,8 +437,12 @@ final class AnyLanguageModelAgent: AgentRunner {
         var tail: [Transcript.Entry] = []
         for start in rounds.suffix(budget.retainedToolRounds).reversed() {
             let candidate = Array(entries[start...]).filter {
-                if case .prompt = $0 { return false }
-                if case .instructions = $0 { return false }
+                if case .prompt = $0 {
+                    return false
+                }
+                if case .instructions = $0 {
+                    return false
+                }
                 return true
             }
             guard Self.estimatedTokens(in: rebuilt(candidate)) <= limit else { break }
@@ -729,7 +459,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return compacted
     }
 
-    private func settledTranscript(_ transcript: Transcript) -> Transcript {
+    func settledTranscript(_ transcript: Transcript) -> Transcript {
         let outputs = Set(transcript.compactMap { entry -> String? in
             if case .toolOutput(let output) = entry {
                 return output.id
@@ -740,7 +470,9 @@ final class AnyLanguageModelAgent: AgentRunner {
         for entry in transcript {
             if case .instructions(var instructions) = entry {
                 instructions.segments.removeAll {
-                    if case .text(let text) = $0 { return text.id == Self.resumeInstructionID }
+                    if case .text(let text) = $0 {
+                        return text.id == Self.resumeInstructionID
+                    }
                     return false
                 }
                 kept.append(.instructions(instructions))
@@ -759,7 +491,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return Transcript(entries: kept)
     }
 
-    private func sessionForContinuation(_ session: LanguageModelSession, pageContext: String) -> LanguageModelSession {
+    func sessionForContinuation(_ session: LanguageModelSession, pageContext: String) -> LanguageModelSession {
         var entries = Array(settledTranscript(session.transcript))
         let metadata = String(decoding: (try? JSONEncoder().encode(pageContext)) ?? Data(), as: UTF8.self)
         let guidance = AgentCheckpoint.resumePrompt
@@ -780,7 +512,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return makeSession(transcript: Transcript(entries: entries))
     }
 
-    private func normalizedSession(
+    func normalizedSession(
         _ session: LanguageModelSession,
         expectedPrefixCount: Int
     ) -> LanguageModelSession {
@@ -795,7 +527,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return makeSession(transcript: Transcript(entries: entries))
     }
 
-    private func sessionRemovingEmptyResponses(
+    func sessionRemovingEmptyResponses(
         from session: LanguageModelSession
     ) -> LanguageModelSession {
         let entries = Array(session.transcript).filter { entry in
@@ -808,7 +540,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return makeSession(transcript: Transcript(entries: entries))
     }
 
-    private func session(for tabID: UUID) -> LanguageModelSession {
+    func session(for tabID: UUID) -> LanguageModelSession {
         if let checkpoint = log.checkpoint(forTab: tabID) {
             let restored = makeSession(transcript: settledTranscript(checkpoint.transcript))
             sessions[tabID] = restored
@@ -864,7 +596,7 @@ final class AnyLanguageModelAgent: AgentRunner {
             + [UpdateProgressTool()] + native
     }
 
-    private func makeSession(transcript: Transcript? = nil) -> LanguageModelSession {
+    func makeSession(transcript: Transcript? = nil) -> LanguageModelSession {
         let tools: [any Tool] = model is SystemLanguageModel
             ? tools().map { AgentProposalTool(name: $0.name, description: $0.description, parameters: $0.parameters) }
             : tools()
@@ -880,7 +612,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         )
     }
 
-    private static func text(in segments: [Transcript.Segment]) -> String {
+    static func text(in segments: [Transcript.Segment]) -> String {
         segments.compactMap { segment in
             if case .text(let text) = segment {
                 return text.content
@@ -889,7 +621,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         }.joined()
     }
 
-    private static func estimatedTokens(in transcript: Transcript) -> Int {
+    static func estimatedTokens(in transcript: Transcript) -> Int {
         var prose = 0
         var machine = 0
         var images = 0
@@ -919,12 +651,14 @@ final class AnyLanguageModelAgent: AgentRunner {
         return prose + machine + images == 0 ? 0 : max(1, estimate)
     }
 
-    private static func isContextWindowError(_ error: any Error) -> Bool {
+    static func isContextWindowError(_ error: any Error) -> Bool {
         if let error = error as? LanguageModelSession.GenerationError,
            case .exceededContextWindowSize = error {
             return true
         }
-        if let error = error as? OpenAIFailure { return error.kind == .contextLimit }
+        if let error = error as? OpenAIFailure {
+            return error.kind == .contextLimit
+        }
         return SystemModelFailure.isContextOverflow(error)
     }
 }
@@ -946,7 +680,7 @@ final class AgentToolProposalObserver: ToolExecutionDelegate {
     }
 }
 
-private struct AgentRequestLimitReached: Error {}
+struct AgentRequestLimitReached: Error {}
 
 private extension LanguageModelSession.Usage {
     var eventValues: [String: String] {
@@ -964,7 +698,7 @@ private extension LanguageModelSession.Usage {
     }
 }
 
-private enum AgentFailure: LocalizedError {
+enum AgentFailure: LocalizedError {
     case emptyResponse
 
     var errorDescription: String? {
@@ -972,7 +706,7 @@ private enum AgentFailure: LocalizedError {
     }
 }
 
-private nonisolated enum AgentToolProposalScope {
+nonisolated enum AgentToolProposalScope {
     @TaskLocal static var current: AgentToolProposalObserver?
 }
 

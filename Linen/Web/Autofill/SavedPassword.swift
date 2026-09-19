@@ -80,7 +80,9 @@ enum PasswordExtensionPolicy {
     static func availableProviders(in records: [InstalledExtension]) -> [InstalledExtension] {
         records.filter { record in
             guard record.enabled else { return false }
-            if knownIDs.contains(record.id) { return true }
+            if knownIDs.contains(record.id) {
+                return true
+            }
             let name = record.displayName.lowercased()
                 .components(separatedBy: CharacterSet.alphanumerics.inverted)
                 .filter { !$0.isEmpty }.joined(separator: " ")

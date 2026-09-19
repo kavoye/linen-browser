@@ -22,7 +22,7 @@ final class AutofillSubmissionTracker {
                   let ready = value["ready"] as? Bool,
                   let passwords = value["passwords"] as? Int, let challenges = value["challenges"] as? Int,
                   let cards = value["cards"] as? Int, let addresses = value["addresses"] as? Int,
-                  [passwords,challenges,cards,addresses].allSatisfy({ (0...400).contains($0) }) else { return nil }
+                  [passwords, challenges, cards, addresses].allSatisfy({ (0...400).contains($0) }) else { return nil }
             self.documentID = documentID; self.url = url; self.ready = ready
             self.passwords = passwords; self.challenges = challenges
             self.cards = cards; self.addresses = addresses
@@ -30,9 +30,12 @@ final class AutofillSubmissionTracker {
 
         func stillContains(_ kind: AutofillSaveKind) -> Bool {
             switch kind {
-            case .password: passwords > 0 || challenges > 0
-            case .card: cards > 0
-            case .contact: addresses > 0
+            case .password:
+                passwords > 0 || challenges > 0
+            case .card:
+                cards > 0
+            case .contact:
+                addresses > 0
             }
         }
     }
@@ -55,7 +58,9 @@ final class AutofillSubmissionTracker {
     private var polling: Task<Void, Never>?
     private var generation = 0
 
-    func attach(to session: AutofillSaveSession) { self.session = session }
+    func attach(to session: AutofillSaveSession) {
+        self.session = session
+    }
 
     func clear() {
         generation += 1
@@ -76,7 +81,8 @@ final class AutofillSubmissionTracker {
                 formDepartures = formDepartures.filter { Date.now.timeIntervalSince($0.value) < 5 }
                 formDepartures[origin] = .now
             }
-        default: break
+        default:
+            break
         }
     }
 
@@ -92,7 +98,9 @@ final class AutofillSubmissionTracker {
             attempts[oldest.id] = nil
         }
         let submittedAddresses = source == "submit" ? candidates.filter { $0.kind == .contact } : []
-        if !submittedAddresses.isEmpty { session?.receive(submittedAddresses, origin: origin) }
+        if !submittedAddresses.isEmpty {
+            session?.receive(submittedAddresses, origin: origin)
+        }
         let pending = source == "submit" ? candidates.filter { $0.kind != .contact } : candidates
         guard !pending.isEmpty else { return }
         attempts[id] = Attempt(id: id, documentID: documentID, formID: formID,
@@ -128,7 +136,9 @@ final class AutofillSubmissionTracker {
                 guard let self, generation == self.generation else { return }
                 await inspectTransitions(generation: generation)
                 guard generation == self.generation else { return }
-                if attempts.isEmpty { polling = nil; return }
+                if attempts.isEmpty {
+                    polling = nil; return
+                }
             }
         }
     }
@@ -145,8 +155,12 @@ final class AutofillSubmissionTracker {
             )
             guard generation == self.generation, attempts[attempt.id] != nil, view.url == topURL, !view.isLoading else { return }
             let state = PageState(value)
-            if let state, state.documentID == attempt.documentID { continue }
-            if attempt.frame.isMainFrame && state == nil { continue }
+            if let state, state.documentID == attempt.documentID {
+                continue
+            }
+            if attempt.frame.isMainFrame && state == nil {
+                continue
+            }
             guard let pages = await AutofillSaveCoordinator.shared.pageStates(in: view),
                   let main = pages.first,
                   pages.allSatisfy(\.ready),

@@ -16,7 +16,9 @@ actor LocalMCPTransport: Transport {
     private var connected = false
     private let onDisconnect: (@Sendable () async -> Void)?
 
-    var isConnected: Bool { connected }
+    var isConnected: Bool {
+        connected
+    }
 
     init(connection: NWConnection, onDisconnect: (@Sendable () async -> Void)? = nil) {
         self.connection = connection

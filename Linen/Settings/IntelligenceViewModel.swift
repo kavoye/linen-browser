@@ -92,7 +92,9 @@ final class IntelligenceViewModel {
     }
 
     var supportsReasoningEffort: Bool {
-        if subject.adapter == .openAIResponses { return !ReasoningCatalog.efforts(for: subject, model: selectedModel).isEmpty }
+        if subject.adapter == .openAIResponses {
+            return !ReasoningCatalog.efforts(for: subject, model: selectedModel).isEmpty
+        }
         return modelProviders.resolve(subject).capabilities.contains(.reasoning)
     }
 

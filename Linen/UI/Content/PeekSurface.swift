@@ -204,8 +204,12 @@ struct PeekRowBadge: View {
 
     @State private var hovering = false
 
-    private var isCollapsed: Bool { coordinator.peek.isCollapsed }
-    private var showsToggleIcon: Bool { hovering || isCollapsed }
+    private var isCollapsed: Bool {
+        coordinator.peek.isCollapsed
+    }
+    private var showsToggleIcon: Bool {
+        hovering || isCollapsed
+    }
     private var toggleSymbol: String {
         coordinator.shownPeek == nil
             ? "arrow.up.left.and.arrow.down.right"

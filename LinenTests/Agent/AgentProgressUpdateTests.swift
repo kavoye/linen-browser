@@ -12,7 +12,7 @@ struct AgentProgressUpdateTests {
         let fixture = HarnessFixture([
             .commentary("I'll inspect the form first.", ["readPage"]),
             .progress("The page requires one more field. I'll fill it next."),
-            .calls(["typeOnPage"]), .text("Finished.")
+            .calls(["typeOnPage"]), .text("Finished."),
         ])
         fixture.state.output = { _ in
             let id = try #require(fixture.log.latestTrace(forTab: fixture.tabID)?.id)
@@ -51,7 +51,7 @@ struct AgentProgressUpdateTests {
     @Test func consecutiveDuplicateUpdatesAreNotRepeated() async throws {
         let fixture = HarnessFixture([
             .progress("I'll inspect the page."), .progress("I'll inspect the page."),
-            .calls(["readPage"]), .text("Done.")
+            .calls(["readPage"]), .text("Done."),
         ])
         await fixture.run()
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.progressUpdates.count == 1)

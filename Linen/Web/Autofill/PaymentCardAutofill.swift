@@ -11,7 +11,9 @@ final class PaymentCardAutofill: NSObject, WKScriptMessageHandler {
     private static let handlerName = "linenCardAutofill"
 
     private(set) var profileID = Profile.originalID
-    var isPrivate: Bool { profileID == Profile.privateID }
+    var isPrivate: Bool {
+        profileID == Profile.privateID
+    }
     @ObservationIgnored private let controllers = NSHashTable<WKUserContentController>.weakObjects()
     @ObservationIgnored private let owners = NSMapTable<WKWebView, NSUUID>.weakToStrongObjects()
 

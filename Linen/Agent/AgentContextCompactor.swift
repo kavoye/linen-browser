@@ -115,7 +115,9 @@ struct AgentContextCompactor {
 
     private func text(_ segments: [Transcript.Segment]) -> String {
         segments.map { segment in
-            if case .text(let value) = segment { return value.content }
+            if case .text(let value) = segment {
+                return value.content
+            }
             return "[Non-text attachment: consult the original attachment; its contents are not summarized here.]"
         }.joined(separator: "\n")
     }

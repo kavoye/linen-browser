@@ -155,7 +155,7 @@ struct AskSurfaceModelTests {
                     completionText: "https://example.com/full/path?q=value#section"
                 ) { runs += 1 },
                 OmniboxItem(id: "phrase", kind: .phrase, title: "example search phrase") { runs += 1 },
-            ])]
+            ]), ]
 
             model.moveSelection(by: 1, in: sections)
             #expect(model.interaction.text == "https://example.com/full/path?q=value#section")
@@ -178,7 +178,7 @@ struct AskSurfaceModelTests {
             let sections = [OmniboxSection(id: "preview", title: "", items: [
                 OmniboxItem(id: "query", kind: .search, title: "exam") {},
                 OmniboxItem(id: "phrase", kind: .phrase, title: "example phrase") {},
-            ])]
+            ]), ]
             model.selectSuggestion(at: 1, in: sections)
             model.interaction.text += " more"
 

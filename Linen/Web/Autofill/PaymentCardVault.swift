@@ -45,7 +45,9 @@ actor PaymentCardVault {
     }
 
     private func context(using session: AutofillAuthenticationSession?) throws -> LAContext {
-        if let session { return try session.context(for: service()) }
+        if let session {
+            return try session.context(for: service())
+        }
         let context = LAContext()
         context.localizedReason = String(localized: "Access your saved payment cards in Linen.")
         return context

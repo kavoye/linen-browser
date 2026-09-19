@@ -57,7 +57,9 @@ nonisolated enum AutofillSaveIndex {
     static func decision(for candidate: AutofillSaveCandidate, origin: String, profileID: UUID) throws -> Decision {
         try access(profileID: profileID, saving: false) { index in
             let kind = candidate.kind.rawValue
-            if try index.blocked[kind]?.contains(index.digest([kind, origin])) == true { return .blocked }
+            if try index.blocked[kind]?.contains(index.digest([kind, origin])) == true {
+                return .blocked
+            }
             let identity = try index.digest([kind] + candidate.identity)
             guard let existing = index.records[kind]?[identity] else { return .new }
             return try existing == index.digest([kind] + candidate.values) ? .unchanged : .update

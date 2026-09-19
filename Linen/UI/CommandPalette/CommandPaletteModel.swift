@@ -334,7 +334,9 @@ final class CommandPaletteModel {
     private var isPreviewingSelection = false
     private var suggestionPreview = OmniboxSuggestionPreview()
 
-    var resultQuery: String { suggestionPreview.query ?? interaction.query }
+    var resultQuery: String {
+        suggestionPreview.query ?? interaction.query
+    }
 
     init(browser: BrowserModel, coordinator: AppCoordinator, dismiss: @escaping () -> Void) {
         self.browser = browser

@@ -32,9 +32,12 @@ struct AutofillSuggestionList: View {
 
     private var symbol: String {
         switch kind {
-        case .password: "key"
-        case .card: "creditcard"
-        case .contact: "person.crop.rectangle"
+        case .password:
+            "key"
+        case .card:
+            "creditcard"
+        case .contact:
+            "person.crop.rectangle"
         }
     }
 
@@ -55,7 +58,9 @@ struct AutofillSuggestionList: View {
                     .padding(AutofillSuggestionLayout.listPadding)
                 }
                 .onChange(of: selection.keyboardID) { _, id in
-                    if let id { proxy.scrollTo(id) }
+                    if let id {
+                        proxy.scrollTo(id)
+                    }
                 }
             }
             Divider()

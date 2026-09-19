@@ -376,7 +376,9 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        if (error as? URLError)?.code != .cancelled { tab?.autofillSave.submissions.clear() }
+        if (error as? URLError)?.code != .cancelled {
+            tab?.autofillSave.submissions.clear()
+        }
         tab?.isRestoring = false
         tab?.finishReclaim()
         tab?.releasePageColorHold()
@@ -389,7 +391,9 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
-        if (error as? URLError)?.code != .cancelled { tab?.autofillSave.submissions.clear() }
+        if (error as? URLError)?.code != .cancelled {
+            tab?.autofillSave.submissions.clear()
+        }
         if let tab, tab.provisionalNavigation === navigation {
             tab.provisionalNavigation = nil
             tab.releasePageColorHold()

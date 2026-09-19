@@ -60,12 +60,16 @@ extension AppCoordinator {
         let notifyExtensions = browser.onActiveTabChanged
         browser.onActiveTabChanged = { [weak self] newTab, previousTab in
             notifyExtensions?(newTab, previousTab)
-            if let self, conversationSpaceID != browser.activeSpaceID { conversationVoice?.stop() }
+            if let self, conversationSpaceID != browser.activeSpaceID {
+                conversationVoice?.stop()
+            }
             self?.followMedia(to: newTab, from: previousTab)
             self?.applyHoverShield()
         }
         browser.onSpaceAnchorChanged = { [weak self] from, to in
-            if self?.conversationSpaceID == from { self?.conversationVoice?.stop() }
+            if self?.conversationSpaceID == from {
+                self?.conversationVoice?.stop()
+            }
             self?.agentTurns.reassignSpace(from: from, to: to)
         }
         browser.onLinkHovered = { [weak self] tab, url, modifiers, anchor in

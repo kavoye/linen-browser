@@ -286,7 +286,9 @@ final class AppCoordinator {
     }
 
     private func tabDidClose(_ tab: BrowserTab) {
-        if conversationSpaceID == tab.id { endVoiceConversation() }
+        if conversationSpaceID == tab.id {
+            endVoiceConversation()
+        }
         playedPages[tab.id] = nil
         FaviconTint.forget(tab.id)
         if peek.belongs(to: tab.id) {
@@ -476,7 +478,9 @@ final class AppCoordinator {
         guard let ownerID = peek.ownerID, let owner = browser.tab(id: ownerID) else { return }
         let collapse = shownPeek != nil
         tabPreview.dismiss()
-        if !collapse { browser.activate(owner) }
+        if !collapse {
+            browser.activate(owner)
+        }
         peek.setCollapsed(collapse)
         applyHoverShield()
     }
@@ -807,7 +811,9 @@ final class AppCoordinator {
                 statusMessage = String(localized: "Hold \(ActivationSettings.talk.phrase) again to speak.")
             } else {
                 statusMessage = Self.microphoneDeniedMessage
-                if isVoiceConversationPresented { voiceConversationMessage = statusMessage }
+                if isVoiceConversationPresented {
+                    voiceConversationMessage = statusMessage
+                }
             }
         }
     }

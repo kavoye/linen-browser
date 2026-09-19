@@ -101,7 +101,9 @@ nonisolated final class AutofillAuthenticationSession: @unchecked Sendable {
         return context
     }
 
-    func invalidate() { context.invalidate() }
+    func invalidate() {
+        context.invalidate()
+    }
     deinit { context.invalidate() }
 }
 
@@ -192,7 +194,9 @@ enum AutofillVaults {
     private static var cards: [UUID: PaymentCardVault] = [:]
 
     static func cards(for id: UUID) -> PaymentCardVault {
-        if let vault = cards[id] { return vault }
+        if let vault = cards[id] {
+            return vault
+        }
         let vault = PaymentCardVault(profileID: id)
         cards[id] = vault
         return vault

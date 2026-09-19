@@ -98,7 +98,8 @@ nonisolated enum PageRuntime {
         const auto = norm(el.autocomplete).toLowerCase();
         const hint = (fieldLabel(el) + ' ' + auto + ' ' + norm(el.name) + ' ' + norm(el.id)).toLowerCase();
         if (/(?:^| )(?:current-password|new-password|one-time-code|cc-number|cc-exp|cc-exp-month|cc-exp-year|cc-csc|cc-name)(?: |$)/.test(auto)) return true;
-        return /password|passcode|\bpin\b|cvv|cvc|cvn|card ?number|cardnumber|card verification|security code|iban|sort ?code|routing|account ?number|ssn|social security|national insurance|passport|tax ?id|one[- ]?time|\botp\b|2fa|verification code|seed phrase|recovery phrase|private key/.test(hint);
+        return /password|passcode|\bpin\b|cvv|cvc|cvn|card ?number|cardnumber|card verification|security code|iban|sort ?code|routing/.test(hint)
+          || /account ?number|ssn|social security|national insurance|passport|tax ?id|one[- ]?time|\botp\b|2fa|verification code|seed phrase|recovery phrase|private key/.test(hint);
       };
 
       const signature = el => JSON.stringify([kindOf(el), labelOf(el, kindOf(el)), el.id, el.name,
@@ -345,7 +346,8 @@ nonisolated enum PageRuntime {
           snapshot: window.__linenSnapshot, document: documentID, url: location.href };
       };
 
-      return { matchesRef, expectValue, valueState, walk, documentID, norm, collect, pageText, viewportText, resolve, setValue, pressEnter, labelOf, kindOf, highlight, isSensitiveField, disabled, actionable, observe };
+      return { matchesRef, expectValue, valueState, walk, documentID, norm, collect, pageText, viewportText, resolve, setValue, pressEnter,
+        labelOf, kindOf, highlight, isSensitiveField, disabled, actionable, observe };
     })());
     """#
 

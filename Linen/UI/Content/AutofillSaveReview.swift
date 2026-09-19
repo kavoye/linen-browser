@@ -46,7 +46,9 @@ struct AutofillSaveReview: View {
                 }
             }
             .textFieldStyle(.roundedBorder)
-            if let message = validation ?? session.error { Text(verbatim: message).foregroundStyle(.secondary) }
+            if let message = validation ?? session.error {
+                Text(verbatim: message).foregroundStyle(.secondary)
+            }
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
@@ -57,11 +59,13 @@ struct AutofillSaveReview: View {
         .padding(24).frame(width: 460)
         .onAppear {
             switch offer.candidate {
-            case .password(let login): username = login.username; password = login.password
+            case .password(let login):
+                username = login.username; password = login.password
             case .card(let card):
                 number = card.number; cardholder = card.cardholder; securityCode = card.securityCode ?? ""
                 month = card.month.map(String.init) ?? ""; year = card.year.map(String.init) ?? ""
-            case .contact(let saved): contact = saved
+            case .contact(let saved):
+                contact = saved
             }
         }
         .onChange(of: session.current?.id) { _, id in if id != offer.id { dismiss() } }

@@ -92,7 +92,9 @@ final class PaymentCardSettingsModel {
         }
     }
     private func message(_ error: any Error) -> String? {
-        if case PaymentCardError.keychain(errSecUserCanceled) = error { return nil }
+        if case PaymentCardError.keychain(errSecUserCanceled) = error {
+            return nil
+        }
         return String(localized: "Couldn’t access saved cards. Try again.")
     }
 }

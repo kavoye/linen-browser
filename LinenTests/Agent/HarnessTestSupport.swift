@@ -42,7 +42,9 @@ final class HarnessScript: LanguageModel, @unchecked Sendable {
             seen.append(session.transcript)
             prompts.append(prompt.description)
             if prompt.description.contains("historical checkpoint") || prompt.description.contains("browser task is paused") {
-                if let summaryFailure { return .failure(summaryFailure) }
+                if let summaryFailure {
+                    return .failure(summaryFailure)
+                }
                 if let summaryInputLimit, prompt.description.utf8.count > summaryInputLimit {
                     return .failure(LanguageModelSession.GenerationError.exceededContextWindowSize(.init(debugDescription: "fixture")))
                 }
@@ -68,7 +70,7 @@ final class HarnessScript: LanguageModel, @unchecked Sendable {
             entries = [.toolCalls(.init([Transcript.ToolCall(
                 id: UUID().uuidString, toolName: "updateProgress",
                 arguments: GeneratedContent(properties: ["message": GeneratedContent(message)])
-            )]))]
+            ), ])), ]
             text = ""
         }
         for entry in entries {

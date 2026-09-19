@@ -52,8 +52,12 @@ private struct TabAutofillSaveBadge: View {
             AutofillSaveReview(session: session, offer: offer)
         }
         .onChange(of: session.current?.id) { _, id in
-            if reviewing?.id != id { reviewing = nil }
-            if pendingReview?.id != id { pendingReview = nil }
+            if reviewing?.id != id {
+                reviewing = nil
+            }
+            if pendingReview?.id != id {
+                pendingReview = nil
+            }
         }
         .onDisappear {
             session.isPopoverPresented = false
@@ -66,17 +70,23 @@ private struct TabAutofillSaveBadge: View {
 private extension AutofillSaveSession.Offer {
     var title: LocalizedStringResource {
         switch candidate.kind {
-        case .password: isUpdate ? "Update password?" : "Save password?"
-        case .card: isUpdate ? "Update card?" : "Save card?"
-        case .contact: "Save address?"
+        case .password:
+            isUpdate ? "Update password?" : "Save password?"
+        case .card:
+            isUpdate ? "Update card?" : "Save card?"
+        case .contact:
+            "Save address?"
         }
     }
 
     var symbol: String {
         switch candidate.kind {
-        case .password: "key"
-        case .card: "creditcard"
-        case .contact: "person.crop.rectangle"
+        case .password:
+            "key"
+        case .card:
+            "creditcard"
+        case .contact:
+            "person.crop.rectangle"
         }
     }
 
@@ -147,7 +157,9 @@ private struct AutofillSaveActions: View {
             .font(Theme.Font.label)
             Divider()
             HStack(spacing: 8) {
-                if session.isBusy { Spinner(size: 14) }
+                if session.isBusy {
+                    Spinner(size: 14)
+                }
                 Spacer(minLength: 0)
                 Button("Not Now") { session.dismiss(offer) }
                 Button(offer.isUpdate ? "Update" : "Save") { Task { await session.save(offer) } }

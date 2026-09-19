@@ -64,11 +64,11 @@ private nonisolated final class HarnessProviderProtocol: URLProtocol, @unchecked
         lock.withLock { requests = [] }
     }
 
-    override class func canInit(with request: URLRequest) -> Bool {
+    override static func canInit(with request: URLRequest) -> Bool {
         request.url?.host() == "harness.invalid"
     }
 
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+    override static func canonicalRequest(for request: URLRequest) -> URLRequest {
         request
     }
 
@@ -100,7 +100,7 @@ private nonisolated final class HarnessProviderProtocol: URLProtocol, @unchecked
                 ? [["type": "tool_use", "id": call, "name": "readPage", "input": ["value": "fixture"]]]
                 : [["type": "text", "text": "Fixture completed."]]
             payload = ["id": "response_\(index)", "type": "message", "role": "assistant", "model": "fixture",
-                       "content": content, "stop_reason": index <= 25 ? "tool_use" : "end_turn"]
+                       "content": content, "stop_reason": index <= 25 ? "tool_use" : "end_turn", ]
         } else if request.url?.path.contains("generateContent") == true {
             let parts: [[String: Any]] = index <= 25
                 ? [["functionCall": ["name": "readPage", "args": ["value": "fixture"]]]]

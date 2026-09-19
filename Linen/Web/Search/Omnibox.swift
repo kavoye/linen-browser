@@ -67,8 +67,10 @@ struct OmniboxItem: Identifiable {
         self.shortcut = shortcut
         self.completionText = completionText ?? {
             switch kind {
-            case .go, .search, .phrase, .newTab: title
-            default: nil
+            case .go, .search, .phrase, .newTab:
+                title
+            default:
+                nil
             }
         }()
         self.alternate = alternate

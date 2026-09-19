@@ -54,7 +54,9 @@ final class AutofillSuggestions {
     }
 
     func dismiss(in view: WKWebView? = nil) {
-        if let view, webView !== view { return }
+        if let view, webView !== view {
+            return
+        }
         presentationID = UUID()
         if let panel {
             panel.parent?.removeChildWindow(panel)
@@ -67,9 +69,13 @@ final class AutofillSuggestions {
         selection.keyboardID = nil
         navigation = nil; loading = nil
         geometryWatch?.cancel(); geometryWatch = nil
-        if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+        }
         eventMonitor = nil
-        for observer in observers { NotificationCenter.default.removeObserver(observer) }
+        for observer in observers {
+            NotificationCenter.default.removeObserver(observer)
+        }
         observers = []
     }
 
@@ -133,7 +139,7 @@ final class AutofillSuggestions {
             guard !request.frame.isMainFrame, let origin = SavedPassword.origin(for: request.frameURL),
                   let x = values["x"], let y = values["y"], let width = values["width"], let height = values["height"],
                   let viewportWidth = values["viewportWidth"], let viewportHeight = values["viewportHeight"],
-                  [x,y,width,height,viewportWidth,viewportHeight].allSatisfy(\.isFinite),
+                  [x, y, width, height, viewportWidth, viewportHeight].allSatisfy(\.isFinite),
                   viewportWidth > 0, viewportHeight > 0, x >= 0, y >= 0,
                   x + width <= viewportWidth, y + height <= viewportHeight else { throw ContactAutofillError.noField }
             let answer = try await view.callAsyncJavaScript(
@@ -145,7 +151,7 @@ final class AutofillSuggestions {
                   let topWidth = frame["viewportWidth"], let topHeight = frame["viewportHeight"] else { throw ContactAutofillError.noField }
             values = ["x": frameX + x * frameWidth / viewportWidth, "y": frameY + y * frameHeight / viewportHeight,
                       "width": width * frameWidth / viewportWidth, "height": height * frameHeight / viewportHeight,
-                      "viewportWidth": topWidth, "viewportHeight": topHeight]
+                      "viewportWidth": topWidth, "viewportHeight": topHeight, ]
         }
         guard let rect = Self.fieldRect(values, in: view) else { throw ContactAutofillError.noField }
         return rect
@@ -180,7 +186,9 @@ final class AutofillSuggestions {
         let field = window.convertToScreen(view.convert(request.rect, to: nil))
         var page = window.convertToScreen(view.convert(view.visibleRect, to: nil)).intersection(window.frame)
         let screen = NSScreen.screens.first { $0.visibleFrame.contains(NSPoint(x: field.midX, y: field.midY)) } ?? window.screen
-        if let screen { page = page.intersection(screen.visibleFrame) }
+        if let screen {
+            page = page.intersection(screen.visibleFrame)
+        }
         guard !page.isNull, !page.isEmpty, page.intersects(field) else { return }
         let width = min(360.0, page.width - 16)
         let availableBelow = max(0, field.minY - page.minY - 12)
@@ -236,7 +244,9 @@ final class AutofillSuggestions {
                     guard let view, id == presentationID, panel.isVisible else { return }
                     try await validate(request, in: view, requiresFocus: true)
                 } catch {
-                    if id == presentationID { dismiss() }
+                    if id == presentationID {
+                        dismiss()
+                    }
                     return
                 }
             }
@@ -245,7 +255,7 @@ final class AutofillSuggestions {
 
     private func observe(_ view: WKWebView, window: NSWindow) {
         for name in [NSWindow.didResignKeyNotification, NSWindow.willCloseNotification,
-                     NSWindow.willMoveNotification, NSWindow.didResizeNotification] {
+                     NSWindow.willMoveNotification, NSWindow.didResizeNotification, ] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.dismiss() }
             })
@@ -267,7 +277,9 @@ final class AutofillSuggestions {
 
     private func handle(_ event: NSEvent) -> NSEvent? {
         guard let panel else { return event }
-        if event.window === panel { return event }
+        if event.window === panel {
+            return event
+        }
         if event.type == .leftMouseDown, let view = webView,
            event.window === view.window, let request = requests.object(forKey: view),
            request.rect.contains(view.convert(event.locationInWindow, from: nil)) {
@@ -276,7 +288,7 @@ final class AutofillSuggestions {
         guard event.type == .keyDown, let view = webView, Self.isFocused(view) else {
             dismiss(); return event
         }
-        guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else {
+        guard event.modifierFlags.isDisjoint(with: [.command, .control, .option]) else {
             dismiss(); return event
         }
         switch event.keyCode {
@@ -314,7 +326,7 @@ final class AutofillSuggestions {
             """,
             arguments: ["bridge": request.bridge, "token": request.token, "url": request.frameURL.absoluteString,
                         "requiresFocus": requiresFocus, "documentID": request.documentID,
-                        "formID": request.formID, "fieldID": request.fieldID],
+                        "formID": request.formID, "fieldID": request.fieldID, ],
             in: request.frame, contentWorld: request.world
         )
         let rect = try await resolveFieldRect(valid, request: request, in: view)
@@ -334,7 +346,9 @@ final class AutofillSuggestions {
         Task {
             defer {
                 isFilling = false
-                if requests.object(forKey: view) === request { requests.removeObject(forKey: view) }
+                if requests.object(forKey: view) === request {
+                    requests.removeObject(forKey: view)
+                }
             }
             do {
                 try await validate(request, in: view)
@@ -356,7 +370,7 @@ final class AutofillSuggestions {
                 let count = try await view.callAsyncJavaScript(
                     "if (globalThis.__linenAutofillForms?.documentID !== documentID) return 0; return globalThis[bridge]?.fill(token, url, fields) || 0;",
                     arguments: ["bridge": request.bridge, "token": request.token, "url": request.frameURL.absoluteString,
-                                "fields": fields, "documentID": request.documentID],
+                                "fields": fields, "documentID": request.documentID, ],
                     in: request.frame, contentWorld: request.world
                 )
                 guard (count as? Int ?? 0) > 0 else { throw ContactAutofillError.noField }
@@ -370,7 +384,8 @@ final class AutofillSuggestions {
                 switch error {
                 case AutofillVaultError.keychain(let status), PaymentCardError.keychain(let status):
                     canceled = status == errSecUserCanceled || status == errSecAuthFailed
-                default: canceled = false
+                default:
+                    canceled = false
                 }
                 guard !canceled, requests.object(forKey: view) === request,
                       AutofillSaveCoordinator.shared.isEnabled(request.kind, profileID: request.profileID),
@@ -385,6 +400,10 @@ final class AutofillSuggestions {
 }
 
 private final class AutofillSuggestionPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
+    override var canBecomeKey: Bool {
+        false
+    }
+    override var canBecomeMain: Bool {
+        false
+    }
 }

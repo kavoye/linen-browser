@@ -37,7 +37,9 @@ final class AutofillSaveSession: NSObject {
     @ObservationIgnored var username: UsernameStep?
     @ObservationIgnored let submissions = AutofillSubmissionTracker()
 
-    var current: Offer? { offers.first }
+    var current: Offer? {
+        offers.first
+    }
 
     func attach(to webView: WKWebView, profileID: UUID) {
         clear()
@@ -62,11 +64,17 @@ final class AutofillSaveSession: NSObject {
         revision += 1
         submissions.clear()
         offers.removeAll { !AutofillSaveCoordinator.shared.isEnabled($0.candidate.kind, profileID: profileID) }
-        if offers.isEmpty { isPopoverPresented = false }
-        if !AutofillSaveCoordinator.shared.isEnabled(.password, profileID: profileID) { username = nil }
+        if offers.isEmpty {
+            isPopoverPresented = false
+        }
+        if !AutofillSaveCoordinator.shared.isEnabled(.password, profileID: profileID) {
+            username = nil
+        }
     }
 
-    func resetDismissals(kind: AutofillSaveKind) { dismissed[kind] = nil }
+    func resetDismissals(kind: AutofillSaveKind) {
+        dismissed[kind] = nil
+    }
 
     func resetDismissalsForNavigation() {
         dismissed = [:]
@@ -100,7 +108,9 @@ final class AutofillSaveSession: NSObject {
         let previousOfferID = current?.id
         offers.removeAll { $0.candidate.kind == candidate.kind }
         offers.append(Offer(candidate: candidate, origin: origin, isUpdate: decision == .update, fingerprint: fingerprint))
-        if current?.id != previousOfferID { isPopoverPresented = true }
+        if current?.id != previousOfferID {
+            isPopoverPresented = true
+        }
         AutofillDiagnostics.note(.saveOffered, kind: candidate.kind)
         expiry?.cancel()
         expiry = Task { [weak self] in
@@ -113,7 +123,9 @@ final class AutofillSaveSession: NSObject {
     func dismiss(_ offer: Offer, rememberingChoice: Bool = true) {
         if rememberingChoice {
             var fingerprints = dismissed[offer.candidate.kind] ?? []
-            if fingerprints.count >= 100 { fingerprints.removeAll() }
+            if fingerprints.count >= 100 {
+                fingerprints.removeAll()
+            }
             fingerprints.insert(offer.fingerprint)
             dismissed[offer.candidate.kind] = fingerprints
         }
@@ -131,7 +143,9 @@ final class AutofillSaveSession: NSObject {
             try await Task.detached {
                 try AutofillSaveIndex.block(kind: offer.candidate.kind, origin: offer.origin, profileID: profileID)
             }.value
-            if self.profileID == profileID && current?.id == offer.id { dismiss(offer) }
+            if self.profileID == profileID && current?.id == offer.id {
+                dismiss(offer)
+            }
         } catch {
             if self.profileID == profileID && current?.id == offer.id { self.error = String(localized: "Couldn’t remember this choice. Try again.") }
         }
@@ -143,7 +157,9 @@ final class AutofillSaveSession: NSObject {
               let webView, webView.window != nil else { return }
         let candidate = replacement ?? offer.candidate
         guard candidate.kind == offer.candidate.kind else { return }
-        if case .password(let password) = candidate, password.origin != offer.origin { return }
+        if case .password(let password) = candidate, password.origin != offer.origin {
+            return
+        }
         isBusy = true
         error = nil
         let profileID = profileID
@@ -161,7 +177,9 @@ final class AutofillSaveSession: NSObject {
                     return contacts + [contact]
                 }
             }
-            if self.profileID == profileID && current?.id == offer.id { dismiss(offer, rememberingChoice: false) }
+            if self.profileID == profileID && current?.id == offer.id {
+                dismiss(offer, rememberingChoice: false)
+            }
         } catch {
             if self.profileID == profileID && current?.id == offer.id { self.error = String(localized: "Couldn’t save these details. Try again.") }
         }
@@ -216,7 +234,9 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
 
     private func clear() {
         AutofillSuggestions.shared.reset()
-        for session in sessions.objectEnumerator()?.allObjects as? [AutofillSaveSession] ?? [] { session.clear() }
+        for session in sessions.objectEnumerator()?.allObjects as? [AutofillSaveSession] ?? [] {
+            session.clear()
+        }
     }
 
     func resetDismissals(kind: AutofillSaveKind, profileID: UUID) {
@@ -237,9 +257,12 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
     func isEnabled(_ kind: AutofillSaveKind, profileID: UUID) -> Bool {
         guard sessionIsActive, !screenIsLocked, profileID == self.profileID, profileID != Profile.privateID else { return false }
         switch kind {
-        case .password: return PasswordAutofill.shared.isEnabled
-        case .card: return BrowserSettings.shared.fillsPaymentCards
-        case .contact: return BrowserSettings.shared.fillsContacts
+        case .password:
+            return PasswordAutofill.shared.isEnabled
+        case .card:
+            return BrowserSettings.shared.fillsPaymentCards
+        case .contact:
+            return BrowserSettings.shared.fillsContacts
         }
     }
 
@@ -258,7 +281,9 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
         AutofillSuggestions.shared.reset()
         for webView in sessions.keyEnumerator().allObjects as? [WKWebView] ?? [] {
             sessions.object(forKey: webView)?.refreshPolicy()
-            for frame in frames.object(forKey: webView)?.values.values.map({ $0 }) ?? [] { applyPolicy(in: webView, frame: frame) }
+            for frame in frames.object(forKey: webView)?.values.values.map({
+                $0 }) ?? [] { applyPolicy(in: webView, frame: frame)
+            }
         }
     }
 
@@ -290,7 +315,9 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
             guard let state = AutofillSubmissionTracker.PageState(raw), state.documentID == id,
                   frame.securityOrigin.protocol == state.url.scheme, frame.securityOrigin.host == state.url.host,
                   (frame.securityOrigin.port == 0 ? 443 : frame.securityOrigin.port) == (state.url.port ?? 443) else {
-                if id == mainID { return nil }
+                if id == mainID {
+                    return nil
+                }
                 list.values[id] = nil
                 continue
             }
@@ -336,12 +363,16 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
         guard let rawAttemptID = body["attemptID"] as? String, let attemptID = UUID(uuidString: rawAttemptID),
               let formID = body["formID"] as? String, let number = Int(formID), number > 0 else { return }
         if action == "discard" {
-            if session.username?.attemptID == attemptID { session.username = nil }
+            if session.username?.attemptID == attemptID {
+                session.username = nil
+            }
             session.submissions.discard(id: attemptID, documentID: documentID, formID: formID)
             return
         }
         if action == "complete" {
-            if session.username?.attemptID == attemptID { session.username?.completed = true }
+            if session.username?.attemptID == attemptID {
+                session.username?.completed = true
+            }
             session.submissions.complete(id: attemptID, documentID: documentID, formID: formID)
             return
         }
@@ -357,9 +388,11 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
            let password = login["password"] {
             var username = login["username"] ?? ""
             if username.isEmpty, let remembered = session.username, remembered.origin == origin,
-               (remembered.completed || remembered.documentID != documentID),
+               remembered.completed || remembered.documentID != documentID,
                Date.now.timeIntervalSince(remembered.date) < 300 { username = remembered.value }
-            if let record = try? SavedPassword(website: origin, username: username, password: password) { candidates.append(.password(record)) }
+            if let record = try? SavedPassword(website: origin, username: username, password: password) {
+                candidates.append(.password(record))
+            }
         }
         if isEnabled(.card, profileID: session.profileID), let values = body["card"] as? [String: String],
            let number = values["cc-number"], number.count <= 32,
@@ -380,7 +413,9 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
             contact.region = values["address-level1"] ?? ""
             contact.postalCode = values["postal-code"] ?? ""
             contact.countryCode = (values["country"] ?? "").uppercased()
-            if contact.isValid, !contact.street.isEmpty, !contact.name.isEmpty || !contact.email.isEmpty { candidates.append(.contact(contact)) }
+            if contact.isValid, !contact.street.isEmpty, !contact.name.isEmpty || !contact.email.isEmpty {
+                candidates.append(.contact(contact))
+            }
         }
         session.submissions.stage(id: attemptID, documentID: documentID, formID: formID, origin: origin,
                                   candidates: candidates, frame: message.frameInfo, source: source)

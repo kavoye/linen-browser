@@ -134,7 +134,7 @@ struct ModelProviderArchitectureTests {
         let credentials = TestCredentialStore(saveFailure: saveFailure)
         let registry = ModelProviderRegistry(credentials: credentials, factories: [provider.id: { configuration in
             TestModelProvider(configuration: configuration, capabilities: [.toolCalling], availability: .available, models: [])
-        }])
+        }, ])
         return IntelligenceViewModel(catalog: TestProviderCatalog(providers: [provider], selectedID: provider.id),
             credentials: credentials, modelProviders: registry, onConfigurationChanged: {})
     }

@@ -4,7 +4,7 @@
 import SwiftUI
 
 extension EnvironmentValues {
-    @Entry var settingsDescriptionLineLimit: Int? = nil
+    @Entry var settingsDescriptionLineLimit: Int?
 }
 
 enum SettingsMetrics {

@@ -113,7 +113,10 @@ actor MCPStdioRelay {
         } catch {
             self.backend = nil
             await backend.client.disconnect()
-            return failure("The Linen connection was interrupted. The operation may have completed; it was not retried. On your next call Linen will reconnect with no shared tabs. Request access again, then check the page before repeating an action.")
+            return failure("""
+                The Linen connection was interrupted. The operation may have completed; it was not retried. \
+                On your next call Linen will reconnect with no shared tabs. Request access again, then check the page before repeating an action.
+                """)
         }
     }
 
@@ -160,6 +163,10 @@ private actor MCPRelayInput: Transport {
         await upstream.disconnect()
     }
 
-    func send(_ data: Data) async throws { try await upstream.send(data) }
-    func receive() -> AsyncThrowingStream<Data, any Error> { messages }
+    func send(_ data: Data) async throws {
+        try await upstream.send(data)
+    }
+    func receive() -> AsyncThrowingStream<Data, any Error> {
+        messages
+    }
 }

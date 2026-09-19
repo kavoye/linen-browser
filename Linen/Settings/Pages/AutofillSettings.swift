@@ -58,9 +58,12 @@ struct AutofillPageStatus: View {
 
     private var loadingMessage: LocalizedStringResource {
         switch kind {
-        case .password: "Accessing passwords…"
-        case .card: "Accessing cards…"
-        case .contact: "Accessing addresses…"
+        case .password:
+            "Accessing passwords…"
+        case .card:
+            "Accessing cards…"
+        case .contact:
+            "Accessing addresses…"
         }
     }
 

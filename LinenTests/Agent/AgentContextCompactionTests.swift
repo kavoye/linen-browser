@@ -204,11 +204,15 @@ struct AgentContextCompactionTests {
         #expect(text.contains("Use metric units and leave billing unchanged"))
         #expect(text.contains("Continue with the shipping address"))
         let calls = checkpoint.transcript.flatMap { entry -> [String] in
-            if case .toolCalls(let calls) = entry { return calls.map(\.id) }
+            if case .toolCalls(let calls) = entry {
+                return calls.map(\.id)
+            }
             return []
         }
         let outputs = checkpoint.transcript.compactMap { entry -> String? in
-            if case .toolOutput(let output) = entry { return output.id }
+            if case .toolOutput(let output) = entry {
+                return output.id
+            }
             return nil
         }
         #expect(Set(calls) == Set(outputs))
