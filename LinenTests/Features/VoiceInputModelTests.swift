@@ -9,6 +9,41 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct VoiceInputModelTests {
+    @Test func failedFinalizationDoesNotSubmitAPartialTranscript() async throws {
+        let audio = FakeAudioInput()
+        let transcriber = FakeTranscriber()
+        transcriber.finishError = FixtureError.transcription
+        let model = VoiceInputModel(audio: audio, transcriber: transcriber)
+        var submitted = false
+        model.onUtterance = { _, trace in submitted = true; trace.end() }
+        try await model.prepare()
+        model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
+        transcriber.yield("partial command")
+        #expect(await waitUntil { model.transcript == "partial command" })
+        await model.finish()
+        #expect(!submitted)
+        #expect(model.transcript.isEmpty)
+        #expect(model.phase == .idle)
+    }
+
+    @Test func replacingTheTranscriberDiscardsTheOldRecording() async throws {
+        let audio = FakeAudioInput()
+        let old = FakeTranscriber()
+        let next = FakeTranscriber()
+        let model = VoiceInputModel(audio: audio, transcriber: old)
+        try await model.prepare()
+        model.begin()
+        #expect(await waitUntil { old.hasStarted })
+        old.yield("old recording")
+        #expect(await waitUntil { model.transcript == "old recording" })
+        try await model.useTranscriber(next)
+        old.yield("late old recording")
+        #expect(model.transcript.isEmpty)
+        #expect(model.isReady)
+        #expect(model.phase == .idle)
+        model.cancel()
+    }
     @Test func startingBeforePreparationReportsNotReady() {
         let audio = FakeAudioInput()
         let transcriber = FakeTranscriber()
@@ -37,6 +72,7 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.yield("  hello browser  ")
         #expect(await waitUntil { model.transcript == "  hello browser  " })
         await model.finish()
@@ -63,6 +99,7 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.yield(" \n ")
         await model.finish()
 
@@ -83,11 +120,12 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.yield("partial")
         #expect(await waitUntil { model.transcript == "partial" })
         model.cancel()
         transcriber.yield("late")
-        try? await Task.sleep(for: .milliseconds(20))
+        #expect(await waitUntil { transcriber.finishCount == 1 })
 
         #expect(model.phase == .idle)
         #expect(model.transcript.isEmpty)
@@ -104,6 +142,7 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.fail(FixtureError.transcription)
 
         #expect(await waitUntil { model.phase == .idle })
@@ -123,24 +162,28 @@ struct VoiceInputModelTests {
         try await model.prepare()
         model.begin()
 
-        #expect(model.phase == .idle)
-        #expect(failures == [.capture("Fixture capture failure")])
+        #expect(await waitUntil { model.phase == .idle })
+        #expect(await waitUntil { failures == [.capture("Fixture capture failure")] })
         #expect(audio.startCount == 1)
     }
 
     @Test func pressingAgainDuringTheReleaseTailContinuesTheSession() async throws {
         let audio = FakeAudioInput()
         let transcriber = FakeTranscriber()
-        let model = VoiceInputModel(audio: audio, transcriber: transcriber)
+        let clock = TestClock()
+        let tail = Duration.seconds(1)
+        let model = VoiceInputModel(audio: audio, transcriber: transcriber, releaseTail: tail, clock: clock)
 
         try await model.prepare()
         model.begin()
-        model.scheduleFinish(after: .milliseconds(60))
+        model.scheduleFinish()
+        #expect(await waitUntil { clock.pendingCount == 1 })
         model.begin()
-        try? await Task.sleep(for: .milliseconds(100))
+        #expect(await waitUntil { clock.pendingCount == 0 })
+        clock.advance(by: tail)
 
         #expect(model.phase == .listening)
-        #expect(audio.startCount == 1)
+        #expect(await waitUntil { audio.startCount == 1 })
         #expect(transcriber.finishCount == 0)
         model.cancel()
     }
@@ -157,6 +200,7 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.yield("finished")
         #expect(await waitUntil { model.transcript == "finished" })
         model.scheduleFinish(after: .zero)
@@ -171,10 +215,10 @@ struct VoiceInputModelTests {
     @Test func silenceAfterTheMicButtonSubmitsOnItsOwn() async throws {
         let audio = FakeAudioInput()
         let transcriber = FakeTranscriber()
+        let clock = TestClock()
+        let tail = Duration.seconds(1)
         let model = VoiceInputModel(
-            audio: audio,
-            transcriber: transcriber,
-            silenceTail: .milliseconds(60)
+            audio: audio, transcriber: transcriber, silenceTail: tail, clock: clock
         )
         var submitted: [String] = []
         model.onUtterance = { text, trace in
@@ -184,8 +228,10 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin(endsOnSilence: true)
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.yield("open my email")
-        #expect(await waitUntil { model.transcript == "open my email" })
+        #expect(await waitUntil { model.transcript == "open my email" && clock.pendingCount == 1 })
+        clock.advance(by: tail)
 
         #expect(await waitUntil { model.phase == .idle })
         #expect(submitted == ["open my email"])
@@ -197,26 +243,23 @@ struct VoiceInputModelTests {
     @Test func speakingAgainPostponesTheSilenceCutoff() async throws {
         let audio = FakeAudioInput()
         let transcriber = FakeTranscriber()
-        // Six gaps of 300ms against a 1s deadline: 1.8s in total, so the
-        // session outlives the tail only if every word pushed it back. The
-        // gap is a third of the deadline so that a busy machine delaying a
-        // step cannot be mistaken for silence.
+        let clock = TestClock()
+        let tail = Duration.seconds(1)
         let model = VoiceInputModel(
-            audio: audio,
-            transcriber: transcriber,
-            silenceTail: .seconds(1)
+            audio: audio, transcriber: transcriber, silenceTail: tail, clock: clock
         )
 
         try await model.prepare()
         model.begin(endsOnSilence: true)
+        #expect(await waitUntil { transcriber.hasStarted })
         let words = [
             "open", "open my", "open my email",
             "open my email now", "open my email now please", "open my email now please and",
         ]
         for word in words {
             transcriber.yield(word)
-            #expect(await waitUntil { model.transcript == word })
-            try? await Task.sleep(for: .milliseconds(300))
+            #expect(await waitUntil { model.transcript == word && clock.pendingCount == 1 })
+            clock.advance(by: tail / 2)
             #expect(model.phase == .listening)
         }
         model.cancel()
@@ -227,17 +270,19 @@ struct VoiceInputModelTests {
     @Test func holdToTalkIgnoresSilence() async throws {
         let audio = FakeAudioInput()
         let transcriber = FakeTranscriber()
+        let clock = TestClock()
+        let tail = Duration.seconds(1)
         let model = VoiceInputModel(
-            audio: audio,
-            transcriber: transcriber,
-            silenceTail: .milliseconds(40)
+            audio: audio, transcriber: transcriber, silenceTail: tail, clock: clock
         )
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.yield("still thinking")
         #expect(await waitUntil { model.transcript == "still thinking" })
-        try? await Task.sleep(for: .milliseconds(140))
+        #expect(clock.pendingCount == 0)
+        clock.advance(by: tail * 2)
 
         #expect(model.phase == .listening)
         model.cancel()
@@ -256,6 +301,7 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         transcriber.yield("do not submit")
         #expect(await waitUntil { model.transcript == "do not submit" })
         let finishing = Task { await model.finish() }
@@ -281,6 +327,7 @@ struct VoiceInputModelTests {
 
         try await model.prepare()
         model.begin()
+        #expect(await waitUntil { transcriber.hasStarted })
         model.cancel()
         model.begin()
 
@@ -288,22 +335,10 @@ struct VoiceInputModelTests {
         #expect(await waitUntil { transcriber.finishCount == 1 })
         transcriber.resumeFirstFinish()
         #expect(await waitUntil { model.phase == .listening })
-        #expect(audio.startCount == 2)
+        #expect(await waitUntil { audio.startCount == 2 })
         model.cancel()
     }
 
-    private func waitUntil(
-        maxSuspensions: Int = 10_000,
-        _ condition: @escaping @MainActor () -> Bool
-    ) async -> Bool {
-        for _ in 0..<maxSuspensions {
-            if condition() {
-                return true
-            }
-            await Task.yield()
-        }
-        return condition()
-    }
 }
 
 @MainActor
@@ -330,7 +365,11 @@ private final class FakeTranscriber: TranscriberEngine {
     private(set) var bestFormat: AVAudioFormat?
     private(set) var finishCount = 0
     var holdFirstFinish = false
+    var finishError: (any Error)?
 
+    var hasStarted: Bool {
+        continuation != nil
+    }
     private var continuation: AsyncThrowingStream<TranscriptUpdate, Error>.Continuation?
     private var firstFinishContinuation: CheckedContinuation<Void, Never>?
 
@@ -346,6 +385,10 @@ private final class FakeTranscriber: TranscriberEngine {
 
     func finishSession() async throws {
         finishCount += 1
+        if let finishError {
+            continuation?.finish(throwing: finishError)
+            throw finishError
+        }
         if holdFirstFinish, finishCount == 1 {
             await withCheckedContinuation { firstFinishContinuation = $0 }
         }

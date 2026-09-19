@@ -106,6 +106,7 @@ struct VoiceGlyph: View {
     var isHighlighted = false
     var orbSize: CGFloat = 14
     @State private var pulsing = false
+    @Environment(\.chromeIsLight) private var chromeIsLight
 
     var body: some View {
         glyph
@@ -145,7 +146,7 @@ struct VoiceGlyph: View {
         } else {
             Image(systemName: symbol)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(color)
+                .foregroundStyle(style)
                 .contentTransition(.identity)
         }
     }
@@ -165,14 +166,14 @@ struct VoiceGlyph: View {
         Self.showsAgentTurn(state: state, isSpeakingReply: isSpeakingReply)
     }
 
-    private var color: Color {
+    private var style: AnyShapeStyle {
         switch state {
         case .listening:
-            .red
+            AnyShapeStyle(Color.red)
         case .executing:
-            Theme.accent
+            AnyShapeStyle(Theme.accent)
         case .idle:
-            isHighlighted ? .primary : .secondary
+            ChromeInk.glyph(onLight: chromeIsLight, hovering: isHighlighted)
         }
     }
 }

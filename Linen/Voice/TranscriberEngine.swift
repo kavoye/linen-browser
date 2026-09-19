@@ -14,4 +14,11 @@ protocol TranscriberEngine: AnyObject {
     func prepare() async throws
     func startSession(input: AsyncStream<CapturedAudio>) -> AsyncThrowingStream<TranscriptUpdate, Error>
     func finishSession() async throws
+    func cancelSession() async
+}
+
+extension TranscriberEngine {
+    func cancelSession() async {
+        try? await finishSession()
+    }
 }

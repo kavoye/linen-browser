@@ -7,8 +7,19 @@ import os
 
 @MainActor
 protocol AudioInputCapturing: AnyObject {
-    func start(targetFormat: AVAudioFormat) throws -> AsyncStream<CapturedAudio>
+    var usesEchoCancellation: Bool {
+        get
+    }
+    func start(targetFormat: AVAudioFormat) async throws -> AsyncStream<CapturedAudio>
     func stop()
+    func setMuted(_ muted: Bool)
+}
+
+extension AudioInputCapturing {
+    var usesEchoCancellation: Bool {
+        true
+    }
+    func setMuted(_ muted: Bool) {}
 }
 
 extension AudioCaptureService: AudioInputCapturing {}
@@ -33,9 +44,11 @@ final class VoiceInputModel {
     private(set) var isReady = false
 
     @ObservationIgnored private let audio: any AudioInputCapturing
-    @ObservationIgnored private let transcriber: any TranscriberEngine
+    @ObservationIgnored private var transcriber: any TranscriberEngine
     @ObservationIgnored private let releaseTail: Duration
     @ObservationIgnored private let silenceTail: Duration
+    @ObservationIgnored private let clock: any Clock<Duration>
+    @ObservationIgnored private var capturePreparation: Task<Void, Never>?
     @ObservationIgnored private var sessionTask: Task<Void, Never>?
     @ObservationIgnored private var releaseTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
@@ -52,12 +65,14 @@ final class VoiceInputModel {
         audio: any AudioInputCapturing = AudioCaptureService(),
         transcriber: any TranscriberEngine = AppleTranscriberEngine(),
         releaseTail: Duration = .milliseconds(450),
-        silenceTail: Duration = .seconds(4)
+        silenceTail: Duration = .seconds(4),
+        clock: any Clock<Duration> = ContinuousClock()
     ) {
         self.audio = audio
         self.transcriber = transcriber
         self.releaseTail = releaseTail
         self.silenceTail = silenceTail
+        self.clock = clock
     }
 
     var pipelineState: PipelineState {
@@ -73,6 +88,17 @@ final class VoiceInputModel {
 
     func prepare() async throws {
         try await transcriber.prepare()
+        isReady = true
+    }
+
+    func useTranscriber(_ next: any TranscriberEngine) async throws {
+        cancel()
+        generation &+= 1
+        let preparing = generation
+        isReady = false
+        transcriber = next
+        try await next.prepare()
+        guard generation == preparing, !Task.isCancelled else { return }
         isReady = true
     }
 
@@ -98,42 +124,43 @@ final class VoiceInputModel {
         self.endsOnSilence = endsOnSilence
         phase = .listening
 
-        do {
-            let input = try audio.start(targetFormat: format)
-            let updates = transcriber.startSession(input: input)
-            sessionTask = Task { [weak self] in
-                do {
-                    for try await update in updates {
-                        guard let self,
-                              !Task.isCancelled,
-                              generation == sessionGeneration
-                        else { return }
-                        let spoke = update.text != transcript
-                        transcript = update.text
-                        if spoke {
-                            waitForSilence()
+        capturePreparation = Task { [weak self] in
+            guard let self, generation == sessionGeneration, !Task.isCancelled else { return }
+            defer { if generation == sessionGeneration { capturePreparation = nil } }
+            do {
+                let input = try await audio.start(targetFormat: format)
+                guard generation == sessionGeneration, !Task.isCancelled else { return }
+                let updates = transcriber.startSession(input: input)
+                waitForSilence()
+                sessionTask = Task { [weak self] in
+                    guard let self else { return }
+                    do {
+                        for try await update in updates {
+                            guard !Task.isCancelled, generation == sessionGeneration else { return }
+                            let spoke = update.text != transcript
+                            transcript = update.text
+                            if spoke {
+                                waitForSilence()
+                            }
                         }
+                    } catch {
+                        guard !Task.isCancelled, generation == sessionGeneration else { return }
+                        audio.stop()
+                        sessionTask = nil
+                        transcript = ""
+                        self.endsOnSilence = false
+                        phase = .idle
+                        onFailure?(.transcription)
+                        Pipeline.log.error("Transcription stream failed")
                     }
-                } catch {
-                    guard let self,
-                          !Task.isCancelled,
-                          generation == sessionGeneration
-                    else { return }
-                    audio.stop()
-                    sessionTask = nil
-                    transcript = ""
-                    self.endsOnSilence = false
-                    phase = .idle
-                    onFailure?(.transcription)
-                    Pipeline.log.error("Transcription stream failed: \(error, privacy: .public)")
                 }
+            } catch {
+                guard !Task.isCancelled, generation == sessionGeneration else { return }
+                transcript = ""
+                self.endsOnSilence = false
+                phase = .idle
+                onFailure?(.capture(error.localizedDescription))
             }
-        } catch {
-            transcript = ""
-            self.endsOnSilence = false
-            phase = .idle
-            onFailure?(.capture(error.localizedDescription))
-            return
         }
         waitForSilence()
     }
@@ -147,8 +174,8 @@ final class VoiceInputModel {
         guard phase == .listening else { return }
         releaseTask?.cancel()
         let delay = delay ?? releaseTail
-        releaseTask = Task { [weak self] in
-            try? await Task.sleep(for: delay)
+        releaseTask = Task { [weak self, clock] in
+            try? await clock.sleep(for: delay)
             guard !Task.isCancelled, let self else { return }
             releaseTask = nil
             await finish()
@@ -158,16 +185,34 @@ final class VoiceInputModel {
     func finish() async {
         guard phase == .listening else { return }
         let sessionGeneration = generation
-        let resultTask = sessionTask
+        let finishingTranscriber = transcriber
         phase = .finishing
         let trace = LatencyTrace()
 
+        await capturePreparation?.value
+        guard generation == sessionGeneration, phase == .finishing else { trace.end(); return }
+        let resultTask = sessionTask
         audio.stop()
         isFinalizingSession = true
         do {
-            try await transcriber.finishSession()
+            try await finishingTranscriber.finishSession()
         } catch {
-            Pipeline.log.error("finishSession failed: \(error, privacy: .public)")
+            Pipeline.log.error("finishSession failed")
+            resultTask?.cancel()
+            await finishingTranscriber.cancelSession()
+            isFinalizingSession = false
+            guard generation == sessionGeneration else {
+                resumeDeferredBeginIfNeeded()
+                trace.end()
+                return
+            }
+            transcript = ""
+            sessionTask = nil
+            endsOnSilence = false
+            phase = .idle
+            onFailure?(.transcription)
+            trace.end()
+            return
         }
         isFinalizingSession = false
         resumeDeferredBeginIfNeeded()
@@ -209,7 +254,10 @@ final class VoiceInputModel {
         guard wasActive else { return }
 
         generation &+= 1
-        if wasListening {
+        let wasPreparing = capturePreparation != nil
+        capturePreparation?.cancel()
+        capturePreparation = nil
+        if wasListening || wasPreparing {
             audio.stop()
         }
         sessionTask?.cancel()
@@ -218,7 +266,7 @@ final class VoiceInputModel {
         let transcriber = transcriber
         isFinalizingSession = true
         Task { [weak self] in
-            try? await transcriber.finishSession()
+            await transcriber.cancelSession()
             guard let self else { return }
             isFinalizingSession = false
             resumeDeferredBeginIfNeeded()
