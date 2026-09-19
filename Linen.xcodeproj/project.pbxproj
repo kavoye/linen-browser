@@ -11,6 +11,8 @@
 		EEAB00013027B875008F6668 /* AnyLanguageModel in Frameworks */ = {isa = PBXBuildFile; productRef = EEAB00033027B875008F6668 /* AnyLanguageModel */; };
 		EEAC00013027B875008F6668 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = EEAC00033027B875008F6668 /* GRDB */; };
 		EEAC00043027B875008F6668 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = EEAC00053027B875008F6668 /* GRDB */; };
+		EEAD00013027B875008F6668 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = EEAD00033027B875008F6668 /* MCP */; };
+		EEAE00013027B875008F6668 /* Logging in Frameworks */ = {isa = PBXBuildFile; productRef = EEAE00033027B875008F6668 /* Logging */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +61,8 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				EEAB00013027B875008F6668 /* AnyLanguageModel in Frameworks */,
+				EEAD00013027B875008F6668 /* MCP in Frameworks */,
+				EEAE00013027B875008F6668 /* Logging in Frameworks */,
 				EEAA00013027B875008F6668 /* Sparkle in Frameworks */,
 				EEAC00013027B875008F6668 /* GRDB in Frameworks */,
 			);
@@ -109,6 +113,8 @@
 			name = Linen;
 			packageProductDependencies = (
 				EEAB00033027B875008F6668 /* AnyLanguageModel */,
+				EEAD00033027B875008F6668 /* MCP */,
+				EEAE00033027B875008F6668 /* Logging */,
 				EEAA00033027B875008F6668 /* Sparkle */,
 				EEAC00033027B875008F6668 /* GRDB */,
 			);
@@ -148,7 +154,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2660;
-				LastUpgradeCheck = 2660;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					EE41BFE13027B875008F6668 = {
 						CreatedOnToolsVersion = 26.6;
@@ -170,6 +176,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				EEAB00023027B875008F6668 /* XCRemoteSwiftPackageReference "AnyLanguageModel" */,
+				EEAD00023027B875008F6668 /* XCRemoteSwiftPackageReference "swift-sdk" */,
+				EEAE00023027B875008F6668 /* XCRemoteSwiftPackageReference "swift-log" */,
 				EEAA00023027B875008F6668 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				EEAC00023027B875008F6668 /* XCRemoteSwiftPackageReference "GRDB" */,
 			);
@@ -254,6 +262,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = T8677WC8DG;
 				ENABLE_ENHANCED_SECURITY = YES;
@@ -281,6 +290,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -321,6 +331,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = T8677WC8DG;
 				ENABLE_ENHANCED_SECURITY = YES;
@@ -341,6 +352,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -354,6 +366,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = T8677WC8DG;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_ENHANCED_SECURITY = YES;
@@ -370,7 +383,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Only websites you allow can use your camera.";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Only websites you allow can use your location.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Only websites you allow can use your location.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Linen listens while you hold the talk key. Only websites you allow can use your microphone too.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Linen uses your microphone for dictation and voice conversations. Websites can use it only with your permission.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -398,6 +411,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = T8677WC8DG;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_ENHANCED_SECURITY = YES;
@@ -414,7 +428,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Only websites you allow can use your camera.";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Only websites you allow can use your location.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Only websites you allow can use your location.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Linen listens while you hold the talk key. Only websites you allow can use your microphone too.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Linen uses your microphone for dictation and voice conversations. Websites can use it only with your permission.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -440,6 +454,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = T8677WC8DG;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
@@ -461,6 +476,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = T8677WC8DG;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
@@ -511,7 +527,7 @@
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.9.5;
+				minimumVersion = 2.10.0;
 			};
 		};
 		EEAB00023027B875008F6668 /* XCRemoteSwiftPackageReference "AnyLanguageModel" */ = {
@@ -519,7 +535,7 @@
 			repositoryURL = "https://github.com/huggingface/AnyLanguageModel.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.0;
+				minimumVersion = 0.13.0;
 			};
 		};
 		EEAC00023027B875008F6668 /* XCRemoteSwiftPackageReference "GRDB" */ = {
@@ -528,6 +544,22 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 7.11.1;
+			};
+		};
+		EEAD00023027B875008F6668 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.12.1;
+			};
+		};
+		EEAE00023027B875008F6668 /* XCRemoteSwiftPackageReference "swift-log" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-log.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -552,6 +584,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EEAC00023027B875008F6668 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = GRDB;
+		};
+		EEAD00033027B875008F6668 /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EEAD00023027B875008F6668 /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = MCP;
+		};
+		EEAE00033027B875008F6668 /* Logging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EEAE00023027B875008F6668 /* XCRemoteSwiftPackageReference "swift-log" */;
+			productName = Logging;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
