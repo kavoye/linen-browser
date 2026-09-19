@@ -97,6 +97,14 @@ struct StartPageSnapshot {
         var days: Set<Date>
         var latestURL: String
         var hosts: [String: Int]
+
+        mutating func record(_ visit: HistoryStore.VisitedPage, host: String, calendar: Calendar) {
+            visits += 1
+            if days.count < 2 {
+                days.insert(calendar.startOfDay(for: visit.visitedAt))
+            }
+            hosts[host, default: 0] += 1
+        }
     }
 
     static func frequentSites(
@@ -105,29 +113,27 @@ struct StartPageSnapshot {
         calendar: Calendar = .current
     ) -> [StartPageSite] {
         var statistics: [String: SiteTally] = [:]
+        var domains: [String: String] = [:]
+        var excludedHosts = hiddenHosts
 
         for visit in visits.prefix(400) {
             guard let parsedHost = URL(string: visit.url)?.host() else { continue }
             let host = parsedHost.lowercased()
-            let domain = SiteName.domain(forHost: host)
-            guard !hiddenHosts.contains(host), !hiddenHosts.contains(domain),
-                  !SearchEngineHosts.isSearchEngine(host)
-            else { continue }
-
-            let day = calendar.startOfDay(for: visit.visitedAt)
-            if var existing = statistics[domain] {
-                existing.visits += 1
-                existing.days.insert(day)
-                existing.hosts[host, default: 0] += 1
-                statistics[domain] = existing
+            guard !excludedHosts.contains(host) else { continue }
+            let domain: String
+            if let cached = domains[host] {
+                domain = cached
             } else {
-                statistics[domain] = SiteTally(
-                    visits: 1,
-                    days: [day],
-                    latestURL: visit.url,
-                    hosts: [host: 1]
-                )
+                domain = SiteName.domain(forHost: host)
+                guard !hiddenHosts.contains(domain), !SearchEngineHosts.isSearchEngine(host) else {
+                    excludedHosts.insert(host)
+                    continue
+                }
+                domains[host] = domain
             }
+
+            statistics[domain, default: SiteTally(visits: 0, days: [], latestURL: visit.url, hosts: [:])]
+                .record(visit, host: host, calendar: calendar)
         }
 
         return statistics.compactMap { domain, statistic in

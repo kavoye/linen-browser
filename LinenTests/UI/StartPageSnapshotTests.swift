@@ -36,6 +36,25 @@ struct StartPageSnapshotTests {
         ])
     }
 
+    @Test func repeatedVisitsOnOneDayDoNotEarnAFrequentSite() {
+        let visits = (1...8).map { visit(id: Int64($0), url: "https://docs.example/guide", day: 3) }
+        #expect(StartPageSnapshot.frequentSites(from: visits, hiddenHosts: [], calendar: calendar).isEmpty)
+    }
+
+    @Test func qualifyingSiteKeepsCountingVisitsAndChoosingItsMostVisitedHost() {
+        let visits = [
+            visit(id: 6, url: "https://www.example.com/latest", day: 5),
+            visit(id: 5, url: "https://docs.example.com/one", day: 4),
+            visit(id: 4, url: "https://docs.example.com/two", day: 3),
+            visit(id: 3, url: "https://docs.example.com/three", day: 2),
+            visit(id: 2, url: "https://www.example.com/older", day: 2),
+            visit(id: 1, url: "https://docs.example.com/four", day: 1),
+        ]
+        #expect(StartPageSnapshot.frequentSites(from: visits, hiddenHosts: [], calendar: calendar) == [
+            StartPageSite(url: "https://www.example.com/latest", host: "docs.example.com", visits: 6),
+        ])
+    }
+
     @Test func frequentSitesExcludeSearchAndDismissedHostsThenRankDeterministically() {
         let visits = [
             visit(id: 20, url: "https://beta.example/latest", day: 5),
