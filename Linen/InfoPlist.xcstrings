@@ -96,12 +96,12 @@
       }
     },
     "NSMicrophoneUsageDescription" : {
-      "comment" : "System permission prompt asking to use the microphone. “the talk key” is the push-to-talk shortcut the user holds to speak to the assistant. Match app style: curly apostrophes, no exclamation marks.",
+      "comment" : "System permission prompt explaining microphone use for dictation, voice conversations, and websites with permission.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Linen listens while you hold the talk key. Only websites you allow can use your microphone too."
+            "value" : "Linen uses your microphone for dictation and voice conversations. Websites can use it only with your permission."
           }
         }
       }

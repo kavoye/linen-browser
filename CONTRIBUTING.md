@@ -1,7 +1,6 @@
 # Contributing to Linen
 
-Keep changes focused, explain the user benefit, and leave the code easier to
-test than you found it.
+Keep changes focused, explain the user benefit, and keep the code testable.
 
 ## Set up the project
 
@@ -30,7 +29,7 @@ Do not weaken concurrency checks to make a change compile.
 
 ## Make changes
 
-- Keep UI, state, persistence, and external-service code behind clear seams.
+- Separate UI, state, persistence, and external-service code.
 - Give each type one main responsibility. Split a file when it contains
   independent features or changes for unrelated reasons.
 - Make each distinct SwiftUI section a separate `View` with narrow inputs.
@@ -67,13 +66,12 @@ identify a real format, service, import source, or compatibility contract.
   they apply.
 - Prefer deterministic fakes and injected dependencies to sleeps or live
   network calls. Wait for a condition with `waitUntil`, which returns as soon as
-  it holds; a fixed sleep spends its whole budget on every run and still fails
-  on a slow one.
+  it holds. Fixed sleeps delay every run and can still fail on a slow machine.
 - Do not assert on a timer you cannot control. Inject the clock or the interval
   instead, as `DownloadFlights` and the extension update sweep do.
-- Take a dependency the whole process shares — a stub on a static, a shared
-  store — with a trait that keeps other suites out, as `.exclusiveExternalApp`
-  does. Serializing one suite does not protect a global from the rest.
+- Protect process-wide dependencies, such as static stubs and shared stores,
+  with an exclusive-access trait such as `.exclusiveExternalApp`. Serializing
+  one suite does not prevent other suites from accessing shared state.
 - Do not hide a persistent failure with `withKnownIssue`. Either make the test
   deterministic or keep the unsupported check out of the automated suite.
 
@@ -83,13 +81,13 @@ line coverage and rejects regressions below the repository floor. CI runs
 swiftlint` to run it locally). The configuration is `.swiftlint.yml`. Put a
 switch case’s body on the line after the label. Do not write a declaration or
 control-flow body inside single-line braces; short closures, `guard … else
-{ return }` and accessor lists (`{ get set }`) stay inline. Coverage is
-a guardrail, not a substitute for meaningful assertions. It also checks the
+{ return }` and accessor lists (`{ get set }`) stay inline. Coverage thresholds
+do not replace meaningful assertions. CI also checks the
 blank-tab, tab-switching, command-palette, Start Page and Ask surface budgets in
-`Tools/check-performance.sh`. Each budget sits at about twice what the runner
-measures, because a shared runner varies by half again between runs. A real
-regression shows as a multiple, not a few percent. Change a budget only with the
-measurements that justify it.
+`Tools/check-performance.sh`. Each budget is about twice the measured
+baseline to allow for roughly 50% variation on shared runners. These checks
+detect large regressions rather than small percentage changes. Change a budget
+only with measurements that justify it.
 
 A case that builds a live WebKit view takes `.boundedWebViews`, which holds one
 of a small number of slots — half the machine’s cores. Starting every case
@@ -99,7 +97,7 @@ on the suite around them, so pure cases do not queue for a resource they never
 use. Add `.serialized` as well when the cases in a suite share state.
 
 `Linen.xctestplan` runs with per-test timeouts: 120 seconds by default, 300 at
-most. A wedged test therefore fails by name instead of holding the whole run.
+most. A stalled test times out and reports its name without blocking the full run.
 Both frameworks run from this plan, and a new test needs no entry in it — the
 plan lists the target, not its tests.
 
@@ -110,6 +108,10 @@ copy.
 ## Keep copy and design consistent
 
 - Use the shortest familiar label that is unambiguous.
+- Never use forced metaphors, poetic phrasing, or marketing filler in product
+  copy. State the action or result directly: “Import your bookmarks,” “Choose
+  a Tab for Lyrics,” and “Change the model or reasoning level.” Keep necessary
+  instructions, accessibility information, and permission consequences.
 - Use Title Case for menu items, window titles, settings page names, and
   buttons that name a command. Use sentence case for options, captions, and
   row titles. One command keeps one capitalization on every surface of the
@@ -127,8 +129,7 @@ copy.
 
 ## Stage the app for screenshots and video
 
-Stage mode fills a launch with a curated session, so a screenshot or a screen
-recording shows a browser someone has been using instead of an empty one.
+Stage mode loads sample browsing data for screenshots and recordings.
 
 Set the session in `Linen/Stage/StageSet.swift`: pinned tabs, folders, loose
 tabs, history and downloads.
@@ -137,13 +138,13 @@ tabs, history and downloads.
 LINEN_STAGE=1 build/DD/Build/Products/Debug/Linen.app/Contents/MacOS/Linen
 ```
 
-Do the warm-up pass once. The staged tabs are real websites, and a data store
-with no cookies in it shows cookie banners and region prompts.
+Prepare the session once. Staged tabs load real websites, which may show cookie
+banners and region prompts on first use.
 
 1. Launch with `LINEN_STAGE=1`.
 2. Dismiss every banner on every staged tab.
 3. Add a model API key in Settings if a recording needs an agent turn.
-4. Quit. The answers stay in the stage data store and the next launch is clean.
+4. Quit. Your choices are saved in the stage data store for the next launch.
 
 A stage run writes to its own support directory, its own website data store and
 its own preference domain. It cannot change the real installation’s history,

@@ -1,6 +1,6 @@
 # Releasing Linen
 
-Linen uses [Sparkle 2.9.6](https://sparkle-project.org) for updates. The app
+Linen uses [Sparkle 2.10.0](https://sparkle-project.org) for updates. The app
 does not show the Sparkle windows. The update interface is only the banner in
 `Linen/Updates/UpdateBanner.swift`.
 
@@ -14,21 +14,20 @@ The feed URL is
 `https://github.com/<owner>/<repo>/releases/latest/download/appcast.xml`.
 GitHub redirects that URL to the asset of the same name in the most recent
 release, so you need no web server and no `gh-pages` branch. Attach
-`appcast.xml` to each release, and the permalink follows it.
+`appcast.xml` to each release to keep that URL working.
 
 ## The signing tools
 
 Sparkle ships `generate_keys`, `sign_update` and `generate_appcast` in an
 artifact bundle rather than as package products, so Swift Package Manager
-downloads them without building them. Point a variable at them once, and you do
-not have to find the path again:
+downloads them without building them. Set a variable to their directory:
 
 ```bash
 export SPARKLE_BIN=$(dirname "$(find ~/Library/Developer/Xcode/DerivedData -path '*artifacts/sparkle/Sparkle/bin/sign_update' -print -quit)")
 ```
 
-The path lives in DerivedData, so cleaning the build folder removes it and the
-next build puts it back. You can also download the release tarball from
+The tools are stored in DerivedData. Cleaning the build folder removes them;
+the next build restores them. You can also download the release tarball from
 https://github.com/sparkle-project/Sparkle/releases.
 
 ## One-time: the Sparkle signing keys
@@ -38,8 +37,7 @@ The EdDSA key pair already exists. `Linen/Info.plist` holds the public key as
 `sign_update` finds it. Nothing else needs configuring.
 
 Back up the private key and keep the backup for at least two years. If you lose
-it, no installed copy can ever update again, and the only way out is to ask
-everyone to download the app afresh.
+it, installed copies cannot verify new updates. Users must download the app again.
 
 To export a copy:
 
@@ -47,8 +45,8 @@ To export a copy:
 "$SPARKLE_BIN/generate_keys" -x sparkle-private-key.txt
 ```
 
-This file has the same importance as a password. It gives full authority to
-release updates. Put the file in a password manager. Then delete the file.
+The exported key authorizes updates. Store it in a password manager, then delete
+the exported file.
 
 `generate_keys -p` shows the public key again at any time. If you run
 `generate_keys` with no arguments, it keeps the existing key pair. It does not
@@ -130,11 +128,10 @@ and at the checks after the export.
 
 ## One-time: who can release
 
-A tag starts the release. Only an account with write access can push a tag, but
-the workflow gives that tag a Developer ID certificate, a notarization key and
-the Sparkle private key. The Sparkle key is the most important of the three: it
-decides what every installed copy of Linen updates to. Set up all three
-controls below before you make the repository public.
+Pushing a tag starts the release workflow, which uses the Developer ID
+certificate, notarization key and Sparkle private key. Only accounts with write
+access can push tags. The Sparkle key authorizes updates for installed copies.
+Set up all three controls below before you make the repository public.
 
 **1. The release environment.** The workflow jobs declare
 `environment: release`, and the secrets live in that environment. Only a job
@@ -156,7 +153,7 @@ Do not add a required reviewer. A reviewer stops the release until you come
 back and approve it, and stops each preview build the same way. The tag ruleset
 below controls who can start a release.
 
-**2. A tag ruleset.** This stops the tag from being made at all.
+**2. A tag ruleset.** Restrict who can create, update or delete release tags.
 
 1. Open Settings › Rules › Rulesets. Add a new tag ruleset.
 2. Set Enforcement status to Active.
@@ -165,7 +162,7 @@ below controls who can start a release.
 5. Leave the bypass list empty, then add only yourself.
 
 **3. A branch ruleset for `main`.** The release only builds a commit that is on
-`main`, so `main` is what an attacker must reach.
+`main`, so protect changes to `main`.
 
 1. Add a branch ruleset that targets the default branch.
 2. Select Require a pull request before merging. Require one approval.
@@ -235,17 +232,17 @@ If CI fails on that commit, the `gate` job stops the release. No signing key is
 used. Correct the code, push it, then make the next tag. Do not move a tag that
 you already pushed.
 
-Important information:
+Release requirements:
 
-- **Each asset has one job.** A person downloads the disk image. Sparkle
+- **Use the correct asset format.** Users download the disk image. Sparkle
   downloads the zip file. `appcast.xml` points only at the zip file. Keep the
   disk image out of the `dist` folder. `generate_appcast` reads a disk image
   also, and then the feed contains two items for one version.
-- **The app asks to move itself.** A copy that runs from another folder cannot
+- **Install in Applications.** A copy that runs from another folder cannot
   always update itself, so Linen offers to move itself to the Applications
   folder at the first launch. `Linen/App/InstallLocation.swift` makes that
-  decision. Linen asks one time only. The disk image is what makes the correct
-  installation obvious, so keep the link to the Applications folder in it.
+  decision. Linen asks one time only. Keep the Applications folder link
+  in the disk image to show where to install the app.
 - **The tag sets the version.** `MARKETING_VERSION` comes from the tag without
   the `v` character. `CURRENT_PROJECT_VERSION` comes from `git rev-list --count
   HEAD`, the number of commits, so the `CFBundleVersion` that Sparkle compares
@@ -266,7 +263,7 @@ Important information:
   promises the reporter credit in the release notes. The workflow cannot know
   the name. Put the name in the `CHANGELOG.md` section before you make the tag.
   Do not use the name if the reporter asked you to keep it out.
-- **The format of the tag is important.** The notes sheet finds the release with
+- **Use a supported tag format.** The notes sheet finds the release with
   the name `v<version>`. If it does not find that name, it uses `<version>`.
   Only the formats `vX.Y` and `vX.Y.Z` start the workflow.
 - **The workflow writes `appcast.xml` from the app bundle**, so the version,
@@ -291,8 +288,8 @@ After you add, remove or update a package:
 3. Commit the file with the change to `Package.resolved`.
 
 CI runs the same command and stops the build if the result is different. The
-MIT and Apache both require their terms to travel with the binary, and a signed
-build is a redistribution, so this file is not optional.
+MIT and Apache licenses require their terms to be included with distributed
+binaries, so this file is required.
 
 ### The disk image
 
@@ -316,8 +313,8 @@ The volume name must stay `Linen`. The background is an alias that names the
 volume.
 
 macOS 26 Finder ignores the window size in the file. The window opens at the
-size that Finder gives to each new window. The artwork is thus 1280x800: paper
-stays below the window at each size, and the composition stays at the top left.
+size that Finder gives to each new window. The 1280x800 artwork
+covers the window background, with the layout anchored at the top left.
 A Finder icon position is the centre of the icon, so the positions in
 `Tools/make-dmg-layout.sh` and the coordinates in `Tools/make-dmg-background.swift`
 are the same numbers.
@@ -373,8 +370,8 @@ Preview. Sparkle reads the other feed at the next check, with no restart.
 
 ### What the workflow does
 
-`.github/workflows/tip.yml` runs each time CI passes on `main`. You neither
-start it nor tag anything. The workflow:
+`.github/workflows/tip.yml` runs each time CI passes on `main`. No manual trigger
+or tag is needed. The workflow:
 
 1. Reads the version: the last `v` tag, then the number of commits after it,
    such as `0.1.2 (4)`.
@@ -425,9 +422,8 @@ the tag name never changes.
   release feed only. If the preview build stops at that commit, the preview
   channel stays on the release before it, and everything since sits in no
   preview feed until the next commit lands on `main`.
-- **A preview build uses the signing keys.** The certificate, the notarization
-  key and the Sparkle key are used on every green commit on `main`, not only at
-  a release.
+- **A preview build uses the signing keys.** The certificate, notarization
+  key and Sparkle key are used for every commit on `main` that passes CI.
 
 ### Going back to releases
 
@@ -444,7 +440,7 @@ image from the releases page and replace the app.
   to the setting starts a check immediately.
 - When Sparkle finds an update, the banner appears in two places: above the
   settings page, and in the sidebar below the media player.
-- Install does the whole job: it downloads the update, installs it, and opens
+- Install downloads the update, installs it, and opens
   Linen again, without asking a second time. Nothing downloads before someone
   chooses Install.
 - Dismissing the banner defers the update rather than skipping it, and a

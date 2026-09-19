@@ -125,7 +125,7 @@ final class ReleaseNotesModel {
             decoder.dateDecodingStrategy = .iso8601
             return published(try decoder.decode([GitHubRelease].self, from: data))
         } catch {
-            Pipeline.log.error("release notes: fetch failed - \(error, privacy: .public)")
+            Pipeline.log.error("release notes: fetch failed")
             return []
         }
     }

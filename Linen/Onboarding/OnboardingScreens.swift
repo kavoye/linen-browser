@@ -16,7 +16,7 @@ extension OnboardingUI {
                     VStack(spacing: 0) {
                         Heading(
                             title: "Welcome to Linen",
-                            caption: "A quiet browser with an assistant built in."
+                            caption: "A browser with a built-in assistant."
                         )
                         .introReveal(revealed, delay: 0)
 
@@ -98,7 +98,7 @@ extension OnboardingUI {
             Screen {
                 Heading(
                     title: "Add extensions",
-                    caption: "These come from the Chrome and Firefox stores. Visit either store to add more."
+                    caption: "Add extensions from the Chrome Web Store or Firefox Add-ons."
                 )
 
                 SettingsCard {
@@ -134,7 +134,7 @@ extension OnboardingUI {
         var body: some View {
             Screen {
                 Heading(
-                    title: "Bring your bookmarks over",
+                    title: "Import your bookmarks",
                     caption: "Import bookmarks from another browser, and open links from other apps in Linen."
                 )
 
@@ -194,7 +194,7 @@ extension OnboardingUI {
                     .padding(.bottom, 24)
                     .introReveal(revealed, delay: 0)
 
-                Heading(title: "You’re set", caption: "Three things to try.")
+                Heading(title: "You’re set", caption: "Start with these shortcuts.")
                     .introReveal(revealed, delay: 0.08)
 
                 FirstMoves()
@@ -229,12 +229,12 @@ extension OnboardingUI {
             .init(
                 id: "summary",
                 symbol: "cursorarrow",
-                text: "Hold Shift and point at a link to read what the page says."
+                text: "Hold Shift over a link to see a summary."
             ),
             .init(
                 id: "peek",
                 symbol: "rectangle.on.rectangle",
-                text: "Hold Shift and click a link to read it over the page."
+                text: "Hold Shift and click a link to open a preview."
             ),
         ]
 

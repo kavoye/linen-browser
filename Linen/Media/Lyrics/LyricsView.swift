@@ -210,7 +210,7 @@ struct LyricsBoard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Choose Which Tab the Words Follow")
+            .help("Choose a Tab for Lyrics")
             .background { MenuAnchor(box: sourceAnchor) }
         } else {
             titleBlock
@@ -306,7 +306,7 @@ struct LyricsBoard: View {
             PanelNotice(
                 symbol: "music.note",
                 title: "Nothing is playing",
-                caption: "Play a song in any tab. Linen reads its title, looks the words up on LRCLIB, and follows along with the music."
+                caption: "Play a song in a tab to see synced lyrics from LRCLIB."
             )
         case .off:
             PanelNotice(
