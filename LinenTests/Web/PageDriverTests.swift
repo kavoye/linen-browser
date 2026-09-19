@@ -48,6 +48,56 @@ struct PageDriverTests {
 
     // MARK: - Observation
 
+    @Test func highlightFitsAllEdgesDespitePageStylesAndBodyTransforms() async throws {
+        let view = await loadedWebView("""
+        <style>
+          body { transform: translate(31px, 17px); }
+          div { box-sizing: content-box !important; padding: 19px !important; margin: 20px !important; }
+          button { width: 180px; height: 44px; border-radius: 12px; }
+        </style>
+        <button id="target">Fixture control</button>
+        """)
+        _ = await PageDriver.readRenderedPage(view)
+        await PageDriver.announce(ref: 1, in: view, pause: false)
+        let gaps = try #require(await js(view, """
+        (() => {
+          const a = document.getElementById('target').getBoundingClientRect();
+          const b = document.querySelector('.__linen-ring').getBoundingClientRect();
+          return [a.left-b.left, a.top-b.top, b.right-a.right, b.bottom-a.bottom];
+        })()
+        """) as? [Double])
+        #expect(gaps.count == 4)
+        #expect(gaps.allSatisfy { abs($0 - 4) < 0.5 })
+        #expect(await js(view, "getComputedStyle(document.querySelector('.__linen-ring')).pointerEvents") as? String == "none")
+    }
+
+    @Test func highlightTracksLayoutChangesAndDisappearsWithItsControl() async throws {
+        let view = await loadedWebView("<button id='target' style='width:180px;height:44px'>Fixture control</button>")
+        let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = view
+        window.orderFront(nil)
+        defer {
+            window.orderOut(nil)
+            window.contentView = nil
+        }
+        _ = await PageDriver.readRenderedPage(view)
+        await PageDriver.announce(ref: 1, in: view, pause: false)
+        _ = await js(view, "document.getElementById('target').style.cssText='margin-left:40px;width:240px;height:64px'")
+        #expect(await waitUntil {
+            await js(view, """
+            (() => {
+              const a = document.getElementById('target').getBoundingClientRect();
+              const ring = document.querySelector('.__linen-ring');
+              if (!ring) return false;
+              const b = ring.getBoundingClientRect();
+              return Math.abs(a.left-b.left-4)<0.5 && Math.abs(b.width-a.width-8)<0.5 && Math.abs(b.height-a.height-8)<0.5;
+            })()
+            """) as? Bool == true
+        })
+        _ = await js(view, "document.getElementById('target').remove()")
+        #expect(await waitUntil { await js(view, "document.querySelector('.__linen-ring') === null") as? Bool == true })
+    }
+
     @Test func numbersEveryControlAndSaysWhatItIs() async {
         let webView = await loadedWebView("""
         <p>Welcome to the shop.</p>
@@ -122,14 +172,14 @@ struct PageDriverTests {
         #expect(await js(webView, "window.__hit") as? String == "second")
     }
 
-    @Test func clickByLabelStillWorksAndTakesTheFirstMatch() async {
+    @Test func ambiguousLabelRequiresAnExplicitRef() async {
         let webView = await loadedWebView("""
         <button onclick="window.__hit='a'">Accept cookies</button>
         <button onclick="window.__hit='b'">Accept cookies</button>
         """)
         let result = await PageDriver.click(ref: 0, label: "accept cookies", in: webView)
-        #expect(result.hasPrefix("Clicked"))
-        #expect(await js(webView, "window.__hit") as? String == "a")
+        #expect(result.contains("Several controls match"))
+        #expect(await js(webView, "window.__hit === undefined") as? Bool == true)
     }
 
     @Test func aMissingLabelListsWhatIsActuallyThere() async {
@@ -316,7 +366,7 @@ struct PageDriverTests {
         </form>
         """)
         let result = await PageDriver.type(text: "shoes", intoField: "Search", ref: 0, submit: true, in: webView)
-        #expect(result.contains("submitted"))
+        #expect(result.contains("requested submission"))
         #expect(await js(webView, "window.__submitted") as? Bool == true)
     }
 
@@ -608,5 +658,127 @@ struct AgentConsentGateTests {
             #expect(!AgentActionPolicy.shared.isAlwaysAllowed(category, host: nil))
             #expect(!AgentActionPolicy.shared.isAlwaysAllowed(category, host: ""))
         }
+    }
+}
+
+extension PageDriverTests {
+    @Test func aBatchFillsIndependentFieldsWithoutSubmitting() async throws {
+        let webView = await loadedWebView("""
+        <form onsubmit="window.submitted=true;return false">
+          <input aria-label="First"><input aria-label="Second">
+          <select aria-label="Choice"><option>A</option><option>B</option></select>
+          <button>Save</button>
+        </form>
+        """)
+        let page = await PageDriver.readRenderedPage(webView)
+        let first = try #require(refs(in: page, matching: "field \"First\"").first)
+        let second = try #require(refs(in: page, matching: "field \"Second\"").first)
+        let select = try #require(refs(in: page, matching: "select \"Choice\"").first)
+        let result = await PageDriver.fillFields([
+            .init(ref: first, value: "fixture-one", select: false),
+            .init(ref: second, value: "fixture-two", select: false),
+            .init(ref: select, value: "B", select: true),
+        ], in: webView)
+        #expect(result.hasPrefix("Filled 3 of 3 fields."))
+        #expect(await js(webView, "document.querySelectorAll('input')[0].value") as? String == "fixture-one")
+        #expect(await js(webView, "document.querySelectorAll('input')[1].value") as? String == "fixture-two")
+        #expect(await js(webView, "document.querySelector('select').value") as? String == "B")
+        #expect(await js(webView, "window.submitted === true") as? Bool == false)
+        #expect(result.contains("CONTROLS"))
+    }
+
+    @Test func aBatchContinuesAfterFillingEditableText() async throws {
+        let webView = await loadedWebView("""
+        <div contenteditable="true" aria-label="First"><span>Original text</span></div>
+        <textarea aria-label="Second">Original notes</textarea>
+        <input aria-label="Third">
+        """)
+        let page = await PageDriver.readRenderedPage(webView)
+        let first = try #require(refs(in: page, matching: "field \"First\"").first)
+        let second = try #require(refs(in: page, matching: "field \"Second\"").first)
+        let third = try #require(refs(in: page, matching: "field \"Third\"").first)
+        let result = await PageDriver.fillFields([
+            .init(ref: first, value: "Updated text", select: false),
+            .init(ref: second, value: "Updated notes", select: false),
+            .init(ref: third, value: "Last value", select: false),
+        ], in: webView)
+        #expect(result.hasPrefix("Filled 3 of 3 fields."))
+        #expect(await js(webView, "document.querySelector('[contenteditable]').textContent") as? String == "Updated text")
+        #expect(await js(webView, "document.querySelector('textarea').value") as? String == "Updated notes")
+        #expect(await js(webView, "document.querySelector('input').value") as? String == "Last value")
+    }
+
+    @Test func aBatchStopsWhenEditableTextTriggersValidation() async throws {
+        let webView = await loadedWebView("""
+        <div contenteditable="true" aria-label="First"
+             oninput="document.getElementById('validation').textContent='Check the first value'"></div>
+        <input aria-label="Second"><div id="validation"></div>
+        """)
+        let page = await PageDriver.readRenderedPage(webView)
+        let first = try #require(refs(in: page, matching: "field \"First\"").first)
+        let second = try #require(refs(in: page, matching: "field \"Second\"").first)
+        let result = await PageDriver.fillFields([
+            .init(ref: first, value: "Updated text", select: false),
+            .init(ref: second, value: "never-entered", select: false),
+        ], in: webView)
+        #expect(result.hasPrefix("Filled 1 of 2 fields."))
+        #expect(result.contains("page changed"))
+        #expect(await js(webView, "document.querySelector('input').value") as? String == "")
+    }
+
+    @Test func aBatchStopsWhenValidationChangesTheForm() async throws {
+        let webView = await loadedWebView("""
+        <input aria-label="First" onchange="document.getElementById('validation').textContent='Check the first value'">
+        <input aria-label="Second"><div id="validation"></div>
+        """)
+        let page = await PageDriver.readRenderedPage(webView)
+        let first = try #require(refs(in: page, matching: "field \"First\"").first)
+        let second = try #require(refs(in: page, matching: "field \"Second\"").first)
+        let result = await PageDriver.fillFields([
+            .init(ref: first, value: "fixture-one", select: false),
+            .init(ref: second, value: "fixture-two", select: false),
+        ], in: webView)
+        #expect(result.hasPrefix("Filled 1 of 2 fields."))
+        #expect(result.contains("page changed"))
+        #expect(await js(webView, "document.querySelectorAll('input')[1].value") as? String == "")
+    }
+
+    @Test func aBatchCannotBypassSensitiveFieldChecks() async throws {
+        let webView = await loadedWebView("<input aria-label='Password' type='password'><input aria-label='Other'>")
+        let page = await PageDriver.readRenderedPage(webView)
+        let password = try #require(refs(in: page, matching: "field \"Password\"").first)
+        let other = try #require(refs(in: page, matching: "field \"Other\"").first)
+        let result = await PageDriver.fillFields([
+            .init(ref: password, value: "fixture-secret", select: false),
+            .init(ref: other, value: "never-entered", select: false),
+        ], in: webView)
+        #expect(result.hasPrefix("Filled 0 of 2 fields."))
+        #expect(await js(webView, "Array.from(document.querySelectorAll('input')).every(e => e.value === '')") as? Bool == true)
+    }
+
+    @Test func aBatchRejectsDuplicateOrStaleRefsBeforeFurtherWrites() async throws {
+        let webView = await loadedWebView("<input aria-label='First'>")
+        let page = await PageDriver.readRenderedPage(webView)
+        let first = try #require(refs(in: page, matching: "field \"First\"").first)
+        let result = await PageDriver.fillFields([
+            .init(ref: first, value: "one", select: false),
+            .init(ref: first, value: "two", select: false),
+        ], in: webView)
+        #expect(result.contains("distinct"))
+        #expect(await js(webView, "document.querySelector('input').value") as? String == "")
+    }
+
+    @Test func individualActionsReturnFreshRefsAfterValidation() async throws {
+        let webView = await loadedWebView("""
+        <input aria-label="First" onchange="document.body.insertAdjacentHTML('afterbegin','<button>Validation help</button>')">
+        <input aria-label="Second">
+        """)
+        let page = await PageDriver.readRenderedPage(webView)
+        let first = try #require(refs(in: page, matching: "field \"First\"").first)
+        let result = await PageDriver.type(text: "one", intoField: "", ref: first, submit: false, in: webView)
+        let newSecond = try #require(refs(in: result, matching: "field \"Second\"").first)
+        let secondResult = await PageDriver.type(text: "two", intoField: "", ref: newSecond, submit: false, in: webView)
+        #expect(secondResult.hasPrefix("Typed"))
+        #expect(await js(webView, "document.querySelectorAll('input')[1].value") as? String == "two")
     }
 }

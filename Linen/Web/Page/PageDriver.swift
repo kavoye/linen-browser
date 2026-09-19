@@ -8,214 +8,8 @@ import WebKit
 enum PageDriver {
     // MARK: - The page-side runtime
 
-    // swiftlint:disable line_length
-    private static let runtime = #"""
-      const R = (window.__linen = window.__linen || (() => {
-      const norm = s => (s || '').replace(/\s+/g, ' ').trim();
-
-      function* walk(root) {
-        for (const el of root.querySelectorAll('*')) {
-          yield el;
-          if (el.shadowRoot) yield* walk(el.shadowRoot);
-          if (el.tagName === 'IFRAME') {
-            try {
-              if (el.contentDocument && el.contentDocument.body) yield* walk(el.contentDocument.body);
-            } catch (e) {}
-          }
-        }
-      }
-
-      const visible = el => {
-        try { if (el.checkVisibility && !el.checkVisibility()) return false; } catch (e) {}
-        return el.getClientRects().length > 0;
-      };
-
-      const kindOf = el => {
-        const tag = el.tagName;
-        if (tag === 'SELECT') return 'select';
-        if (tag === 'TEXTAREA') return 'field';
-        if (tag === 'INPUT') {
-          const t = (el.type || 'text').toLowerCase();
-          if (t === 'hidden') return null;
-          if (t === 'submit' || t === 'button' || t === 'image') return 'button';
-          if (t === 'checkbox') return 'checkbox';
-          if (t === 'radio') return 'radio';
-          return 'field';
-        }
-        if (tag === 'BUTTON' || tag === 'SUMMARY') return 'button';
-        if (tag === 'A' && el.href) return 'link';
-        const role = el.getAttribute && el.getAttribute('role');
-        if (['button', 'tab', 'menuitem', 'checkbox', 'radio', 'link', 'option', 'switch'].includes(role)) return 'button';
-        if (el.hasAttribute && el.hasAttribute('onclick')) return 'button';
-        if (el.isContentEditable && !(el.parentElement && el.parentElement.isContentEditable)) return 'field';
-        return null;
-      };
-
-      const controlLabel = el => norm(
-        el.innerText || el.value || (el.getAttribute && el.getAttribute('aria-label')) || el.title || ''
-      ).slice(0, 60);
-      const fieldLabel = el => {
-        const assoc = el.labels && el.labels.length ? el.labels[0].innerText : '';
-        return norm(
-          el.placeholder || (el.getAttribute && el.getAttribute('aria-label')) || assoc || el.name || el.id || ''
-        ).slice(0, 60);
-      };
-      const labelOf = (el, kind) => (kind === 'button' || kind === 'link') ? controlLabel(el) : fieldLabel(el);
-
-      const isSensitiveField = el => {
-        const kind = ((el.type || '') + '').toLowerCase();
-        if (kind === 'password') return true;
-        const auto = norm(el.autocomplete).toLowerCase();
-        const hint = (fieldLabel(el) + ' ' + auto + ' ' + norm(el.name) + ' ' + norm(el.id)).toLowerCase();
-        if (/(?:^| )(?:current-password|new-password|one-time-code|cc-number|cc-exp|cc-exp-month|cc-exp-year|cc-csc|cc-name)(?: |$)/.test(auto)) return true;
-        return /password|passcode|\bpin\b|cvv|cvc|cvn|card ?number|cardnumber|card verification|security code|iban|sort ?code|routing|account ?number|ssn|social security|national insurance|passport|tax ?id|one[- ]?time|\botp\b|2fa|verification code|seed phrase|recovery phrase|private key/.test(hint);
-      };
-
-      const collect = () => {
-        window.__linenRefs = [];
-        const out = [];
-        for (const el of walk(document.body)) {
-          const kind = kindOf(el);
-          if (!kind || !visible(el)) continue;
-          const label = labelOf(el, kind);
-          if (!label && kind !== 'field' && kind !== 'select') continue;
-          let dup = false;
-          for (let a = el.parentElement, hops = 0; a && hops < 3; a = a.parentElement, hops++) {
-            if (a.__linenRef && labelOf(a, 'button') === label) { dup = true; break; }
-          }
-          if (dup) continue;
-
-          const ref = window.__linenRefs.push(el);
-          el.__linenRef = ref;
-          const entry = { r: ref, k: kind, l: label };
-          if (kind === 'link') entry.h = (el.href || '').slice(0, 200);
-          if (kind === 'field') {
-            entry.t = ((el.type || (el.isContentEditable ? 'editable' : 'text')) + '').toLowerCase();
-            const v = norm(el.value || '');
-            if (isSensitiveField(el)) {
-              entry.s = 1;
-              entry.f = v ? 1 : 0;
-            } else if (v) {
-              entry.v = v.slice(0, 30);
-            }
-          }
-          if (kind === 'select') {
-            entry.v = el.selectedIndex >= 0 ? norm(el.options[el.selectedIndex].text).slice(0, 30) : '';
-            entry.o = Array.from(el.options).slice(0, 15).map(o => norm(o.text).slice(0, 30));
-          }
-          if (kind === 'checkbox' || kind === 'radio') entry.c = el.checked ? 1 : 0;
-          if (el.disabled) entry.d = 1;
-          out.push(entry);
-        }
-        return out;
-      };
-
-      const pageText = () => {
-        let text = document.body ? norm(document.body.innerText) : '';
-        for (const frame of document.querySelectorAll('iframe')) {
-          try {
-            const body = frame.contentDocument && frame.contentDocument.body;
-            if (body) { const t = norm(body.innerText); if (t) text += ' ' + t; }
-          } catch (e) {}
-        }
-        return text;
-      };
-
-      const viewportText = limit => {
-        const height = window.innerHeight;
-        const parts = [];
-        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-        let node;
-        while ((node = walker.nextNode())) {
-          const t = norm(node.textContent);
-          if (!t) continue;
-          const parent = node.parentElement;
-          if (!parent) continue;
-          const r = parent.getBoundingClientRect();
-          if (r.bottom <= 0 || r.top >= height || r.width === 0) continue;
-          parts.push(t);
-          if (parts.join(' ').length > limit) break;
-        }
-        const joined = norm(parts.join(' ')).slice(0, limit);
-        return joined || pageText().slice(0, limit);
-      };
-
-      const resolve = (ref, label, kinds) => {
-        if (!window.__linenRefs || !window.__linenRefs.length) collect();
-        if (ref > 0) {
-          const el = window.__linenRefs[ref - 1];
-          if (!el || !el.isConnected) return { stale: true };
-          return { el };
-        }
-        const t = norm(label).toLowerCase();
-        const candidates = [];
-        for (const el of window.__linenRefs) {
-          if (!el.isConnected) continue;
-          const kind = kindOf(el);
-          if (!kind || !kinds.includes(kind)) continue;
-          candidates.push({ el, label: labelOf(el, kind).toLowerCase() });
-        }
-        const found = candidates.find(c => c.label === t)
-          || candidates.find(c => t && c.label.includes(t))
-          || candidates.find(c => c.label.length > 2 && t.includes(c.label));
-        if (found) return { el: found.el };
-        return { options: [...new Set(candidates.map(c => c.label).filter(l => l && l.length < 50))].slice(0, 25) };
-      };
-
-      const realm = el => (el.ownerDocument && el.ownerDocument.defaultView) || window;
-
-      const setValue = (el, value) => {
-        if (el.isContentEditable) {
-          el.focus();
-          el.textContent = value;
-          el.dispatchEvent(new (realm(el).Event)('input', { bubbles: true }));
-          return;
-        }
-        const view = realm(el);
-        const proto = el.tagName === 'TEXTAREA' ? view.HTMLTextAreaElement.prototype : view.HTMLInputElement.prototype;
-        Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
-        el.dispatchEvent(new (view.Event)('input', { bubbles: true }));
-        el.dispatchEvent(new (view.Event)('change', { bubbles: true }));
-      };
-
-      const highlight = (el, ms) => {
-        try {
-          const doc = el.ownerDocument;
-          const rect = el.getBoundingClientRect();
-          const ring = doc.createElement('div');
-          ring.className = '__linen-ring';
-          const s = ring.style;
-          s.position = 'fixed';
-          s.left = (rect.left - 4) + 'px';
-          s.top = (rect.top - 4) + 'px';
-          s.width = (rect.width + 8) + 'px';
-          s.height = (rect.height + 8) + 'px';
-          s.border = '2px solid #3478F6';
-          s.borderRadius = '7px';
-          s.boxShadow = '0 0 0 4px rgba(52, 120, 246, 0.25)';
-          s.zIndex = '2147483647';
-          s.pointerEvents = 'none';
-          s.transition = 'opacity 0.2s';
-          doc.body.appendChild(ring);
-          setTimeout(() => { s.opacity = '0'; setTimeout(() => ring.remove(), 250); }, ms);
-        } catch (e) {}
-      };
-
-      const pressEnter = el => {
-        const view = realm(el);
-        const opts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true };
-        el.dispatchEvent(new (view.KeyboardEvent)('keydown', opts));
-        el.dispatchEvent(new (view.KeyboardEvent)('keyup', opts));
-        if (el.form) { try { el.form.requestSubmit(); } catch (e) {} }
-      };
-
-      return { norm, collect, pageText, viewportText, resolve, setValue, pressEnter, labelOf, kindOf, highlight, isSensitiveField };
-    })());
-    """#
-    // swiftlint:enable line_length
-
-    private static func scripted(_ body: String) -> String {
-        "(() => {\n" + runtime + "\n" + body + "\n})()"
+    static func scripted(_ body: String) -> String {
+        "(() => {\n" + PageAutomationGuard.scriptCheck + PageRuntime.script + "\n" + body + "\n})()"
     }
 
     // MARK: - Reading
@@ -224,27 +18,68 @@ enum PageDriver {
         _ webView: WKWebView,
         lookingFor: String = "",
         maxTextLength: Int = 2400,
-        controlLimit: Int = 40
+        controlLimit: Int = 40,
+        textOffset: Int = 0,
+        controlOffset: Int = 0,
+        scope: String = "",
+        viewportOnly: Bool = false
     ) async -> String {
         await PageSettle.untilIdle(webView)
         await PageSettle.untilQuiet(webView)
+        return await snapshot(
+            webView, lookingFor: lookingFor, textLimit: maxTextLength,
+            controlLimit: controlLimit, textOffset: textOffset, controlOffset: controlOffset,
+            scope: scope, viewportOnly: viewportOnly)
+    }
 
-        let script = scripted("return JSON.stringify({ text: R.pageText().slice(0, 8000), controls: R.collect() });")
+    static func snapshot(
+        _ webView: WKWebView, lookingFor: String = "", textLimit: Int? = nil, controlLimit: Int? = nil,
+        textOffset: Int = 0, controlOffset: Int = 0, scope: String = "", viewportOnly: Bool = false
+    ) async -> String {
+        let textLength = max(0, min(textLimit ?? outputBudget.textCharacters, outputBudget.textCharacters))
+        let count = max(1, min(controlLimit ?? outputBudget.controls, outputBudget.controls))
+        guard let query = jsonString(lookingFor), let selector = jsonString(scope) else { return "Invalid page query." }
+        let script = scripted(
+            "return JSON.stringify(R.observe(\(query), \(textLength), \(count), \(max(0, textOffset)), \(max(0, controlOffset)), \(selector), \(viewportOnly)));"
+        )
         guard let object = await evaluateJSON(script, in: webView) else {
-            return "The page hasn't finished loading. Try again in a moment."
+            return "The page did not respond. Use readPage after it finishes loading."
         }
-
-        let fullText = object["text"] as? String ?? ""
-        let controls = (object["controls"] as? [[String: Any]]) ?? []
-        if fullText.isEmpty, controls.isEmpty {
-            return "The page rendered no readable text."
+        if let error = object["error"] as? String { return error }
+        guard let id = object["snapshot"] as? String, let documentID = object["document"] as? String,
+            let url = object["url"] as? String
+        else { return "The page changed. Use readPage again." }
+        let controls = object["controls"] as? [[String: Any]] ?? []
+        let available = max(300, outputBudget.totalCharacters - 650)
+        let text = PageOutputBudget.prefix(object["text"] as? String ?? "", fitting: min(textLength, available / 2))
+        var result = "PAGE TEXT:\n\(text)\n\nCONTROLS:\n"
+        var refs = Set<Int>()
+        for control in controls {
+            var row = renderControl(control)
+            guard !row.isEmpty, let ref = control["r"] as? Int else { continue }
+            if refs.isEmpty && PageOutputBudget.cost(result + row) > available {
+                var summary = control
+                summary["h"] = nil
+                summary["o"] = nil
+                row = renderControl(summary)
+            }
+            guard PageOutputBudget.cost(result + row + "\n") <= available else { break }
+            result += row + "\n"
+            refs.insert(ref)
         }
-
-        let text = PageExcerpt.extract(from: fullText, query: lookingFor, budget: maxTextLength)
-        var result = "PAGE TEXT:\n\(text)"
-        if !controls.isEmpty {
-            result += "\n\n" + renderControls(controls, limit: controlLimit)
+        let totalText = object["textTotal"] as? Int ?? 0
+        let start = object["textStart"] as? Int ?? 0
+        let nextText = start + text.utf16.count
+        let totalControls = object["controlTotal"] as? Int ?? 0
+        let nextControl = max(0, controlOffset) + refs.count
+        result += "\nobservationID: \(id)"
+        if nextText < totalText {
+            result += "\nMore text: readPage textOffset=\(nextText) (\(totalText) UTF-16 units total)."
         }
+        if nextControl < totalControls {
+            result += "\nMore controls: readPage controlOffset=\(nextControl) (\(totalControls) total); keep the same query and scope."
+        }
+        observations.setObject(PageObservation(id: id, documentID: documentID, url: url, refs: refs), forKey: webView)
         return result
     }
 
@@ -259,7 +94,7 @@ enum PageDriver {
         var seen = Set<URL>()
         return observation.split(separator: "\n").compactMap { line in
             guard line.hasPrefix("["),
-                  let arrow = line.range(of: linkArrow, options: .backwards)
+                let arrow = line.range(of: linkArrow, options: .backwards)
             else { return nil }
 
             let head = line[..<arrow.lowerBound]
@@ -268,12 +103,12 @@ enum PageDriver {
 
             var href = line[arrow.upperBound...]
             if let suffix = href.range(of: " (disabled)", options: .backwards),
-               suffix.upperBound == href.endIndex {
+                suffix.upperBound == href.endIndex {
                 href = href[..<suffix.lowerBound]
             }
             guard let url = URL(string: String(href)),
-                  url.scheme == "https" || url.scheme == "http",
-                  seen.insert(url).inserted
+                url.scheme == "https" || url.scheme == "http",
+                seen.insert(url).inserted
             else { return nil }
 
             return ListedLink(label: label, url: url)
@@ -281,54 +116,55 @@ enum PageDriver {
     }
 
     static func renderControls(_ controls: [[String: Any]], limit: Int = 40) -> String {
-        var lines: [String] = []
-        for control in controls.prefix(limit) {
-            guard let ref = control["r"] as? Int, let kind = control["k"] as? String else { continue }
-            let label = control["l"] as? String ?? ""
-            var line = "[\(ref)] \(kind) \"\(label)\""
-            switch kind {
-            case "link":
-                if let href = control["h"] as? String, !href.isEmpty {
-                    line += linkArrow + href
-                }
-            case "field":
-                if let type = control["t"] as? String, type != "text" {
-                    line += " (\(type))"
-                }
-                if control["s"] as? Int == 1 {
-                    line += (control["f"] as? Int == 1) ? " = (filled, hidden)" : " = (empty)"
-                } else if let value = control["v"] as? String {
-                    line += " = \"\(value)\""
-                }
-            case "select":
-                if let value = control["v"] as? String, !value.isEmpty {
-                    line += " = \"\(value)\""
-                }
-                if let options = control["o"] as? [String], !options.isEmpty {
-                    line += " (options: \(options.joined(separator: " | ")))"
-                }
-            case "checkbox", "radio":
-                line += (control["c"] as? Int == 1) ? " (checked)" : " (unchecked)"
-            default:
-                break
+        let lines = controls.prefix(limit).map(renderControl).filter { !$0.isEmpty }
+        return "CONTROLS:\n" + lines.joined(separator: "\n")
+    }
+
+    private static func renderControl(_ control: [String: Any]) -> String {
+        guard let ref = control["r"] as? Int, let kind = control["k"] as? String else { return "" }
+        let label = control["l"] as? String ?? ""
+        var line = "[\(ref)] \(kind) \"\(label)\""
+        switch kind {
+        case "link":
+            if let href = control["h"] as? String, !href.isEmpty {
+                line += linkArrow + href
             }
-            if control["d"] as? Int == 1 {
-                line += " (disabled)"
+        case "field":
+            if let type = control["t"] as? String, type != "text" {
+                line += " (\(type))"
             }
-            lines.append(line)
+            if control["s"] as? Int == 1 {
+                line += (control["f"] as? Int == 1) ? " = (filled, hidden)" : " = (empty)"
+            } else if let value = control["v"] as? String {
+                line += " = \"\(value)\""
+            }
+        case "select":
+            if control["s"] as? Int == 1 {
+                line += (control["f"] as? Int == 1) ? " = (filled, hidden)" : " = (empty)"
+            } else if let value = control["v"] as? String, !value.isEmpty {
+                line += " = \"\(value)\""
+            }
+            if let options = control["o"] as? [String], !options.isEmpty {
+                line += " (options: \(options.joined(separator: " | ")))"
+                if let total = control["oc"] as? Int, total > options.count {
+                    line += " (\(total) options; inspectControl for more)"
+                }
+            }
+        case "checkbox", "radio":
+            line += (control["c"] as? Int == 1) ? " (checked)" : " (unchecked)"
+        default:
+            break
         }
-        var section = "CONTROLS - pass the [ref] number to clickOnPage, typeOnPage or selectOption:\n"
-            + lines.joined(separator: "\n")
-        if controls.count > limit {
-            section += "\n…and \(controls.count - limit) more. Scroll, or readPage with lookingFor."
+        if control["d"] as? Int == 1 {
+            line += " (disabled)"
         }
-        return section
+        return line
     }
 
     // MARK: - Actions
 
     static func click(ref: Int, label: String, in webView: WKWebView, announced: Bool = false) async -> String {
-        let resolved = await resolve(ref: ref, label: label, kinds: #"["button","link","checkbox","radio","field","select"]"#, in: webView)
+        let resolved = await resolve(ref: ref, label: label, kinds: #"["button","link","checkbox","radio","field","select","combobox"]"#, in: webView)
         switch resolved {
         case .failure(let message):
             return message
@@ -343,6 +179,7 @@ enum PageDriver {
                 guard permitted else {
                     return SensitiveAction.declined(found.label, category: category)
                 }
+                guard PageAutomationGuard.allowsExecution else { return Self.staleMessage }
                 if category == .publication {
                     AgentAuthoredText.clear(in: webView)
                 }
@@ -351,16 +188,21 @@ enum PageDriver {
                 return "“\(found.label)” is disabled right now - the page isn't accepting it. Something else may need doing first."
             }
             await announce(ref: found.ref, in: webView, pause: announced)
-            let script = scripted("""
-              const el = window.__linenRefs[\(found.ref) - 1];
-              if (!el || !el.isConnected) { return JSON.stringify({ stale: true }); }
-              el.scrollIntoView({ block: 'center' });
-              el.click();
-              return JSON.stringify({ ok: true });
-            """)
-            guard let object = await evaluateJSON(script, in: webView), object["ok"] as? Bool == true else {
-                return Self.staleMessage
+            if let error = await prepareAction(ref: found.ref, in: webView) {
+                return error
             }
+            let script = scripted(
+                """
+                  const el = window.__linenRefs[\(found.ref) - 1];
+                  if (!el || !el.isConnected) { return JSON.stringify({ stale: true }); }
+                  const error = R.actionable(el);
+                  if (error) return JSON.stringify({ error });
+                  el.click();
+                  return JSON.stringify({ ok: true });
+                """)
+            guard let object = await evaluateJSON(script, in: webView) else { return staleMessage }
+            if let error = object["error"] as? String { return error }
+            guard object["ok"] as? Bool == true else { return staleMessage }
             return "Clicked “\(found.label)”. \(await settleAndSnippet(webView))"
         }
     }
@@ -371,7 +213,8 @@ enum PageDriver {
         ref: Int,
         submit: Bool,
         in webView: WKWebView,
-        announced: Bool = false
+        announced: Bool = false,
+        refreshControls: Bool = true
     ) async -> String {
         guard let encodedText = jsonString(text) else { return "Could not encode the input." }
         let resolved = await resolve(ref: ref, label: fieldLabel, kinds: #"["field"]"#, in: webView)
@@ -391,27 +234,51 @@ enum PageDriver {
                 }
             }
             await announce(ref: found.ref, in: webView, pause: announced)
-            let script = scripted("""
-              const el = window.__linenRefs[\(found.ref) - 1];
-              if (!el || !el.isConnected) { return JSON.stringify({ stale: true }); }
-              if (R.isSensitiveField(el)) {
-                return JSON.stringify({ refused: true });
-              }
-              el.scrollIntoView({ block: 'center' });
-              el.focus();
-              R.setValue(el, \(encodedText));
-              if (\(submit ? "true" : "false")) { R.pressEnter(el); }
-              return JSON.stringify({ ok: true });
-            """)
+            if let error = await prepareAction(ref: found.ref, in: webView) {
+                return error
+            }
+            let script = scripted(
+                """
+                  const el = window.__linenRefs[\(found.ref) - 1];
+                  if (!el || !el.isConnected) { return JSON.stringify({ stale: true }); }
+                  if (R.isSensitiveField(el)) {
+                    return JSON.stringify({ refused: true });
+                  }
+                  if (R.disabled(el) || el.readOnly) { return JSON.stringify({ unavailable: true }); }
+                  if (!['INPUT','TEXTAREA'].includes(el.tagName) && !el.isContentEditable) return JSON.stringify({ error: 'This control is not directly editable. Use click or keyboard controls.' });
+                  if (el.tagName === 'INPUT' && ['file','range','color','hidden','checkbox','radio','button','submit'].includes(el.type)) {
+                    return JSON.stringify({ error: 'Use the appropriate control tool for this input type.' });
+                  }
+                  const error = R.actionable(el);
+                  if (error) return JSON.stringify({ error });
+                  el.scrollIntoView({ block: 'center' });
+                  el.focus();
+                  R.expectValue(el, \(encodedText));
+                  R.setValue(el, \(encodedText));
+                  const retained = R.valueState(\(found.ref)) === 'matched';
+                  if (\(submit ? "true" : "false") && retained) { R.pressEnter(el); }
+                  return JSON.stringify({ ok: true, submitted: \(submit ? "true" : "false") && retained });
+                """)
             guard let object = await evaluateJSON(script, in: webView) else {
                 return "The page didn't respond to typing."
             }
+            if let error = object["error"] as? String { return error }
+            if object["unavailable"] as? Bool == true {
+                return "The field is disabled or read-only. Read the page for available controls."
+            }
             if object["refused"] as? Bool == true {
-                return "“\(found.label)” looks like a password, payment, or other sensitive field (a code, or an account or ID number). The user has to fill it themselves."
+                return
+                    "“\(found.label)” looks like a password, payment, or other sensitive field (a code, or an account or ID number). The user has to fill it themselves."
             }
             guard object["ok"] as? Bool == true else { return Self.staleMessage }
             AgentAuthoredText.record(in: webView)
-            return "Typed into “\(found.label)”\(submit ? " and submitted" : ""). \(await settleAndSnippet(webView))"
+            let submitted = object["submitted"] as? Bool == true
+            let status = submit && !submitted
+                ? "The field did not retain the requested value; submission was not attempted. Inspect the current page before retrying."
+                : "Typed into “\(found.label)”\(submitted ? " and requested submission" : "")."
+            return await finishValueAction(
+                status: status, ref: found.ref, documentID: observation(in: webView)?.documentID,
+                submissionRequested: submitted, refreshControls: refreshControls, in: webView)
         }
     }
 
@@ -420,7 +287,8 @@ enum PageDriver {
         ref: Int,
         field: String,
         in webView: WKWebView,
-        announced: Bool = false
+        announced: Bool = false,
+        refreshControls: Bool = true
     ) async -> String {
         guard let encodedOption = jsonString(option) else { return "Could not encode the option." }
         let resolved = await resolve(ref: ref, label: field, kinds: #"["select"]"#, in: webView)
@@ -429,54 +297,182 @@ enum PageDriver {
             return message
         case .success(let found):
             await announce(ref: found.ref, in: webView, pause: announced)
-            let script = scripted("""
-              const el = window.__linenRefs[\(found.ref) - 1];
-              if (!el || !el.isConnected || el.tagName !== 'SELECT') { return JSON.stringify({ stale: true }); }
-              const want = R.norm(\(encodedOption)).toLowerCase();
-              const options = Array.from(el.options);
-              const match = options.find(o => R.norm(o.value).toLowerCase() === want)
-                || options.find(o => R.norm(o.text).toLowerCase() === want)
-                || options.find(o => R.norm(o.text).toLowerCase().includes(want));
-              if (!match) {
-                return JSON.stringify({ ok: false, options: options.slice(0, 15).map(o => R.norm(o.text)) });
-              }
-              for (const o of options) { o.selected = false; }
-              match.selected = true;
-              el.value = match.value;
-              const view = (el.ownerDocument && el.ownerDocument.defaultView) || window;
-              el.dispatchEvent(new (view.Event)('input', { bubbles: true }));
-              el.dispatchEvent(new (view.Event)('change', { bubbles: true }));
-              return JSON.stringify({ ok: true, selected: R.norm(match.text) });
-            """)
+            if let error = await prepareAction(ref: found.ref, in: webView) {
+                return error
+            }
+            let script = scripted(
+                """
+                  const el = window.__linenRefs[\(found.ref) - 1];
+                  if (!el || !el.isConnected || el.tagName !== 'SELECT') { return JSON.stringify({ stale: true }); }
+                  if (R.isSensitiveField(el)) { return JSON.stringify({ refused: true }); }
+                  const error = R.actionable(el);
+                  if (error) return JSON.stringify({ error });
+                  const want = R.norm(\(encodedOption)).toLowerCase();
+                  const options = Array.from(el.options);
+                  let matches = options.filter(o => R.norm(o.value).toLowerCase() === want);
+                  if (!matches.length) matches = options.filter(o => R.norm(o.text).toLowerCase() === want);
+                  if (!matches.length) matches = options.filter(o => R.norm(o.text).toLowerCase().includes(want));
+                  if (matches.length > 1) return JSON.stringify({ error: 'Several options match. Inspect the control and use an exact value or label.' });
+                  const match = matches[0];
+                  if (!match) {
+                    return JSON.stringify({ ok: false, options: options.slice(0, 8).map(o => R.norm(o.text).slice(0, 60)) });
+                  }
+                  if (match.disabled || match.closest('optgroup[disabled]')) return JSON.stringify({ error: 'That option is disabled.' });
+                  R.expectValue(el, match.value);
+                  for (const o of options) { o.selected = false; }
+                  match.selected = true;
+                  el.value = match.value;
+                  const view = (el.ownerDocument && el.ownerDocument.defaultView) || window;
+                  el.dispatchEvent(new (view.Event)('input', { bubbles: true }));
+                  el.dispatchEvent(new (view.Event)('change', { bubbles: true }));
+                  return JSON.stringify({ ok: true, selected: R.norm(match.text).slice(0, 120) });
+                """)
             guard let object = await evaluateJSON(script, in: webView) else {
                 return "The page didn't respond to the selection."
             }
+            if let error = object["error"] as? String { return error }
+            if object["refused"] as? Bool == true {
+                return "“\(found.label)” is a sensitive payment field. The user has to fill it themselves."
+            }
             if object["ok"] as? Bool != true {
                 if let options = object["options"] as? [String], !options.isEmpty {
-                    return "No option matches “\(option)” in “\(found.label)”. Options: \(options.joined(separator: " | "))"
+                    return PageOutputBudget.prefix("No option matches “\(option)” in “\(found.label)”. Options: \(options.joined(separator: " | "))", fitting: outputBudget.totalCharacters - 100)
                 }
                 return Self.staleMessage
             }
-            let selected = object["selected"] as? String ?? option
-            return "Selected “\(selected)” in “\(found.label)”. \(await settleAndSnippet(webView))"
+            let selected = PageOutputBudget.prefix(object["selected"] as? String ?? option, fitting: 120)
+            let status = "Selected “\(selected)” in “\(found.label)”."
+            return await finishValueAction(
+                status: status, ref: found.ref, documentID: observation(in: webView)?.documentID,
+                refreshControls: refreshControls, in: webView)
         }
     }
 
-    static func scroll(direction: String, in webView: WKWebView) async -> String {
-        let delta = direction == "up" ? "-0.8" : "0.8"
-        _ = try? await webView.evaluateJavaScript(
-            "window.scrollBy({ top: window.innerHeight * \(delta), behavior: 'instant' })"
-        )
+    nonisolated struct FieldValue: Codable, Equatable, Sendable {
+        let ref: Int
+        let value: String
+        let select: Bool
+    }
+
+    static func fillFields(_ fields: [FieldValue], in webView: WKWebView, announced: Bool = false) async -> String {
+        guard (1...8).contains(fields.count), fields.allSatisfy({ $0.ref > 0 }),
+            Set(fields.map(\.ref)).count == fields.count
+        else {
+            return "Use one to eight distinct field refs from the latest page observation."
+        }
+        guard let initial = await batchState(in: webView) else { return staleMessage }
+        let documentID = observation(in: webView)?.documentID
+        var completed = 0
+        var reason = ""
+        for field in fields {
+            guard !Task.isCancelled, PageAutomationGuard.allowsExecution,
+                !webView.isLoading, await batchState(in: webView) == initial
+            else {
+                reason = "The page changed. Read the fresh controls before filling remaining fields."
+                break
+            }
+            let result: String
+            if field.select {
+                result = await selectOption(
+                    field.value, ref: field.ref, field: "", in: webView,
+                    announced: announced && completed == 0, refreshControls: false)
+            } else {
+                result = await type(
+                    text: field.value, intoField: "", ref: field.ref, submit: false,
+                    in: webView, announced: announced && completed == 0, refreshControls: false)
+            }
+            guard result.hasPrefix("Typed") || result.hasPrefix("Selected") else {
+                reason = result
+                break
+            }
+            completed += 1
+        }
+        await PageSettle.afterInteraction(webView)
+        var retained = 0
+        for field in fields.prefix(completed) {
+            let state = await valueState(ref: field.ref, documentID: documentID, in: webView)
+            retained += state == "matched" ? 1 : 0
+        }
+        if retained < completed {
+            reason = "Some earlier values changed or could not be verified. Inspect the current page before retrying. " + reason
+            completed = retained
+        }
+        return "Filled \(completed) of \(fields.count) fields. \(reason)\n" + (await PageAutomationGuard.withCurrentDocument(in: webView) {
+            await snapshot(webView)
+        })
+    }
+
+    private static func batchState(in webView: WKWebView) async -> String? {
+        guard PageAutomationGuard.allowsExecution else { return nil }
+        let script = scripted(
+            """
+            const textOutsideFields = doc => {
+              if (!doc.body) return '';
+              const parts = [];
+              const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+              let node;
+              while ((node = walker.nextNode())) {
+                const parent = node.parentElement;
+                if (!parent || parent.isContentEditable || parent.closest('textarea,script,style,noscript')) continue;
+                if (!parent.getClientRects().length || (parent.checkVisibility && !parent.checkVisibility())) continue;
+                parts.push(node.textContent);
+              }
+              return R.norm(parts.join(' '));
+            };
+            const markupWithoutValues = el => {
+              const copy = el.cloneNode(true);
+              if (el.isContentEditable || el.tagName === 'TEXTAREA') copy.replaceChildren();
+              for (const field of copy.querySelectorAll('textarea,[contenteditable]:not([contenteditable="false"])')) {
+                field.replaceChildren();
+              }
+              return copy.outerHTML.replace(/value="[^"]*"/g, '');
+            };
+            let text = textOutsideFields(document);
+            for (const frame of document.querySelectorAll('iframe')) {
+              try { if (frame.contentDocument) text += ' ' + textOutsideFields(frame.contentDocument); } catch (e) {}
+            }
+            return JSON.stringify({ snapshot: window.__linenSnapshot, url: location.href,
+              text, refs: (window.__linenRefs || []).map(el =>
+                [el.isConnected, el.disabled, R.kindOf(el), el.name, el.id, markupWithoutValues(el)]) });
+            """)
+        return (try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)) as? String
+    }
+
+    static func scroll(direction: String, ref: Int = 0, in webView: WKWebView) async -> String {
+        guard ["up", "down", "left", "right"].contains(direction) else { return "Use up, down, left, or right." }
+        guard PageAutomationGuard.allowsExecution else { return staleMessage }
+        if ref > 0, !(await validateObservation(in: webView, ref: ref)) {
+            return staleMessage
+        }
+        let horizontal = direction == "left" || direction == "right"
+        let sign = direction == "up" || direction == "left" ? -1 : 1
+        let script = scripted(
+            """
+            let el = \(ref) > 0 ? window.__linenRefs[\(ref) - 1] : document.scrollingElement;
+            const horizontal = \(horizontal);
+            const canScroll = e => horizontal ? e.scrollWidth > e.clientWidth + 1 : e.scrollHeight > e.clientHeight + 1;
+            while (el && !canScroll(el)) el = el.parentElement || el.getRootNode()?.host;
+            if (!el) return JSON.stringify({ error: 'No scrollable container in that direction.' });
+            const before = horizontal ? el.scrollLeft : el.scrollTop;
+            el.scrollBy({ left: horizontal ? el.clientWidth * 0.8 * \(sign) : 0,
+              top: horizontal ? 0 : el.clientHeight * 0.8 * \(sign), behavior: 'instant' });
+            const after = horizontal ? el.scrollLeft : el.scrollTop;
+            return JSON.stringify({ moved: Math.abs(after - before) > 0.5 });
+            """)
+        guard let result = await evaluateJSON(script, in: webView) else { return staleMessage }
+        if let error = result["error"] as? String { return error }
         await PageSettle.untilQuiet(webView, ceiling: .milliseconds(900))
-        return "Scrolled \(direction). Visible now: \(await snippet(of: webView))"
+        let status = result["moved"] as? Bool == true ? "Scrolled \(direction)." : "Already at the \(direction) scroll boundary."
+        return status + "\n" + (await PageAutomationGuard.withCurrentDocument(in: webView) {
+            await snapshot(webView, viewportOnly: ref == 0)
+        })
     }
 
     static func goBack(in webView: WKWebView) async -> String {
+        guard PageAutomationGuard.allowsExecution else { return staleMessage }
         guard webView.canGoBack else { return "There is no page to go back to." }
         webView.goBack()
-        await PageSettle.untilIdle(webView)
-        await PageSettle.untilQuiet(webView)
-        return "Went back. \(await snippet(of: webView))"
+        return "Went back. " + (await settleAndSnippet(webView))
     }
 
     // MARK: - Announcing
@@ -489,15 +485,17 @@ enum PageDriver {
     private static let ringLife = 1200
 
     static func announce(ref: Int, in webView: WKWebView, pause: Bool) async {
-        let script = scripted("""
-          const el = window.__linenRefs[\(ref) - 1];
-          if (el && el.isConnected) {
-            el.scrollIntoView({ block: 'center' });
-            R.highlight(el, \(ringLife));
-          }
-          return true;
-        """)
-        _ = try? await webView.evaluateJavaScript(script)
+        guard PageAutomationGuard.allowsExecution else { return }
+        let script = scripted(
+            """
+              const el = window.__linenRefs[\(ref) - 1];
+              if (el && el.isConnected) {
+                el.scrollIntoView({ block: 'center' });
+                R.highlight(el, \(ringLife));
+              }
+              return true;
+            """)
+        _ = try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)
         if pause {
             await pauseSleeper(announcePause)
         }
@@ -505,94 +503,122 @@ enum PageDriver {
 
     // MARK: - Resolution
 
-    private struct Resolved {
+    struct Resolved {
         let ref: Int
         let label: String
         let disabled: Bool
         let context: String
     }
 
-    private enum Resolution {
+    enum Resolution {
         case success(Resolved)
         case failure(String)
     }
 
-    private static let staleMessage =
+    static let staleMessage =
         "That element is gone - the page has changed since it was read. Use readPage and act on the fresh refs."
 
-    private static func resolve(ref: Int, label: String, kinds: String, in webView: WKWebView) async -> Resolution {
+    static func resolve(ref: Int, label: String, kinds: String, in webView: WKWebView) async -> Resolution {
         guard ref > 0 || !label.trimmingCharacters(in: .whitespaces).isEmpty else {
             return .failure("Say which element: a [ref] number from readPage, or a visible label.")
         }
+        if ref > 0, !(await validateObservation(in: webView, ref: ref)) {
+            return .failure(staleMessage)
+        }
+        if ref == 0, expectedObservation == nil {
+            _ = await snapshot(webView, lookingFor: label)
+        }
         guard let encodedLabel = jsonString(label) else { return .failure("Could not encode that label.") }
-        let script = scripted("""
-          const found = R.resolve(\(ref), \(encodedLabel), \(kinds));
-          if (found.stale) { return JSON.stringify({ stale: true }); }
-          if (found.options) { return JSON.stringify({ options: found.options }); }
-          const el = found.el;
-          const kind = R.kindOf(el) || 'button';
-          const form = el.form || (el.closest && el.closest('form'));
-          const context = R.norm([
-            el.getAttribute && el.getAttribute('aria-label'),
-            el.title,
-            el.name,
-            el.getAttribute && el.getAttribute('data-action'),
-            el.getAttribute && el.getAttribute('formaction'),
-            el.getAttribute && el.getAttribute('onclick'),
-            form && form.getAttribute('action'),
-            form && form.getAttribute('aria-label'),
-            form && form.innerText
-          ].filter(Boolean).join(' ')).slice(0, 800);
-          return JSON.stringify({
-            ref: el.__linenRef || window.__linenRefs.push(el),
-            label: R.labelOf(el, kind),
-            disabled: el.disabled ? 1 : 0,
-            context
-          });
-        """)
+        let script = scripted(
+            """
+              const found = R.resolve(\(ref), \(encodedLabel), \(kinds));
+              if (found.stale) { return JSON.stringify({ stale: true }); }
+              if (found.ambiguous) { return JSON.stringify({ ambiguous: true }); }
+              if (found.options) { return JSON.stringify({ options: found.options }); }
+              const el = found.el;
+              const kind = R.kindOf(el) || 'button';
+              const form = el.form || (el.closest && el.closest('form'));
+              const context = R.norm([
+                el.getAttribute && el.getAttribute('aria-label'),
+                el.title,
+                el.name,
+                el.getAttribute && el.getAttribute('data-action'),
+                el.getAttribute && el.getAttribute('formaction'),
+                el.getAttribute && el.getAttribute('onclick'),
+                form && form.getAttribute('action'),
+                form && form.getAttribute('aria-label'),
+                form && form.innerText
+              ].filter(Boolean).join(' ')).slice(0, 800);
+              return JSON.stringify({
+                ref: el.__linenRef || window.__linenRefs.push(el),
+                label: R.labelOf(el, kind),
+                disabled: R.disabled(el) ? 1 : 0,
+                context
+              });
+            """)
         guard let object = await evaluateJSON(script, in: webView) else {
             return .failure("The page didn't respond. It may still be loading - try readPage.")
         }
         if object["stale"] as? Bool == true {
             return .failure(staleMessage)
         }
+        if object["ambiguous"] as? Bool == true {
+            return .failure("Several controls match. Use readPage and choose a specific ref.")
+        }
         if let options = object["options"] as? [String] {
-            return .failure(options.isEmpty
+            let message = options.isEmpty
                 ? "Nothing on the page matches that. Use readPage to see what's there."
-                : "Nothing matches “\(label)”. Present: \(options.joined(separator: " | "))")
+                : "Nothing matches “\(label)”. Present: \(options.joined(separator: " | "))"
+            return .failure(PageOutputBudget.prefix(message, fitting: outputBudget.totalCharacters - 100))
         }
         guard let foundRef = object["ref"] as? Int else {
             return .failure("The page didn't respond. It may still be loading - try readPage.")
         }
-        return .success(Resolved(
-            ref: foundRef,
-            label: object["label"] as? String ?? label,
-            disabled: object["disabled"] as? Int == 1,
-            context: object["context"] as? String ?? ""
-        ))
+        return .success(
+            Resolved(
+                ref: foundRef,
+                label: object["label"] as? String ?? label,
+                disabled: object["disabled"] as? Int == 1,
+                context: object["context"] as? String ?? ""
+            ))
     }
 
     // MARK: - Helpers
 
-    private static func settleAndSnippet(_ webView: WKWebView) async -> String {
+    static func settleAndSnippet(_ webView: WKWebView, refreshControls: Bool = true) async -> String {
         await PageSettle.afterInteraction(webView)
-        return "The page now shows: \(await snippet(of: webView))"
+        guard refreshControls else { return "The page now shows: \(await snippet(of: webView))" }
+        return await PageAutomationGuard.withCurrentDocument(in: webView) {
+            await snapshot(webView)
+        }
     }
 
     private static func snippet(of webView: WKWebView) async -> String {
+        guard PageAutomationGuard.allowsExecution else { return "" }
         let script = scripted("return R.viewportText(1200);")
-        return (try? await webView.evaluateJavaScript(script)) as? String ?? ""
+        let text = (try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)) as? String ?? ""
+        return PageAutomationGuard.allowsExecution ? text : ""
     }
 
-    private static func evaluateJSON(_ script: String, in webView: WKWebView) async -> [String: Any]? {
-        guard let raw = (try? await webView.evaluateJavaScript(script)) as? String,
-              let data = raw.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    static func evaluateJSON(_ script: String, in webView: WKWebView) async -> [String: Any]? {
+        guard PageAutomationGuard.allowsExecution,
+            let raw = (try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)) as? String,
+            PageAutomationGuard.allowsExecution,
+            let data = raw.data(using: .utf8),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
         return object
     }
 
-    private static func jsonString(_ value: String) -> String? {
+    static func automationSnapshot(in webView: WKWebView) async -> String? {
+        guard PageAutomationGuard.allowsExecution else { return nil }
+        return
+            (try? await webView.evaluateJavaScript(
+                "window.__linenSnapshot", in: nil, contentWorld: PageAutomationGuard.world
+            )) as? String
+    }
+
+    static func jsonString(_ value: String) -> String? {
         guard let data = try? JSONEncoder().encode(value) else { return nil }
         return String(data: data, encoding: .utf8)
     }
