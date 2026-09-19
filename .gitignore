@@ -22,6 +22,11 @@ DerivedData/
 
 # Signing material
 *.p12
+*.pfx
+*.p8
+*.pem
+*.key
+*.keychain-db
 *.cer
 *.certSigningRequest
 *.provisionprofile
@@ -30,3 +35,11 @@ DerivedData/
 # Local secrets
 .env
 .env.*
+
+# Local validation output
+/Audits/
+*.xcresult/
+
+# Python cache files
+__pycache__/
+*.py[cod]
