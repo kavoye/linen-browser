@@ -15,7 +15,6 @@ struct ContextBudgetTests {
         #expect(budget.toolTier == .core)
         #expect(budget.toolOutput.pageTextCharacters <= 1_600)
         #expect(budget.toolOutput.controlLimit == 12)
-        #expect(budget.maxToolCalls <= 8)
         #expect(budget.retainedToolRounds == 1)
         #expect(budget.inputTokens + budget.responseTokens < budget.windowTokens)
     }
@@ -27,7 +26,6 @@ struct ContextBudgetTests {
         #expect(budget.instructionTier == .full)
         #expect(budget.toolTier == .full)
         #expect(budget.toolOutput == .standard)
-        #expect(budget.maxToolCalls == 20)
         #expect(budget.retainedExchanges == 12)
     }
 
@@ -37,7 +35,6 @@ struct ContextBudgetTests {
         #expect(budget.responseTokens == 512)
         #expect(budget.inputTokens > 0)
         #expect(budget.toolOutput.pageTextCharacters >= 800)
-        #expect(budget.maxToolCalls >= 3)
         #expect(budget.retainedExchanges >= 1)
     }
 
@@ -83,6 +80,34 @@ struct ContextBudgetTests {
 
 @Suite(.serialized)
 struct ContextWindowOverrideTests {
+    @Test func documentedLimitsAreScopedToTheModelAndEndpoint() {
+        let previous = LLMSettings.defaults
+        let suiteName = UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        LLMSettings.defaults = defaults
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+            LLMSettings.defaults = previous
+        }
+        var provider = ProviderCatalog.openAI
+        let luna = ContextWindow.resolve(for: provider, model: "gpt-5.6-luna")
+        #expect(luna.tokens == 1_050_000)
+        #expect(luna.source == .documented)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-unknown").source == .fallback)
+
+        LLMSettings.setDiscoveredContextWindow(500_000, for: provider, model: "gpt-5.6-luna")
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-luna").source == .discovered)
+        #expect(ContextWindow.tokens(for: provider, model: "gpt-5.6-luna") == 500_000)
+        LLMSettings.setContextWindow(250_000, for: provider)
+        #expect(ContextWindow.tokens(for: provider, model: "gpt-5.6-luna") == 250_000)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-luna").source == .configured)
+        LLMSettings.setContextWindow(nil, for: provider)
+        LLMSettings.setDiscoveredContextWindow(nil, for: provider, model: "gpt-5.6-luna")
+
+        provider.baseURL = URL(string: "https://example.com/v1")
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-luna").source == .fallback)
+    }
+
     @Test func aStoredOverrideWinsOverTheDefaultWindow() {
         let previous = LLMSettings.defaults
         let suiteName = "context-window-override-tests"

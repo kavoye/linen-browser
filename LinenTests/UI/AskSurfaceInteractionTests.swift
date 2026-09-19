@@ -8,6 +8,33 @@ import Testing
 
 @MainActor
 struct AskSurfaceInteractionTests {
+    @Test func mentionCandidatesKeepTheCurrentPageWithinTheLimit() {
+        let tabs = (0..<8).map { index in
+            let tab = BrowserTab()
+            tab.title = "Item \(index)"
+            tab.urlString = "https://shop.example/item/\(index)"
+            return tab
+        }
+        let current = tabs[7]
+        let candidates = AskSurfaceInteraction.mentionCandidates(
+            fragment: "", tabs: tabs, mentionedTabIDs: [tabs[0].id], activeTabID: current.id
+        )
+        #expect(candidates.map(\.id) == [current.id] + tabs[1...4].map(\.id))
+
+        let byTitle = AskSurfaceInteraction.mentionCandidates(
+            fragment: "ITEM 7", tabs: tabs, mentionedTabIDs: [], activeTabID: current.id
+        )
+        #expect(byTitle.map(\.id) == [current.id])
+
+        let alreadyMentioned = AskSurfaceInteraction.mentionCandidates(
+            fragment: "item/7", tabs: tabs, mentionedTabIDs: [current.id], activeTabID: current.id
+        )
+        #expect(alreadyMentioned.isEmpty)
+        #expect(AskSurfaceInteraction.mentionCandidates(
+            fragment: "", tabs: [BrowserTab()], mentionedTabIDs: [], activeTabID: nil
+        ).isEmpty)
+    }
+
     @Test func anUnconfiguredAgentHasAHumanReadableName() {
         #expect(AppCoordinator.displayAgentName(for: "none") == String(localized: "Assistant"))
         #expect(AppCoordinator.displayAgentName(for: "Claude") == "Claude")

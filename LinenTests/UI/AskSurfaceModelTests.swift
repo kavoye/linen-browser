@@ -12,6 +12,36 @@ import Testing
 /// leave the machine as a completion request.
 @MainActor
 struct AskSurfaceModelTests {
+    @Test(arguments: [AskSurface.Placement.toolbar, .startPage])
+    func currentPageCanBeSelectedForAThreePageComparison(placement: AskSurface.Placement) throws {
+        try Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model(placement: placement)
+            let tabs = (0..<3).map { index in
+                let tab = model.browser.newTab()
+                tab.urlString = "https://shop.example/item/\(index)"
+                tab.title = "Item \(index)"
+                return tab
+            }
+            model.browser.activate(tabs[0])
+            model.fieldFocusDidChange(true)
+            model.interaction.text = "compare @"
+
+            for tab in tabs {
+                let item = try #require(model.resultSections().flattened.first { $0.id == "mention-\(tab.id)" })
+                item.run()
+                #expect(!model.resultSections().flattened.contains { $0.id == "mention-\(tab.id)" })
+                model.interaction.text += "@"
+            }
+
+            #expect(model.mentionedTabIDs == tabs.map(\.id))
+            #expect(model.contextPages.map(\.id) == tabs.map(\.id))
+            #expect(MentionText.resolved(model.interaction.text, chips: model.mentionChips)
+                == "compare @Item 0 @Item 1 @Item 2 @")
+            #expect(model.browser.contextSummary(mentionedTabIDs: model.mentionedTabIDs)?
+                .contains("ACTIVE, MENTIONED") == true)
+        }
+    }
+
     private func model(placement: AskSurface.Placement = .toolbar) -> AskSurfaceModel {
         let coordinator = AppCoordinator()
         return AskSurfaceModel(
@@ -110,6 +140,51 @@ struct AskSurfaceModelTests {
             let tabsBefore = model.browser.tabs.count
             model.run(at: 5, in: [])
             #expect(model.browser.tabs.count == tabsBefore)
+        }
+    }
+
+    @Test func browsingSuggestionsPreviewsFullTextWithoutChangingTheResults() {
+        Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model()
+            model.replaceTextAndFocus("exam")
+            var runs = 0
+            let sections = [OmniboxSection(id: "preview", title: "", items: [
+                OmniboxItem(id: "query", kind: .search, title: "exam") { runs += 1 },
+                OmniboxItem(
+                    id: "page", kind: .history, title: "Example page",
+                    completionText: "https://example.com/full/path?q=value#section"
+                ) { runs += 1 },
+                OmniboxItem(id: "phrase", kind: .phrase, title: "example search phrase") { runs += 1 },
+            ])]
+
+            model.moveSelection(by: 1, in: sections)
+            #expect(model.interaction.text == "https://example.com/full/path?q=value#section")
+            #expect(model.interaction.selection == 1)
+            #expect(model.resultQuery == "exam")
+            #expect(model.resultSections().flattened.map(\.id) == ["query", "page", "phrase"])
+
+            model.moveSelection(by: 1, in: model.resultSections())
+            #expect(model.interaction.text == "example search phrase")
+            model.selectSuggestion(at: 0, in: model.resultSections())
+            #expect(model.interaction.text == "exam")
+            #expect(runs == 0)
+        }
+    }
+
+    @Test func typingAfterPreviewStartsANewQueryAndClearsSelection() {
+        Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model()
+            model.replaceTextAndFocus("exam")
+            let sections = [OmniboxSection(id: "preview", title: "", items: [
+                OmniboxItem(id: "query", kind: .search, title: "exam") {},
+                OmniboxItem(id: "phrase", kind: .phrase, title: "example phrase") {},
+            ])]
+            model.selectSuggestion(at: 1, in: sections)
+            model.interaction.text += " more"
+
+            #expect(model.resultQuery == "example phrase more")
+            #expect(model.interaction.selection == 0)
+            #expect(!model.resultSections().contains { $0.id == "preview" })
         }
     }
     @Test func mentioningATabRecordsItAndStripsTheToken() {

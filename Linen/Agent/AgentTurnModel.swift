@@ -35,10 +35,15 @@ extension BrowserModel: AgentTurnBrowsing {
 @MainActor
 protocol AgentTurnLogging: AnyObject {
     func beginTask(_ prompt: String, tabID: UUID) -> UUID
+    func setAttachments(_ attachments: [AssistantAttachment], textOnly: Bool, taskID: UUID)
     func completeTask(_ taskID: UUID, response: String)
     func cancelTask(_ taskID: UUID)
     func removeTab(_ tabID: UUID)
     func reassign(from tabID: UUID, to newTabID: UUID)
+}
+
+extension AgentTurnLogging {
+    func setAttachments(_ attachments: [AssistantAttachment], textOnly: Bool, taskID: UUID) {}
 }
 
 extension ConversationLog: AgentTurnLogging {}
@@ -50,12 +55,18 @@ final class AgentTurnModel {
 
     private(set) var runnerName = "none"
     private(set) var activeTask: AgentTaskContext?
+    private(set) var supportsCompaction = false
+    private(set) var compactingSpaceID: UUID?
+    private(set) var compactionMessage: LocalizedStringResource?
+    private(set) var compactionMessageSpaceID: UUID?
 
     @ObservationIgnored private let browser: any AgentTurnBrowsing
     @ObservationIgnored private let log: any AgentTurnLogging
     @ObservationIgnored private let speech: any SpeechOutput
     @ObservationIgnored private var runner: (any AgentRunner)?
     @ObservationIgnored private var runTask: Task<Void, Never>?
+    @ObservationIgnored private var completion: ((Result<AgentTurnResult, any Error>) -> Void)?
+    @ObservationIgnored private var compactionTask: Task<Void, Never>?
     @ObservationIgnored private var pendingSpaceMoves: [(from: UUID, to: UUID)] = []
     @ObservationIgnored var onTurnFinished: (() -> Void)?
 
@@ -84,16 +95,51 @@ final class AgentTurnModel {
     }
 
     func use(_ runner: (any AgentRunner)?) {
+        cancelCompaction()
         self.runner = runner
         runnerName = runner?.name ?? "none"
+        supportsCompaction = runner?.supportsCompaction == true
+    }
+
+    func compactContext(inSpace spaceID: UUID) {
+        guard !isRunning, compactingSpaceID == nil, let runner, runner.supportsCompaction else { return }
+        compactingSpaceID = spaceID
+        compactionMessage = nil
+        compactionMessageSpaceID = spaceID
+        compactionTask = Task { [weak self] in
+            let message: LocalizedStringResource
+            do {
+                let changed = try await runner.compactContext(forTab: spaceID)
+                message = changed ? "Context compacted" : "No context to compact"
+            } catch {
+                message = "Couldn’t compact. Context unchanged."
+            }
+            guard !Task.isCancelled, let self else { return }
+            compactionMessage = message
+            compactingSpaceID = nil
+            compactionTask = nil
+        }
+    }
+
+    private func cancelCompaction() {
+        compactionTask?.cancel()
+        compactionTask = nil
+        compactingSpaceID = nil
+        compactionMessage = nil
+        compactionMessageSpaceID = nil
     }
 
     @discardableResult
     func run(
         utterance: String,
         mentionedTabIDs: [UUID] = [],
+        attachments: [AssistantAttachment] = [],
+        attachmentTextOnly: Bool = false,
+        isContinuation: Bool = false,
         trace: LatencyTrace? = nil,
-        showsInChrome: Bool = true
+        showsInChrome: Bool = true,
+        speechOverride: (any SpeechOutput)? = nil,
+        completion: ((Result<AgentTurnResult, any Error>) -> Void)? = nil
     ) -> Bool {
         guard let runner else {
             trace?.end()
@@ -101,6 +147,7 @@ final class AgentTurnModel {
         }
 
         cancel()
+        self.completion = completion
         let tabID = browser.ensureAgentTabID()
         let spaceID = browser.agentSpaceID(forTab: tabID)
         let contextualized: String
@@ -110,17 +157,21 @@ final class AgentTurnModel {
             contextualized = utterance
         }
         let task = AgentTaskContext(
-            id: log.beginTask(utterance, tabID: spaceID),
+            id: log.beginTask(isContinuation ? "" : utterance, tabID: spaceID),
             tabID: tabID,
             spaceID: spaceID,
-            mentionedTabIDs: mentionedTabIDs
+            mentionedTabIDs: mentionedTabIDs,
+            attachments: attachments,
+            attachmentTextOnly: attachmentTextOnly,
+            isContinuation: isContinuation
         )
+        log.setAttachments(attachments, textOnly: attachmentTextOnly, taskID: task.id)
         browser.setAgentWorking(true, inSpace: spaceID)
         activeTask = task
         reply.bind(toSpace: spaceID, showsInChrome: showsInChrome)
 
         let reply = reply
-        let speech = speech
+        let speech = speechOverride ?? speech
         runTask = Task { [weak self] in
             await runner.run(
                 utterance: contextualized,
@@ -137,12 +188,16 @@ final class AgentTurnModel {
             activeTask = nil
             runTask = nil
             applyPendingSpaceMoves()
+            let completed = self.completion
+            self.completion = nil
             onTurnFinished?()
+            completed?(.success(.init(taskID: task.id, text: reply.text ?? "")))
         }
         return true
     }
 
     func cancel() {
+        cancelCompaction()
         let hadActiveTurn = activeTask != nil || runTask != nil
         onCancel?()
         runTask?.cancel()
@@ -156,11 +211,17 @@ final class AgentTurnModel {
         if hadActiveTurn {
             reply = AgentReplyModel()
         }
+        let completed = completion
+        completion = nil
         applyPendingSpaceMoves()
+        completed?(.failure(CancellationError()))
     }
 
     func reassignSpace(from spaceID: UUID, to newSpaceID: UUID) {
         guard spaceID != newSpaceID else { return }
+        if compactingSpaceID == spaceID {
+            cancelCompaction()
+        }
         guard activeTask?.spaceID != spaceID else {
             pendingSpaceMoves.append((from: spaceID, to: newSpaceID))
             return
@@ -181,11 +242,15 @@ final class AgentTurnModel {
     }
 
     func forgetEveryConversation() {
+        cancelCompaction()
         runner?.discardAllSessions()
     }
 
     @discardableResult
     func closeTab(_ tabID: UUID) -> Bool {
+        if compactingSpaceID == tabID {
+            cancelCompaction()
+        }
         let endedActiveTurn = activeTask?.tabID == tabID || activeTask?.spaceID == tabID
         if endedActiveTurn {
             cancel()

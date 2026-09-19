@@ -2,14 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct AssistantComposer: View {
-    private static let effortWidth: CGFloat = 46
-    private static let pickerDrop: CGFloat = 3
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     let coordinator: AppCoordinator
-    @Binding var seed: String?
+    @Binding var seed: ConversationLog.TaskTrace?
 
+    @State private var attachments = AttachmentDraft()
+    @State private var dropTargeted = false
+    @State private var isSending = false
     @State private var draft = ""
     @State private var mentions: [AssistantMention] = []
     @State private var mentionSelection = 0
@@ -39,17 +44,12 @@ struct AssistantComposer: View {
 
     private var mentionable: [BrowserTab] {
         guard !mentionsDismissed, let fragment = mentionFragment else { return [] }
-        var taken = Set(mentions.map(\.id))
-        if let active = coordinator.browser.activeTab?.id {
-            taken.insert(active)
-        }
-        let matches = coordinator.browser.tabs.filter { tab in
-            guard !taken.contains(tab.id), !tab.isShowingSystemPage, !tab.hasNoPageYet else { return false }
-            guard !fragment.isEmpty else { return true }
-            return tab.title.lowercased().contains(fragment)
-                || tab.urlString.lowercased().contains(fragment)
-        }
-        return Array(matches.prefix(5))
+        return AskSurfaceInteraction.mentionCandidates(
+            fragment: fragment,
+            tabs: coordinator.browser.tabs,
+            mentionedTabIDs: Set(mentions.map(\.id)),
+            activeTabID: coordinator.browser.activeTab?.id
+        )
     }
 
     private var attached: [UUID] {
@@ -68,13 +68,22 @@ struct AssistantComposer: View {
 
             field
         }
+        .onDrop(of: [UTType.fileURL, UTType.image], isTargeted: $dropTargeted, perform: attachments.drop)
+        .onChange(of: coordinator.browser.activeSpaceID) { _, _ in
+            attachments.clear()
+            draft = ""
+            mentions = []
+        }
+        .onDisappear { attachments.clear() }
         .onChange(of: mentionFragment) { _, _ in
             mentionSelection = 0
             mentionsDismissed = false
         }
         .onChange(of: seed) { _, prompt in
             guard let prompt else { return }
-            draft = prompt
+            draft = prompt.prompt
+            attachments.clear()
+            attachments.files = prompt.attachments
             mentions = []
             seed = nil
             writing = true
@@ -87,94 +96,68 @@ struct AssistantComposer: View {
     }
 
     private var field: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            MentionField(
+        VStack(alignment: .leading, spacing: 7) {
+            AttachmentComposerStatus(attachments: attachments, isTextOnly: effectiveTextOnly)
+            AssistantTextEditor(
                 text: $draft,
                 chips: chips,
                 placeholder: placeholder,
                 fontSize: 12.5,
                 isFocused: writing,
-                accessibilityLabel: placeholder,
-                wraps: true,
+                showsMentions: !mentionable.isEmpty,
                 onFocusChange: focus(_:),
                 onChipsChange: keep(_:),
                 onSubmit: submit,
                 onCancel: dismissMentions,
-                onMove: move(by:jumping:)
+                onMove: move(by:jumping:),
+                onAttachmentPaste: attachments.paste
             )
 
-            HStack(alignment: .bottom, spacing: 2) {
-                Group {
-                    AssistantPicker(sections: .providers, coordinator: coordinator) { _ in
-                        ProviderBrandIcon(providerID: coordinator.selectedProvider.id, size: 14)
-                    }
-                    .padding(.leading, -4)
-                    .padding(.trailing, -4)
-
-                    AssistantPicker(
-                        sections: .models,
-                        coordinator: coordinator,
-                        isPickable: !coordinator.selectedProvider.isOnDevice
-                    ) { hovering in
-                        Text(verbatim: modelLabel)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(hovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    .layoutPriority(-1)
-
-                    if coordinator.supportsReasoningEffort {
-                        AssistantPicker(sections: .thinking, coordinator: coordinator) { hovering in
-                            EffortMeter(effort: coordinator.selectedEffort)
-
-                            Text(coordinator.selectedEffort.label)
-                                .font(Theme.Font.caption)
-                                .foregroundStyle(hovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-                                .lineLimit(1)
-                                .frame(width: Self.effortWidth, alignment: .leading)
-                        }
-                    }
-                }
-                .offset(y: Self.pickerDrop)
-
-                Spacer(minLength: 0)
-
-                SendButton(stops: stops, isEnabled: !trimmed.isEmpty || isWorking) {
-                    if stops {
-                        stop()
-                    } else {
-                        send()
-                    }
+            AssistantComposerToolbar(
+                coordinator: coordinator, attachments: attachments,
+                stops: stops,
+                canSend: stops || (!attachments.isImporting && !isSending && (!trimmed.isEmpty || !attachments.files.isEmpty)),
+                offersVoice: trimmed.isEmpty && attachments.files.isEmpty && !attachments.isImporting && !isSending && !isAnsweringAQuestion
+            ) {
+                if stops {
+                    stop()
+                } else {
+                    send()
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, 12)
         .padding(.top, 10)
-        .padding(.bottom, 12)
+        .padding([.trailing, .bottom], 8)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(Theme.Wash.hairline)
         )
+        .background(
+            Theme.windowBackground.opacity(reduceTransparency ? 1 : (coordinator.sidePanel.isExpanded ? 0.96 : 0)),
+            in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .strokeBorder(
+                    dropTargeted ? Color.accentColor : Color.primary.opacity(
+                        contrast == .increased ? 0.4 : (writing ? 0.18 : 0.08)
+                    ),
+                    lineWidth: dropTargeted ? 2 : 1
+                )
+                .allowsHitTesting(false)
+        }
+        .animation(reduceMotion ? nil : Theme.Motion.quick, value: writing)
         .contentShape(Rectangle())
         .onTapGesture { writing = true }
     }
 
     private var stops: Bool {
-        isWorking && trimmed.isEmpty
+        isWorking && trimmed.isEmpty && attachments.files.isEmpty
     }
 
     private var placeholder: String {
         isAnsweringAQuestion ? String(localized: "Answer…") : String(localized: "Ask anything")
-    }
-
-    private var modelLabel: String {
-        let provider = coordinator.selectedProvider
-        if provider.isOnDevice {
-            return provider.name
-        }
-        let model = coordinator.selectedModel
-        return model.isEmpty ? String(localized: "Choose a model") : model
     }
 
     private func submit() {
@@ -219,22 +202,44 @@ struct AssistantComposer: View {
         writing = true
     }
 
+    private var effectiveTextOnly: Bool {
+        !ModelImageSupport.acceptsImages(for: coordinator.selectedProvider, model: coordinator.selectedModel)
+    }
+
     private func send() {
         let message = trimmed
-        guard !message.isEmpty else { return }
-        let mentionedTabIDs = attached
-        draft = ""
-        mentions = []
-        if isAnsweringAQuestion {
+        guard !attachments.isImporting, !isSending, !message.isEmpty || !attachments.files.isEmpty else { return }
+        do {
+            try AttachmentRequest.validate(
+                attachments.files, message: message, textOnly: effectiveTextOnly,
+                windowTokens: ContextWindow.tokens(for: coordinator.selectedProvider, model: coordinator.selectedModel)
+            )
+        } catch {
+            attachments.error = error.localizedDescription
+            return
+        }
+        if isAnsweringAQuestion && attachments.files.isEmpty {
+            draft = ""
+            mentions = []
             coordinator.agentQuestions.answer(message)
             return
         }
+        let mentionedTabIDs = attached
+        let files = attachments.files
+        isSending = true
         Task {
-            await coordinator.handleTypedUtterance(
-                message,
-                mentionedTabIDs: mentionedTabIDs,
+            let started = await coordinator.handleTypedUtterance(
+                message, mentionedTabIDs: mentionedTabIDs, attachments: files,
                 showsInChrome: false
             )
+            isSending = false
+            if started {
+                draft = ""
+                mentions = []
+                attachments.clear()
+            } else {
+                attachments.error = coordinator.statusMessage
+            }
         }
     }
 
@@ -326,83 +331,5 @@ private struct AssistantMentionRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-    }
-}
-
-private struct SendButton: View {
-    let stops: Bool
-    let isEnabled: Bool
-    let action: () -> Void
-
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Circle()
-                .fill(Color.primary.opacity(isEnabled ? (hovering ? 1 : 0.88) : 0.55))
-                .frame(width: 24, height: 24)
-                .overlay {
-                    Image(systemName: stops ? "square.fill" : "arrow.up")
-                        .font(.system(size: stops ? 8 : 11, weight: .bold))
-                        .blendMode(.destinationOut)
-                }
-                .compositingGroup()
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .help(Text(stops ? LocalizedStringResource("Stop") : LocalizedStringResource("Send")))
-    }
-}
-
-private struct AssistantPicker<Label: View>: View {
-    let sections: EnginePopover.Sections
-    let coordinator: AppCoordinator
-    var isPickable = true
-    @ViewBuilder let label: (Bool) -> Label
-
-    @State private var isPresenting = false
-    @State private var hovering = false
-
-    private var help: LocalizedStringResource {
-        if sections.contains(.providers) {
-            return "Choose which assistant answers"
-        }
-        if sections.contains(.models) {
-            return "Choose the model"
-        }
-        return "Choose how much it thinks"
-    }
-
-    var body: some View {
-        if isPickable {
-            Button {
-                isPresenting = true
-            } label: {
-                plate
-            }
-            .buttonStyle(.plain)
-            .onHover { hovering = $0 }
-            .animation(Theme.Motion.quick, value: hovering)
-            .help(Text(help))
-            .popover(isPresented: $isPresenting, arrowEdge: .bottom) {
-                EnginePopover(coordinator: coordinator, sections: sections) {
-                    isPresenting = false
-                }
-            }
-        } else {
-            plate
-        }
-    }
-
-    private var plate: some View {
-        HStack(spacing: 4) {
-            label(isPickable && (hovering || isPresenting))
-        }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 3)
-        .contentShape(Rectangle())
     }
 }

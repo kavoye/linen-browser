@@ -7,256 +7,196 @@ import Testing
 
 @testable import Linen
 
-/// The turn loop in `AnyLanguageModelAgent`, driven end to end through a
-/// scripted model instead of a provider: continuation after a tool round,
-/// recovery from a barren turn, the give-up reply at the tool budget, and
-/// the clean-session retry after a context-window overflow. The scripts
-/// stand in for real provider behaviour each path was built against.
 @MainActor
+@Suite(.serialized)
 struct AnyLanguageModelAgentTests {
-    private final class ScriptedModel: LanguageModel, @unchecked Sendable {
-        enum Turn {
-            case text(String)
-            case toolCall(named: String)
-            case error(any Error)
+    @Test func successfulAnswerCompletesTheTraceBeforeCoordinatorCleanup() async throws {
+        let fixture = HarnessFixture([.text("Done.")])
+        let taskID = fixture.log.beginTask("Finish the task", tabID: fixture.tabID)
+
+        await fixture.agent.run(
+            utterance: "Finish the task",
+            task: .init(id: taskID, tabID: fixture.tabID),
+            into: fixture.reply,
+            speech: fixture.speech
+        )
+
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.state == .completed)
+        #expect(!trace.canContinue)
+        #expect(trace.response == "Done.")
+    }
+
+    @Test func unchangedPageReadsWithNewObservationIDsRecoverThenPause() async throws {
+        let state = HarnessToolState()
+        state.output = { "PAGE TEXT:\nPending\n\nCONTROLS:\n\nobservationID: read\($0)" }
+        let fixture = HarnessFixture(Array(repeating: .calls(["readPage"]), count: 20), state: state)
+        await fixture.run("Wait for the page to change")
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.stopReason == .noProgress)
+        #expect(state.calls == 6)
+        #expect(trace.diagnostics.modelRequests == 7)
+        #expect(trace.diagnostics.events.filter { $0.kind == "progress_recovery" }.count == 1)
+        #expect(trace.diagnostics.events.filter { $0.kind == "response" }.allSatisfy { $0.values["elapsed_ms"] != nil })
+    }
+
+    @Test func contextEstimateUpdatesWhileTheTaskIsStillRunning() async {
+        let state = HarnessToolState()
+        let fixture = HarnessFixture([.calls(["readPage"]), .calls(["readPage"]), .text("Done.")], state: state)
+        var observations: [Int] = []
+        state.output = { _ in
+            #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.state == .running)
+            observations.append(fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens)
+            return String(repeating: "Fixture page content ", count: 100)
         }
+        await fixture.run()
+        #expect(observations.count == 2)
+        #expect(observations.first ?? 0 > 0)
+        #expect((observations.last ?? 0) > (observations.first ?? 0))
+    }
 
-        private let lock = NSLock()
-        private var turns: [Turn]
-        private var recorded: [String] = []
-
-        init(turns: [Turn]) {
-            self.turns = turns
+    @Test func progressRestoresRecoveryForALaterIndependentStall() {
+        var monitor = AgentProgressMonitor(policy: .interactive)
+        for _ in 0..<2 {
+            #expect(monitor.observe(name: "readPage", arguments: "a", output: "unchanged", failed: true) == .proceed)
         }
-
-        var prompts: [String] {
-            lock.withLock { recorded }
+        #expect(monitor.observe(name: "readPage", arguments: "a", output: "unchanged", failed: true) == .recover)
+        for index in 0..<3 {
+            #expect(monitor.observe(name: "readPage", arguments: "a", output: "page \(index)", failed: false) == .proceed)
         }
+        for _ in 0..<2 {
+            #expect(monitor.observe(name: "typeOnPage", arguments: "b", output: "new failure", failed: true) == .proceed)
+        }
+        #expect(monitor.observe(name: "typeOnPage", arguments: "b", output: "new failure", failed: true) == .recover)
+    }
 
-        private func nextTurn(recording prompt: String) -> Turn {
-            lock.withLock {
-                recorded.append(prompt)
-                return turns.isEmpty ? .text("") : turns.removeFirst()
+    @Test func remoteWorkContinuesPastSixtyToolsWithoutACap() async throws {
+        let fixture = HarnessFixture(Array(repeating: .calls(["typeOnPage"]), count: 60) + [.text("Finished all fields.")])
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(fixture.state.calls == 60)
+        #expect(trace.state == .completed)
+        #expect(fixture.reply.text == "Finished all fields.")
+        #expect(trace.diagnostics.modelRequests == 61)
+        #expect(trace.diagnostics.toolCalls == 60)
+        #expect(trace.diagnostics.model == "gpt-5.6-luna")
+        #expect(trace.diagnostics.reasoningEffort == "medium")
+        #expect(trace.diagnostics.inputTokens == nil)
+    }
+
+    @Test func adapterProposalsAreExecutedExactlyOnceByTheHarness() async {
+        let fixture = HarnessFixture([.calls(["readPage", "typeOnPage"]), .text("Done.")])
+        await fixture.run()
+        #expect(fixture.state.calls == 2)
+        #expect(fixture.model.requests.count == 2)
+        let history = fixture.model.transcripts.last.map(HarnessFixture.flattened) ?? ""
+        #expect(history.contains("Observed state 1"))
+        #expect(history.contains("Observed state 2"))
+    }
+
+    @Test func explicitLimitPausesWithSummaryAndCanResumeAfterReload() async throws {
+        let fixture = HarnessFixture([.calls(["typeOnPage"])], policy: .init(maxModelRequests: 1))
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.state == .paused)
+        #expect(trace.stopReason == .requestLimit)
+        #expect(trace.canContinue)
+        #expect(trace.response.contains("earlier fields"))
+        #expect(trace.response.contains("Continue"))
+        let resumed = HarnessFixture([.text("Finished.")], database: fixture.database, tabID: fixture.tabID)
+        await resumed.run(AgentCheckpoint.resumePrompt)
+        #expect(resumed.state.calls == 0)
+        #expect(resumed.model.transcripts.first.map(HarnessFixture.flattened)?.contains("Observed state 1") == true)
+        #expect(resumed.reply.text == "Finished.")
+    }
+
+    @Test func repeatedUnchangedActionsRecoverThenPause() async throws {
+        let state = HarnessToolState()
+        state.output = { _ in "Same unchanged page" }
+        let fixture = HarnessFixture(Array(repeating: .calls(["typeOnPage"]), count: 15), state: state)
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.stopReason == .noProgress)
+        #expect(state.calls == 6)
+        #expect(trace.diagnostics.events.filter { $0.kind == "progress_recovery" }.count == 1)
+        #expect(fixture.model.requests.contains { $0.contains("fresh controls") })
+    }
+
+    @Test func anIndividualToolFailureDoesNotEndTheTask() async throws {
+        let state = HarnessToolState()
+        state.output = { call in
+            if call == 1 {
+                throw HarnessFixtureFailure()
             }
+            return "Validation corrected; moved to next page"
         }
+        let fixture = HarnessFixture([.calls(["typeOnPage"]), .calls(["readPage"]), .text("Recovered.")], state: state)
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.state == .completed)
+        #expect(trace.diagnostics.failedToolCalls == 1)
+        #expect(fixture.reply.text == "Recovered.")
+        #expect(!trace.diagnostics.exported().contains("private@example.test"))
+    }
 
-        func respond<Content>(
-            within session: LanguageModelSession,
-            to prompt: Prompt,
-            generating type: Content.Type,
-            includeSchemaInPrompt: Bool,
-            options: GenerationOptions
-        ) async throws -> LanguageModelSession.Response<Content> where Content: Generable {
-            switch nextTurn(recording: prompt.description) {
-            case .error(let error):
-                throw error
-            case .text(let text):
-                guard let content = text as? Content else {
-                    fatalError("the scripted model only generates String")
-                }
-                return .init(
-                    content: content,
-                    rawContent: GeneratedContent(text),
-                    transcriptEntries: []
-                )
-            case .toolCall(let name):
-                let call = Transcript.ToolCall(
-                    id: UUID().uuidString,
-                    toolName: name,
-                    arguments: GeneratedContent(properties: [:])
-                )
-                var entries: [Transcript.Entry] = [.toolCalls(.init([call]))]
-                if let delegate = session.toolExecutionDelegate {
-                    await delegate.didGenerateToolCalls([call], in: session)
-                    switch await delegate.toolCallDecision(for: call, in: session) {
-                    case .stop:
-                        break
-                    case .execute, .provideOutput:
-                        let output = Transcript.ToolOutput(
-                            id: call.id,
-                            toolName: name,
-                            segments: [.text(.init(content: "ok"))]
-                        )
-                        await delegate.didExecuteToolCall(call, output: output, in: session)
-                        entries.append(.toolOutput(output))
-                    }
-                }
-                guard let content = "" as? Content else {
-                    fatalError("the scripted model only generates String")
-                }
-                return .init(
-                    content: content,
-                    rawContent: GeneratedContent(""),
-                    transcriptEntries: entries[...]
-                )
+    @Test func providerFailurePreservesCompletedActionsAndDoesNotLeakErrorText() async throws {
+        let fixture = HarnessFixture([.calls(["typeOnPage"]), .failure(HarnessFixtureFailure())])
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.state == .paused)
+        #expect(trace.stopReason == .providerError)
+        #expect(trace.checkpoint.map { HarnessFixture.flattened($0.transcript).contains("Observed state 1") } == true)
+        #expect(!trace.response.contains("private@example.test"))
+        #expect(!trace.diagnostics.exported().contains("ABC123"))
+    }
+
+    @Test func cancellationCheckpointsAnInFlightWriteWithoutReplayingIt() async throws {
+        let state = HarnessToolState()
+        state.output = { _ in
+            let suspended = AsyncStream<Void> { _ in }
+            for await _ in suspended { }
+            try Task.checkCancellation()
+            return "Should not arrive"
+        }
+        let fixture = HarnessFixture([.calls(["typeOnPage"])], state: state)
+        let running = Task { await fixture.run() }
+        defer { running.cancel() }
+        try #require(await waitUntil { state.calls == 1 })
+        running.cancel()
+        _ = await running.value
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.stopReason == .interrupted)
+        #expect(state.calls == 1)
+        let resumed = HarnessFixture([.text("I checked the current page.")], database: fixture.database, tabID: fixture.tabID)
+        await resumed.run(AgentCheckpoint.resumePrompt)
+        #expect(resumed.state.calls == 0)
+        #expect(resumed.model.transcripts.first.map(HarnessFixture.flattened)?.contains("Check the current page") == true)
+    }
+
+    @Test func twoEmptyAnswersPauseInsteadOfSpinning() async throws {
+        let fixture = HarnessFixture([.text(""), .text("")])
+        await fixture.run()
+        #expect(fixture.model.requests.count == 2)
+        #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.state == .paused)
+        #expect(fixture.reply.text?.contains("empty response") == true)
+    }
+
+    @Test func attachmentsReachTheModelOnceAndSurviveRestoringHistory() async {
+        let fixture = HarnessFixture([.calls(["readPage"]), .text("Read.")])
+        let file = AssistantAttachment(
+            id: UUID(), name: "invoice.png", contentType: "public.png", data: Data([1]),
+            text: "Fixture invoice 42", images: [.init(data: Data([1]), mimeType: "image/png")]
+        )
+        await fixture.run("Read this", attachments: [file])
+        for transcript in fixture.model.transcripts {
+            let count = transcript.reduce(0) { count, entry in
+                guard case .prompt(let prompt) = entry else { return count }
+                return count + prompt.segments.filter { if case .image = $0 { return true }; return false }.count
             }
+            #expect(count == 1)
         }
-
-        func streamResponse<Content>(
-            within session: LanguageModelSession,
-            to prompt: Prompt,
-            generating type: Content.Type,
-            includeSchemaInPrompt: Bool,
-            options: GenerationOptions
-        ) -> sending LanguageModelSession.ResponseStream<Content> where Content: Generable {
-            guard let content = "" as? Content else {
-                fatalError("the scripted model only generates String")
-            }
-            return .init(content: content, rawContent: GeneratedContent(""))
-        }
-    }
-
-    private final class SilentSpeech: SpeechOutput {
-        var isMuted = false
-        var onSpeakingChange: ((Bool) -> Void)?
-        private(set) var spoken: [String] = []
-
-        func speak(_ text: String) {
-            spoken.append(text)
-        }
-
-        func stopSpeaking() {}
-    }
-
-    private struct Turn {
-        let agent: AnyLanguageModelAgent
-        let model: ScriptedModel
-        let reply = AgentReplyModel()
-        let speech = SilentSpeech()
-        let task = AgentTaskContext(id: UUID(), tabID: UUID())
-
-        init(turns: [ScriptedModel.Turn], maxToolCalls: Int = 4) {
-            model = ScriptedModel(turns: turns)
-            let log = ConversationLog(database: .temporary())
-            agent = AnyLanguageModelAgent(
-                name: "scripted",
-                model: model,
-                options: GenerationOptions(),
-                budget: ContextBudget(
-                    windowTokens: 8_192,
-                    responseTokens: 1_024,
-                    inputTokens: 6_144,
-                    toolSchemaTokens: 0,
-                    instructionTier: .full,
-                    toolTier: .full,
-                    toolOutput: .standard,
-                    maxToolCalls: maxToolCalls,
-                    retainedExchanges: 3,
-                    retainedToolRounds: 3
-                ),
-                toolkit: AgentToolkit(
-                    browser: BrowserModel(database: .temporary()),
-                    media: MediaCenter(),
-                    log: log,
-                    services: .live
-                ),
-                log: log
-            )
-        }
-
-        func run(_ utterance: String = "What is this?") async {
-            await agent.run(utterance: utterance, task: task, into: reply, speech: speech)
-        }
-    }
-
-    @Test func aPlainAnswerLandsInTheReply() async {
-        let turn = Turn(turns: [.text("Paris.")])
-        await turn.run("Where was it made?")
-
-        #expect(turn.reply.text == "Paris.")
-        #expect(turn.reply.activity == nil)
-        #expect(turn.model.prompts == ["Where was it made?"])
-        #expect(turn.speech.spoken.count == 1)
-        #expect(turn.speech.spoken.first?.hasSuffix("Paris.") == true)
-    }
-
-    @Test func aToolRoundIsContinuedUntilTheModelSpeaks() async {
-        let turn = Turn(turns: [.toolCall(named: "inspect"), .text("Done.")])
-        await turn.run()
-
-        #expect(turn.reply.text == "Done.")
-        #expect(turn.model.prompts.count == 2)
-        #expect(turn.model.prompts.last == "Continue the task using the tool result.")
-    }
-
-    @Test func aBarrenTurnIsAskedForTheAnswerDirectly() async {
-        let turn = Turn(turns: [.text(""), .text("Here it is.")])
-        await turn.run()
-
-        #expect(turn.reply.text == "Here it is.")
-        #expect(turn.model.prompts.last == "Answer the user now, in plain words.")
-    }
-
-    @Test func twoBarrenTurnsBecomeTheEmptyResponseError() async {
-        let turn = Turn(turns: [.text(""), .text("")])
-        await turn.run()
-
-        #expect(
-            turn.reply.text
-                == "The model returned an empty response. Try again or choose another model."
-        )
-        #expect(turn.speech.spoken.isEmpty)
-    }
-
-    @Test func exhaustingTheToolBudgetGivesUpAudibly() async {
-        let turn = Turn(
-            turns: [.toolCall(named: "inspect"), .toolCall(named: "inspect")],
-            maxToolCalls: 2
-        )
-        await turn.run()
-
-        #expect(turn.reply.text == "This task needed more steps than expected. Try asking again.")
-    }
-
-    @Test func aContextWindowOverflowRetriesOnACleanSession() async {
-        let overflow = LanguageModelSession.GenerationError.exceededContextWindowSize(
-            .init(debugDescription: "scripted overflow")
-        )
-        let turn = Turn(turns: [.error(overflow), .text("Fresh start.")])
-        await turn.run("Long question")
-
-        #expect(turn.reply.text == "Fresh start.")
-        #expect(turn.model.prompts == ["Long question", "Long question"])
-    }
-
-    @Test func anOnDeviceOverflowIsRecoveredLikeTheProviderOne() async {
-        let turn = Turn(turns: [
-            .toolCall(named: "inspect"),
-            .error(SystemModelFailureTests.contextOverflow()),
-            .text("Recovered."),
-        ])
-        await turn.run("Long task")
-
-        #expect(turn.reply.text == "Recovered.")
-    }
-
-    @Test func anOverflowMidTurnIsRecoveredWithoutRestartingTheTask() async {
-        let overflow = LanguageModelSession.GenerationError.exceededContextWindowSize(
-            .init(debugDescription: "scripted overflow")
-        )
-        let turn = Turn(turns: [
-            .toolCall(named: "inspect"),
-            .error(overflow),
-            .text("Recovered."),
-        ])
-        await turn.run("Long task")
-
-        #expect(turn.reply.text == "Recovered.")
-        #expect(turn.model.prompts == [
-            "Long task",
-            "Continue the task using the tool result.",
-            "Continue the task using the tool result.",
-        ])
-    }
-
-    @Test func aProviderFailureBecomesTheConnectionMessage() async {
-        let turn = Turn(turns: [.error(URLError(.notConnectedToInternet))])
-        await turn.run()
-
-        #expect(
-            turn.reply.text
-                == "Couldn’t reach the model provider. Check its connection and API key in Settings."
-        )
-        #expect(turn.speech.spoken.isEmpty)
+        let resumed = HarnessFixture([.text("42")], database: fixture.database, tabID: fixture.tabID)
+        await resumed.run("What was the total?")
+        #expect(resumed.model.transcripts.first.map(HarnessFixture.flattened)?.contains("Fixture invoice 42") == true)
     }
 }

@@ -16,9 +16,6 @@ nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendabl
     /// This hosts the panel at its minimum width, streams worst-case traces
     /// into it, sweeps the whole scroll range, and requires the main run
     /// loop to go idle after every step - on a deadline, so a relapse fails
-    /// instead of spinning. It then checks that every trace's selectable
-    /// answer is a real platform view: the sibling guard that the column is
-    /// not lazy, which is what made the heights estimates in the first place.
     func testStreamingAndScrollingTracesNeverWedgesTheMainRunLoop() {
         MainActor.assumeIsolated {
             let browser = BrowserModel(database: .temporary())
@@ -71,42 +68,56 @@ nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendabl
                 traces[traces.count - 1].state = .completed
             }
 
+            host.rootView = Self.panel(traces, tabID: tabID, browser: browser)
+            window.layoutIfNeeded()
+            guard mainRunLoopReachesIdle(within: 15) else {
+                XCTFail("completed traces never settled")
+                return
+            }
+
             guard let scrollView = firstScrollView(in: host) else {
                 XCTFail("no NSScrollView behind the panel's ScrollView")
                 return
             }
+            let documentHeight = scrollView.documentView?.frame.height ?? 0
+            let viewportHeight = scrollView.contentView.bounds.height
+            guard viewportHeight > 0, documentHeight > viewportHeight else {
+                XCTFail("the activity panel must have a visible, scrollable viewport")
+                return
+            }
+            let scrollStep = viewportHeight / 2
+            let maximumSteps = Int(ceil(max(0, documentHeight - viewportHeight) / scrollStep)) + 1
+            let layoutTolerance = 1 / window.backingScaleFactor
             var step = 0
             while true {
-                let documentHeight = scrollView.documentView?.frame.height ?? 0
+                let currentHeight = scrollView.documentView?.frame.height ?? 0
                 let visibleHeight = scrollView.contentView.bounds.height
                 let y = min(
-                    CGFloat(step) * visibleHeight / 2,
-                    max(0, documentHeight - visibleHeight)
+                    CGFloat(step) * scrollStep,
+                    max(0, currentHeight - visibleHeight)
                 )
                 scrollView.contentView.scroll(to: NSPoint(x: 0, y: y))
                 scrollView.reflectScrolledClipView(scrollView.contentView)
                 window.displayIfNeeded()
                 guard mainRunLoopReachesIdle(within: 15) else {
-                    XCTFail("main run loop never settled after scrolling to \(Int(y)) of \(Int(documentHeight))")
+                    XCTFail("main run loop never settled after scrolling to \(Int(y)) of \(Int(currentHeight))")
                     return
                 }
-                if y >= documentHeight - visibleHeight {
+                if y >= currentHeight - visibleHeight {
                     break
                 }
                 step += 1
-                if step > 400 {
-                    XCTFail("scroll range never converged: the document kept outgrowing the sweep")
+                if step > maximumSteps {
+                    XCTFail("scroll range never converged: initial=\(documentHeight), current=\(scrollView.documentView?.frame.height ?? 0), viewport=\(viewportHeight), step=\(step), y=\(y)")
                     return
                 }
             }
 
-            XCTAssertGreaterThanOrEqual(
-                selectableTextCount(in: host), traces.count,
-                """
-                every trace's answer should be a materialised platform text \
-                view - a lazy column drops the offscreen ones, and its height \
-                estimates are what livelocked the layout graph
-                """
+            XCTAssertEqual(
+                scrollView.documentView?.frame.height ?? 0,
+                documentHeight,
+                accuracy: layoutTolerance,
+                "scrolling must not change the activity panel's measured content height"
             )
         }
     }
@@ -125,22 +136,6 @@ nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendabl
             onEdit: { _ in },
             onSpeak: { _ in }
         )
-    }
-
-    /// Selectable SwiftUI text on macOS is an AppKit text field (today a
-    /// `SelectionTextField`); accept any AppKit text view in case the class
-    /// is renamed.
-    @MainActor
-    private func selectableTextCount(in view: NSView) -> Int {
-        var count = 0
-        if view is NSTextView || view is NSTextField
-            || String(describing: type(of: view)).contains("SelectionTextField") {
-            count += 1
-        }
-        for subview in view.subviews {
-            count += selectableTextCount(in: subview)
-        }
-        return count
     }
 
     /// Idle means a `.beforeWaiting` pass *after* Core Animation's commit

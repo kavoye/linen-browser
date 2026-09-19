@@ -13,6 +13,8 @@ enum AgentActionConsent {
     }
 
     @TaskLocal static var decisionForTesting: Stub?
+    @TaskLocal static var scopedPolicy: AgentActionPolicy?
+    @TaskLocal static var externalClientName: String?
 
     struct Stub: @unchecked Sendable {
         let decide: (String, SensitiveAction.Category, String?) -> Decision
@@ -29,6 +31,7 @@ enum AgentActionConsent {
         authoredByAI: Bool = false,
         policy: AgentActionPolicy = .shared
     ) async -> Bool {
+        let policy = scopedPolicy ?? policy
         if policy.isAlwaysAllowed(category, host: host) {
             return true
         }
@@ -68,7 +71,7 @@ enum AgentActionConsent {
         host: String?,
         authoredByAI: Bool = false
     ) async -> Decision {
-        guard !isRunningTests else { return .decline }
+        guard !isRunningTests, !Task.isCancelled else { return .decline }
         let site = AgentActionPolicy.normalizedHost(host)
 
         let alert = NSAlert()
@@ -82,10 +85,17 @@ enum AgentActionConsent {
             site: site,
             authoredByAI: authoredByAI
         )
+        if let externalClientName {
+            alert.informativeText = String(localized: "Requested by the external connection “\(externalClientName)”.")
+                + "\n\n" + alert.informativeText
+        }
 
         alert.addButton(withTitle: String(localized: "Allow Once"))
         if let site {
-            alert.addButton(withTitle: String(localized: "Always Allow on \(site)"))
+            let title = externalClientName == nil
+                ? String(localized: "Always Allow on \(site)")
+                : String(localized: "Allow on \(site) for This Connection")
+            alert.addButton(withTitle: title)
         }
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.buttons.last?.keyEquivalent = "\u{1b}"
@@ -97,12 +107,20 @@ enum AgentActionConsent {
 
         let response: NSApplication.ModalResponse
         if let window {
-            response = await withCheckedContinuation { continuation in
-                alert.beginSheetModal(for: window) { continuation.resume(returning: $0) }
+            response = await withTaskCancellationHandler {
+                guard !Task.isCancelled else { return .abort }
+                return await withCheckedContinuation { continuation in
+                    alert.beginSheetModal(for: window) { continuation.resume(returning: $0) }
+                }
+            } onCancel: {
+                Task { @MainActor in window.endSheet(alert.window, returnCode: .abort) }
             }
         } else {
+            guard externalClientName == nil else { return .decline }
             response = alert.runModal()
         }
+
+        guard !Task.isCancelled else { return .decline }
 
         switch response {
         case .alertFirstButtonReturn:

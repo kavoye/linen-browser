@@ -32,7 +32,7 @@ struct AssistantToolSettingsTests {
         defaultModel: "small-model"
     )
 
-    private func makeModel(onChange: @escaping () -> Void) -> (IntelligenceViewModel, TestProviderCatalog) {
+    private func makeModel(onVoiceChange: (() -> Void)? = nil, onChange: @escaping () -> Void) -> (IntelligenceViewModel, TestProviderCatalog) {
         let catalog = TestProviderCatalog(providers: [Self.inUse, Self.other], selectedID: Self.inUse.id)
         let credentials = TestCredentialStore()
         let model = IntelligenceViewModel(
@@ -40,9 +40,30 @@ struct AssistantToolSettingsTests {
             credentials: credentials,
             modelProviders: ModelProviderRegistry(credentials: credentials),
             contextProbe: SilentContextProbe(),
+            onVoiceConfigurationChanged: onVoiceChange,
             onConfigurationChanged: onChange
         )
         return (model, catalog)
+    }
+
+    @Test func voiceEditsDoNotRestartTheBrowserAgent() {
+        let key = "openai.options." + Self.inUse.id
+        let previous = UserDefaults.standard.object(forKey: key)
+        defer { UserDefaults.standard.set(previous, forKey: key) }
+        OpenAISettingsStore.save(.init(), providerID: Self.inUse.id)
+        var agentChanges = 0
+        var voiceChanges = 0
+        let (model, _) = makeModel(onVoiceChange: { voiceChanges += 1 }, onChange: { agentChanges += 1 })
+        var settings = OpenAIResponseSettings()
+        settings.voice.voice = "marin"
+        model.saveOpenAISettings(settings)
+        #expect(voiceChanges == 1)
+        #expect(agentChanges == 0)
+        settings.verbosity = "high"
+        model.saveOpenAISettings(settings)
+        #expect(agentChanges == 1)
+        model.saveOpenAISettings(settings)
+        #expect(agentChanges == 1)
     }
 
     private func withCleanDefaults(_ body: (IntelligenceViewModel, @escaping () -> Int) -> Void) {

@@ -8,18 +8,30 @@ nonisolated struct AgentTaskContext: Sendable, Equatable {
     let tabID: UUID
     let spaceID: UUID
     let mentionedTabIDs: [UUID]
+    let attachments: [AssistantAttachment]
+    let attachmentTextOnly: Bool
+    let isContinuation: Bool
 
-    init(id: UUID, tabID: UUID, spaceID: UUID? = nil, mentionedTabIDs: [UUID] = []) {
+    init(
+        id: UUID, tabID: UUID, spaceID: UUID? = nil, mentionedTabIDs: [UUID] = [],
+        attachments: [AssistantAttachment] = [], attachmentTextOnly: Bool = false,
+        isContinuation: Bool = false
+    ) {
         self.id = id
         self.tabID = tabID
         self.spaceID = spaceID ?? tabID
         self.mentionedTabIDs = mentionedTabIDs
+        self.attachments = attachments
+        self.attachmentTextOnly = attachmentTextOnly
+        self.isContinuation = isContinuation
     }
 }
 
 @MainActor
 protocol AgentRunner: AnyObject {
     var name: String { get }
+    var supportsCompaction: Bool { get }
+    func compactContext(forTab tabID: UUID) async throws -> Bool
     func prepare()
     func discardSession(forTab tabID: UUID)
     func discardAllSessions()
@@ -32,6 +44,15 @@ protocol AgentRunner: AnyObject {
     ) async
 }
 
+extension AgentRunner {
+    var supportsCompaction: Bool {
+        false
+    }
+    func compactContext(forTab tabID: UUID) async throws -> Bool {
+        false
+    }
+}
+
 enum AgentInstructions {
     nonisolated enum Tier: Hashable, Sendable {
         case compact
@@ -39,13 +60,28 @@ enum AgentInstructions {
     }
 
     static func text(for tier: Tier) -> String {
-        switch tier {
+        let base = switch tier {
         case .compact:
             compact
         case .full:
             full
         }
+        return base + "\n" + progressGuidance
     }
+
+    private static let progressGuidance = """
+        Keep the user informed during multi-step work. Use updateProgress before your first browser \
+        action to say what you will do, then after a meaningful finding, a change of approach, or \
+        several actions without an update. Use one or two natural sentences about the work and \
+        observed results, not tool names or private internal reasoning. Never claim an action \
+        succeeded before checking its result. Verify the requested outcome: for a save, check the \
+        saved record or reload when persistence matters. A click or submission request alone does \
+        not establish completion. State when the outcome remains unverified. Avoid repeating yourself or narrating every click. \
+        Do not echo passwords, payment details, or sensitive field values. When possible, propose \
+        the update and your next browser tool together. Continue working after an update; use \
+        your normal final response only when finished or when you need the user. For a simple \
+        question needing no tools, answer directly without a progress update.
+        """
 
     private static let compact = """
         You are Linen, the voice agent driving the user's browser. Answer in 1-3 short plain \
@@ -58,7 +94,7 @@ enum AgentInstructions {
         do anything.
         Rules:
         - readPage returns the page text and numbers every control: [7] button "Add to Bag". \
-        Act by that ref with clickOnPage or typeOnPage, and readPage again after the page changes.
+        Act with its ref, pageID, and observationID. Use the fresh observation in action results; read again only when stale or missing needed content.
         - For anything factual or current: searchWeb, then navigate to the most promising \
         result, and read it. Report concrete findings: names, models, prices, places.
         - NEVER enter login, payment, or checkout flows: stop and hand over to the user.
@@ -77,8 +113,7 @@ enum AgentInstructions {
         conversation works with - the pages on screen and any tabs the user attached. Use it to \
         resolve references like "the Nike one" or "which is cheaper" across those pages. A reference \
         to "the first item", a list, or content is about the ACTIVE page - readPage answers it, the \
-        context list does not. Other tabs are outside this conversation: they are never listed, and \
-        switchTab, closeTab and readPage do not reach them.
+        context list does not. listTabs can show other tab titles, but reading and controlling remain limited to pages in context.
         Tabs marked ON SCREEN are in split view: up to four pages share the window and the user sees \
         them all at once. They are one workspace and one conversation, so "these pages", "all of them", \
         "compare them" and "the other one" mean those pages, in the order the list marks them. Resolve \
@@ -86,9 +121,8 @@ enum AgentInstructions {
         when the list already says. readPage takes a page argument - a title, a host, a position word \
         the list used ("left", "right", "top", "bottom"), or "first" to "fourth" - to read another page \
         on screen; leave it empty for the ACTIVE one. Read each of them in turn, then answer from all \
-        of them. Clicking, typing and scrolling always land on the ACTIVE page, so switchTab to another \
-        page on screen before acting on it - that moves the focus inside the split without hiding \
-        anything - and readPage again there for refs that belong to it.
+        of them. Pass the returned pageID explicitly when acting across pages. Empty targets use the research page \
+        after navigate, or the active tab after switchTab. Use "research" to target research explicitly.
         Tabs marked MENTIONED were attached to the request by the user. readPage reads one by its title \
         or host without switching to it. They are readable only - to click or type there, switchTab \
         first so the user sees the page you act on. Tabs with no mark and not on screen are not yours \
@@ -104,11 +138,17 @@ enum AgentInstructions {
         - You fully drive the browser: navigate (researches and reads a page), clickOnPage, typeOnPage \
         (search boxes, forms), selectOption (dropdowns), scrollPage, goBack, readPage. readPage numbers \
         every control: [7] button "Add to Bag". Act by that ref number - it names exactly one element; \
-        a label matches the first element carrying it, so use labels only when you haven't read the \
-        page. If an action says the element is gone, readPage again for fresh refs. Pass lookingFor to \
+        Supply the observationID returned with those refs. Ambiguous labels are refused. If an action says the element is gone, readPage again for fresh refs. Pass lookingFor to \
         readPage to get the part of the page about it. After acting you see the updated page, so verify \
         the effect before saying it worked. NEVER enter login, payment, or checkout flows: stop and \
         hand over to the user.
+        - For several independent text fields or dropdowns on one page, use fillFields. It never \
+        submits. If a batch stops early, inspect fresh control values to identify remaining fields; \
+        the count does not identify which fields retained their values. Never repeat fields already filled. After each action, use the returned \
+        fresh observationID, controls, and validation messages. Reuse that result without another read.
+        - Use lookingFor, scope, viewportOnly, and continuation offsets to read only needed content. Use \
+        inspectControl for dropdown options, setChecked for an explicit checked state, waitForPage for \
+        asynchronous changes, and screenshotPage only when visual layout matters. Never invent a ref or observationID.
         - Tabs are tasks and separate conversation sessions; pages sharing a window in split view are one \
         session between them. The current request already belongs to what is on screen. Use newTab only \
         when the user explicitly asks for another tab. switchTab and closeTab reach only pages in this \

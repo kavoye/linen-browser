@@ -37,27 +37,23 @@ struct AgentReplyModelTests {
         #expect(reply.activity == nil)
         #expect(reply.text == "Done")
 
-        for _ in 0..<100 {
-            if reply.text == nil {
-                break
-            }
-            await Task.yield()
-        }
-        #expect(reply.text == nil)
+        #expect(await waitUntil { reply.text == nil })
         #expect(!reply.isVisible)
     }
 
     @Test func aNewStreamCancelsTheOldFade() async {
-        let reply = AgentReplyModel()
+        let clock = TestClock()
+        let retention = Duration.seconds(1)
+        let reply = AgentReplyModel(clock: clock)
         reply.beginStream()
         reply.update(text: "Old reply")
-        reply.endStream(retainFor: 0)
+        reply.endStream(retainFor: 1)
+        #expect(await waitUntil { clock.pendingCount == 1 })
 
         reply.beginStream()
         reply.update(text: "New reply")
-        for _ in 0..<100 {
-            await Task.yield()
-        }
+        #expect(await waitUntil { clock.pendingCount == 0 })
+        clock.advance(by: retention)
 
         #expect(reply.isStreaming)
         #expect(reply.text == "New reply")

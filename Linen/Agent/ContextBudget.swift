@@ -8,6 +8,11 @@ nonisolated struct ContextBudget: Hashable, Sendable {
         var pageTextCharacters: Int
         var controlLimit: Int
 
+        var driverBudget: PageOutputBudget {
+            PageOutputBudget(textCharacters: pageTextCharacters, controls: controlLimit,
+                             totalCharacters: controlLimit <= 12 ? 2000 : 6000)
+        }
+
         static let standard = Self(pageTextCharacters: 2_400, controlLimit: 40)
     }
 
@@ -18,7 +23,6 @@ nonisolated struct ContextBudget: Hashable, Sendable {
     let instructionTier: AgentInstructions.Tier
     let toolTier: AgentToolTier
     let toolOutput: ToolOutputBudget
-    let maxToolCalls: Int
     let retainedExchanges: Int
     let retainedToolRounds: Int
 
@@ -29,7 +33,8 @@ nonisolated struct ContextBudget: Hashable, Sendable {
     static func resolve(
         windowTokens: Int,
         desiredResponseTokens: Int,
-        toolCount: Int? = nil
+        toolCount: Int? = nil,
+        measuredSchemaTokens: Int? = nil
     ) -> Self {
         let window = max(2_048, windowTokens)
         let response = max(256, min(desiredResponseTokens, window / 4))
@@ -38,7 +43,7 @@ nonisolated struct ContextBudget: Hashable, Sendable {
         let compact = window < 16_384
 
         let instructionTokens = compact ? 300 : 1_300
-        let schemaTokens = toolCount.map { max(150, $0 * 75) } ?? (compact ? 500 : 1_200)
+        let schemaTokens = measuredSchemaTokens.map { max(150, $0) } ?? toolCount.map { max(150, $0 * 75) } ?? (compact ? 500 : 1_200)
         let conversation = max(512, input - instructionTokens - schemaTokens)
 
         let output: ToolOutputBudget
@@ -60,7 +65,6 @@ nonisolated struct ContextBudget: Hashable, Sendable {
             instructionTier: compact ? .compact : .full,
             toolTier: compact ? .core : .full,
             toolOutput: output,
-            maxToolCalls: compact ? max(3, min(8, conversation / 300)) : 20,
             retainedExchanges: compact ? max(1, min(4, conversation / 800)) : 12,
             retainedToolRounds: compact ? 1 : 3
         )
@@ -68,14 +72,31 @@ nonisolated struct ContextBudget: Hashable, Sendable {
 }
 
 nonisolated enum ContextWindow {
+    enum Source: Sendable {
+        case configured, discovered, documented, fallback
+    }
+
+    struct Resolution: Sendable {
+        let tokens: Int
+        let source: Source
+    }
+
     static func tokens(for provider: Provider, model: String) -> Int {
+        resolve(for: provider, model: model).tokens
+    }
+
+    static func resolve(for provider: Provider, model: String) -> Resolution {
         if let override = LLMSettings.contextWindow(for: provider) {
-            return override
+            return Resolution(tokens: override, source: .configured)
         }
         if let discovered = LLMSettings.discoveredContextWindow(for: provider, model: model) {
-            return discovered
+            return Resolution(tokens: discovered, source: .discovered)
         }
-        return switch provider.adapter {
+        if provider.baseURL?.host() == "api.openai.com",
+           ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-astra"].contains(model) {
+            return Resolution(tokens: 1_050_000, source: .documented)
+        }
+        let fallback = switch provider.adapter {
         case .system:
             4_096
         case .anthropic:
@@ -87,6 +108,7 @@ nonisolated enum ContextWindow {
         case .openAICompatible:
             provider.isLocal ? 4_096 : 128_000
         }
+        return Resolution(tokens: fallback, source: .fallback)
     }
 }
 

@@ -141,9 +141,7 @@ struct AgentSpaceTests {
         #expect(left.isAgentWorking)
         #expect(right.isAgentWorking)
 
-        for _ in 0..<10_000 where turns.isRunning {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !(turns.isRunning) })
         #expect(!turns.isRunning)
         #expect(!left.isAgentWorking)
         #expect(!right.isAgentWorking)
@@ -225,17 +223,13 @@ struct AgentSpaceTests {
         let task = try #require(turns.activeTask)
         // The runner registers its continuation on its first suspension; a
         // release before that would resume nothing.
-        for _ in 0..<10_000 where runner.started == 0 {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !(runner.started == 0) })
 
         turns.reassignSpace(from: left.id, to: right.id)
         #expect(log.reassigned.isEmpty)
 
         runner.release(task.id)
-        for _ in 0..<10_000 where turns.isRunning {
-            await Task.yield()
-        }
+        #expect(await waitUntil { !(turns.isRunning) })
         #expect(log.reassigned == [.init(from: left.id, to: right.id)])
         #expect(runner.transferred == [.init(from: left.id, to: right.id)])
         #expect(turns.reply.spaceID == right.id)

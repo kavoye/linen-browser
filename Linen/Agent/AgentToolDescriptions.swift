@@ -4,7 +4,7 @@
 extension AgentToolkit {
     nonisolated enum Descriptions {
         static let searchWeb = """
-            Search the web in this task's private research page. Return the top links and summaries.
+            Search one to four queries concurrently, optionally restricted to a domain. Return deduplicated links and summaries within one response budget.
             """
         static let navigate = """
             Open a web URL in this task's private research page. Return its rendered text and controls.
@@ -30,8 +30,8 @@ extension AgentToolkit {
         static let closeTab = "Close the active tab, or close a tab in this conversation by part of its title."
         static let readPage = """
             Read a page on screen and list each control with a [ref] number. Use lookingFor to return \
-            the relevant part, and page to read another pane of a split window. Read again after the \
-            page changes.
+            the relevant part. Pass pageID when targeting another page. Use pagination for more content. \
+            Actions return fresh observations; read again when stale or missing needed content.
             """
         static let clickOnPage = """
             Click a control by its [ref], or by its label when no ref is available. The browser asks \
@@ -43,7 +43,7 @@ extension AgentToolkit {
             passwords, payment details, codes, and account or identity numbers.
             """
         static let selectOption = "Choose a visible option in a select control by its [ref] or label."
-        static let scrollPage = "Scroll the current page up or down one screen."
+        static let scrollPage = "Scroll up, down, left, or right. Supply a ref inside a container to scroll that container."
         static let goBack = "Go back one page."
         static let playVideo = "Find a video by topic and play it in a background tab."
         static let closeVideo = "Pause the video and close the media player. Keep its tab open."

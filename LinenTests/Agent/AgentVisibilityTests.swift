@@ -41,28 +41,18 @@ struct AgentVisibilityTests {
         let observation = await PageDriver.readRenderedPage(webView)
         let ref = try #require(observation.contains("[1]") ? 1 : nil)
 
-        async let clicking = PageDriver.click(ref: ref, label: "", in: webView, announced: true)
-
-        // Sample during the announce pause: ring present, effect absent.
-        var sawRingBeforeEffect = false
-        let sampleDeadline = ContinuousClock.now + .seconds(5)
-        while ContinuousClock.now < sampleDeadline {
-            let rings = await ringCount(webView)
-            let hit = (try? await webView.evaluateJavaScript("window.__hit === true")) as? Bool ?? false
-            if rings > 0, !hit {
-                sawRingBeforeEffect = true
-                break
-            }
-            if hit {
-                break
-            }
-            try? await Task.sleep(for: .milliseconds(20))
+        let clock = TestClock()
+        try await PageDriver.$pauseSleeper.withValue({ try? await clock.sleep(for: $0) }) {
+            let clicking = Task { await PageDriver.click(ref: ref, label: "", in: webView, announced: true) }
+            defer { clicking.cancel() }
+            try #require(await waitUntil { clock.pendingCount == 1 })
+            #expect(await ringCount(webView) > 0)
+            #expect((try? await webView.evaluateJavaScript("window.__hit === true")) as? Bool == false)
+            clock.advance(by: PageDriver.announcePause)
+            let result = await clicking.value
+            #expect(result.hasPrefix("Clicked"))
+            #expect((try? await webView.evaluateJavaScript("window.__hit === true")) as? Bool == true)
         }
-
-        let result = await clicking
-        #expect(result.hasPrefix("Clicked"))
-        #expect(sawRingBeforeEffect, "the ring should be visible before the click takes effect")
-        #expect((try? await webView.evaluateJavaScript("window.__hit === true")) as? Bool == true)
     }
 
     /// Nothing the ring draws survives its moment: it fades and removes
@@ -141,15 +131,7 @@ struct AgentVisibilityTests {
         #expect(preview.isLive)
         #expect(preview.snapshot == nil, "begin clears the previous task's frame")
 
-        var frames = 0
-        for _ in 0..<40 {
-            if preview.snapshot != nil {
-                frames += 1
-                break
-            }
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-        #expect(frames > 0, "a frame should arrive within the loop's first ticks")
+        #expect(await waitUntil { preview.snapshot != nil })
 
         preview.end()
         #expect(!preview.isLive)
@@ -159,9 +141,13 @@ struct AgentVisibilityTests {
     /// No research surface, no frames - and no crash asking for them.
     @Test func thePreviewLoopIdlesWhenThereIsNothingToShow() async {
         let preview = ResearchPreview()
-        preview.source = { nil }
+        var requests = 0
+        preview.source = {
+            requests += 1
+            return nil
+        }
         preview.begin()
-        try? await Task.sleep(for: .milliseconds(400))
+        #expect(await waitUntil { requests > 0 })
         #expect(preview.snapshot == nil)
         preview.end()
     }

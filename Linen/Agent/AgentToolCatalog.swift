@@ -76,6 +76,13 @@ nonisolated enum AgentToolCatalog {
             isCore: true
         ),
         AgentToolDescriptor(
+            id: "fillFields",
+            title: "Fill Multiple Fields",
+            summary: "Fill several text fields or dropdowns together without submitting.",
+            category: .page,
+            isCore: false
+        ),
+        AgentToolDescriptor(
             id: "selectOption",
             title: "Choose From Menus",
             summary: "Pick an option in a dropdown menu.",
@@ -89,6 +96,12 @@ nonisolated enum AgentToolCatalog {
             category: .page,
             isCore: true
         ),
+        AgentToolDescriptor(id: "hoverOnPage", title: "Hover", summary: "Reveal content by hovering over a control.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "pressKey", title: "Press Keys", summary: "Use keyboard controls on a page.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "inspectControl", title: "Inspect Controls", summary: "Read control state and dropdown options.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "setChecked", title: "Set Checkboxes", summary: "Set a checkbox or radio selection.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "waitForPage", title: "Wait for Page Changes", summary: "Wait for expected text or loading to finish.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "screenshotPage", title: "Capture the Page", summary: "Inspect the current viewport as an image.", category: .page, isCore: false),
         AgentToolDescriptor(
             id: "newTab",
             title: "Open Tabs",

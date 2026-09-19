@@ -9,6 +9,84 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct AgentTurnModelTests {
+    @Test func awaitedTurnReturnsItsLoggedResult() async throws {
+        let fixture = Fixture()
+        fixture.model.use(fixture.runner)
+        let result = try await fixture.model.perform(utterance: "Read the page")
+        #expect(result.text == "Run 1 finished")
+        #expect(result.taskID == fixture.log.completed.first?.id)
+        #expect(fixture.runner.speechWasMuted == [true])
+    }
+
+    @Test func cancellingAnAwaiterDoesNotCancelItsReplacement() async throws {
+        let fixture = Fixture()
+        fixture.runner.waitsForRelease = true
+        fixture.model.use(fixture.runner)
+        let voice = Task { try await fixture.model.perform(utterance: "Voice request") }
+        try #require(await waitUntil { fixture.runner.runs.count == 1 })
+        let first = fixture.runner.runs[0].task.id
+        fixture.model.run(utterance: "Typed request")
+        voice.cancel()
+        try #require(await waitUntil { fixture.runner.runs.count == 2 })
+        let second = fixture.runner.runs[1].task.id
+        do { _ = try await voice.value; Issue.record("Cancelled voice completed") } catch { }
+        #expect(fixture.model.activeTask?.id == second)
+        fixture.runner.release(first)
+        fixture.runner.release(second)
+        #expect(await waitUntil { !fixture.model.isRunning })
+        #expect(fixture.log.cancelled == [first])
+    }
+
+    @Test func cancellingAwaitedTurnEndsItsOwnLog() async throws {
+        let fixture = Fixture()
+        fixture.runner.waitsForRelease = true
+        fixture.model.use(fixture.runner)
+        let voice = Task { try await fixture.model.perform(utterance: "Voice request") }
+        try #require(await waitUntil { fixture.runner.runs.count == 1 })
+        let id = fixture.runner.runs[0].task.id
+        voice.cancel()
+        do { _ = try await voice.value; Issue.record("Cancelled voice completed") } catch { }
+        #expect(fixture.log.cancelled == [id])
+        #expect(!fixture.model.isRunning)
+        fixture.runner.release(id)
+    }
+
+    @Test func continuationDoesNotLogAUserMessage() async throws {
+        let fixture = Fixture(context: "[Pages in context: Fixture]")
+        fixture.model.use(fixture.runner)
+        #expect(fixture.model.run(utterance: "", isContinuation: true))
+        try #require(await waitUntil { fixture.runner.runs.count == 1 })
+        let run = try #require(fixture.runner.runs.first)
+        #expect(run.task.isContinuation)
+        #expect(fixture.log.begun.first?.prompt == "")
+        #expect(!run.utterance.contains(AgentCheckpoint.resumePrompt))
+    }
+
+    @Test func aNewTurnCancelsManualCompactionAndClearsItsStatus() async throws {
+        let fixture = Fixture()
+        fixture.model.use(fixture.runner)
+        fixture.model.compactContext(inSpace: fixture.browser.tabID)
+        #expect(fixture.model.compactingSpaceID == fixture.browser.tabID)
+        try #require(await waitUntil { fixture.runner.compactionStarted })
+        #expect(fixture.model.run(utterance: "Continue working"))
+        #expect(fixture.model.compactingSpaceID == nil)
+        fixture.runner.releaseCompaction()
+        try #require(await waitUntil { fixture.runner.compactionCancelled })
+        #expect(fixture.model.compactionMessage == nil)
+    }
+
+    @Test func manualCompactionDoesNotStartDuringAnActiveTurn() async throws {
+        let fixture = Fixture()
+        fixture.runner.waitsForRelease = true
+        fixture.model.use(fixture.runner)
+        #expect(fixture.model.run(utterance: "Work"))
+        fixture.model.compactContext(inSpace: fixture.browser.tabID)
+        #expect(fixture.model.compactingSpaceID == nil)
+        #expect(!fixture.runner.compactionStarted)
+        try #require(await waitUntil { !fixture.runner.runs.isEmpty })
+        fixture.runner.release(try #require(fixture.runner.runs.first).task.id)
+    }
+
     @Test func switchingProfilesForgetsEveryConversation() {
         let fixture = Fixture()
         fixture.model.use(fixture.runner)
@@ -177,18 +255,6 @@ struct AgentTurnModelTests {
         #expect(await waitUntil { !fixture.model.isRunning })
     }
 
-    private func waitUntil(
-        maxSuspensions: Int = 10_000,
-        _ condition: @escaping @MainActor () -> Bool
-    ) async -> Bool {
-        for _ in 0..<maxSuspensions {
-            if condition() {
-                return true
-            }
-            await Task.yield()
-        }
-        return condition()
-    }
 }
 
 @MainActor
@@ -289,12 +355,31 @@ private final class FakeAgentTurnLog: AgentTurnLogging {
 
 @MainActor
 private final class FakeAgentRunner: AgentRunner {
+    let supportsCompaction = true
+    var compactionStarted = false
+    var compactionCancelled = false
+    private var compactionContinuation: CheckedContinuation<Void, Never>?
+
+    func compactContext(forTab tabID: UUID) async throws -> Bool {
+        compactionStarted = true
+        await withCheckedContinuation { compactionContinuation = $0 }
+        compactionCancelled = Task.isCancelled
+        try Task.checkCancellation()
+        return true
+    }
+
+    func releaseCompaction() {
+        compactionContinuation?.resume()
+        compactionContinuation = nil
+    }
+
     struct Run: Equatable {
         let utterance: String
         let task: AgentTaskContext
     }
 
     let name = "Test runner"
+    var speechWasMuted: [Bool] = []
     var waitsForRelease = false
     private(set) var runs: [Run] = []
     private(set) var released: Set<UUID> = []
@@ -323,6 +408,7 @@ private final class FakeAgentRunner: AgentRunner {
         into reply: AgentReplyModel,
         speech: any SpeechOutput
     ) async {
+        speechWasMuted.append(speech.isMuted)
         let runNumber = runs.count + 1
         runs.append(.init(utterance: utterance, task: task))
         reply.beginStream()

@@ -7,8 +7,10 @@ struct AgentActivityPanel: View {
     let traces: [ConversationLog.TaskTrace]
     let tabID: UUID
     let browser: BrowserModel
-    let onRetry: (String) -> Void
-    let onEdit: (String) -> Void
+    var isCompacting = false
+    var compactionMessage: LocalizedStringResource?
+    let onRetry: (ConversationLog.TaskTrace) -> Void
+    let onEdit: (ConversationLog.TaskTrace) -> Void
     let onSpeak: (String) -> Void
 
     @State private var edges = Edges()
@@ -32,9 +34,24 @@ struct AgentActivityPanel: View {
                             browser: browser,
                             onRetry: onRetry,
                             onEdit: onEdit,
-                            onSpeak: onSpeak
+                            onSpeak: onSpeak,
+                            isLatest: trace.id == traces.last?.id
                         )
                         .id(trace.id)
+                    }
+
+                    if isCompacting {
+                        HStack(spacing: 8) {
+                            Spinner(size: 13)
+                            Text("Compacting context…")
+                        }
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .accessibilityElement(children: .combine)
+                    } else if let compactionMessage {
+                        Text(compactionMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
 
                     Color.clear
@@ -73,10 +90,16 @@ struct AgentActivityPanel: View {
             .onChange(of: traces.last?.response.count) { _, _ in
                 scrollToLatest(using: scrollProxy)
             }
+            .onChange(of: traces.last?.progressUpdates.count) { _, _ in
+                scrollToLatest(using: scrollProxy)
+            }
             .onChange(of: traces.last?.steps.count) { _, _ in
                 scrollToLatest(using: scrollProxy)
             }
             .onChange(of: traces.last?.state) { _, _ in
+                scrollToLatest(using: scrollProxy)
+            }
+            .onChange(of: isCompacting) { _, _ in
                 scrollToLatest(using: scrollProxy)
             }
         }
@@ -100,8 +123,8 @@ enum AssistantChatMetrics {
 
 private enum Metrics {
     static let gutter: CGFloat = 12
-    static let railIndent: CGFloat = 20
-    static let railWidth: CGFloat = 12
+    static let railIndent: CGFloat = action + 5
+    static let railWidth: CGFloat = action
     static let traceGap: CGFloat = 16
     static let turnGap: CGFloat = 7
 
@@ -143,14 +166,18 @@ struct AgentUsageSummary: View {
             Text("\(usage.requestCount) req")
             Text(verbatim: "·")
                 .foregroundStyle(.tertiary)
-            Text("\(usage.inputTokens.formatted(.number.notation(.compactName))) in")
+            if usage.inputTokens > 0 || usage.outputTokens > 0 {
+                Text("\(usage.inputTokens.formatted(.number.notation(.compactName))) in")
             if let cacheHitRate {
                 Text("(\(cacheHitRate.formatted(.percent.precision(.fractionLength(0)))) cached)")
                     .foregroundStyle(.tertiary)
             }
             Text(verbatim: "·")
                 .foregroundStyle(.tertiary)
-            Text("\(usage.outputTokens.formatted(.number.notation(.compactName))) out")
+                Text("\(usage.outputTokens.formatted(.number.notation(.compactName))) out")
+            } else {
+                Text("Token usage unavailable")
+            }
         }
         .font(.system(size: 10, design: .monospaced))
         .monospacedDigit()
@@ -192,7 +219,7 @@ private struct AgentActivityEmptyState: View {
             .foregroundStyle(.secondary)
             .lineLimit(1)
 
-            Text("This chat reads the page it is open beside, and keeps its own thread per tab. Type @ to let it read another tab too.")
+            Text("Each tab has a separate chat with access to its page. Type @ to include another tab.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -207,9 +234,11 @@ private struct AgentTaskTraceView: View {
     let trace: ConversationLog.TaskTrace
     let tabID: UUID
     let browser: BrowserModel
-    let onRetry: (String) -> Void
-    let onEdit: (String) -> Void
+    let onRetry: (ConversationLog.TaskTrace) -> Void
+    let onEdit: (ConversationLog.TaskTrace) -> Void
     let onSpeak: (String) -> Void
+
+    var isLatest = true
 
     @State private var showsSteps: Bool?
     @State private var hovering = false
@@ -224,27 +253,32 @@ private struct AgentTaskTraceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.turnGap) {
-            ChatUserMessage(
-                text: trace.prompt,
-                when: Self.when(trace),
-                showsActions: hovering,
-                onEdit: { onEdit(trace.prompt) },
-                onCopy: { copy(trace.prompt) },
-                onRetry: { onRetry(trace.prompt) }
-            )
+            if !trace.attachments.isEmpty {
+                AttachmentList(files: trace.attachments)
+                if trace.attachmentTextOnly, trace.attachments.contains(where: { !$0.images.isEmpty }) {
+                    Text("This model received the extracted text. Visual details weren’t included.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if trace.hasUserPrompt {
+                ChatUserMessage(
+                    text: trace.prompt,
+                    when: Self.when(trace),
+                    showsActions: hovering,
+                    onEdit: { onEdit(trace) },
+                    onCopy: { copy(trace.prompt) },
+                    onRetry: { onRetry(trace) }
+                )
+            }
 
             VStack(alignment: .leading, spacing: 5) {
-                ChatAssistantMessage(
-                    text: trace.response,
-                    state: trace.state,
-                    onRetry: { onRetry(trace.prompt) },
-                    onOpenLink: open(_:)
-                )
-
                 ChatTurnFooter(
                     label: workLabel,
                     providerID: trace.providerID,
                     stepCount: trace.steps.count,
+                    hasProgress: !trace.progressUpdates.isEmpty,
+                    hasSummary: !(trace.checkpoint?.openAI?.presentation?.summaries.isEmpty ?? true),
                     isThinking: isThinking,
                     stepsAreShown: stepsAreShown,
                     showsActions: hovering && !trace.response.isEmpty,
@@ -255,26 +289,19 @@ private struct AgentTaskTraceView: View {
                     onSpeak: { onSpeak(trace.response) }
                 )
 
-                if stepsAreShown, !trace.steps.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(trace.steps.enumerated(), id: \.element.id) { index, step in
-                            AgentActivityStepRow(
-                                title: step.title,
-                                toolName: step.toolName,
-                                detail: step.detail,
-                                links: step.links,
-                                state: step.state,
-                                connectsAbove: index > 0,
-                                connectsBelow: index < trace.steps.count - 1,
-                                tabID: tabID,
-                                browser: browser
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3)
-                    .frame(maxWidth: AssistantChatMetrics.steps, alignment: .leading)
-                    .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
+                if stepsAreShown {
+                    AgentWorkHistory(trace: trace, tabID: tabID, browser: browser)
+                }
+
+                ChatAssistantMessage(
+                    text: trace.response,
+                    state: trace.state,
+                    onRetry: { onRetry(trace) },
+                    onOpenLink: open(_:),
+                    allowsContinuation: isLatest
+                )
+                if let output = trace.checkpoint?.openAI?.presentation {
+                    OpenAIOutputView(output: output, providerID: trace.providerID, onOpenLink: open(_:))
                 }
             }
         }
@@ -284,9 +311,12 @@ private struct AgentTaskTraceView: View {
         .contextMenu {
             Button("Copy Answer") { copy(trace.response) }
                 .disabled(trace.response.isEmpty)
-            Button("Copy Question") { copy(trace.prompt) }
-            Button("Ask Again") { onRetry(trace.prompt) }
-            Button("Edit Question") { onEdit(trace.prompt) }
+            if trace.hasUserPrompt {
+                Button("Copy Question") { copy(trace.prompt) }
+                Button("Ask Again") { onRetry(trace) }
+                Button("Edit Question") { onEdit(trace) }
+            }
+            Button("Copy Diagnostics") { copy(trace.diagnostics.exported()) }
             Divider()
             Button("Speak Answer") { onSpeak(trace.response) }
                 .disabled(trace.response.isEmpty)
@@ -327,6 +357,67 @@ private struct AgentTaskTraceView: View {
         return Duration.seconds(seconds).formatted(
             .units(allowed: [.seconds], width: .narrow, fractionalPart: .show(length: places))
         )
+    }
+}
+
+private struct AgentWorkHistory: View {
+    let trace: ConversationLog.TaskTrace
+    let tabID: UUID
+    let browser: BrowserModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let summaries = trace.checkpoint?.openAI?.presentation?.summaries, !summaries.isEmpty {
+                AgentReasoningSummary(summaries: summaries)
+            }
+            ForEach(0...trace.steps.count, id: \.self) { index in
+                ForEach(trace.progressUpdates.filter { $0.afterStepCount == index }) { update in
+                    Text(verbatim: update.text)
+                        .font(.system(size: 13))
+                        .lineSpacing(3)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 9)
+                }
+                if index < trace.steps.count {
+                    let step = trace.steps[index]
+                    AgentActivityStepRow(
+                        title: step.title, toolName: step.toolName,
+                        detail: step.detail, links: step.links, state: step.state,
+                        connectsAbove: index > 0 && !trace.progressUpdates.contains { $0.afterStepCount == index },
+                        connectsBelow: index < trace.steps.count - 1 && !trace.progressUpdates.contains { $0.afterStepCount == index + 1 },
+                        tabID: tabID, browser: browser
+                    )
+                    .frame(maxWidth: AssistantChatMetrics.steps, alignment: .leading)
+                }
+            }
+        }
+        .padding(.vertical, 5)
+    }
+}
+
+private struct AgentReasoningSummary: View {
+    let summaries: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Reasoning summary")
+                .font(Theme.Font.caption.weight(.medium))
+            Text(verbatim: summaries.joined(separator: "\n\n"))
+                .font(.system(size: 12))
+                .lineSpacing(3)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 12)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Theme.Wash.strong)
+                .frame(width: 2)
+        }
+        .padding(.vertical, 8)
     }
 }
 
@@ -375,7 +466,7 @@ private struct ChatUserMessage: View {
     }
 }
 
-struct ChatBubble: Shape {
+nonisolated struct ChatBubble: Shape {
     static let tail: CGFloat = 4
     static let drop: CGFloat = 2.5
 
@@ -430,6 +521,8 @@ private struct ChatAssistantMessage: View {
     let onRetry: () -> Void
     let onOpenLink: (URL) -> Void
 
+    var allowsContinuation = true
+
     private var isStreaming: Bool {
         state == .running
     }
@@ -461,8 +554,14 @@ private struct ChatAssistantMessage: View {
                     Button("Try Again", action: onRetry)
                         .buttonStyle(AgentInlineButtonStyle())
                 }
-            case .cancelled:
-                AgentOutcomeChip(label: "Stopped", tint: .secondary)
+            case .paused, .cancelled:
+                HStack(spacing: 8) {
+                    AgentOutcomeChip(label: "Paused", tint: .secondary)
+                    if allowsContinuation {
+                        Button("Continue", action: onRetry)
+                            .buttonStyle(AgentInlineButtonStyle())
+                    }
+                }
             case .running, .completed:
                 EmptyView()
             }
@@ -476,6 +575,8 @@ private struct ChatTurnFooter: View {
     let label: String
     let providerID: String?
     let stepCount: Int
+    let hasProgress: Bool
+    let hasSummary: Bool
     let isThinking: Bool
     let stepsAreShown: Bool
     let showsActions: Bool
@@ -485,27 +586,29 @@ private struct ChatTurnFooter: View {
 
     @State private var copied = false
 
-    private var showsTheTime: Bool {
-        !showsActions || isThinking
-    }
-
     var body: some View {
         HStack(spacing: 5) {
-            if showsTheTime {
-                if isThinking {
-                    ComposingOrb(size: 15)
-                        .frame(width: Metrics.action, height: Metrics.action)
-                } else if let providerID {
-                    ProviderBrandIcon(providerID: providerID, size: 12)
-                }
+            if isThinking {
+                ComposingOrb(size: 15)
+                    .frame(width: Metrics.action, height: Metrics.action)
+            } else if let providerID {
+                ProviderBrandIcon(providerID: providerID, size: 12)
+                    .frame(width: Metrics.railWidth, height: Metrics.action)
+            }
 
-                if !label.isEmpty {
-                    Text(verbatim: label)
-                        .font(Theme.Font.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.tertiary)
-                }
-            } else {
+            if !label.isEmpty {
+                Text(verbatim: label)
+                    .font(Theme.Font.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.tertiary)
+            }
+
+            if stepCount > 0 || hasProgress || hasSummary {
+                StepsToggle(count: stepCount, hasSummary: hasSummary, isShown: stepsAreShown, action: onToggleSteps)
+                    .foregroundStyle(.tertiary)
+            }
+
+            if showsActions && !isThinking {
                 HStack(spacing: 0) {
                     ChatAction(symbol: copied ? "checkmark" : "doc.on.doc", help: "Copy this answer") {
                         onCopy()
@@ -517,12 +620,6 @@ private struct ChatTurnFooter: View {
                     }
                     ChatAction(symbol: "speaker.wave.2", help: "Read this answer aloud", action: onSpeak)
                 }
-                .padding(.leading, -3)
-            }
-
-            if stepCount > 0 {
-                StepsToggle(count: stepCount, isShown: stepsAreShown, action: onToggleSteps)
-                    .foregroundStyle(.tertiary)
             }
 
             Spacer(minLength: 0)
@@ -534,6 +631,7 @@ private struct ChatTurnFooter: View {
 
 private struct StepsToggle: View {
     let count: Int
+    let hasSummary: Bool
     let isShown: Bool
     let action: () -> Void
 
@@ -543,9 +641,13 @@ private struct StepsToggle: View {
         Button(action: action) {
             HStack(spacing: 3) {
                 Text(verbatim: "·")
-                Text("\(count) steps")
-                    .font(Theme.Font.caption)
-                    .monospacedDigit()
+                if hasSummary {
+                    Text("Details").font(Theme.Font.caption)
+                } else if count > 0 {
+                    Text("\(count) steps").font(Theme.Font.caption).monospacedDigit()
+                } else {
+                    Text("Updates").font(Theme.Font.caption)
+                }
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .bold))
                     .rotationEffect(.degrees(isShown ? 0 : -90))
@@ -556,7 +658,8 @@ private struct StepsToggle: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
-        .help(isShown ? Text("Hide the steps") : Text("Show the steps"))
+        .help(isShown ? Text("Hide details") : Text("Show details"))
+        .accessibilityValue(isShown ? Text("Expanded") : Text("Collapsed"))
     }
 }
 
@@ -668,7 +771,8 @@ private struct AgentActivityStepRow: View {
             }
         }
         .padding(.leading, Metrics.railIndent)
-        .padding(.vertical, 4)
+        .padding(.top, 4)
+        .padding(.bottom, connectsBelow ? 14 : 4)
         .overlay(alignment: .leading) {
             AgentBreadcrumbNode(
                 connectsAbove: connectsAbove,
@@ -740,7 +844,7 @@ private struct AgentBreadcrumbNode: View {
                     path.addLine(to: CGPoint(x: centerX, y: proxy.size.height))
                 }
             }
-            .stroke(lineColor, lineWidth: lineWidth)
+            .stroke(lineColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt))
 
             if state == .running {
                 Circle()

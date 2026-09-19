@@ -44,7 +44,24 @@ struct AgentToolsTests {
         }
     }
 
-    @Test func theTableIsExactlyTheseSixteenTools() {
+    @Test func actionsRequireTheObservationTheyUseAndSchemasAreMeasured() throws {
+        for tool in tools().filter({ ["clickOnPage", "typeOnPage", "fillFields", "selectOption", "setChecked", "pressKey", "hoverOnPage"].contains($0.name) }) {
+            let data = try JSONEncoder().encode(tool.parameters)
+            var schema = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            if let reference = schema["$ref"] as? String, let name = reference.split(separator: "/").last,
+               let definitions = schema["$defs"] as? [String: [String: Any]] {
+                schema = try #require(definitions[String(name)])
+            }
+            #expect((schema["required"] as? [String])?.contains("observationID") == true, "\(tool.name)")
+        }
+        let actual = tools() + [UpdateProgressTool()]
+        let measured = estimatedToolSchemaTokens(actual)
+        let budget = ContextBudget.resolve(windowTokens: 128_000, desiredResponseTokens: 4000, measuredSchemaTokens: measured)
+        #expect(budget.toolSchemaTokens == measured)
+        #expect(measured > actual.count * 75)
+    }
+
+    @Test func theTableIncludesFormBatching() {
         #expect(Set(tools().map(\.name)) == [
             "askUser",
             "searchWeb",
@@ -56,6 +73,13 @@ struct AgentToolsTests {
             "readPage",
             "clickOnPage",
             "typeOnPage",
+            "fillFields",
+            "inspectControl",
+            "setChecked",
+            "waitForPage",
+            "screenshotPage",
+            "hoverOnPage",
+            "pressKey",
             "selectOption",
             "scrollPage",
             "goBack",

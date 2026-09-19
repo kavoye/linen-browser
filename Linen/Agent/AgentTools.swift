@@ -13,10 +13,14 @@ nonisolated struct WebSearchTool: Tool {
     struct Arguments {
         @Guide(description: "The search query")
         var query: String
+        @Guide(description: "Up to three additional independent queries to search concurrently.")
+        var additionalQueries: [String]?
+        @Guide(description: "Optional domain restriction, such as example.com.")
+        var domain: String?
     }
 
     func call(arguments: Arguments) async throws -> String {
-        await toolkit.searchWeb(query: arguments.query)
+        await toolkit.searchWeb(query: arguments.query, additionalQueries: arguments.additionalQueries ?? [], domain: arguments.domain ?? "")
     }
 }
 
@@ -131,12 +135,26 @@ nonisolated struct ReadPageTool: Tool {
     struct Arguments {
         @Guide(description: "What you are looking for; the text returned is the part of the page about this. Empty for the top of the page.")
         var lookingFor: String
-        @Guide(description: "Which page on screen to read, by title, site name, or position (\"left\", \"right\", \"top\", \"bottom\", or \"first\" to \"fourth\"). Empty for the active one.")
+        @Guide(
+            description:
+                "Page ID, title, site, split position, or research. Empty for the current target."
+        )
         var page: String
+        @Guide(description: "Continuation offset for page text; omit for the first excerpt.")
+        var textOffset: Int?
+        @Guide(description: "Continuation offset for controls; omit for the first page.")
+        var controlOffset: Int?
+        @Guide(description: "Optional CSS selector restricting the control list.")
+        var scope: String?
+        @Guide(description: "Only controls in the viewport when true.")
+        var viewportOnly: Bool?
+
     }
 
     func call(arguments: Arguments) async throws -> String {
-        await toolkit.readPage(lookingFor: arguments.lookingFor, page: arguments.page)
+        await toolkit.readPage(
+            lookingFor: arguments.lookingFor, page: arguments.page, textOffset: arguments.textOffset ?? 0, controlOffset: arguments.controlOffset ?? 0,
+            scope: arguments.scope ?? "", viewportOnly: arguments.viewportOnly ?? false)
     }
 }
 
@@ -147,6 +165,11 @@ nonisolated struct ClickOnPageTool: Tool {
 
     @Generable
     struct Arguments {
+        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        var page: String?
+        @Guide(description: "Exact observationID from the latest read or action result.")
+        var observationID: String
+
         @Guide(description: "The [N] ref of the element, from the last readPage. 0 to match by label instead.")
         var ref: Int
         @Guide(description: "The visible label to match instead, e.g. \"Add to Bag\". Empty when using ref.")
@@ -154,7 +177,12 @@ nonisolated struct ClickOnPageTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        await toolkit.clickOnPage(ref: arguments.ref, label: arguments.label)
+        guard !arguments.observationID.isEmpty else {
+            return await toolkit.rejectTool(name: name, reason: "Read the page first and provide its observationID.")
+        }
+        return await toolkit.withPageContext(page: arguments.page, observationID: arguments.observationID) {
+            await toolkit.clickOnPage(ref: arguments.ref, label: arguments.label)
+        }
     }
 }
 
@@ -165,6 +193,11 @@ nonisolated struct TypeOnPageTool: Tool {
 
     @Generable
     struct Arguments {
+        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        var page: String?
+        @Guide(description: "Exact observationID from the latest read or action result.")
+        var observationID: String
+
         @Guide(description: "The text to type")
         var text: String
         @Guide(description: "The [N] ref of the field, from the last readPage. 0 to match by label instead.")
@@ -176,12 +209,56 @@ nonisolated struct TypeOnPageTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        await toolkit.typeOnPage(
-            text: arguments.text,
-            field: arguments.field,
-            ref: arguments.ref,
-            submit: arguments.submit
-        )
+        guard !arguments.observationID.isEmpty else {
+            return await toolkit.rejectTool(name: name, reason: "Read the page first and provide its observationID.")
+        }
+        return await toolkit.withPageContext(page: arguments.page, observationID: arguments.observationID) {
+            await toolkit.typeOnPage(
+                text: arguments.text,
+                field: arguments.field,
+                ref: arguments.ref,
+                submit: arguments.submit
+            )
+        }
+    }
+}
+
+nonisolated struct FillFieldsTool: Tool {
+    let name = "fillFields"
+    let description = """
+        Fill up to eight independent fields or dropdowns without submitting. Use the latest observation. \
+        Stops if the page changes; check the completed count before continuing.
+        """
+    let toolkit: AgentToolkit
+
+    @Generable
+    struct Field {
+        @Guide(description: "The field ref from the latest page observation")
+        var ref: Int
+        @Guide(description: "Text to enter, or the dropdown option to select")
+        var value: String
+        @Guide(description: "True for a dropdown, false for a text field")
+        var select: Bool
+    }
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        var page: String?
+        @Guide(description: "Exact observationID from the latest read or action result.")
+        var observationID: String
+
+        @Guide(description: "One to eight independent fields, in order; never login or payment fields")
+        var fields: [Field]
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        guard !arguments.observationID.isEmpty else {
+            return await toolkit.rejectTool(name: name, reason: "Read the page first and provide its observationID.")
+        }
+        return await toolkit.withPageContext(page: arguments.page, observationID: arguments.observationID) {
+            await toolkit.fillFields(arguments.fields.map { .init(ref: $0.ref, value: $0.value, select: $0.select) })
+        }
     }
 }
 
@@ -192,6 +269,11 @@ nonisolated struct SelectOptionTool: Tool {
 
     @Generable
     struct Arguments {
+        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        var page: String?
+        @Guide(description: "Exact observationID from the latest read or action result.")
+        var observationID: String
+
         @Guide(description: "The visible text of the option to choose")
         var option: String
         @Guide(description: "The [N] ref of the select, from the last readPage. 0 to match by label instead.")
@@ -201,7 +283,12 @@ nonisolated struct SelectOptionTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        await toolkit.selectOption(arguments.option, ref: arguments.ref, field: arguments.field)
+        guard !arguments.observationID.isEmpty else {
+            return await toolkit.rejectTool(name: name, reason: "Read the page first and provide its observationID.")
+        }
+        return await toolkit.withPageContext(page: arguments.page, observationID: arguments.observationID) {
+            await toolkit.selectOption(arguments.option, ref: arguments.ref, field: arguments.field)
+        }
     }
 }
 
@@ -212,12 +299,23 @@ nonisolated struct ScrollPageTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "Either \"down\" or \"up\"")
+        @Guide(description: "up, down, left, or right")
         var direction: String
+        var page: String?
+        var observationID: String?
+        @Guide(description: "Optional control inside a scrollable container; omit for the document.") var ref: Int?
     }
 
     func call(arguments: Arguments) async throws -> String {
-        await toolkit.scrollPage(direction: arguments.direction)
+        await toolkit.withPageContext(page: arguments.page, observationID: arguments.observationID) {
+            if let ref = arguments.ref, ref > 0 {
+                guard arguments.observationID != nil else { return "Provide observationID for a container ref." }
+                return await toolkit.pageOperation(name: name) { view in
+                    await PageDriver.scroll(direction: arguments.direction, ref: ref, in: view)
+                }
+            }
+            return await toolkit.scrollPage(direction: arguments.direction)
+        }
     }
 }
 
@@ -228,12 +326,11 @@ nonisolated struct GoBackTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "Always \"back\"")
-        var confirm: String
+        var page: String?
     }
 
     func call(arguments: Arguments) async throws -> String {
-        await toolkit.goBack()
+        await toolkit.withPageContext(page: arguments.page, observationID: nil) { await toolkit.goBack() }
     }
 }
 
@@ -259,10 +356,7 @@ nonisolated struct CloseVideoTool: Tool {
     let toolkit: AgentToolkit
 
     @Generable
-    struct Arguments {
-        @Guide(description: "Always \"close\"")
-        var confirm: String
-    }
+    struct Arguments {}
 
     func call(arguments: Arguments) async throws -> String {
         await toolkit.closeVideo()
@@ -276,7 +370,7 @@ nonisolated struct ControlMediaTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "One of: \"pip\", \"exitPip\", \"expand\", \"collapse\"")
+        @Guide(description: "One of: \"pip\", \"exitPip\"")
         var action: String
     }
 
@@ -319,9 +413,23 @@ func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any 
             SwitchTabTool(toolkit: toolkit),
             CloseTabTool(toolkit: toolkit),
             SelectOptionTool(toolkit: toolkit),
+            FillFieldsTool(toolkit: toolkit),
+            InspectControlTool(toolkit: toolkit),
+            SetCheckedTool(toolkit: toolkit),
+            WaitForPageTool(toolkit: toolkit),
+            ScreenshotPageTool(toolkit: toolkit),
+            HoverOnPageTool(toolkit: toolkit),
+            PressKeyTool(toolkit: toolkit),
             PlayVideoTool(toolkit: toolkit),
             CloseVideoTool(toolkit: toolkit),
             ControlMediaTool(toolkit: toolkit),
         ]
+    }
+}
+
+nonisolated func estimatedToolSchemaTokens(_ tools: [any Tool]) -> Int {
+    tools.reduce(0) { count, tool in
+        let bytes = (try? JSONEncoder().encode(tool.parameters).count) ?? 600
+        return count + (bytes + tool.name.utf8.count + tool.description.utf8.count + 3) / 4 + 16
     }
 }

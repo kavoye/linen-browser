@@ -20,6 +20,50 @@ struct ConversationLogTests {
         return (ConversationLog(database: database), database)
     }
 
+    @Test func voiceTurnsUpdateWithoutDuplicatesAndSurviveRelaunch() {
+        let (log, database) = makeLog()
+        let space = UUID(), turn = UUID()
+        let write = log.voiceTranscriptWriter(tabID: space, providerID: "openai")
+        write(turn, "What is on this page?", "It has")
+        write(turn, "What is on this page?", "It has three links.")
+        write(turn, "What is on this page?", "")
+        #expect(log.traces.count == 1)
+        #expect(log.traces.first?.providerID == "openai")
+        log.saveBlocking()
+        let reopened = ConversationLog(database: database)
+        #expect(reopened.exchanges(forTab: space) == [.init(prompt: "What is on this page?", response: "It has three links.")])
+        #expect(reopened.traces(forTab: UUID()).isEmpty)
+    }
+
+    @Test func voiceDeltasDoNotRestoreDeletedOrClearedHistory() {
+        let (log, _) = makeLog()
+        let space = UUID(), first = UUID()
+        let write = log.voiceTranscriptWriter(tabID: space, providerID: "openai")
+        write(first, "Hello", "Hi")
+        log.removeTrace(first)
+        write(first, "Hello", "Hi again")
+        #expect(log.traces.isEmpty)
+        log.clearAll()
+        write(UUID(), "Late words", "Late reply")
+        #expect(log.traces.isEmpty)
+        let next = log.voiceTranscriptWriter(tabID: space, providerID: "openai")
+        next(UUID(), "New voice chat", "Hello")
+        #expect(log.traces.count == 1)
+    }
+
+    @Test func voiceWriterDoesNotCrossProfileChangesOrCancelBrowserWork() {
+        let (log, _) = makeLog()
+        let space = UUID()
+        let task = log.beginTask("Inspect the page", tabID: space)
+        let write = log.voiceTranscriptWriter(tabID: space, providerID: "openai")
+        write(UUID(), "Tell me about it", "I will check.")
+        #expect(log.traces.first { $0.id == task }?.state == .running)
+        #expect(log.isRunning(onTab: space))
+        log.adopt(database: .temporary())
+        write(UUID(), "Old profile", "Must not appear")
+        #expect(log.traces.isEmpty)
+    }
+
     /// "Clear browsing data" has to reach this file. A trace names the pages
     /// the agent visited, so history cleared with the traces left behind is a
     /// list of exactly what was cleared.
@@ -105,6 +149,32 @@ struct ConversationLogTests {
         #expect(trace.finishedAt != nil)
         #expect(trace.steps.allSatisfy { $0.state != .running })
         #expect(!reopened.isRunning(onTab: tab))
+    }
+
+    @Test func repairsSuccessfullyFinishedTurnsWhoseStateWasNotCommitted() throws {
+        let (log, database) = makeLog()
+        let runningTab = UUID()
+        let cancelledTab = UUID()
+
+        for (tab, wasAlreadyRepaired) in [(runningTab, false), (cancelledTab, true)] {
+            let task = log.beginTask("finished", tabID: tab)
+            log.updateResponse("Done.", taskID: task)
+            var diagnostics = AgentRunDiagnostics()
+            diagnostics.record(AgentEvaluationEvent(kind: "terminal", values: ["status": "completed"]))
+            log.setDiagnostics(diagnostics, taskID: task)
+            if wasAlreadyRepaired {
+                log.cancelTask(task)
+            }
+        }
+        log.saveBlocking()
+
+        let reopened = ConversationLog(database: database)
+        for tab in [runningTab, cancelledTab] {
+            let trace = try #require(reopened.latestTrace(forTab: tab))
+            #expect(trace.state == .completed)
+            #expect(!trace.canContinue)
+            #expect(trace.response == "Done.")
+        }
     }
 
     @Test func closingATabTakesItsHistoryWithIt() {
@@ -272,10 +342,10 @@ struct ConversationLogTests {
         let reopened = ConversationLog(database: database)
         let trace = try #require(reopened.latestTrace(forTab: tab))
         let restored = try #require(trace.steps.first { $0.toolName == "searchWeb" })
-        #expect(restored.links == [link])
-        #expect(restored.detail == "one result")
+        #expect(restored.links.isEmpty)
+        #expect(restored.detail == nil)
         // Order is a column, not an accident of how rows came back.
-        #expect(trace.steps.map(\.title) == ["Search", "Open"])
+        #expect(trace.steps.map(\.title) == ["Search web", "Open page"])
     }
 
     @Test func clearingLeavesNoStepsBehind() throws {

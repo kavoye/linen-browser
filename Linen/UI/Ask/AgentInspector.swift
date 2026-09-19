@@ -106,12 +106,8 @@ struct AgentInspector: View {
         return coordinator.conversationLog.failureCount(forTab: activeSpaceID)
     }
 
-    private var usage: ConversationLog.Usage {
-        guard let activeSpaceID else { return .zero }
-        return coordinator.conversationLog.usage(forTab: activeSpaceID)
-    }
-
-    @State private var seed: String?
+    @State private var seed: ConversationLog.TaskTrace?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var pendingQuestion: AgentQuestionModel.Ask? {
         coordinator.agentQuestions.ask(inSpace: activeSpaceID)
@@ -119,23 +115,50 @@ struct AgentInspector: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ResearchGlimpse(preview: coordinator.researchPreview, activeSpaceID: activeSpaceID)
-                .padding(.horizontal, 12)
+            ZStack {
+                if coordinator.isVoiceConversationPresented {
+                    AssistantVoiceConversationView(coordinator: coordinator, needsAnswer: pendingQuestion != nil)
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94, anchor: .center)))
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ResearchGlimpse(preview: coordinator.researchPreview, activeSpaceID: activeSpaceID)
+                            .padding(.horizontal, 12)
 
-            if let activeTabID {
-                AgentActivityPanel(
-                    traces: traces,
-                    tabID: activeTabID,
-                    browser: browser,
-                    onRetry: { prompt in
-                        Task { await coordinator.handleTypedUtterance(prompt, showsInChrome: false) }
-                    },
-                    onEdit: { prompt in seed = prompt },
-                    onSpeak: { answer in coordinator.readAloud(answer) }
-                )
-            } else {
-                Spacer(minLength: 0)
+                        if let activeTabID {
+                            AgentActivityPanel(
+                                traces: traces,
+                                tabID: activeTabID,
+                                browser: browser,
+                                isCompacting: coordinator.agentTurns.compactingSpaceID == activeSpaceID
+                                    && coordinator.agentTurns.compactingSpaceID != nil
+                                    || coordinator.agentReply.isCompacting && coordinator.agentReply.spaceID == activeSpaceID,
+                                compactionMessage: coordinator.agentTurns.compactionMessageSpaceID == activeSpaceID
+                                    ? coordinator.agentTurns.compactionMessage : nil,
+                                onRetry: { trace in
+                                    let resumes = trace.canContinue && trace.id == traces.last?.id
+                                    if resumes {
+                                        coordinator.continueAgent()
+                                        return
+                                    }
+                                    Task {
+                                        await coordinator.handleTypedUtterance(
+                                            trace.prompt,
+                                            attachments: trace.attachments,
+                                            showsInChrome: false
+                                        )
+                                    }
+                                },
+                                onEdit: { prompt in seed = prompt },
+                                onSpeak: { answer in coordinator.readAloud(answer) }
+                            )
+                        } else {
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 12)))
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: pendingQuestion == nil ? .infinity : nil)
 
             if pendingQuestion != nil {
                 AskQuestionBlock(
@@ -152,15 +175,20 @@ struct AgentInspector: View {
                 .modifier(ChatColumn())
             }
 
-            AssistantComposer(coordinator: coordinator, seed: $seed)
-                .padding(.horizontal, 12)
-                .padding(.top, 4)
-                .modifier(ChatColumn())
+            if !coordinator.isVoiceConversationPresented || pendingQuestion != nil {
+                AssistantComposer(coordinator: coordinator, seed: $seed)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 4)
+                    .modifier(ChatColumn())
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom)))
 
-            InspectorFooter(coordinator: coordinator, usage: usage)
-                .padding(.horizontal, 12)
-                .modifier(ChatColumn())
+                InspectorFooter()
+                    .padding(.horizontal, 12)
+                    .modifier(ChatColumn())
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: reduceMotion ? 0.18 : 0.45), value: coordinator.isVoiceConversationPresented)
         .padding(.top, 4)
         .padding(.bottom, 12)
         .onChange(of: isShowing, initial: true) { _, _ in
@@ -237,15 +265,8 @@ private struct ResearchGlimpse: View {
 }
 
 private struct InspectorFooter: View {
-    let coordinator: AppCoordinator
-    let usage: ConversationLog.Usage
-
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            if usage.requestCount > 0 {
-                AgentUsageSummary(usage: usage)
-            }
-
             Text(AIDisclosure.replyCaption)
                 .font(Theme.Font.micro)
                 .foregroundStyle(.tertiary)

@@ -36,10 +36,7 @@ struct AskPageChip: View {
 
             Group {
                 if let icon {
-                    Image(nsImage: icon)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFit()
+                    FaviconImage(image: icon)
                         .clipShape(RoundedRectangle(cornerRadius: iconRadius, style: .continuous))
                 } else {
                     Image(systemName: "globe")

@@ -91,11 +91,11 @@ struct AskSurface: View {
 
                 OmniboxList(
                     sections: sections,
-                    query: model.interaction.text,
+                    query: model.resultQuery,
                     selection: model.interaction.selection,
                     density: .compact,
                     containerRadius: model.placement.cornerRadius,
-                    onSelect: { model.interaction.selection = $0 },
+                    onSelect: { model.selectSuggestion(at: $0, in: sections) },
                     onRun: { model.run(at: $0, in: sections) }
                 )
                 .transition(.opacity)
@@ -125,6 +125,18 @@ struct AskSurface: View {
                 status: status,
                 isFocused: model.isFocused
             )
+        }
+        .overlay(alignment: .top) {
+            if model.placement == .toolbar, let tab = model.browser.activeTab {
+                AddressLoadingIndicator(
+                    progress: tab.progress,
+                    isLoading: tab.isLoading,
+                    isSuppressed: model.isFocused || model.pendingQuestion != nil
+                )
+                .id(tab.id)
+                .frame(height: max(model.placement.rowHeight, model.interaction.rowHeight))
+                .clipShape(RoundedRectangle(cornerRadius: model.placement.cornerRadius, style: .continuous))
+            }
         }
         .transformEnvironment(\.colorScheme) { if model.isPrivate { $0 = .dark } }
         .transformEnvironment(\.chromeIsLight) { if model.isPrivate { $0 = false } }

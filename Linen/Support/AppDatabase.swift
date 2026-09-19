@@ -74,7 +74,7 @@ struct AppDatabase: Sendable {
             writer = pool
             isEphemeral = false
         } catch {
-            Pipeline.log.error("db: opening \(url.path, privacy: .public) failed: \(error, privacy: .public)")
+            Pipeline.log.error("Database open failed; using temporary storage")
             writer = Self.memoryWriter()
             isEphemeral = true
         }
@@ -100,6 +100,9 @@ struct AppDatabase: Sendable {
     private static var configuration: Configuration {
         var configuration = Configuration()
         configuration.foreignKeysEnabled = true
+        configuration.prepareDatabase { db in
+            try db.execute(sql: "PRAGMA secure_delete = ON")
+        }
         return configuration
     }
 
@@ -177,6 +180,12 @@ struct AppDatabase: Sendable {
             }
         }
 
+        try db.create(table: "agentAttachments", options: .ifNotExists) { t in
+            t.primaryKey("traceID", .blob).references("agentTrace", onDelete: .cascade)
+            t.column("payload", .blob).notNull()
+            t.column("textOnly", .boolean).notNull().defaults(to: false)
+        }
+
         try db.create(table: "agentStep", options: .ifNotExists) {  t in
             t.primaryKey("id", .blob)
             t.column("traceID", .blob)
@@ -191,6 +200,18 @@ struct AppDatabase: Sendable {
             t.column("detail", .text)
             t.column("links", .text).notNull()
             t.column("state", .text).notNull()
+        }
+
+        let traceColumns = try db.columns(in: "agentTrace").map(\.name)
+        if !traceColumns.contains("stopReason") {
+            try db.alter(table: "agentTrace") { t in
+                t.add(column: "stopReason", .text)
+                t.add(column: "diagnostics", .blob)
+            }
+        }
+        try db.create(table: "agentConversationMemory", options: .ifNotExists) { t in
+            t.primaryKey("traceID", .blob).references("agentTrace", onDelete: .cascade)
+            t.column("payload", .blob).notNull()
         }
 
         try db.create(table: "agentUsage", options: .ifNotExists) {  t in

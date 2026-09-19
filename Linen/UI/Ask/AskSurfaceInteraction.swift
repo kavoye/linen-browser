@@ -88,6 +88,26 @@ struct AskSurfaceInteraction: Equatable {
         return !text.contains(" ")
     }
 
+    static func mentionCandidates(
+        fragment: String,
+        tabs: [BrowserTab],
+        mentionedTabIDs: Set<UUID>,
+        activeTabID: UUID?
+    ) -> [BrowserTab] {
+        let needle = fragment.lowercased()
+        let candidates = tabs.filter { tab in
+            !tab.isShowingSystemPage
+                && !tab.hasNoPageYet
+                && !mentionedTabIDs.contains(tab.id)
+                && (needle.isEmpty
+                    || tab.title.lowercased().contains(needle)
+                    || tab.urlString.lowercased().contains(needle))
+        }
+        let current = candidates.filter { $0.id == activeTabID }
+        let others = candidates.filter { $0.id != activeTabID }
+        return Array((current + others).prefix(5))
+    }
+
     static func removingMentionFragment(from text: String) -> String {
         guard mentionFragment(in: text) != nil,
               let at = text.lastIndex(of: "@")
@@ -255,16 +275,13 @@ enum AskSurfaceResults {
         activeTabID: UUID?,
         mention: @escaping (BrowserTab) -> Void
     ) -> OmniboxSection? {
-        let candidates = tabs.filter { tab in
-            tab.id != activeTabID
-                && !tab.isShowingSystemPage
-                && !tab.hasNoPageYet
-                && !mentions.contains { $0.id == tab.id }
-                && (fragment.isEmpty
-                    || tab.title.lowercased().contains(fragment)
-                    || tab.urlString.lowercased().contains(fragment))
-        }
-        let items = candidates.prefix(5).map { tab in
+        let candidates = AskSurfaceInteraction.mentionCandidates(
+            fragment: fragment,
+            tabs: tabs,
+            mentionedTabIDs: Set(mentions.map(\.id)),
+            activeTabID: activeTabID
+        )
+        let items = candidates.map { tab in
             let host = URL(string: tab.urlString)?.displayHost
             return OmniboxItem(
                 id: "mention-\(tab.id)",

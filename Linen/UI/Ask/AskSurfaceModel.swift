@@ -14,7 +14,8 @@ final class AskSurfaceModel {
 
     var interaction = AskSurfaceInteraction() {
         didSet {
-            if oldValue.text != interaction.text {
+            if oldValue.text != interaction.text, !isPreviewingSelection {
+                suggestionPreview.clear()
                 suggestions.update(for: MentionText.stripped(interaction.text))
             }
         }
@@ -22,6 +23,10 @@ final class AskSurfaceModel {
     private(set) var isFocused = false
     private(set) var mentionedTabIDs: [UUID] = []
     private(set) var selectAllToken = 0
+    private var isPreviewingSelection = false
+    private var suggestionPreview = OmniboxSuggestionPreview()
+
+    var resultQuery: String { suggestionPreview.query ?? interaction.text }
 
     init(placement: AskSurface.Placement, browser: BrowserModel, coordinator: AppCoordinator) {
         self.placement = placement
@@ -109,7 +114,8 @@ final class AskSurfaceModel {
     }
 
     func resultSections() -> [OmniboxSection] {
-        AskSurfaceResults.sections(
+        if isFocused, !isListening, let sections = suggestionPreview.sections { return sections }
+        return AskSurfaceResults.sections(
             placement: placement,
             query: interaction.text,
             isFocused: isFocused,
@@ -223,10 +229,20 @@ final class AskSurfaceModel {
 
     func moveSelection(by delta: Int, in sections: [OmniboxSection]) {
         interaction.moveSelection(by: delta, resultCount: sections.flattened.count)
+        selectSuggestion(at: interaction.selection, in: sections)
     }
 
     func moveSection(by delta: Int, in sections: [OmniboxSection]) {
         interaction.moveSection(by: delta, itemCounts: sections.map(\.items.count))
+        selectSuggestion(at: interaction.selection, in: sections)
+    }
+
+    func selectSuggestion(at index: Int, in sections: [OmniboxSection]) {
+        guard let text = suggestionPreview.select(at: index, in: sections, query: interaction.text) else { return }
+        isPreviewingSelection = true
+        defer { isPreviewingSelection = false }
+        interaction.text = text
+        interaction.selection = index
     }
 
     func finishEditing() {
@@ -288,6 +304,7 @@ final class AskSurfaceModel {
         guard isFocused != focused else { return }
         isFocused = focused
         if !focused {
+            suggestionPreview.clear()
             suggestions.clear()
         }
     }

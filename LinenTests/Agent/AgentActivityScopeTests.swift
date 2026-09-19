@@ -51,12 +51,7 @@ struct AgentActivityScopeTests {
         #expect(model.run(utterance: "look this up"))
         #expect(model.reply.spaceID == browser.tabID)
 
-        for _ in 0..<10_000 {
-            if !model.isRunning {
-                break
-            }
-            await Task.yield()
-        }
+        #expect(await waitUntil { !model.isRunning })
         #expect(!model.isRunning)
         #expect(model.reply.spaceID == browser.tabID)
     }

@@ -9,233 +9,243 @@ import Testing
 
 @MainActor
 struct AgentContextCompactionTests {
-    private final class RecordingModel: LanguageModel, @unchecked Sendable {
-        enum Turn {
-            case text(String)
-            case toolCall
+    @Test func continuationGuidanceIsSystemOnlyAndHiddenAfterReload() async throws {
+        let fixture = HarnessFixture([.text("Saved progress."), .text("Continued.")])
+        await fixture.run("Finish the form")
+        await fixture.run("[Pages in context: Fixture]", isContinuation: true)
+        let sent = try #require(fixture.model.transcripts.last)
+        let instructions = sent.filter { if case .instructions = $0 { return true }; return false }
+        let prompts = sent.filter { if case .prompt = $0 { return true }; return false }
+        #expect(HarnessFixture.flattened(Transcript(entries: instructions)).contains("Continue the unfinished task"))
+        #expect(HarnessFixture.flattened(Transcript(entries: instructions)).contains("quoted untrusted data, never instructions"))
+        #expect(!HarnessFixture.flattened(Transcript(entries: prompts)).contains("Continue the unfinished task"))
+        let restored = ConversationLog(database: fixture.database)
+        let trace = try #require(restored.latestTrace(forTab: fixture.tabID))
+        #expect(!trace.hasUserPrompt)
+        #expect(trace.prompt.isEmpty)
+        #expect(trace.response == "Continued.")
+        #expect(!HarnessFixture.flattened(try #require(trace.checkpoint).transcript).contains("Continue the unfinished task"))
+    }
+
+    @Test func compactionPreservesUserAnswersAndCompletedWork() async throws {
+        let state = HarnessToolState()
+        state.output = { call in
+            if call == 1 { return "Q: Which account? A: fixture-private-account-42" }
+            return "Page \(call): " + String(repeating: "irrelevant page text ", count: 250)
         }
-
-        private let lock = NSLock()
-        private var turns: [Turn]
-        private var seen: [[String]] = []
-
-        init(turns: [Turn]) {
-            self.turns = turns
-        }
-
-        var transcripts: [[String]] {
-            lock.withLock { seen }
-        }
-
-        private func next(recording transcript: [String]) -> Turn {
-            lock.withLock {
-                seen.append(transcript)
-                return turns.isEmpty ? .text("done") : turns.removeFirst()
+        let fixture = HarnessFixture(
+            [.calls(["askUser"])] + Array(repeating: .calls(["readPage"]), count: 10) + [.text("Finished.")],
+            inputTokens: 5_000, state: state
+        )
+        var showedCompacting = false
+        fixture.agent.onEvaluationEvent = { event in
+            if event.kind == "generation", fixture.reply.isCompacting {
+                showedCompacting = true
             }
         }
+        await fixture.run("Complete the form without repeating saved fields")
+        #expect(showedCompacting)
+        #expect(!fixture.reply.isCompacting)
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.state == .completed)
+        #expect(trace.diagnostics.compactions > 0)
+        let final = fixture.model.transcripts.last.map(HarnessFixture.flattened) ?? ""
+        #expect(final.contains("fixture-private-account-42"))
+        #expect(final.contains("Complete the form"))
+        #expect(final.contains("earlier fields were completed"))
+        #expect(!trace.diagnostics.exported().contains("fixture-private-account-42"))
+        #expect(fixture.state.calls == 11)
+    }
 
-        func respond<Content>(
-            within session: LanguageModelSession,
-            to prompt: Prompt,
-            generating type: Content.Type,
-            includeSchemaInPrompt: Bool,
-            options: GenerationOptions
-        ) async throws -> LanguageModelSession.Response<Content> where Content: Generable {
-            switch next(recording: Self.flatten(session.transcript)) {
-            case .text(let text):
-                guard let content = text as? Content else {
-                    fatalError("the recording model only generates String")
-                }
-                return .init(
-                    content: content,
-                    rawContent: GeneratedContent(text),
-                    transcriptEntries: []
-                )
-            case .toolCall:
-                let call = Transcript.ToolCall(
-                    id: UUID().uuidString,
-                    toolName: "readPage",
-                    arguments: GeneratedContent(properties: [:])
-                )
-                var entries: [Transcript.Entry] = [.toolCalls(.init([call]))]
-                if let delegate = session.toolExecutionDelegate {
-                    await delegate.didGenerateToolCalls([call], in: session)
-                    switch await delegate.toolCallDecision(for: call, in: session) {
-                    case .stop:
-                        break
-                    case .execute, .provideOutput:
-                        let output = Transcript.ToolOutput(
-                            id: call.id,
-                            toolName: "readPage",
-                            segments: [.text(.init(content: String(repeating: "page text. ", count: 40)))]
-                        )
-                        await delegate.didExecuteToolCall(call, output: output, in: session)
-                        entries.append(.toolOutput(output))
-                    }
-                }
-                guard let content = "" as? Content else {
-                    fatalError("the recording model only generates String")
-                }
-                return .init(
-                    content: content,
-                    rawContent: GeneratedContent(""),
-                    transcriptEntries: entries[...]
-                )
-            }
+    @Test func roomyContextKeepsToolResultsAcrossFollowupAndReload() async throws {
+        let fixture = HarnessFixture([.calls(["askUser", "typeOnPage"]), .text("Done.")])
+        await fixture.run()
+        let restored = HarnessFixture([.text("I remember.")], database: fixture.database, tabID: fixture.tabID)
+        await restored.run("Continue")
+        let text = restored.model.transcripts.first.map(HarnessFixture.flattened) ?? ""
+        #expect(text.contains("Observed state 1"))
+        #expect(text.contains("Observed state 2"))
+    }
+
+    @Test func overflowAfterAnActionCompactsWithoutRestartingTheTask() async throws {
+        let state = HarnessToolState()
+        state.output = { _ in String(repeating: "long tool output ", count: 600) }
+        let overflow = LanguageModelSession.GenerationError.exceededContextWindowSize(.init(debugDescription: "fixture"))
+        let fixture = HarnessFixture([.calls(["typeOnPage"]), .failure(overflow), .text("Recovered.")], state: state)
+        await fixture.run()
+        #expect(fixture.state.calls == 1)
+        #expect(fixture.reply.text == "Recovered.")
+        #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.diagnostics.events.contains { $0.kind == "overflow_recovery" } == true)
+    }
+
+    @Test func failedCompactionPausesWithTheOriginalCheckpointIntact() async throws {
+        let fixture = HarnessFixture([.calls(["readPage"])], inputTokens: 1)
+        fixture.model.summary = ""
+        await fixture.run("Keep this exact user instruction")
+        #expect(fixture.state.calls == 0)
+        #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.stopReason == .contextLimit)
+        #expect(!fixture.reply.isCompacting)
+    }
+
+    @Test func manualCompactionPersistsSmallerContextWithoutChangingTheChatOrRunningTools() async throws {
+        let state = HarnessToolState()
+        state.output = { call in
+            call == 1 ? "Q: Which account? A: fixture-private-account-42"
+                : String(repeating: "older page evidence ", count: 400)
         }
+        let fixture = HarnessFixture(
+            [.calls(["askUser"])] + Array(repeating: .calls(["readPage"]), count: 4) + [.text("Saved everything.")],
+            state: state
+        )
+        await fixture.run("Save the form")
+        let before = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        let tokensBefore = fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens
+        #expect(try await fixture.agent.compactContext(forTab: fixture.tabID))
+        let after = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(after.id == before.id)
+        #expect(after.response == before.response)
+        #expect(after.state == .completed)
+        #expect(fixture.state.calls == 5)
+        #expect(fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens < tokensBefore)
+        #expect(after.checkpoint?.userAnswers.contains { $0.contains("fixture-private-account-42") } == true)
+        #expect(after.diagnostics.events.contains { $0.kind == "context_compaction" && $0.values["reason"] == "manual" })
+        #expect(!after.diagnostics.exported().contains("fixture-private-account-42"))
+        fixture.log.saveBlocking()
+        let restored = HarnessFixture([.text("Remembered.")], database: fixture.database, tabID: fixture.tabID)
+        await restored.run("Continue")
+        let context = HarnessFixture.flattened(try #require(restored.model.transcripts.first))
+        #expect(context.contains("fixture-private-account-42"))
+    }
 
-        func streamResponse<Content>(
-            within session: LanguageModelSession,
-            to prompt: Prompt,
-            generating type: Content.Type,
-            includeSchemaInPrompt: Bool,
-            options: GenerationOptions
-        ) -> sending LanguageModelSession.ResponseStream<Content> where Content: Generable {
-            guard let content = "" as? Content else {
-                fatalError("the recording model only generates String")
-            }
-            return .init(content: content, rawContent: GeneratedContent(""))
+    @Test func failedManualCompactionKeepsOriginalContextAndEstimate() async throws {
+        let fixture = HarnessFixture([.text("Done.")])
+        await fixture.run()
+        let original = fixture.log.checkpoint(forTab: fixture.tabID)
+        let tokens = fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens
+        fixture.model.summary = ""
+        await #expect(throws: (any Error).self) {
+            try await fixture.agent.compactContext(forTab: fixture.tabID)
         }
+        #expect(fixture.log.checkpoint(forTab: fixture.tabID) == original)
+        #expect(fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens == tokens)
+    }
 
-        private static func flatten(_ transcript: Transcript) -> [String] {
-            transcript.map { entry in
-                switch entry {
-                case .instructions(let value):
-                    "instructions: " + text(in: value.segments)
-                case .prompt(let value):
-                    "prompt: " + text(in: value.segments)
-                case .response(let value):
-                    "response: " + text(in: value.segments)
-                case .toolCalls(let calls):
-                    "toolCalls: " + calls.map(\.toolName).joined(separator: ",")
-                case .toolOutput(let value):
-                    "toolOutput: " + text(in: value.segments)
-                }
-            }
+    @Test func onDeviceBudgetCompactsRepeatedlyAndKeepsUserDecisions() async throws {
+        let state = HarnessToolState()
+        state.output = { call in
+            if call == 1 { return "Q: Which account? A: fixture-private-account-42" }
+            return "Verified page \(call): " + String(repeating: "fixture evidence ", count: 180)
         }
+        let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 700, toolCount: 3)
+        let fixture = HarnessFixture(
+            [.calls(["askUser"])] + Array(repeating: .calls(["readPage"]), count: 12) + [.text("Finished.")],
+            state: state, contextBudget: budget
+        )
+        await fixture.run("Finish the form. Keep the chosen account.")
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.stopReason == nil)
+        #expect(fixture.reply.text == "Finished.")
+        #expect(trace.diagnostics.compactions > 1)
+        #expect(state.calls == 13)
+        let checkpoint = try #require(trace.checkpoint)
+        #expect(checkpoint.userAnswers.contains { $0.contains("fixture-private-account-42") })
+        #expect(!trace.diagnostics.exported().contains("fixture-private-account-42"))
+    }
 
-        private static func text(in segments: [Transcript.Segment]) -> String {
-            segments.compactMap { segment in
-                if case .text(let text) = segment {
-                    return text.content
-                }
-                return nil
-            }.joined()
+    @Test func hugeHistoryIsSummarizedInBoundedSlicesIncludingBothEnds() async throws {
+        let model = HarnessScript([])
+        let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 700, toolCount: 3)
+        let text = "FIRST_EVIDENCE " + String(repeating: "quoted page evidence ", count: 2_000) + " LAST_EVIDENCE"
+        let transcript = Transcript(entries: [.prompt(.init(segments: [.text(.init(content: text))]))])
+        let summary = try await AgentContextCompactor(model: model, options: .init(), budget: budget)
+            .summarize(transcript) { _, _ in }
+        #expect(!summary.isEmpty)
+        #expect(model.requests.count > 1)
+        #expect(model.requests.allSatisfy { $0.utf8.count < budget.inputTokens * 2 })
+        #expect(model.requests.first?.contains("FIRST_EVIDENCE") == true)
+        #expect(model.requests.last?.contains("LAST_EVIDENCE") == true)
+        #expect(model.requests.dropFirst().allSatisfy { $0.contains("earlier fields were completed") })
+    }
+
+    @Test func summaryOverflowRetriesSmallerSlicesWithoutDroppingEvidence() async throws {
+        let model = HarnessScript([])
+        model.summaryInputLimit = 2_500
+        let budget = ContextBudget.resolve(windowTokens: 16_384, desiredResponseTokens: 700, toolCount: 3)
+        let text = "FIRST_EVIDENCE " + String(repeating: "page evidence ", count: 900) + " LAST_EVIDENCE"
+        let transcript = Transcript(entries: [.prompt(.init(segments: [.text(.init(content: text))]))])
+        _ = try await AgentContextCompactor(model: model, options: .init(), budget: budget)
+            .summarize(transcript) { _, _ in }
+        #expect(model.requests.contains { $0.utf8.count > 2_500 })
+        let accepted = model.requests.filter { $0.utf8.count <= 2_500 }.joined()
+        #expect(accepted.contains("FIRST_EVIDENCE"))
+        #expect(accepted.contains("LAST_EVIDENCE"))
+    }
+
+    @Test func cancelledSummaryLeavesOriginalCheckpointIntact() async throws {
+        let fixture = HarnessFixture([.text("Saved.")])
+        await fixture.run("Keep the original conversation")
+        let original = fixture.log.checkpoint(forTab: fixture.tabID)
+        fixture.model.summaryFailure = CancellationError()
+        await #expect(throws: CancellationError.self) {
+            try await fixture.agent.compactContext(forTab: fixture.tabID)
         }
+        #expect(fixture.log.checkpoint(forTab: fixture.tabID) == original)
     }
 
-    private final class SilentSpeech: SpeechOutput {
-        var isMuted = false
-        var onSpeakingChange: ((Bool) -> Void)?
-
-        func speak(_ text: String) {}
-        func stopSpeaking() {}
-    }
-
-    private static func budget(
-        inputTokens: Int,
-        retainedToolRounds: Int = 1,
-        maxToolCalls: Int = 6
-    ) -> ContextBudget {
-        ContextBudget(
-            windowTokens: 4_096,
-            responseTokens: 1_024,
-            inputTokens: inputTokens,
-            toolSchemaTokens: 0,
-            instructionTier: .compact,
-            toolTier: .core,
-            toolOutput: ContextBudget.ToolOutputBudget(pageTextCharacters: 800, controlLimit: 12),
-            maxToolCalls: maxToolCalls,
-            retainedExchanges: 2,
-            retainedToolRounds: retainedToolRounds
-        )
-    }
-
-    private static func agent(
-        model: any LanguageModel,
-        budget: ContextBudget
-    ) -> AnyLanguageModelAgent {
-        let log = ConversationLog(database: .temporary())
-        return AnyLanguageModelAgent(
-            name: "recording",
-            model: model,
-            options: GenerationOptions(),
-            budget: budget,
-            toolkit: AgentToolkit(
-                browser: BrowserModel(database: .temporary()),
-                media: MediaCenter(),
-                log: log
-            ),
-            log: log
-        )
-    }
-
-    @Test func aTightBudgetTrimsToolRoundsButKeepsTheQuestion() async {
-        let model = RecordingModel(turns: [.toolCall, .toolCall, .toolCall, .text("Found it.")])
-        let subject = Self.agent(model: model, budget: Self.budget(inputTokens: 1))
-        let reply = AgentReplyModel()
-
-        await subject.run(
-            utterance: "What is the first item here?",
-            task: AgentTaskContext(id: UUID(), tabID: UUID()),
-            into: reply,
-            speech: SilentSpeech()
-        )
-
-        #expect(reply.text == "Found it.")
-
-        let transcripts = model.transcripts
-        #expect(transcripts.count == 4)
-
-        for transcript in transcripts.dropFirst() {
-            #expect(
-                transcript.contains { $0.contains("What is the first item here?") },
-                "the user's question was compacted away"
-            )
-            #expect(
-                transcript.filter { $0.hasPrefix("toolOutput:") }.count <= 1,
-                "more than one tool round survived a one-round budget"
-            )
+    @Test func compactionKeepsRecentUserRequestsAndWholeToolRounds() async throws {
+        let state = HarnessToolState()
+        state.output = { _ in String(repeating: "historical page evidence ", count: 300) }
+        let fixture = HarnessFixture([.calls(["readPage"]), .text("Checked.")], state: state)
+        await fixture.run("Use metric units and leave billing unchanged")
+        await fixture.run("Continue with the shipping address")
+        #expect(try await fixture.agent.compactContext(forTab: fixture.tabID))
+        let checkpoint = try #require(fixture.log.checkpoint(forTab: fixture.tabID))
+        let text = HarnessFixture.flattened(checkpoint.transcript)
+        #expect(text.contains("Use metric units and leave billing unchanged"))
+        #expect(text.contains("Continue with the shipping address"))
+        let calls = checkpoint.transcript.flatMap { entry -> [String] in
+            if case .toolCalls(let calls) = entry { return calls.map(\.id) }
+            return []
         }
-
-        let sizes = transcripts.map(\.count)
-        #expect(sizes.max() ?? 0 <= (sizes.first ?? 0) + 4, "the transcript grew unbounded")
+        let outputs = checkpoint.transcript.compactMap { entry -> String? in
+            if case .toolOutput(let output) = entry { return output.id }
+            return nil
+        }
+        #expect(Set(calls) == Set(outputs))
     }
 
-    @Test func aRoomyBudgetLeavesTheTranscriptIntact() async {
-        let model = RecordingModel(turns: [.toolCall, .toolCall, .text("All good.")])
-        let subject = Self.agent(model: model, budget: Self.budget(inputTokens: 100_000))
-        let reply = AgentReplyModel()
-
-        await subject.run(
-            utterance: "Compare these two pages",
-            task: AgentTaskContext(id: UUID(), tabID: UUID()),
-            into: reply,
-            speech: SilentSpeech()
+    @Test func requiredUserAnswersThatCannotFitDoNotReplaceTheCheckpoint() async throws {
+        let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 700, toolCount: 3)
+        let fixture = HarnessFixture([], contextBudget: budget)
+        let id = fixture.log.beginTask("Keep my answers exact", tabID: fixture.tabID)
+        let original = AgentCheckpoint(
+            transcript: Transcript(entries: [.prompt(.init(segments: [.text(.init(content: "Keep my answers exact"))]))]),
+            summary: "Previous checkpoint",
+            userAnswers: [String(repeating: "private fixture answer ", count: 1_000)]
         )
-
-        #expect(reply.text == "All good.")
-
-        let transcripts = model.transcripts
-        let outputsInFinalCall = transcripts.last?.filter { $0.hasPrefix("toolOutput:") }.count ?? 0
-        #expect(outputsInFinalCall == 2, "both tool rounds should still be present")
+        fixture.log.saveCheckpoint(original, taskID: id)
+        fixture.log.completeTask(id, response: "Paused.")
+        await #expect(throws: (any Error).self) {
+            try await fixture.agent.compactContext(forTab: fixture.tabID)
+        }
+        #expect(fixture.log.checkpoint(forTab: fixture.tabID) == original)
     }
 
-    @Test func compactionTruncatesTheToolOutputItKeeps() async {
-        let model = RecordingModel(turns: [.toolCall, .toolCall, .text("Trimmed.")])
-        let subject = Self.agent(model: model, budget: Self.budget(inputTokens: 1))
-        let reply = AgentReplyModel()
-
-        await subject.run(
-            utterance: "Read this",
-            task: AgentTaskContext(id: UUID(), tabID: UUID()),
-            into: reply,
-            speech: SilentSpeech()
+    @Test func chunkedCompactionHonorsTheOptionalRequestLimit() async throws {
+        let state = HarnessToolState()
+        state.output = { _ in String(repeating: "recorded browser evidence ", count: 1_000) }
+        let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 700, toolCount: 3)
+        let fixture = HarnessFixture(
+            [.calls(["readPage"]), .text("Must not run past the limit")],
+            policy: .init(maxModelRequests: 2), state: state, contextBudget: budget
         )
-
-        let kept = model.transcripts.last?.first { $0.hasPrefix("toolOutput:") }
-        let body = kept.map { $0.replacingOccurrences(of: "toolOutput: ", with: "") }
-        #expect(body != nil)
-        #expect((body?.count ?? .max) <= 400, "kept tool output was not truncated to the budget")
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.stopReason == .requestLimit)
+        #expect(trace.diagnostics.modelRequests == 3)
+        #expect(fixture.model.requests.filter { $0.hasPrefix("Create a historical checkpoint") }.count == 1)
+        #expect(state.calls == 1)
+        #expect(trace.checkpoint?.summary.isEmpty == true)
+        #expect(!fixture.reply.isCompacting)
     }
 }

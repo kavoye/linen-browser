@@ -85,6 +85,8 @@ final class MentionTextField: NSTextField {
     }
 
     override func becomeFirstResponder() -> Bool {
+        allowsWritingTools = false
+        allowsWritingToolsAffordance = false
         let accepted = super.becomeFirstResponder()
         if accepted, let editor = currentEditor() as? NSTextView {
             editor.isContinuousSpellCheckingEnabled = false

@@ -52,7 +52,7 @@ struct AgentToolkitPolicyTests {
         #expect(names == [
             "askUser", "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
             "scrollPage", "goBack", "newTab", "listTabs", "switchTab", "closeTab",
-            "selectOption", "playVideo", "closeVideo", "controlMedia",
+            "selectOption", "fillFields", "inspectControl", "setChecked", "waitForPage", "screenshotPage", "hoverOnPage", "pressKey", "playVideo", "closeVideo", "controlMedia",
         ])
     }
 
@@ -196,8 +196,8 @@ struct AgentToolkitPolicyTests {
         _ = await subject.readPage()
 
         let links = log.latestTrace(forTab: tab.id)?.steps.last?.links ?? []
-        #expect(links.map(\.url.absoluteString) == ["https://example.com/story"])
-        #expect(links.first?.title == "The story")
+        #expect(links.isEmpty)
+        #expect(log.latestTrace(forTab: tab.id)?.steps.last?.detail == nil)
         #expect((await subject.navigate(to: "https://example.org/thread")).hasPrefix("For safety"))
     }
 
@@ -293,10 +293,9 @@ struct AgentToolkitPolicyTests {
         let subject = toolkit(browser: browser)
         subject.beginTask(AgentTaskContext(id: UUID(), tabID: taskTab.id))
 
-        // The reference falls back to the lone visible page - a blank one
         // here - and never resolves the background tab.
         let output = await subject.readPage(page: "nike")
-        #expect(output.contains("No webpage is open yet."))
+        #expect(output.contains("No page on screen or mentioned matches"))
         #expect(!output.contains("<page-content"))
     }
 
@@ -404,7 +403,7 @@ struct AgentToolkitPolicyTests {
         let media = MediaCenter()
         let subject = toolkit(browser: browser, media: media, services: safeServices)
 
-        #expect((await subject.playVideo(topic: " music ")).contains("Playing"))
+        #expect((await subject.playVideo(topic: " music ")).contains("Opened the video"))
         #expect(browser.tabs.count == 1)
         #expect(media.model.isActive)
         #expect(subject.controlMedia(action: "pip").contains("Picture in Picture"))
@@ -445,7 +444,7 @@ struct AgentToolkitPolicyTests {
         )
 
         #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL))
-        #expect(output.contains("moved to another website"))
+        #expect(output.contains("moved to another website"), "\(output)")
         #expect(!output.contains("Destination secret"))
         #expect(!output.contains("<page-content"))
     }
@@ -468,7 +467,7 @@ struct AgentToolkitPolicyTests {
         let output = await subject.selectOption("Leave", ref: 0, field: "Choice")
 
         #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL))
-        #expect(output.contains("moved to another website"))
+        #expect(output.contains("moved to another website"), "\(output)")
         #expect(!output.contains("Destination secret"))
         #expect(!output.contains("<page-content"))
     }
@@ -490,7 +489,7 @@ struct AgentToolkitPolicyTests {
         let output = await subject.scrollPage(direction: "down")
 
         #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL))
-        #expect(output.contains("moved to another website"))
+        #expect(output.contains("moved to another website"), "\(output)")
         #expect(!output.contains("Destination secret"))
         #expect(!output.contains("<page-content"))
     }
@@ -518,7 +517,7 @@ struct AgentToolkitPolicyTests {
         let output = await subject.goBack()
 
         #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: earlierURL))
-        #expect(output.contains("moved to another website"))
+        #expect(output.contains("moved to another website"), "\(output)")
         #expect(!output.contains("Earlier secret"))
         #expect(!output.contains("<page-content"))
     }

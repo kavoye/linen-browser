@@ -97,26 +97,46 @@ final class ConversationLog {
             case completed
             case cancelled
             case failed
+            case paused
 
             var isSpoken: Bool {
-                self == .completed || self == .cancelled
+                self == .completed || self == .cancelled || self == .paused
             }
         }
 
         let id: UUID
         var tabID: UUID
-        let prompt: String
+        var prompt: String
         let startedAt: Date
         var steps: [Step]
         var response: String
         var state: State
         var finishedAt: Date?
         let providerID: String?
+        var attachments: [AssistantAttachment] = []
+        var attachmentTextOnly = false
+        var stopReason: AgentStopReason?
+        var diagnostics = AgentRunDiagnostics()
+        var checkpoint: AgentCheckpoint?
+
+        var progressUpdates: [AgentProgressUpdate] {
+            checkpoint?.progressUpdates ?? []
+        }
+
+        var hasUserPrompt: Bool {
+            !prompt.isEmpty && prompt != AgentCheckpoint.resumePrompt
+        }
+
+        var canContinue: Bool {
+            state == .paused || state == .cancelled || state == .failed
+        }
     }
 
     struct Exchange: Equatable {
         let prompt: String
         let response: String
+        var attachments: [AssistantAttachment] = []
+        var attachmentTextOnly = false
     }
 
     private nonisolated struct TraceRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -130,6 +150,21 @@ final class ConversationLog {
         var state: TaskTrace.State
         var finishedAt: Date?
         var providerID: String?
+        var stopReason: AgentStopReason?
+        var diagnostics: Data?
+    }
+
+    private nonisolated struct MemoryRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+        static let databaseTableName = "agentConversationMemory"
+        let traceID: UUID
+        let payload: Data
+    }
+
+    private nonisolated struct AttachmentRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+        static let databaseTableName = "agentAttachments"
+        let traceID: UUID
+        let payload: Data
+        let textOnly: Bool
     }
 
     private nonisolated struct StepRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -162,6 +197,9 @@ final class ConversationLog {
     private(set) var usageByTab: [UUID: Usage] = [:]
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var discardedTabIDs = RecentIDs()
+    @ObservationIgnored private var voiceTraceIDs = RecentIDs()
+    @ObservationIgnored private var historyRevision = UUID()
+    @ObservationIgnored private var dirtyAttachmentIDs: Set<UUID> = []
     @ObservationIgnored private var dirtyTraceIDs: Set<UUID> = []
     @ObservationIgnored private var dirtyUsageTabIDs: Set<UUID> = []
     private var database: AppDatabase
@@ -172,15 +210,41 @@ final class ConversationLog {
     }
 
     func adopt(database: AppDatabase) {
+        historyRevision = UUID()
         saveTask?.cancel()
         saveTask = nil
         self.database = database
         traces = []
         usageByTab = [:]
+        dirtyAttachmentIDs = []
         dirtyTraceIDs = []
         dirtyUsageTabIDs = []
         discardedTabIDs = RecentIDs()
         load()
+    }
+
+    func voiceTranscriptWriter(tabID: UUID, providerID: String) -> (UUID, String, String) -> Void {
+        discardedTabIDs.remove(tabID)
+        let revision = historyRevision
+        return { [weak self] id, prompt, response in
+            guard let self, historyRevision == revision, !discardedTabIDs.contains(tabID),
+                  !prompt.isEmpty || !response.isEmpty else { return }
+            if let index = traces.firstIndex(where: { $0.id == id }) {
+                if !prompt.isEmpty {
+                    traces[index].prompt = prompt
+                }
+                if !response.isEmpty {
+                    traces[index].response = response
+                }
+                traces[index].finishedAt = Date()
+            } else {
+                guard !voiceTraceIDs.contains(id) else { return }
+                voiceTraceIDs.insert(id)
+                traces.append(TaskTrace(id: id, tabID: tabID, prompt: prompt, startedAt: Date(), steps: [],
+                                        response: response, state: .completed, finishedAt: Date(), providerID: providerID))
+            }
+            scheduleSave(trace: id)
+        }
     }
 
     @discardableResult
@@ -204,6 +268,14 @@ final class ConversationLog {
         return taskID
     }
 
+    func setAttachments(_ attachments: [AssistantAttachment], textOnly: Bool, taskID: UUID) {
+        guard !attachments.isEmpty, let index = traces.firstIndex(where: { $0.id == taskID }) else { return }
+        traces[index].attachments = attachments
+        traces[index].attachmentTextOnly = textOnly
+        dirtyAttachmentIDs.insert(taskID)
+        scheduleSave(trace: taskID)
+    }
+
     @discardableResult
     func beginTool(
         taskID: UUID,
@@ -215,7 +287,8 @@ final class ConversationLog {
               traces[traceIndex].state == .running
         else { return nil }
         finishRunningSteps(at: traceIndex)
-        let step = Step(kind: .tool, title: title, toolName: name, detail: detail)
+        let safeName = AgentDiagnosticPrivacy.tool(name)
+        let step = Step(kind: .tool, title: AgentDiagnosticPrivacy.title(for: safeName), toolName: safeName)
         traces[traceIndex].steps.append(step)
         scheduleSave(trace: taskID)
         return step.id
@@ -234,8 +307,8 @@ final class ConversationLog {
               let stepIndex = traces[traceIndex].steps.firstIndex(where: { $0.id == stepID })
         else { return }
 
-        traces[traceIndex].steps[stepIndex].detail = Self.trimmedDetail(detail)
-        traces[traceIndex].steps[stepIndex].links = links
+        traces[traceIndex].steps[stepIndex].detail = nil
+        traces[traceIndex].steps[stepIndex].links = []
         traces[traceIndex].steps[stepIndex].state = failed ? .failed : .completed
         scheduleSave(trace: taskID)
     }
@@ -294,10 +367,67 @@ final class ConversationLog {
         scheduleSave(trace: traces[index].id)
     }
 
-    func recordUsage(tabID: UUID, input: Int, cached: Int, output: Int) {
+    func checkpoint(forTab tabID: UUID) -> AgentCheckpoint? {
+        traces.last(where: { $0.tabID == tabID && $0.checkpoint != nil })?.checkpoint
+    }
+
+    func saveCheckpoint(_ checkpoint: AgentCheckpoint, taskID: UUID) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              !discardedTabIDs.contains(traces[index].tabID) else { return }
+        traces[index].checkpoint = checkpoint
+        let trace = traces[index]
+        writeNow { db in
+            try Self.record(trace).save(db)
+            try MemoryRecord(traceID: taskID, payload: JSONEncoder().encode(checkpoint)).save(db)
+        }
+        scheduleSave(trace: taskID)
+    }
+
+    func persistCheckpoint(taskID: UUID) throws {
+        guard let trace = traces.first(where: { $0.id == taskID }),
+              !discardedTabIDs.contains(trace.tabID), let checkpoint = trace.checkpoint else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try database.writer.write { db in
+            try Self.record(trace).save(db)
+            try MemoryRecord(traceID: taskID, payload: JSONEncoder().encode(checkpoint)).save(db)
+        }
+    }
+
+    func setDiagnostics(_ diagnostics: AgentRunDiagnostics, taskID: UUID) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }) else { return }
+        var safe = diagnostics
+        safe.model = AgentDiagnosticPrivacy.model(diagnostics.model)
+        safe.reasoningEffort = AgentDiagnosticPrivacy.effort(diagnostics.reasoningEffort)
+        traces[index].diagnostics = safe
+        scheduleSave(trace: taskID)
+    }
+
+    func pauseTask(_ taskID: UUID, reason: AgentStopReason, response: String) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              traces[index].state == .running else { return }
+        finishRunningSteps(at: index, failed: true)
+        traces[index].state = .paused
+        traces[index].stopReason = reason
+        traces[index].response = response
+        traces[index].finishedAt = Date()
+        scheduleSave(trace: taskID)
+    }
+
+    func recordModelRequest(tabID: UUID) {
         guard !discardedTabIDs.contains(tabID) else { return }
         var usage = usageByTab[tabID, default: .zero]
         usage.requestCount += 1
+        usageByTab[tabID] = usage
+        scheduleSave(usage: tabID)
+    }
+
+    func recordUsage(tabID: UUID, input: Int, cached: Int, output: Int, countRequest: Bool = true) {
+        guard !discardedTabIDs.contains(tabID) else { return }
+        var usage = usageByTab[tabID, default: .zero]
+        if countRequest {
+            usage.requestCount += 1
+        }
         usage.inputTokens += input
         usage.cachedTokens += cached
         usage.outputTokens += output
@@ -322,7 +452,7 @@ final class ConversationLog {
     }
 
     func failureCount(forTab tabID: UUID) -> Int {
-        traces.count { $0.tabID == tabID && $0.state == .failed }
+        traces.count { $0.tabID == tabID && ($0.state == .failed || $0.state == .paused) }
     }
 
     func latestTrace(forTab tabID: UUID) -> TaskTrace? {
@@ -334,13 +464,16 @@ final class ConversationLog {
     }
 
     func isRunning(onTab tabID: UUID) -> Bool {
-        traces.last { $0.tabID == tabID }?.state == .running
+        traces.contains { $0.tabID == tabID && $0.state == .running }
     }
 
     func exchanges(forTab tabID: UUID, limit: Int? = nil) -> [Exchange] {
         let exchanges = traces.lazy
             .filter { $0.tabID == tabID && $0.state.isSpoken && !$0.response.isEmpty }
-            .map { Exchange(prompt: $0.prompt, response: $0.response) }
+            .map { Exchange(
+                prompt: $0.hasUserPrompt ? $0.prompt : "", response: $0.response,
+                attachments: $0.attachments, attachmentTextOnly: $0.attachmentTextOnly
+            ) }
         let all = Array(exchanges)
         guard let limit, all.count > limit else { return all }
         return Array(all.suffix(limit))
@@ -383,18 +516,26 @@ final class ConversationLog {
         guard let index = traces.firstIndex(where: { $0.id == traceID }),
               traces[index].state != .running
         else { return }
+        let tabID = traces[index].tabID
         traces.remove(at: index)
+        for index in traces.indices where traces[index].tabID == tabID {
+            traces[index].checkpoint = nil
+        }
         dirtyTraceIDs.remove(traceID)
         writeNow { db in
+            let ids = try UUID.fetchAll(db, sql: "SELECT id FROM agentTrace WHERE tabID = ?", arguments: [tabID])
+            _ = try MemoryRecord.filter(ids.contains(Column("traceID"))).deleteAll(db)
             _ = try TraceRecord.filter(Column("id") == traceID).deleteAll(db)
         }
     }
 
     func clearAll() {
+        historyRevision = UUID()
         guard !traces.isEmpty || !usageByTab.isEmpty else { return }
         discardedTabIDs.formUnion(traces.map(\.tabID))
         traces.removeAll()
         usageByTab.removeAll()
+        dirtyAttachmentIDs.removeAll()
         dirtyTraceIDs.removeAll()
         dirtyUsageTabIDs.removeAll()
         saveTask?.cancel()
@@ -468,6 +609,8 @@ final class ConversationLog {
             : dirtyUsageTabIDs.map { tabID in
                 Self.record(usageByTab[tabID, default: .zero], for: tabID)
             }
+        let attachmentRows = traceRows.filter { !$0.attachments.isEmpty && (blocking || dirtyAttachmentIDs.contains($0.id)) }
+        dirtyAttachmentIDs.subtract(attachmentRows.map(\.id))
         let touched = traceRows.map(\.id)
         dirtyTraceIDs.removeAll()
         dirtyUsageTabIDs.removeAll()
@@ -475,6 +618,11 @@ final class ConversationLog {
         let updates: @Sendable (Database) throws -> Void = { db in
             for trace in traceRows {
                 try Self.record(trace).save(db)
+            }
+            for trace in attachmentRows {
+                try AttachmentRecord(
+                    traceID: trace.id, payload: JSONEncoder().encode(trace.attachments), textOnly: trace.attachmentTextOnly
+                ).save(db)
             }
             _ = try StepRecord.filter(touched.contains(Column("traceID"))).deleteAll(db)
             for step in stepRows {
@@ -495,14 +643,18 @@ final class ConversationLog {
         let stored = try? database.writer.read { db in
             (
                 traces: try TraceRecord.order(Column("startedAt")).fetchAll(db),
+                attachments: try AttachmentRecord.fetchAll(db),
+                memories: try MemoryRecord.fetchAll(db),
                 steps: try StepRecord.order(Column("position")).fetchAll(db),
                 usage: try UsageRecord.fetchAll(db)
             )
         }
         guard let stored else { return }
 
+        let memories = Dictionary(uniqueKeysWithValues: stored.memories.map { ($0.traceID, $0.payload) })
+        let attachmentsByTrace = Dictionary(uniqueKeysWithValues: stored.attachments.map { ($0.traceID, $0) })
         let stepsByTrace = Dictionary(grouping: stored.steps, by: \.traceID)
-        var repairedInterruptedTask = false
+        var repairedStoredTask = false
 
         traces = stored.traces.map { record in
             var trace = TaskTrace(
@@ -516,13 +668,33 @@ final class ConversationLog {
                 finishedAt: record.finishedAt,
                 providerID: record.providerID
             )
+            trace.stopReason = record.stopReason
+            trace.diagnostics = record.diagnostics.flatMap {
+                try? JSONDecoder().decode(AgentRunDiagnostics.self, from: $0)
+            } ?? AgentRunDiagnostics()
+            trace.checkpoint = memories[record.id].flatMap {
+                try? JSONDecoder().decode(AgentCheckpoint.self, from: $0)
+            }
+            if let attachmentRecord = attachmentsByTrace[record.id] {
+                trace.attachments = (try? JSONDecoder().decode([AssistantAttachment].self, from: attachmentRecord.payload)) ?? []
+                trace.attachmentTextOnly = attachmentRecord.textOnly
+            }
+            let terminalStatus = trace.diagnostics.events.last { $0.kind == "terminal" }?.values["status"]
+            if terminalStatus == "completed", trace.state == .running || trace.state == .cancelled {
+                trace.state = .completed
+                trace.stopReason = nil
+                trace.finishedAt = trace.finishedAt ?? Date()
+                repairedStoredTask = true
+                dirtyTraceIDs.insert(trace.id)
+                return trace
+            }
             guard trace.state == .running else { return trace }
             for index in trace.steps.indices where trace.steps[index].state == .running {
                 trace.steps[index].state = .failed
             }
             trace.state = .cancelled
             trace.finishedAt = Date()
-            repairedInterruptedTask = true
+            repairedStoredTask = true
             dirtyTraceIDs.insert(trace.id)
             return trace
         }
@@ -531,7 +703,7 @@ final class ConversationLog {
             stored.usage.map { ($0.tabID, Self.usage(from: $0)) },
             uniquingKeysWith: { first, _ in first }
         )
-        if repairedInterruptedTask {
+        if repairedStoredTask {
             scheduleFlush()
         }
     }
@@ -542,7 +714,7 @@ final class ConversationLog {
             do {
                 try await database.writer.write(updates)
             } catch {
-                Pipeline.log.error("agent log: write failed: \(error, privacy: .public)")
+                Pipeline.log.error("Conversation storage write failed")
             }
         }
     }
@@ -551,7 +723,7 @@ final class ConversationLog {
         do {
             try database.writer.write(updates)
         } catch {
-            Pipeline.log.error("agent log: delete failed: \(error, privacy: .public)")
+            Pipeline.log.error("Conversation storage update failed")
         }
     }
 
@@ -566,23 +738,24 @@ final class ConversationLog {
             response: trace.response,
             state: trace.state,
             finishedAt: trace.finishedAt,
-            providerID: trace.providerID
+            providerID: trace.providerID,
+            stopReason: trace.stopReason,
+            diagnostics: try? JSONEncoder().encode(trace.diagnostics)
         )
     }
 
     private nonisolated static func steps(of trace: TaskTrace) -> [StepRecord] {
         trace.steps.enumerated().map { position, step in
-            let links = (try? JSONEncoder().encode(step.links)) ?? Data()
             return StepRecord(
                 id: step.id,
                 traceID: trace.id,
                 position: position,
                 kind: step.kind,
-                title: step.title,
-                toolName: step.toolName,
+                title: AgentDiagnosticPrivacy.title(for: step.toolName ?? ""),
+                toolName: step.toolName.map(AgentDiagnosticPrivacy.tool),
                 startedAt: step.startedAt,
-                detail: step.detail,
-                links: String(decoding: links, as: UTF8.self),
+                detail: nil,
+                links: "[]",
                 state: step.state
             )
         }
@@ -592,14 +765,11 @@ final class ConversationLog {
         Step(
             id: record.id,
             kind: record.kind,
-            title: record.title,
-            toolName: record.toolName,
+            title: AgentDiagnosticPrivacy.title(for: record.toolName ?? ""),
+            toolName: record.toolName.map(AgentDiagnosticPrivacy.tool),
             startedAt: record.startedAt,
-            detail: record.detail,
-            links: (try? JSONDecoder().decode(
-                [ActivityLink].self,
-                from: Data(record.links.utf8)
-            )) ?? [],
+            detail: nil,
+            links: [],
             state: record.state
         )
     }
