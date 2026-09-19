@@ -137,7 +137,7 @@ final class DownloadManager: NSObject {
             )
             try JSONEncoder().encode(Array(kept)).write(to: file, options: .atomic)
         } catch {
-            Pipeline.log.error("downloads: writing the list failed: \(error, privacy: .public)")
+            Pipeline.log.error("downloads: writing the list failed")
         }
     }
 
@@ -243,7 +243,7 @@ final class DownloadManager: NSObject {
         guard let download = live[item.id] else { return }
         let id = item.id
         noteCancelRequested(id)
-        download.cancel { data in
+        download.cancel { [weak self] data in
             Task { @MainActor [weak self] in
                 self?.noteCancellation(id, resumeData: data)
             }
@@ -254,7 +254,7 @@ final class DownloadManager: NSObject {
         guard let data = resumeData[item.id], let webView = webViewProvider?() else { return }
         let id = item.id
         noteResumeStarted(id)
-        webView.resumeDownload(fromResumeData: data) { download in
+        webView.resumeDownload(fromResumeData: data) { [weak self] download in
             Task { @MainActor [weak self] in
                 self?.attach(download, to: id)
             }
@@ -507,13 +507,21 @@ extension DownloadManager: WKDownloadDelegate {
     func download(_ download: WKDownload, didFailWithError error: any Error, resumeData: Data?) {
         guard let id = id(for: download) else { return }
         noteFailure(id, reason: error.localizedDescription, resumeData: resumeData)
-        Pipeline.log.error("download failed: \(error.localizedDescription, privacy: .public)")
+        Pipeline.log.error("download failed")
     }
 }
 
 // MARK: - Formatting
 
 extension DownloadManager.Item {
+    private static let progressSizeFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        formatter.zeroPadsFractionDigits = true
+        formatter.allowsNonnumericFormatting = false
+        return formatter
+    }()
+
     private static func size(_ bytes: Int64) -> String {
         bytes.formatted(.byteCount(style: .file))
     }
@@ -521,9 +529,10 @@ extension DownloadManager.Item {
     var sizeSummary: String {
         switch state {
         case .running where bytesExpected > 0:
-            return String(localized: "\(Self.size(bytesReceived)) of \(Self.size(bytesExpected))")
+            let received = Self.progressSizeFormatter.string(fromByteCount: bytesReceived)
+            return String(localized: "\(received) of \(Self.size(bytesExpected))")
         case .running:
-            return Self.size(bytesReceived)
+            return Self.progressSizeFormatter.string(fromByteCount: bytesReceived)
         case .finished:
             return Self.size(max(bytesReceived, bytesExpected))
         case .cancelled:

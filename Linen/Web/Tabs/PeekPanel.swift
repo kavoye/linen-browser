@@ -20,6 +20,7 @@ final class PeekPanel {
     /// A peek that is kept hands its page to the window behind it, so the
     /// panel must not shrink away empty.
     private(set) var isQuiet = false
+    private(set) var isCollapsed = false
 
     var isOpen: Bool {
         tab != nil
@@ -30,10 +31,18 @@ final class PeekPanel {
         ownerID = owner
         self.origin = origin
         isQuiet = false
+        isCollapsed = false
     }
 
     func aim(at origin: CGPoint) {
         self.origin = origin
+        isCollapsed = false
+    }
+
+    func setCollapsed(_ collapsed: Bool) {
+        guard tab != nil else { return }
+        isCollapsed = collapsed
+        isQuiet = false
     }
 
     func belongs(to tabID: UUID) -> Bool {
@@ -45,6 +54,7 @@ final class PeekPanel {
         isQuiet = quietly
         tab = nil
         ownerID = nil
+        isCollapsed = false
         return held
     }
 }

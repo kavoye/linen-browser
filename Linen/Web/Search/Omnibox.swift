@@ -3,6 +3,26 @@
 
 import Foundation
 
+struct OmniboxSuggestionPreview {
+    private(set) var sections: [OmniboxSection]?
+    private(set) var query: String?
+
+    mutating func select(at index: Int, in results: [OmniboxSection], query input: String) -> String? {
+        let items = results.flattened
+        guard items.indices.contains(index) else { return nil }
+        if sections == nil {
+            sections = results
+            query = input
+        }
+        return items[index].completionText ?? query ?? input
+    }
+
+    mutating func clear() {
+        sections = nil
+        query = nil
+    }
+}
+
 struct OmniboxItem: Identifiable {
     enum Kind {
         case go
@@ -22,6 +42,7 @@ struct OmniboxItem: Identifiable {
     let symbol: String
     let iconHost: String?
     let shortcut: String
+    let completionText: String?
     let alternate: (() -> Void)?
     let run: () -> Void
 
@@ -33,6 +54,7 @@ struct OmniboxItem: Identifiable {
         symbol: String? = nil,
         iconHost: String? = nil,
         shortcut: String = "",
+        completionText: String? = nil,
         alternate: (() -> Void)? = nil,
         run: @escaping () -> Void
     ) {
@@ -43,6 +65,12 @@ struct OmniboxItem: Identifiable {
         self.symbol = symbol ?? kind.defaultSymbol
         self.iconHost = iconHost
         self.shortcut = shortcut
+        self.completionText = completionText ?? {
+            switch kind {
+            case .go, .search, .phrase, .newTab: title
+            default: nil
+            }
+        }()
         self.alternate = alternate
         self.run = run
     }
@@ -236,7 +264,8 @@ enum Omnibox {
                 kind: .tab,
                 title: tab.title,
                 detail: [host, String(localized: "Opened Tab")].compactMap { $0 }.joined(separator: " • "),
-                iconHost: host
+                iconHost: host,
+                completionText: tab.urlString
             ) {
                 switchTo(tab)
             }
@@ -360,7 +389,8 @@ enum Omnibox {
                 kind: .history,
                 title: entry.title,
                 detail: url.displayAddress ?? host,
-                iconHost: url.displayHost
+                iconHost: url.displayHost,
+                completionText: url.absoluteString
             ) {
                 open(url)
             }

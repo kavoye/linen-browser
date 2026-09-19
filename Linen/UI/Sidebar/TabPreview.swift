@@ -263,9 +263,7 @@ private struct TabFaviconMark: View {
                     .font(.system(size: 9, weight: .medium))
                     .foregroundStyle(.secondary)
             } else if let favicon = tab.favicon {
-                Image(nsImage: favicon)
-                    .resizable()
-                    .scaledToFit()
+                FaviconImage(image: favicon)
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: 9))

@@ -46,6 +46,8 @@ struct ContentArea: View {
         .onDisappear {
             pull.stop()
         }
+        .onChange(of: browser.activeTab?.id) { _, _ in AutofillSuggestions.shared.reset() }
+        .onChange(of: coordinator.isShowingSettings) { _, _ in AutofillSuggestions.shared.reset() }
         .animation(Theme.Motion.settle, value: browser.activeTab?.find.isActive)
     }
 
@@ -100,13 +102,6 @@ struct ContentArea: View {
                                 removal: .move(edge: .top).combined(with: .opacity)
                             )
                         )
-                }
-            }
-            .overlay(alignment: .top) {
-                if !coordinator.isShowingSettings, let tab = browser.activeTab, tab.isLoading {
-                    LoadingBar(progress: tab.progress)
-                        .padding(.top, pullState.offset)
-                        .transition(.opacity)
                 }
             }
 
@@ -203,28 +198,5 @@ private struct ActiveWebSurface: View {
             .overlay {
                 LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id)
             }
-    }
-}
-
-struct LoadingBar: View {
-    let progress: Double
-
-    private static let thickness: CGFloat = 2
-    private static let minimumWidth: CGFloat = 18
-
-    var body: some View {
-        GeometryReader { proxy in
-            let fraction = min(max(progress, 0), 1)
-            let width = min(
-                proxy.size.width,
-                max(Self.minimumWidth, proxy.size.width * fraction)
-            )
-            Capsule()
-                .fill(Theme.accent)
-                .frame(width: width, height: Self.thickness)
-                .animation(Theme.Motion.drift, value: progress)
-        }
-        .frame(height: Self.thickness)
-        .allowsHitTesting(false)
     }
 }

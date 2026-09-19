@@ -262,7 +262,8 @@ enum CommandPaletteProjection {
                 kind: .tab,
                 title: tab.title,
                 detail: host ?? String(localized: "tab"),
-                iconHost: host
+                iconHost: host,
+                completionText: tab.urlString
             ) {
                 actions.switchTo(tab)
             }
@@ -279,7 +280,8 @@ enum CommandPaletteProjection {
                     kind: .history,
                     title: entry.title,
                     detail: url.displayAddress ?? entry.url,
-                    iconHost: url.displayHost
+                    iconHost: url.displayHost,
+                    completionText: url.absoluteString
                 ) {
                     actions.openNew(url)
                 }
@@ -319,7 +321,8 @@ final class CommandPaletteModel {
 
     var interaction = CommandPaletteInteraction() {
         didSet {
-            guard interaction.query != oldValue.query else { return }
+            guard interaction.query != oldValue.query, !isPreviewingSelection else { return }
+            suggestionPreview.clear()
             suggestions.update(for: MentionText.stripped(
                 CommandPaletteProjection.suggestionQuery(for: interaction.query)
             ))
@@ -328,6 +331,10 @@ final class CommandPaletteModel {
     }
     private(set) var sections: [OmniboxSection] = []
     private(set) var mentionedTabIDs: [UUID] = []
+    private var isPreviewingSelection = false
+    private var suggestionPreview = OmniboxSuggestionPreview()
+
+    var resultQuery: String { suggestionPreview.query ?? interaction.query }
 
     init(browser: BrowserModel, coordinator: AppCoordinator, dismiss: @escaping () -> Void) {
         self.browser = browser
@@ -349,10 +356,20 @@ final class CommandPaletteModel {
 
     func moveSelection(by delta: Int) {
         interaction.moveSelection(by: delta, resultCount: sections.flattened.count)
+        selectSuggestion(at: interaction.selection)
     }
 
     func moveSection(by delta: Int) {
         interaction.moveSection(by: delta, itemCounts: sections.itemCounts)
+        selectSuggestion(at: interaction.selection)
+    }
+
+    func selectSuggestion(at index: Int) {
+        guard let text = suggestionPreview.select(at: index, in: sections, query: interaction.query) else { return }
+        isPreviewingSelection = true
+        defer { isPreviewingSelection = false }
+        interaction.query = text
+        interaction.selection = index
     }
 
     func submit() {
@@ -421,6 +438,7 @@ final class CommandPaletteModel {
     }
 
     private func refreshSections() {
+        guard suggestionPreview.sections == nil else { return }
         sections = CommandPaletteProjection.sections(
             query: interaction.query,
             agentName: coordinator.agentDisplayName,
@@ -437,6 +455,7 @@ final class CommandPaletteModel {
 
     private var context: CommandPaletteContext {
         let tab = browser.activeTab
+        let page = coordinator.pageCommandTab
         let split = browser.activeSplit
         let window = NSApp.keyWindow ?? NSApp.mainWindow
         return CommandPaletteContext(
@@ -446,10 +465,10 @@ final class CommandPaletteModel {
             historyCount: browser.history.count,
             tabCount: browser.tabs.count,
             hasActiveTab: tab != nil,
-            canGoBack: tab?.canGoBack ?? false,
-            canGoForward: tab?.canGoForward ?? false,
-            isLoading: tab?.isLoading ?? false,
-            isZoomed: tab?.isZoomed ?? false,
+            canGoBack: page?.canGoBack ?? false,
+            canGoForward: page?.canGoForward ?? false,
+            isLoading: page?.isLoading ?? false,
+            isZoomed: page?.isZoomed ?? false,
             isShowingPin: tab?.isShowingPin ?? false,
             isAwayFromPin: tab?.isAwayFromPin ?? false,
             canReopenClosedTab: browser.canReopenClosedTab,
@@ -506,6 +525,7 @@ final class CommandPaletteModel {
     private func perform(_ action: CommandPaletteAction) {  // swiftlint:disable:this cyclomatic_complexity
         dismiss()
         let tab = browser.activeTab
+        let page = coordinator.pageCommandTab
         switch action {
         case .newTab:
             coordinator.openNewTab()
@@ -530,27 +550,27 @@ final class CommandPaletteModel {
         case .organizeTabs:
             coordinator.organizeTabs()
         case .reload:
-            tab?.webView.reload()
+            page?.webView.reload()
         case .hardReload:
-            tab?.webView.reloadFromOrigin()
+            page?.webView.reloadFromOrigin()
         case .stopLoading:
-            tab?.webView.stopLoading()
+            page?.webView.stopLoading()
         case .goBack:
-            tab?.goBack()
+            page?.goBack()
         case .goForward:
-            tab?.goForward()
+            page?.goForward()
         case .find:
-            tab?.find.open()
+            page?.find.open()
         case .copyLink:
             coordinator.copyCurrentURL()
         case .printPage:
             coordinator.printActivePage()
         case .zoomIn:
-            tab?.zoomIn()
+            page?.zoomIn()
         case .zoomOut:
-            tab?.zoomOut()
+            page?.zoomOut()
         case .actualSize:
-            tab?.resetZoom()
+            page?.resetZoom()
         case .splitRight:
             coordinator.splitActiveTab(axis: .sideBySide)
         case .splitDown:

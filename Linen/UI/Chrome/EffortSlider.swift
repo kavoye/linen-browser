@@ -9,11 +9,10 @@ struct EffortSlider: View {
     let onSelect: (LLMSettings.ReasoningEffort) -> Void
 
     private enum Metrics {
-        static let knob: CGFloat = 15
-        static let track: CGFloat = 4
-        static let tick: CGFloat = 5
-        static let lane: CGFloat = 18
-        static let captionIndent: CGFloat = 53
+        static let knob: CGFloat = 28
+        static let track: CGFloat = 24
+        static let tick: CGFloat = 4
+        static let lane: CGFloat = 28
     }
 
     private var stops: [LLMSettings.ReasoningEffort] {
@@ -25,25 +24,21 @@ struct EffortSlider: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if stops.count > 1 {
-                track
-            }
-
-            caption
-        }
-        .accessibilityElement()
-        .accessibilityLabel(Text("Thinking"))
-        .accessibilityValue(Text(effort.label))
-        .accessibilityAdjustableAction { direction in
-            switch direction {
-            case .increment:
-                move(by: 1)
-            case .decrement:
-                move(by: -1)
-            @unknown default:
-                break
-            }
+        if stops.count > 1 {
+            track
+                .accessibilityElement()
+                .accessibilityLabel(Text("Thinking"))
+                .accessibilityValue(Text(effort.label))
+                .accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment:
+                        move(by: 1)
+                    case .decrement:
+                        move(by: -1)
+                    @unknown default:
+                        break
+                    }
+                }
         }
     }
 
@@ -62,7 +57,11 @@ struct EffortSlider: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Theme.Wash.strong)
+                    .fill(Theme.Wash.selection)
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(Theme.Wash.hairline, lineWidth: 0.5)
+                    }
                     .frame(height: Metrics.track)
 
                 Capsule()
@@ -71,7 +70,7 @@ struct EffortSlider: View {
 
                 ForEach(stops.indices, id: \.self) { stop in
                     Circle()
-                        .fill(stop <= index ? Color.white.opacity(0.7) : Theme.Wash.emphasis)
+                        .fill(stop <= index ? Color.white.opacity(0.45) : Theme.Wash.emphasis)
                         .frame(width: Metrics.tick, height: Metrics.tick)
                         .position(x: inset + step * CGFloat(stop), y: Metrics.lane / 2)
                 }
@@ -79,7 +78,7 @@ struct EffortSlider: View {
                 Circle()
                     .fill(Theme.controlSurface)
                     .overlay(Circle().strokeBorder(Theme.Wash.strong, lineWidth: 0.5))
-                    .shadow(color: .black.opacity(0.18), radius: 1.5, y: 0.5)
+                    .shadow(color: .black.opacity(0.16), radius: 2, y: 1)
                     .frame(width: Metrics.knob, height: Metrics.knob)
                     .position(x: knobX, y: Metrics.lane / 2)
             }
@@ -94,15 +93,6 @@ struct EffortSlider: View {
             .animation(Theme.Motion.quick, value: index)
         }
         .frame(height: Metrics.lane)
-    }
-
-    private var caption: some View {
-        Text(effort.caption)
-            .font(Theme.Font.caption)
-            .foregroundStyle(.tertiary)
-            .lineLimit(2, reservesSpace: true)
-            .padding(.leading, Metrics.captionIndent)
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func pick(at x: CGFloat, inset: CGFloat, step: CGFloat) {

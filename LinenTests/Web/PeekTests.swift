@@ -117,6 +117,57 @@ struct PeekTests {
         #expect(panel.origin == CGPoint(x: 40, y: 60))
     }
 
+    @Test func pageCommandsTargetTheVisiblePeek() {
+        let coordinator = AppCoordinator()
+        let ownerAddress = URL(string: "https://one.example/")!
+        let owner = coordinator.browser.newTab(url: ownerAddress)
+        let peeked = coordinator.browser.makePeekTab(address)
+        coordinator.browser.activate(owner)
+        coordinator.peek.show(peeked, from: owner.id, at: .zero)
+
+        #expect(coordinator.pageCommandTab === peeked)
+        #expect(coordinator.pageCommandTab.flatMap { coordinator.linkURL(for: $0) } == address)
+
+        _ = coordinator.peek.take()
+        #expect(coordinator.pageCommandTab === owner)
+        #expect(coordinator.pageCommandTab.flatMap { coordinator.linkURL(for: $0) } == ownerAddress)
+    }
+
+    @Test func collapsingAndRestoringKeepsTheSamePeekPage() {
+        let coordinator = AppCoordinator()
+        let owner = coordinator.browser.newTab()
+        let peeked = coordinator.browser.makePeekTab(address)
+        coordinator.peek.show(peeked, from: owner.id, at: .zero)
+
+        coordinator.togglePeekVisibility()
+        #expect(coordinator.peek.isCollapsed)
+        #expect(coordinator.shownPeek == nil)
+        #expect(coordinator.peek.tab === peeked)
+        #expect(!peeked.isClosed)
+        #expect(coordinator.pageCommandTab === owner)
+
+        coordinator.togglePeekVisibility()
+        #expect(!coordinator.peek.isCollapsed)
+        #expect(coordinator.shownPeek === peeked)
+        #expect(coordinator.pageCommandTab === peeked)
+
+        let other = coordinator.browser.newTab()
+        #expect(coordinator.browser.activeTab === other)
+        coordinator.togglePeekVisibility()
+        #expect(coordinator.browser.activeTab === owner)
+        #expect(coordinator.shownPeek === peeked)
+    }
+
+    @Test func openingAnotherLinkRestoresACollapsedPeek() {
+        let panel = PeekPanel()
+        let peeked = model().makePeekTab(address)
+        panel.show(peeked, from: UUID(), at: .zero)
+        panel.setCollapsed(true)
+        panel.aim(at: CGPoint(x: 20, y: 30))
+        #expect(!panel.isCollapsed)
+        #expect(panel.tab === peeked)
+    }
+
     /// Keeping a peek hands its page to the window behind, so the panel must
     /// not animate away over it.
     @Test func aKeptPeekLeavesWithoutAnimating() {

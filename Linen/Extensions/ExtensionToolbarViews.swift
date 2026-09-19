@@ -346,6 +346,8 @@ struct ExtensionOverflowButton: View {
 }
 
 private struct ExtensionOverflowList: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     let manager: ExtensionManager
     let records: [InstalledExtension]
     let collapsedCount: Int
@@ -366,6 +368,10 @@ private struct ExtensionOverflowList: View {
         }
         .padding(Self.inset)
         .frame(width: 236)
+        .background {
+            Theme.windowBackground.opacity(reduceTransparency ? 1 : 0.94)
+                .ignoresSafeArea()
+        }
         .environment(\.colorScheme, macScheme)
     }
 
@@ -405,6 +411,12 @@ private struct ExtensionOverflowRow: View {
             isActive: hovering,
             in: RoundedRectangle(cornerRadius: Self.rowRadius, style: .continuous)
         )
+        .overlay {
+            ClusterMenuCatcher(
+                extensionID: { _ in record.id },
+                menuForExtension: { manager.contextMenu(for: $0) }
+            )
+        }
         .animation(Theme.Motion.quick, value: hovering)
     }
 

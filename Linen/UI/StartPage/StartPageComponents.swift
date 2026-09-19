@@ -177,6 +177,8 @@ private struct StartPageTaskProvenance: View {
             ("Failed", Theme.warning)
         case .cancelled:
             ("Stopped", .secondary)
+        case .paused:
+            ("Paused", .secondary)
         }
     }
 

@@ -9,7 +9,6 @@ struct HistoryView: View {
 
     @State private var query = ""
     @State private var hoveredURL: String?
-    @FocusState private var searchFocused: Bool
 
     var body: some View {
         DestinationPage {
@@ -76,33 +75,7 @@ struct HistoryView: View {
 
             Spacer(minLength: 12)
 
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(Theme.Font.label)
-                    .foregroundStyle(.tertiary)
-                TextField("", text: $query)
-                    .fieldPlaceholder("Search history", isShowing: query.isEmpty)
-                    .textFieldStyle(.plain)
-                    .font(Theme.Font.row)
-                    .focused($searchFocused)
-                if !query.isEmpty {
-                    ChromeIcon(
-                        symbol: "xmark",
-                        size: 9,
-                        extent: 18,
-                        help: String(localized: "Clear Search")
-                    ) {
-                        query = ""
-                        searchFocused = true
-                    }
-                }
-            }
-            .padding(.horizontal, 9)
-            .frame(height: 28)
-            .frame(maxWidth: 240)
-            .glassSurface(
-                in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-            )
+            ToolbarSearchField(query: $query, placeholder: "Search history")
 
             ToolbarChip(symbol: "trash", label: "Clear", isDestructive: true) {
                 Task { await clear() }

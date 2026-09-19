@@ -106,17 +106,17 @@ private struct PermissionPopover: View {
                 recordFace
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, center.currentAsk == nil ? 7 : 14)
+        .padding(.horizontal, SiteControlsMetrics.inset)
+        .padding(.top, 12)
+        .padding(.bottom, center.currentAsk == nil ? 6 : 14)
         .frame(width: 320)
+        .background(.ultraThickMaterial)
     }
 
     private var header: some View {
         HStack(spacing: 8) {
             if let favicon = tab.favicon {
-                Image(nsImage: favicon)
-                    .resizable()
+                FaviconImage(image: favicon)
                     .frame(width: 18, height: 18)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
             } else {
@@ -181,20 +181,16 @@ private struct PermissionPopover: View {
 
     // MARK: Record
 
-    private func caption(for state: TabPermissionCenter.RowState) -> LocalizedStringResource {
+    private func caption(for state: TabPermissionCenter.RowState) -> LocalizedStringResource? {
         switch state {
         case .live(always: true):
-            "In use, always allowed"
+            "In use"
         case .live(always: false):
             "In use, allowed until you leave"
-        case .always:
-            "Always allowed"
         case .session:
             "Allowed until you leave"
-        case .denied:
-            "Denied"
-        case .asks:
-            "Asks each time"
+        case .always, .denied, .asks:
+            nil
         }
     }
 
@@ -217,21 +213,20 @@ private struct PermissionPopover: View {
     private var recordFace: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(center.rows) { row in
-                if row.id != center.rows.first?.id {
-                    Divider()
-                }
                 HStack(spacing: 10) {
                     Image(systemName: row.state == .denied ? row.permission.slashedSymbol : row.permission.symbol)
-                        .font(Theme.Font.body)
-                        .foregroundStyle(row.state == .denied ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(.secondary)
                         .frame(width: 18)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(row.permission.label)
-                            .font(.system(size: 12.5, weight: .semibold))
-                        Text(caption(for: row.state))
-                            .font(Theme.Font.caption)
-                            .foregroundStyle(captionColor(for: row))
+                            .font(.system(size: 12.5))
+                        if let caption = caption(for: row.state) {
+                            Text(caption)
+                                .font(Theme.Font.caption)
+                                .foregroundStyle(captionColor(for: row))
+                        }
                     }
 
                     Spacer(minLength: 12)
@@ -246,11 +241,13 @@ private struct PermissionPopover: View {
                         Text(center.menuPolicy(for: row.permission).label)
                             .font(Theme.Font.label)
                     }
-                    .menuStyle(.button)
+                    .menuStyle(.borderlessButton)
+                    .foregroundStyle(.secondary)
                     .controlSize(.small)
                     .fixedSize()
                 }
-                .padding(.vertical, 7)
+                .padding(.vertical, caption(for: row.state) == nil ? 0 : 5)
+                .frame(minHeight: 32)
             }
         }
     }

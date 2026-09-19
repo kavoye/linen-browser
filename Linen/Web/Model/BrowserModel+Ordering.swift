@@ -9,10 +9,7 @@ extension BrowserModel {
 
     func pin(_ tab: BrowserTab) {
         guard let url = URL(string: tab.urlString), !tab.urlString.isEmpty else { return }
-        tab.pinnedURL = url
-        tab.pinnedTitle = tab.title
-        moveToPinnedBoundary(tab)
-        scheduleSave()
+        setPin(url, title: tab.title, for: tab)
     }
 
     func unpin(_ tab: BrowserTab) {
@@ -247,6 +244,10 @@ extension BrowserModel {
     }
 
     func close(_ tab: BrowserTab, recordForReopening: Bool = true) {
+        if tab.isMaterialised {
+            AutofillSuggestions.shared.dismiss(in: tab.webView)
+        }
+        tab.autofillSave.clear()
         if recordForReopening, !tab.isPrivate {
             closedTabs.append(ClosedTab(
                 title: tab.title,

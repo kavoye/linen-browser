@@ -237,7 +237,7 @@ struct SidebarTabRow: View {
                     HStack(spacing: 4) {
                         trailingControls
                         if let peekedTab {
-                            PeekRowBadge(tab: peekedTab) { coordinator.openTab(tab) }
+                            PeekRowBadge(tab: peekedTab, coordinator: coordinator)
                         }
                     }
                     .padding(.trailing, SidebarMetrics.rowControlEdgeOffset(style: sidebarStyle))
@@ -366,10 +366,7 @@ private struct PinReturnSegment: View {
         Button(action: action) {
             ZStack {
                 if let pinnedFavicon, !isSameSite {
-                    Image(nsImage: pinnedFavicon)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFit()
+                    FaviconImage(image: pinnedFavicon)
                         .frame(width: 14, height: 14)
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
                         .opacity(hovering ? 0 : 1)
@@ -479,6 +476,7 @@ struct PinBadge: View {
 struct TabIcon: View {
     let tab: BrowserTab
     var size: CGFloat = SidebarMetrics.rowIconSize
+    var loadingColor: Color = .secondary
 
     static func isAsleep(_ state: TabReclaimState) -> Bool {
         state == .unloaded
@@ -498,16 +496,13 @@ struct TabIcon: View {
                     .foregroundStyle(.secondary)
             } else if tab.isLoading, !tab.isRestoring {
                 Spinner(size: size * 0.8)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(loadingColor)
             } else if SystemPages.showsStartFace(tab) {
                 Image(systemName: SystemPages.startSymbol)
                     .font(.system(size: size * 0.66, weight: .medium))
                     .foregroundStyle(.secondary)
             } else if let favicon = tab.favicon {
-                Image(nsImage: favicon)
-                    .resizable()
-                    .interpolation(.high)
-                    .scaledToFit()
+                FaviconImage(image: favicon)
                     .frame(width: size - 1, height: size - 1)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
             } else {

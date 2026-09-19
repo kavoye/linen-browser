@@ -56,10 +56,7 @@ struct RemoteSiteBadge: View {
     var body: some View {
         Group {
             if let icon {
-                Image(nsImage: icon)
-                    .resizable()
-                    .interpolation(.high)
-                    .scaledToFit()
+                FaviconImage(image: icon)
                     .clipShape(RoundedRectangle(cornerRadius: size / 5, style: .continuous))
             } else {
                 Image(systemName: "globe")

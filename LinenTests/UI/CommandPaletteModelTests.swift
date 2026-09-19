@@ -9,6 +9,61 @@ import Testing
 
 @MainActor
 struct CommandPaletteModelTests {
+    @Test func currentPageCanBeMentionedInThePalette() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(true) {
+            let coordinator = AppCoordinator()
+            let current = coordinator.browser.newTab()
+            current.urlString = "https://shop.example/current"
+            current.title = "Current item"
+            let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+            model.prepare()
+            model.interaction.query = "compare @current"
+
+            let item = try #require(model.sections.flattened.first { $0.id == "mention-\(current.id)" })
+            item.run()
+
+            #expect(model.mentionedTabIDs == [current.id])
+            #expect(MentionText.resolved(model.interaction.query, chips: model.mentionChips) == "compare @Current item ")
+            model.interaction.query += "@current"
+            #expect(!model.sections.flattened.contains { $0.id == "mention-\(current.id)" })
+        }
+    }
+
+    @Test func suggestionPreviewKeepsResultsStableUntilTypingResumes() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(true) {
+            let coordinator = AppCoordinator()
+            let tab = coordinator.browser.newTab()
+            tab.urlString = "https://example.com/full/path?q=value#section"
+            tab.title = "Example page"
+            var dismissed = false
+            let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {
+                dismissed = true
+            }
+            model.prepare()
+            let ids = model.sections.flattened.map(\.id)
+            let tabIndex = try #require(model.sections.flattened.firstIndex { $0.id == "tab-\(tab.id)" })
+            let actionIndex = try #require(model.sections.flattened.firstIndex { $0.kind == .action })
+
+            model.selectSuggestion(at: tabIndex)
+            #expect(model.interaction.query == tab.urlString)
+            #expect(model.resultQuery.isEmpty)
+            model.suggestionsDidChange()
+            #expect(model.sections.flattened.map(\.id) == ids)
+            #expect(model.interaction.selection == tabIndex)
+
+            model.selectSuggestion(at: actionIndex)
+            #expect(model.interaction.query.isEmpty)
+            model.moveSelection(by: tabIndex - actionIndex)
+            #expect(model.interaction.query == tab.urlString)
+            #expect(!dismissed)
+
+            model.interaction.query += "extra"
+            #expect(model.resultQuery == tab.urlString + "extra")
+            #expect(model.interaction.selection == 0)
+            #expect(model.sections.flattened.map(\.id) != ids)
+        }
+    }
+
     /// The palette walks the same way the ask surface does: arrows wrap, so
     /// up from the first row reaches the last one.
     @Test func selectionWrapsAndAChangedQueryReturnsToTheFirstRow() {

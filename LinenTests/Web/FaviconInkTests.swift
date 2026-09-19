@@ -28,6 +28,35 @@ struct FaviconInkTests {
         #expect(!FaviconInk.needsInk(glyph, isDark: true))
     }
 
+    @MainActor
+    @Test func oneFaviconCanAppearOnOppositeBackgrounds() throws {
+        let dark = try #require(NSImage(data: svg(fill: "#24292E")))
+        let light = try #require(NSImage(data: svg(fill: "white")))
+        let original = dark.tiffRepresentation
+
+        #expect(!FaviconContrast.needsInk(dark, isDark: false))
+        #expect(FaviconContrast.needsInk(dark, isDark: true))
+        #expect(!FaviconContrast.needsInk(dark, isDark: false))
+        #expect(dark.tiffRepresentation == original)
+
+        #expect(!FaviconContrast.needsInk(light, isDark: true))
+        #expect(FaviconContrast.needsInk(light, isDark: false))
+    }
+
+    @MainActor
+    @Test func localContrastPreservesColouredAndPlatedImages() throws {
+        let coloured = try #require(NSImage(data: svg(fill: "#F05138")))
+        let plated = try #require(NSImage(data: Data("""
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">\
+        <rect width="32" height="32" fill="black"/>\
+        <circle cx="16" cy="16" r="8" fill="white"/></svg>
+        """.utf8)))
+        for image in [coloured, plated] {
+            #expect(!FaviconContrast.needsInk(image, isDark: false))
+            #expect(!FaviconContrast.needsInk(image, isDark: true))
+        }
+    }
+
     /// The whole point of the saturation test: a brand keeps its colour.
     @Test func aColouredIconIsNeverInked() {
         for fill in ["#F05138", "#0066CC", "#34C759"] {

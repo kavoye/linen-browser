@@ -7,6 +7,27 @@ import Testing
 @testable import Linen
 
 struct ThemePickerTests {
+    @Test func tintDefaultsPreserveOptOutsUntilSettingsAreReset() throws {
+        let name = "TintDefaultsTests.\(UUID().uuidString)"
+        let suite = try #require(UserDefaults(suiteName: name))
+        defer { suite.removePersistentDomain(forName: name) }
+
+        let settings = BrowserSettings(defaults: suite)
+        #expect(settings.matchesWebsiteColor)
+        #expect(settings.refractsTabColor)
+
+        settings.matchesWebsiteColor = false
+        settings.refractsTabColor = false
+        let restored = BrowserSettings(defaults: suite)
+        #expect(!restored.matchesWebsiteColor)
+        #expect(!restored.refractsTabColor)
+
+        restored.resetToDefaults()
+        let reset = BrowserSettings(defaults: suite)
+        #expect(reset.matchesWebsiteColor)
+        #expect(reset.refractsTabColor)
+    }
+
     @Test func everyModeHasSomethingToDraw() {
         for mode in AppearanceMode.allCases {
             #expect(!ThemeThumbnailPalette.palettes(for: mode).isEmpty)
@@ -67,5 +88,17 @@ struct ThemePickerTests {
         let settings = BrowserSettings(defaults: suite)
         #expect(settings.loomStyle == .standard)
         #expect(settings.matchesWebsiteColor)
+    }
+
+    @Test func legacyTintOptOutSurvivesAWindowStyleChange() throws {
+        let name = "LegacyTintOptOutTests.\(UUID().uuidString)"
+        let suite = try #require(UserDefaults(suiteName: name))
+        defer { suite.removePersistentDomain(forName: name) }
+        suite.set(false, forKey: "appearance.websiteColor")
+
+        let settings = BrowserSettings(defaults: suite)
+        #expect(!settings.matchesWebsiteColor)
+        settings.loomStyle = .transparent
+        #expect(!BrowserSettings(defaults: suite).matchesWebsiteColor)
     }
 }

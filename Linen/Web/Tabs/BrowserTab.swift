@@ -29,6 +29,7 @@ final class BrowserTab: Identifiable {
     static let placeholderTitle = String(localized: "New Tab")
 
     let id: UUID
+    let autofillSave = AutofillSaveSession()
     var pageTitle = BrowserTab.placeholderTitle
     var customTitle = ""
 
@@ -95,10 +96,12 @@ final class BrowserTab: Identifiable {
     private(set) var committedURL: URL?
 
     func goBack() {
+        webView.stopLoading()
         webView.goBack()
     }
 
     func goForward() {
+        webView.stopLoading()
         webView.goForward()
     }
 
@@ -331,8 +334,9 @@ final class BrowserTab: Identifiable {
                 self?.notePageActivity(signal)
             }
             PageActivityMonitor.shared.install(in: tabView)
-            tabView.onScrollPosition = { [weak self] y in
+            tabView.onScrollPosition = { [weak self] y, url in
                 self?.lastReportedScrollY = y
+                self?.lastReportedScrollURL = url
             }
             ScrollPositionMonitor.shared.install(in: tabView)
             tabView.onFaviconDeclarationChange = { [weak self] in
@@ -344,6 +348,10 @@ final class BrowserTab: Identifiable {
                 self?.popups.note(url)
             }
             SiteContentGuard.shared.install(in: tabView)
+            PaymentCardAutofill.shared.install(in: tabView)
+            ContactAutofill.shared.install(in: tabView)
+            PasswordAutofill.shared.install(in: tabView)
+            AutofillSaveCoordinator.shared.install(in: tabView, session: autofillSave)
         }
         progressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] _, change in
             let value = change.newValue ?? 1
@@ -438,6 +446,10 @@ final class BrowserTab: Identifiable {
 
     func setAgentWorking(_ isWorking: Bool) {
         processState.setAgentWorking(isWorking)
+    }
+
+    func setExternalAutomationWorking(_ isWorking: Bool) {
+        processState.isExternalAutomationWorking = isWorking
     }
 
     func notePageActivity(_ signal: PageActivitySignal) {
@@ -628,15 +640,17 @@ final class BrowserTab: Identifiable {
 
     // MARK: - Scroll return
 
-    private var lastReportedScrollY: Double = 0
+    private(set) var lastReportedScrollY: Double = 0
+    private var lastReportedScrollURL: URL?
     private var scrollReturns = ScrollReturnMemory()
 
     func rememberScrollOffset() {
-        scrollReturns.remember(lastReportedScrollY, leaving: webView.url?.absoluteString)
+        scrollReturns.remember(lastReportedScrollY, leaving: lastReportedScrollURL?.absoluteString)
     }
 
     func noteDocumentChanged() {
         lastReportedScrollY = 0
+        lastReportedScrollURL = nil
         if isShowingRealPage {
             find.pageChanged()
         }
@@ -647,6 +661,7 @@ final class BrowserTab: Identifiable {
               let stored = scrollReturns.offset(returningTo: webView.url?.absoluteString)
         else { return }
         lastReportedScrollY = stored
+        lastReportedScrollURL = webView.url
         webView.evaluateJavaScript(Self.restoreScrollScript(to: stored), completionHandler: nil)
     }
 
@@ -682,6 +697,7 @@ final class BrowserTab: Identifiable {
     }
 
     func load(_ url: URL, transition: HistoryStore.Transition = .typed) {
+        autofillSave.clear()
         pendingTransition = transition
         discardDeferredSession()
         stopUncommittedStartPage()
@@ -695,6 +711,7 @@ final class BrowserTab: Identifiable {
     }
 
     func loadHTML(_ html: String, baseURL: URL?) {
+        autofillSave.clear()
         discardDeferredSession()
         stopUncommittedStartPage()
         webView.loadHTMLString(html, baseURL: baseURL)
@@ -780,7 +797,9 @@ final class BrowserTab: Identifiable {
     }
 
     private static let presentationUpdateSelector = Selector(("_doAfterNextPresentationUpdate:"))
-    private static let coverCeiling: Duration = .milliseconds(400)
+    static let coverCeiling: Duration = .milliseconds(400)
+
+    @ObservationIgnored var presentationClock: any Clock<Duration> = ContinuousClock()
 
     @ObservationIgnored private var coverHold: Task<Void, Never>?
     @ObservationIgnored private var isArmingPresentation = false
@@ -820,8 +839,8 @@ final class BrowserTab: Identifiable {
             return
         }
         if coverHold == nil {
-            coverHold = Task { [weak self] in
-                try? await Task.sleep(for: Self.coverCeiling)
+            coverHold = Task { [weak self, presentationClock] in
+                try? await presentationClock.sleep(for: Self.coverCeiling)
                 guard !Task.isCancelled else { return }
                 self?.uncover()
             }

@@ -39,7 +39,7 @@ struct ModelChip: View {
             .buttonStyle(.plain)
             .onHover { hovering = $0 }
             .animation(Theme.Motion.quick, value: hovering)
-            .help("Change the model or how much it thinks")
+            .help("Change the model or reasoning level")
             .popover(isPresented: $isPresenting, arrowEdge: .top) {
                 EnginePopover(coordinator: coordinator) { isPresenting = false }
             }
@@ -109,7 +109,7 @@ struct EffortMeter: View {
             2
         case .medium:
             3
-        case .high:
+        case .high, .xhigh, .max:
             4
         }
     }
@@ -219,7 +219,7 @@ struct EnginePopover: View {
                 }
             }
 
-            if sections.contains(.models) {
+            if sections.contains(.models), !provider.isOnDevice {
                 if sections.contains(.providers) {
                     PopoverDivider()
                 }
@@ -262,8 +262,11 @@ struct EnginePopover: View {
         }
         .padding(.vertical, PopoverMetrics.sectionGap)
         .frame(width: width)
-        .task {
-            if sections.contains(.models), fetched.isEmpty {
+        .task(id: provider.id) {
+            fetched = []
+            loadError = nil
+            isLoading = false
+            if sections.contains(.models), !provider.isOnDevice {
                 await load()
             }
         }
@@ -273,7 +276,6 @@ struct EnginePopover: View {
         ForEach(pinned) { suggestion in
             EngineRow(
                 title: suggestion.id,
-                detail: suggestion.detail,
                 isSelected: suggestion.id == selectedModel
             ) {
                 choose(model: suggestion.id)
@@ -287,7 +289,7 @@ struct EnginePopover: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(rest, id: \.self) { id in
-                        EngineRow(title: id, detail: "", isSelected: id == selectedModel) {
+                        EngineRow(title: id, isSelected: id == selectedModel) {
                             choose(model: id)
                         }
                     }
@@ -332,12 +334,12 @@ struct EnginePopover: View {
     }
 
     private func choose(provider candidate: Provider) {
-        defer { dismiss() }
-        guard candidate.id != provider.id else { return }
-        coordinator.useProvider(candidate)
-        fetched = []
-        loadError = nil
-        Task { await load() }
+        if candidate.id != provider.id {
+            coordinator.useProvider(candidate)
+        }
+        if !sections.contains(.models) {
+            dismiss()
+        }
     }
 
     private func choose(effort: LLMSettings.ReasoningEffort) {
@@ -348,7 +350,8 @@ struct EnginePopover: View {
 
     private func load() async {
         guard !isLoading else { return }
-        let engine = coordinator.engine(for: provider)
+        let requestedProvider = provider
+        let engine = coordinator.engine(for: requestedProvider)
         guard case .available = engine.availability else {
             loadError = String(localized: "Add an API key for \(provider.name) in Settings to see its models.")
             return
@@ -356,14 +359,19 @@ struct EnginePopover: View {
 
         isLoading = true
         loadError = nil
+        defer {
+            if requestedProvider.id == provider.id {
+                isLoading = false
+            }
+        }
         do {
             let models = try await engine.availableModels()
-            guard provider.id == coordinator.selectedProvider.id else { return }
+            guard !Task.isCancelled, requestedProvider.id == provider.id else { return }
             fetched = models
         } catch {
+            guard !Task.isCancelled, requestedProvider.id == provider.id else { return }
             loadError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
-        isLoading = false
     }
 }
 
@@ -393,7 +401,6 @@ private struct PopoverDivider: View {
 
 private struct EngineRow: View {
     let title: String
-    let detail: String
     let isSelected: Bool
     let action: () -> Void
 
@@ -413,14 +420,6 @@ private struct EngineRow: View {
                     .truncationMode(.middle)
 
                 Spacer(minLength: 8)
-
-                if !detail.isEmpty {
-                    Text(verbatim: detail)
-                        .font(Theme.Font.micro)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                        .layoutPriority(-1)
-                }
             }
             .padding(.horizontal, PopoverMetrics.inset - PopoverMetrics.plateInset)
             .frame(height: PopoverMetrics.rowHeight)

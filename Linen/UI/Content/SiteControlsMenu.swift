@@ -92,17 +92,13 @@ private struct SiteControlsPanel: View {
 }
 
 private struct SiteControlGroup<Content: View>: View {
-    let title: LocalizedStringResource
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(Theme.Font.caption)
-                .foregroundStyle(.secondary)
+            Divider()
                 .padding(.horizontal, SiteControlsMetrics.inset)
-                .padding(.top, 16)
-                .padding(.bottom, 4)
+                .padding(.vertical, 5)
 
             content
         }
@@ -124,8 +120,7 @@ private struct SiteControlsHeader: View {
         HStack(spacing: 10) {
             Group {
                 if let favicon = tab.favicon {
-                    Image(nsImage: favicon)
-                        .resizable()
+                    FaviconImage(image: favicon)
                 } else {
                     Image(systemName: "globe")
                         .resizable()
@@ -269,7 +264,6 @@ private struct SiteHandlingSection: View {
                 }
             }
         }
-        .padding(.bottom, 6)
     }
 }
 
@@ -278,8 +272,8 @@ private struct SiteMediaSection: View {
     let tab: BrowserTab
 
     var body: some View {
-        SiteControlGroup(title: "Media and windows") {
-            SiteControlRow(symbol: "play.rectangle", title: "Auto-Play") {
+        SiteControlGroup {
+            SiteControlRow(symbol: "play.rectangle", title: "Autoplay") {
                 SitePolicyMenu(
                     options: AutoplayPolicy.allCases.map { ($0, String(localized: $0.label)) },
                     selection: browser.autoplay(for: tab)
@@ -298,7 +292,7 @@ private struct SiteMediaSection: View {
             }
 
             if BrowserSettings.shared.automaticPictureInPicture {
-                SiteControlRow(symbol: "pip", title: "Automatic Picture in Picture") {
+                SiteControlRow(symbol: "pip", title: "Auto Picture in Picture") {
                     SiteControlToggle(
                         isOn: browser.allowsAutomaticPicture(tab),
                         set: { browser.setAllowsAutomaticPicture($0, for: tab) }
@@ -313,8 +307,16 @@ private struct SiteSafetySection: View {
     let tab: BrowserTab
     let blockableHost: String?
 
+    private var visiblePermissions: [WebPermission] {
+        WebPermission.allCases.filter { permission in
+            tab.permissions.live.contains(permission)
+                || tab.permissions.sessionGrants.contains(permission)
+                || tab.permissions.menuPolicy(for: permission) == .allow
+        }
+    }
+
     var body: some View {
-        SiteControlGroup(title: "Trackers and permissions") {
+        SiteControlGroup {
             if let blockableHost {
                 SiteControlRow(symbol: "shield", title: "Block Trackers") {
                     HStack(spacing: 7) {
@@ -332,13 +334,74 @@ private struct SiteSafetySection: View {
             }
 
             if !tab.permissions.origin.isEmpty {
-                ForEach(WebPermission.allCases, id: \.self) { permission in
+                ForEach(visiblePermissions, id: \.self) { permission in
                     SiteControlRow(symbol: permission.symbol, title: permission.label) {
                         PermissionPolicyMenu(tab: tab, permission: permission)
                     }
                 }
+
+                SitePermissionsMenu(tab: tab)
             }
         }
+    }
+}
+
+private struct SitePermissionsMenu: View {
+    let tab: BrowserTab
+
+    @State private var isPresented = false
+    @State private var isHovering = false
+
+    var body: some View {
+        Button {
+            isPresented.toggle()
+        } label: {
+            SiteControlRow(symbol: "hand.raised", title: "Permissions…") {
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+            .background {
+                if isHovering || isPresented {
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 6,
+                        bottomLeadingRadius: 14,
+                        bottomTrailingRadius: 14,
+                        topTrailingRadius: 6
+                    )
+                    .fill(.quaternary)
+                    .padding(.horizontal, 6)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .popover(isPresented: $isPresented, arrowEdge: .trailing) {
+            SitePermissionsPanel(tab: tab)
+        }
+    }
+}
+
+private struct SitePermissionsPanel: View {
+    let tab: BrowserTab
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Permissions")
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.horizontal, SiteControlsMetrics.inset)
+                .padding(.vertical, 10)
+
+            ForEach(WebPermission.allCases, id: \.self) { permission in
+                SiteControlRow(symbol: permission.symbol, title: permission.label) {
+                    PermissionPolicyMenu(tab: tab, permission: permission)
+                }
+            }
+        }
+        .padding(.bottom, 6)
+        .frame(width: 280)
+        .background(.ultraThickMaterial)
     }
 }
 
@@ -556,7 +619,8 @@ private struct AssistantAccessMenu: View {
             Text(tab.assistantAccess.effectivePolicy.label)
                 .font(Theme.Font.label)
         }
-        .menuStyle(.button)
+        .menuStyle(.borderlessButton)
+        .foregroundStyle(.secondary)
         .controlSize(.small)
         .fixedSize()
     }
@@ -572,29 +636,43 @@ private struct PermissionPolicyMenu: View {
 
     var body: some View {
         Menu {
-            ForEach([PermissionPolicy.ask, .allow, .deny], id: \.self) { policy in
-                Button {
-                    center.set(policy, for: permission)
-                } label: {
-                    if center.menuPolicy(for: permission) == policy {
-                        Label {
-                            Text(policy.label)
-                        } icon: {
-                            Image(systemName: "checkmark")
-                        }
-                    } else {
-                        Text(policy.label)
-                    }
-                }
-                .disabled(!center.isSecure && policy == .allow)
-            }
+            PermissionPolicyOptions(tab: tab, permission: permission)
         } label: {
             Text(center.menuPolicy(for: permission).label)
                 .font(Theme.Font.label)
         }
-        .menuStyle(.button)
+        .menuStyle(.borderlessButton)
+        .foregroundStyle(.secondary)
         .controlSize(.small)
         .fixedSize()
+    }
+}
+
+private struct PermissionPolicyOptions: View {
+    let tab: BrowserTab
+    let permission: WebPermission
+
+    private var center: TabPermissionCenter {
+        tab.permissions
+    }
+
+    var body: some View {
+        ForEach([PermissionPolicy.ask, .allow, .deny], id: \.self) { policy in
+            Button {
+                center.set(policy, for: permission)
+            } label: {
+                if center.menuPolicy(for: permission) == policy {
+                    Label {
+                        Text(policy.label)
+                    } icon: {
+                        Image(systemName: "checkmark")
+                    }
+                } else {
+                    Text(policy.label)
+                }
+            }
+            .disabled(!center.isSecure && policy == .allow)
+        }
     }
 }
 
@@ -628,7 +706,8 @@ private struct SitePolicyMenu<Value: Hashable>: View {
             Text(verbatim: selectedLabel)
                 .font(Theme.Font.label)
         }
-        .menuStyle(.button)
+        .menuStyle(.borderlessButton)
+        .foregroundStyle(.secondary)
         .controlSize(.small)
         .fixedSize()
     }
@@ -664,7 +743,7 @@ private struct SiteControlRow<Accessory: View>: View {
             accessory
         }
         .padding(.horizontal, SiteControlsMetrics.inset)
-        .frame(minHeight: 36)
+        .frame(minHeight: 32)
     }
 }
 

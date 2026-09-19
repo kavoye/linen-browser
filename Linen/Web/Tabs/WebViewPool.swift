@@ -60,7 +60,7 @@ final class TabWebView: WKWebView {
     var onSummarizeLink: ((URL, CGPoint?) -> Void)?
     var onPageActivity: ((PageActivitySignal) -> Void)?
     var hasPageActivityMonitor = false
-    var onScrollPosition: ((Double) -> Void)?
+    var onScrollPosition: ((Double, URL?) -> Void)?
     var hasScrollPositionMonitor = false
     var onFaviconDeclarationChange: (() -> Void)?
     var hasFaviconWatcher = false
@@ -326,9 +326,6 @@ final class WebViewPool {
 
     private(set) var dataStore: WKWebsiteDataStore = .default()
 
-    // WebKit traps in ~WebProcessPool when a pool is destroyed while a display
-    // link client is still registered. A copy shares its template's pool, and
-    // the template outlives every view, so no pool is ever destroyed.
     private static let configurationTemplate = WKWebViewConfiguration()
 
     static func makeConfiguration() -> WKWebViewConfiguration {
@@ -424,6 +421,7 @@ final class WebViewPool {
         defer { scheduleRefill() }
         while let view = idle.popLast() {
             if view.configuration.websiteDataStore === dataStore {
+                BrowserSettings.shared.apply(to: view)
                 return view
             }
         }

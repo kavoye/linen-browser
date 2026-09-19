@@ -91,11 +91,11 @@ private struct DownloadFileRow: View {
 
                 subtitle
                     .font(Theme.Font.label)
+                    .monospacedDigit()
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
-
-            Spacer(minLength: 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if item.isRunning {
                 if let fraction = item.fraction {

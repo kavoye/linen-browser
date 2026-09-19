@@ -297,10 +297,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         activeWebView?.stopLoading()
     }
     @objc private func goBack() {
-        coordinator.browser.activeTab?.goBack()
+        coordinator.pageCommandTab?.goBack()
     }
     @objc private func goForward() {
-        coordinator.browser.activeTab?.goForward()
+        coordinator.pageCommandTab?.goForward()
     }
     @objc private func toggleSidebar() {
         coordinator.toggleSidebar()
@@ -335,13 +335,13 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     }
 
     @objc private func openFind() {
-        coordinator.browser.activeTab?.find.open()
+        coordinator.pageCommandTab?.find.open()
     }
     @objc private func findNext() {
-        coordinator.browser.activeTab?.find.findNext(backwards: false)
+        coordinator.pageCommandTab?.find.findNext(backwards: false)
     }
     @objc private func findPrevious() {
-        coordinator.browser.activeTab?.find.findNext(backwards: true)
+        coordinator.pageCommandTab?.find.findNext(backwards: true)
     }
 
     @objc private func nextTab() {
@@ -372,17 +372,17 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     }
 
     @objc private func actualSize() {
-        coordinator.browser.activeTab?.resetZoom()
+        coordinator.pageCommandTab?.resetZoom()
     }
     @objc private func zoomIn() {
-        coordinator.browser.activeTab?.zoomIn()
+        coordinator.pageCommandTab?.zoomIn()
     }
     @objc private func zoomOut() {
-        coordinator.browser.activeTab?.zoomOut()
+        coordinator.pageCommandTab?.zoomOut()
     }
 
     private var activeWebView: WKWebView? {
-        coordinator.browser.activeTab?.webView
+        coordinator.pageCommandTab?.webView
     }
 
     // MARK: - Validation
@@ -390,17 +390,22 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {  // swiftlint:disable:this cyclomatic_complexity
         switch menuItem.action {
         case #selector(goBack):
-            return coordinator.browser.activeTab?.canGoBack ?? false
+            return coordinator.pageCommandTab?.canGoBack ?? false
         case #selector(goForward):
-            return coordinator.browser.activeTab?.canGoForward ?? false
+            return coordinator.pageCommandTab?.canGoForward ?? false
         case #selector(actualSize):
-            return coordinator.browser.activeTab?.isZoomed ?? false
-        case #selector(reload), #selector(hardReload), #selector(closeTab),
+            return coordinator.pageCommandTab?.isZoomed ?? false
+        case #selector(copyPageURL):
+            guard let tab = coordinator.pageCommandTab else { return false }
+            return coordinator.linkURL(for: tab) != nil
+        case #selector(reload), #selector(hardReload),
              #selector(zoomIn), #selector(zoomOut), #selector(openFind), #selector(findNext),
              #selector(findPrevious), #selector(printPage):
+            return coordinator.pageCommandTab != nil
+        case #selector(closeTab):
             return coordinator.browser.activeTab != nil
         case #selector(stopLoading):
-            return coordinator.browser.activeTab?.isLoading ?? false
+            return coordinator.pageCommandTab?.isLoading ?? false
         case #selector(splitRight), #selector(splitDown):
             guard coordinator.browser.activeTab != nil else { return false }
             return !(coordinator.browser.activeSplit?.isFull ?? false)

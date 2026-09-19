@@ -163,10 +163,7 @@ struct OmniboxFavicon: View {
     var body: some View {
         Group {
             if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .scaledToFit()
+                FaviconImage(image: image)
             } else {
                 Image(systemName: fallback)
                     .font(.system(size: size * 0.75))

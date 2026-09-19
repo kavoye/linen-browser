@@ -43,6 +43,32 @@ struct PinnedSectionTests {
         #expect(loose.pinnedURL == nil)
     }
 
+    @Test(arguments: [false, true])
+    func movingPinToCurrentPagePreservesPosition(inFolder: Bool) {
+        let model = model()
+        let first = tab("https://one.example/", in: model)
+        let second = tab("https://two.example/", in: model)
+        _ = tab("https://loose.example/", in: model)
+        model.pin(first)
+        model.pin(second)
+        let folder = inFolder ? model.createFolder(named: "Work", containing: [first, second]) : nil
+        if let folder {
+            model.pinAtTop([.folder(folder.id)])
+        }
+        let rootBefore = model.rows(in: nil)
+        let rowsBefore = model.rows(in: folder)
+        first.urlString = "https://one.example/inbox"
+        first.pageTitle = "Inbox"
+
+        model.pin(first)
+
+        #expect(first.pinnedURL?.absoluteString == "https://one.example/inbox")
+        #expect(first.pinnedTitle == "Inbox")
+        #expect(!first.isAwayFromPin)
+        #expect(model.rows(in: nil) == rootBefore)
+        #expect(model.rows(in: folder) == rowsBefore)
+    }
+
     @Test func aTabDroppedIntoThePinnedSectionIsPinned() {
         let model = model()
         let kept = tab("https://kept.example/", in: model)
@@ -163,7 +189,7 @@ struct PinnedSectionTests {
     @Test func aPinnedTabBelowALooseOneIsNotInTheRun() {
         let model = model()
         let kept = tab("https://kept.example/", in: model)
-        let loose = tab("https://loose.example/", in: model)
+        _ = tab("https://loose.example/", in: model)
         let below = tab("https://below.example/", in: model)
         model.pin(kept)
         model.move([.tab(below.id)], into: nil, before: nil)

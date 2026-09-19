@@ -63,6 +63,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
               url.scheme != "about",
               url.scheme != base.scheme || url.host != base.host
         else {
+            tab?.autofillSave.submissions.navigationRequested(navigationAction)
             decisionHandler(.allow)
             return
         }
@@ -253,6 +254,10 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         decidePolicyFor navigationResponse: WKNavigationResponse,
         decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
     ) {
+        if navigationResponse.isForMainFrame,
+           let response = navigationResponse.response as? HTTPURLResponse, response.statusCode >= 400 {
+            tab?.autofillSave.submissions.clear()
+        }
         guard !navigationResponse.canShowMIMEType else {
             decisionHandler(.allow)
             return
@@ -334,6 +339,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        tab?.autofillSave.resetDismissalsForNavigation()
         if tab?.provisionalNavigation === navigation {
             tab?.provisionalNavigation = nil
         }
@@ -370,6 +376,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if (error as? URLError)?.code != .cancelled { tab?.autofillSave.submissions.clear() }
         tab?.isRestoring = false
         tab?.finishReclaim()
         tab?.releasePageColorHold()
@@ -382,6 +389,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         didFailProvisionalNavigation navigation: WKNavigation!,
         withError error: Error
     ) {
+        if (error as? URLError)?.code != .cancelled { tab?.autofillSave.submissions.clear() }
         if let tab, tab.provisionalNavigation === navigation {
             tab.provisionalNavigation = nil
             tab.releasePageColorHold()
@@ -394,6 +402,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        tab?.autofillSave.clear()
         tab?.contentProcessDidTerminate()
     }
 

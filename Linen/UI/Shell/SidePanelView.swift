@@ -9,6 +9,7 @@ struct SidePanelSurface: View {
     let coordinator: AppCoordinator
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var panel: SidePanelModel {
         coordinator.sidePanel
@@ -21,6 +22,13 @@ struct SidePanelSurface: View {
                 LyricsBackdrop(artwork: coordinator.lyricsSource.artworkURL)
             } else {
                 LoomPanelFill(shape: shape)
+
+                if panel.selectedKind == .activity, coordinator.isVoiceConversationPresented {
+                    VoiceConversationBackdrop(session: coordinator.conversationVoice)
+                        .transition(.opacity)
+                } else if panel.selectedKind == .activity, panel.isExpanded {
+                    AssistantExpandedBackdrop()
+                }
             }
 
             SidePanelInteractionBoundary()
@@ -31,6 +39,7 @@ struct SidePanelSurface: View {
                 content
             }
         }
+        .animation(.easeInOut(duration: reduceMotion ? 0.18 : 0.55), value: coordinator.isVoiceConversationPresented)
         .contentShape(shape)
         .clipShape(shape)
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
@@ -47,6 +56,24 @@ struct SidePanelSurface: View {
         case nil:
             Spacer(minLength: 0)
         }
+    }
+}
+
+private struct AssistantExpandedBackdrop: View {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var body: some View {
+        LinearGradient(
+            stops: [
+                .init(color: Theme.windowBackground.opacity(reduceTransparency ? 1 : 0.65), location: 0),
+                .init(color: Theme.windowBackground.opacity(reduceTransparency ? 1 : 0.78), location: 0.65),
+                .init(color: Theme.windowBackground.opacity(reduceTransparency ? 1 : 0.94), location: 1),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

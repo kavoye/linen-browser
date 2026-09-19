@@ -105,6 +105,7 @@ struct MainMenuKeyTests {
             #expect(ShortcutPriority.menuAnswersFirst(try event(key, modifiers: .command)))
         }
         #expect(ShortcutPriority.menuAnswersFirst(try event("T", modifiers: [.command, .shift])))
+        #expect(ShortcutPriority.menuAnswersFirst(try event("C", modifiers: [.command, .shift])))
         #expect(ShortcutPriority.menuAnswersFirst(try event("\t", modifiers: .control)))
     }
 

@@ -21,22 +21,12 @@ struct NewTabChromeTests {
     @Test func anEmptyTabNeverReportsItselfLoading() async {
         let tab = BrowserTab()
 
-        var everClaimedToLoad = false
-        var everLeftTheStartPage = false
-        // Well past the warm-up page's own load, sampled finely enough to
-        // catch a flicker a person would see.
-        for _ in 0..<60 {
-            if tab.isLoading {
-                everClaimedToLoad = true
-            }
-            if !tab.hasNoPageYet {
-                everLeftTheStartPage = true
-            }
-            try? await Task.sleep(for: .milliseconds(25))
+        let finished = await waitUntil {
+            #expect(!tab.isLoading, "the warm-up page must not report a page load")
+            #expect(tab.hasNoPageYet, "the start page must stay visible during warm-up")
+            return tab.webView.url == SystemPages.start && !tab.webView.isLoading
         }
-
-        #expect(!everClaimedToLoad, "the pool's warm-up page was reported as the tab loading")
-        #expect(!everLeftTheStartPage, "the start page condition flickered, which is the toolbar blinking")
+        #expect(finished)
         #expect(tab.urlString.isEmpty)
     }
 
@@ -46,14 +36,11 @@ struct NewTabChromeTests {
     @Test func aWholeSessionOfNewTabsStaysQuiet() async {
         let tabs = (0..<5).map { _ in BrowserTab() }
 
-        var flickered = false
-        for _ in 0..<40 {
-            if tabs.contains(where: { !$0.hasNoPageYet }) {
-                flickered = true
-            }
-            try? await Task.sleep(for: .milliseconds(25))
+        let finished = await waitUntil {
+            #expect(tabs.allSatisfy { $0.hasNoPageYet })
+            return tabs.allSatisfy { $0.webView.url == SystemPages.start && !$0.webView.isLoading }
         }
-        #expect(!flickered)
+        #expect(finished)
     }
 
     /// The warm-up page is painted `#101014` so WebKit has something to
@@ -61,10 +48,11 @@ struct NewTabChromeTests {
     /// takes its wash from the *site*, and an empty tab has no site.
     @Test func theWarmUpPageNeverTintsTheToolbar() async {
         let tab = BrowserTab()
-        for _ in 0..<40 {
+        let finished = await waitUntil {
             #expect(tab.pageColor == nil, "the pool's blank page washed the toolbar in its own backdrop")
-            try? await Task.sleep(for: .milliseconds(25))
+            return tab.webView.url == SystemPages.start && !tab.webView.isLoading
         }
+        #expect(finished)
     }
 
     // MARK: - …without disabling the flag entirely
@@ -92,10 +80,11 @@ struct NewTabChromeTests {
         let tab = BrowserTab()
         tab.load(URL(string: "about:blank")!)
 
-        for _ in 0..<40 {
+        let finished = await waitUntil {
             #expect(!tab.isLoading)
-            try? await Task.sleep(for: .milliseconds(25))
+            return tab.webView.url?.absoluteString == "about:blank" && !tab.webView.isLoading
         }
+        #expect(finished)
         #expect(tab.hasNoPageYet)
     }
 
@@ -142,10 +131,11 @@ struct NewTabChromeTests {
     /// window's own background, never the warm-up's.
     @Test func theBackdropClaimsNothingBeforeARealPage() async {
         let tab = BrowserTab()
-        for _ in 0..<40 {
+        let finished = await waitUntil {
             #expect(tab.canvasColor == nil, "the warm-up page's backdrop leaked into the canvas colour")
-            try? await Task.sleep(for: .milliseconds(25))
+            return tab.webView.url == SystemPages.start && !tab.webView.isLoading
         }
+        #expect(finished)
     }
 
     /// …and takes the site's colour once there is a site, which is what

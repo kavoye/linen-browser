@@ -46,10 +46,10 @@ struct CommandPalette: View {
 
             CommandPaletteResultsView(
                 sections: model.sections,
-                query: model.interaction.query,
+                query: model.resultQuery,
                 selection: model.interaction.selection,
                 maxHeight: layout.maxListHeight,
-                onSelect: { model.interaction.selection = $0 },
+                onSelect: model.selectSuggestion,
                 onRun: model.run,
                 onRunAlternate: model.runAlternate
             )

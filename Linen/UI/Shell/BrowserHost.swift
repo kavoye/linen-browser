@@ -141,7 +141,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         created.tabbingMode = .disallowed
         created.isRestorable = false
         created.onSideButton = { [weak coordinator] forward in
-            guard let tab = coordinator?.browser.activeTab else { return }
+            guard let tab = coordinator?.pageCommandTab else { return }
             if forward {
                 tab.goForward()
             } else {
@@ -379,6 +379,8 @@ struct BrowserRootView: View {
 
     var body: some View {
         BrowserView(browser: coordinator.browser, coordinator: coordinator)
+            .disclosureGroupStyle(ClickableDisclosureStyle())
+            .writingToolsAffordanceVisibility(.hidden)
             .environment(\.windowControlsInset, coordinator.windowControlsInset)
     }
 }
