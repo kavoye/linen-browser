@@ -65,7 +65,7 @@ final class ContentBlocker {
             }
             Pipeline.log.notice("content blocking: \(TrackerList.domains.count, privacy: .public) rules compiled")
         } catch {
-            Pipeline.log.error("content blocking: compile failed: \(error, privacy: .public)")
+            Pipeline.log.error("content blocking: compile failed")
         }
     }
 

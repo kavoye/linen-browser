@@ -40,7 +40,7 @@ enum FolderNamer {
             let response = try await session.respond(to: prompt, generating: Suggestion.self)
             return sanitize(response.content.name)
         } catch {
-            Pipeline.log.error("folder naming failed: \(String(describing: error), privacy: .public)")
+            Pipeline.log.error("folder naming failed")
             return nil
         }
     }

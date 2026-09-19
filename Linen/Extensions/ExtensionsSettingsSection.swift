@@ -62,14 +62,12 @@ private struct ExtensionRowMenu: View {
     let manager: ExtensionManager
     let record: InstalledExtension
 
-    @State private var hovering = false
-
     private var isChecking: Bool {
         manager.updateChecks[record.id] == .checking
     }
 
     var body: some View {
-        Menu {
+        SettingsMoreMenu {
             Button("Check for Updates") {
                 Task { await manager.checkForUpdate(id: record.id) }
             }
@@ -86,23 +84,7 @@ private struct ExtensionRowMenu: View {
             Button("Remove Extension", role: .destructive) {
                 manager.confirmUninstall(id: record.id)
             }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(
-                    width: SettingsMetrics.controlHeight,
-                    height: SettingsMetrics.controlHeight
-                )
-                .settingsSurface(isActive: hovering, isLifted: true, in: Circle())
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain)
-        .fixedSize()
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-        .help(Text("More Options"))
     }
 }
 
@@ -251,7 +233,7 @@ private struct IssueList: View {
                 .font(.system(size: 12, weight: .semibold))
 
             if issues.isEmpty {
-                Text("The issue has cleared — turn the extension off and on to refresh the badge.")
+                Text("The issue is resolved. Turn the extension off and on to clear the warning.")
                     .font(Theme.Font.secondary)
                     .foregroundStyle(.secondary)
             } else {
@@ -268,7 +250,7 @@ private struct IssueList: View {
                     }
                 }
 
-                Text("Usually a part of the extension WebKit doesn’t support. The rest keeps working.")
+                Text("Some extension features aren’t supported by WebKit. Other features remain available.")
                     .font(Theme.Font.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.top, 2)

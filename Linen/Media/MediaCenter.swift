@@ -575,7 +575,7 @@ final class MediaCenter {
             return true
         }
         if message.hasPrefix("diag:") {
-            Pipeline.log.notice("media \(message, privacy: .public)")
+            Pipeline.log.notice("Media diagnostic received")
             return true
         }
         return false
@@ -645,10 +645,10 @@ final class MediaCenter {
             return
         }
         if message.hasPrefix("diag:") {
-            Pipeline.log.notice("media \(message, privacy: .public)")
+            Pipeline.log.notice("Media diagnostic received")
             return
         }
-        Pipeline.log.notice("media mode → \(message, privacy: .public)")
+        Pipeline.log.notice("Media state received")
     }
 
     private func applyState(_ json: String, from source: WKWebView?) {

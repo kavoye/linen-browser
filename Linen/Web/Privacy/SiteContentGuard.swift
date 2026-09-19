@@ -12,9 +12,11 @@ final class SiteContentGuard: NSObject, WKScriptMessageHandlerWithReply {
     private static let handlerName = "linenSiteGuard"
     private let installedControllers = NSHashTable<WKUserContentController>.weakObjects()
     private let permissions: SitePermissions
+    private let settings: BrowserSettings
 
-    init(permissions: SitePermissions = .shared) {
+    init(permissions: SitePermissions = .shared, settings: BrowserSettings = .shared) {
         self.permissions = permissions
+        self.settings = settings
         super.init()
     }
 
@@ -48,7 +50,6 @@ final class SiteContentGuard: NSObject, WKScriptMessageHandlerWithReply {
         }
 
         let origin = SitePermissions.origin(for: webView.url)
-        let settings = BrowserSettings.shared
         let autoplay = permissions.autoplay(for: origin) ?? settings.autoplay
         let popups = permissions.popups(for: origin)
             ?? (settings.blocksPopups ? PopupPolicy.blockAndNotify : .allow)

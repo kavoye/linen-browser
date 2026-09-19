@@ -124,7 +124,7 @@ extension ExtensionManager {
         completionHandler: @escaping ((any Error)?) -> Void
     ) {
         if !present(action, for: context.uniqueIdentifier) {
-            Pipeline.log.notice("ext: no toolbar anchor for \(context.uniqueIdentifier, privacy: .public), popup skipped")
+            Pipeline.log.notice("Extension popup skipped: no toolbar anchor")
         }
         completionHandler(nil)
     }

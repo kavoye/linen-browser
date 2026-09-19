@@ -249,7 +249,7 @@ nonisolated enum ExtensionExternalConnect {
         } catch {
             return false
         }
-        Pipeline.log.notice("ext: gave \(package.lastPathComponent, privacy: .public) the externally_connectable relay")
+        Pipeline.log.notice("Extension external connection relay installed")
         return true
     }
 }

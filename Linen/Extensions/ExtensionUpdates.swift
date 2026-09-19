@@ -57,7 +57,7 @@ extension ExtensionManager {
             }
             if quietly {
                 guard asksForNothingNew(candidate, replacing: id) else {
-                    Pipeline.log.notice("ext: \(id, privacy: .public) \(version, privacy: .public) wants more access, leaving it")
+                    Pipeline.log.notice("Extension update needs more access")
                     return
                 }
             } else if await !accepts(candidate, replacing: id, named: record.displayName) {
@@ -71,11 +71,11 @@ extension ExtensionManager {
                 version: version
             )
             updateChecks[id] = .updated(version)
-            Pipeline.log.notice("ext: updated \(id, privacy: .public) to \(version, privacy: .public)")
+            Pipeline.log.notice("Extension updated")
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             updateChecks[id] = quietly ? nil : .failed(message)
-            Pipeline.log.error("ext: update of \(id, privacy: .public) failed: \(error, privacy: .public)")
+            Pipeline.log.error("Extension update failed")
         }
     }
 

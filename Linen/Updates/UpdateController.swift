@@ -74,9 +74,9 @@ final class UpdateController: NSObject {
         do {
             try updater.start()
             self.updater = updater
-            Pipeline.log.notice("updater: started, feed \(self.feedURL, privacy: .public)")
+            Pipeline.log.notice("Updater started")
         } catch {
-            Pipeline.log.error("updater: start failed - \(error, privacy: .public)")
+            Pipeline.log.error("updater: start failed")
         }
     }
 
@@ -93,7 +93,7 @@ final class UpdateController: NSObject {
             return state != channel
         }
         guard changed else { return }
-        Pipeline.log.notice("updater: feed \(self.feedURL, privacy: .public)")
+        Pipeline.log.notice("Updater feed configured")
         checkNow()
     }
 
@@ -235,7 +235,7 @@ extension UpdateController: SPUUserDriver {
     }
 
     func showUpdaterError(_ error: any Error, acknowledgement: @escaping () -> Void) {
-        Pipeline.log.error("updater: \(error, privacy: .public)")
+        Pipeline.log.error("updater operation failed")
         checkTask?.cancel()
         pendingChoice = nil
         if isUserInitiated {

@@ -112,7 +112,7 @@ extension BrowserModel {
                     try Self.persist(snapshot, in: db)
                 }
             } catch {
-                Pipeline.log.error("session: write failed: \(error, privacy: .public)")
+                Pipeline.log.error("session: write failed")
                 self?.forgetWrittenState(of: snapshot)
             }
         }
@@ -134,7 +134,7 @@ extension BrowserModel {
             }
             Pipeline.log.notice("session: wrote \(snapshot.tabs.count) tabs, \(snapshot.folders.count) folders")
         } catch {
-            Pipeline.log.error("session: final write failed: \(error, privacy: .public)")
+            Pipeline.log.error("session: final write failed")
             forgetWrittenState(of: snapshot)
         }
     }
@@ -268,7 +268,7 @@ extension BrowserModel {
             }
             try SplitPaneRecord.deleteAll(db)
         } catch {
-            Pipeline.log.error("session: split write failed: \(error, privacy: .public)")
+            Pipeline.log.error("session: split write failed")
         }
     }
 

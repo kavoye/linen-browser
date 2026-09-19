@@ -216,7 +216,7 @@ final class ScrollPositionMonitor: NSObject, WKScriptMessageHandler {
               let y = (message.body as? NSNumber)?.doubleValue,
               y.isFinite, y >= 0
         else { return }
-        webView.onScrollPosition?(y)
+        webView.onScrollPosition?(y, message.frameInfo.request.url)
     }
 
     private static let script = #"""

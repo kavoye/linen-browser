@@ -68,13 +68,13 @@ enum LinkSummarizer {
                 try Task.checkCancellation()
                 guard let partial = summary(from: snapshot.content) else { continue }
                 latest = partial
-                await onPartial(partial)
+                onPartial(partial)
             }
             return latest
         } catch is CancellationError {
             return nil
         } catch {
-            Pipeline.log.error("link peek failed: \(String(describing: error), privacy: .public)")
+            Pipeline.log.error("Link preview request failed")
             return nil
         }
     }

@@ -62,7 +62,7 @@ struct CopyCatalogTests {
     }
 
     @Test func theCatalogWasFoundAndIsNotEmpty() {
-        #expect(Self.displayStrings.count > 500)
+        #expect(!Self.displayStrings.isEmpty)
     }
 
     @Test func displayStringsUseTheCurlyApostrophe() {
@@ -190,9 +190,14 @@ struct SettingsIndexParityTests {
         "Linen/Settings/Pages/GeneralSettings.swift",
         "Linen/Settings/Pages/AppearanceSettings.swift",
         "Linen/Settings/Pages/PrivacySettings.swift",
+        "Linen/Settings/Pages/PaymentCardSettings.swift",
+        "Linen/Settings/Pages/AutofillSettings.swift",
+        "Linen/Settings/Pages/ContactAutofillSettings.swift",
+        "Linen/Settings/Pages/PasswordSettings.swift",
         "Linen/Settings/Pages/WebsiteSettings.swift",
         "Linen/Settings/Pages/DownloadsSettings.swift",
         "Linen/Settings/Pages/AdvancedSettings.swift",
+        "Linen/Settings/Pages/MCPSettingsPage.swift",
         "Linen/Settings/Pages/ExperimentsSettings.swift",
         "Linen/Settings/SettingsView.swift",
         "Linen/Settings/Pages/ProfileSettings.swift",

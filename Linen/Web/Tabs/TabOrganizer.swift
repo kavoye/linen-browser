@@ -58,7 +58,7 @@ enum TabOrganizer {
             let plan = plan(from: groups(in: response.content.groups), tabs: tabs)
             return plan.folders.isEmpty ? .empty : .plan(plan)
         } catch {
-            Pipeline.log.error("tab organizing failed: \(String(describing: error), privacy: .public)")
+            Pipeline.log.error("tab organizing failed")
             return .failed
         }
     }

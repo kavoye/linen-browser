@@ -190,7 +190,6 @@ nonisolated final class NativeMessagingConnection: @unchecked Sendable {
         // Writing to a dead host's stdin raises SIGPIPE and kills Linen without this.
         _ = fcntl(stdinHandle.fileDescriptor, F_SETNOSIGPIPE, 1)
 
-        let hostName = manifest.name
         stdoutHandle.readabilityHandler = { [weak self] handle in
             let chunk = handle.availableData
             guard let self else { return }
@@ -199,8 +198,7 @@ nonisolated final class NativeMessagingConnection: @unchecked Sendable {
         stderrHandle.readabilityHandler = { handle in
             let chunk = handle.availableData
             guard !chunk.isEmpty else { return }
-            let text = String(decoding: chunk.prefix(512), as: UTF8.self)
-            Pipeline.log.notice("nativemsg: \(hostName, privacy: .public) stderr: \(text, privacy: .public)")
+            Pipeline.log.notice("Native messaging stderr received (\(chunk.count) bytes)")
         }
         // EOF and termination race in both orders; whichever lands second closes.
         process.terminationHandler = { [weak self] process in
@@ -209,7 +207,7 @@ nonisolated final class NativeMessagingConnection: @unchecked Sendable {
             self.queue.async {
                 self.exitStatus = status
                 if status != 0 {
-                    Pipeline.log.notice("nativemsg: \(hostName, privacy: .public) exited with \(status, privacy: .public)")
+                    Pipeline.log.notice("Native messaging exited with status \(status)")
                 }
                 if self.sawEOF {
                     self.finishForExit(status)
@@ -224,7 +222,7 @@ nonisolated final class NativeMessagingConnection: @unchecked Sendable {
             try process.run()
         } catch {
             continuation.finish()
-            Pipeline.log.error("nativemsg: \(hostName, privacy: .public) failed to launch: \(error, privacy: .public)")
+            Pipeline.log.error("nativemsg operation failed")
             throw NativeMessagingError.communicationFailed
         }
     }
@@ -338,10 +336,7 @@ final class NativeMessagingService {
             refused = true
         }
         guard refused else { return .unavailable }
-        Pipeline.log.notice("""
-            nativemsg: \(name, privacy: .public) refuses \
-            \(context.uniqueIdentifier, privacy: .public)
-            """)
+        Pipeline.log.notice("Native messaging host refused connection")
         return .forbidden
     }
 
@@ -397,10 +392,7 @@ final class NativeMessagingService {
             }
             self?.connections[key] = nil
         }
-        Pipeline.log.notice("""
-            nativemsg: connected \(context.uniqueIdentifier, privacy: .public) → \
-            \(manifest.name, privacy: .public)
-            """)
+        Pipeline.log.notice("Native messaging connected")
         return .connected
     }
 

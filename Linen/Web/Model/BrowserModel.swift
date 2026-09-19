@@ -18,14 +18,17 @@ final class BrowserModel {
     var history: HistoryStore
     var sitePermissions: SitePermissions
     let downloads: DownloadManager
+    private let webViewFactory: (@MainActor () -> WKWebView)?
 
     init(
         database: AppDatabase = .shared,
         history: HistoryStore? = nil,
         sitePermissions: SitePermissions = .shared,
-        downloads: DownloadManager = DownloadManager()
+        downloads: DownloadManager = DownloadManager(),
+        webViewFactory: (@MainActor () -> WKWebView)? = nil
     ) {
         self.database = database
+        self.webViewFactory = webViewFactory
         self.history = history ?? HistoryStore(database: database)
         self.sitePermissions = sitePermissions
         self.downloads = downloads
@@ -79,6 +82,7 @@ final class BrowserModel {
         restoring: Bool = false
     ) -> BrowserTab {
         let privately = opensPrivately
+        let adopting = adopting ?? (restoring ? nil : webViewFactory?())
         let tab = BrowserTab(
             id: id,
             extensionHost: adopting == nil ? url.flatMap { extensionPageHost?($0) } : nil,

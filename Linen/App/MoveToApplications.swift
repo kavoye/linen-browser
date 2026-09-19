@@ -114,7 +114,7 @@ enum MoveToApplications {
         do {
             try install(from: source, to: destination)
         } catch {
-            Pipeline.log.error("install: copy failed: \(error, privacy: .public)")
+            Pipeline.log.error("install: copy failed")
             guard escalatedInstall(from: source, to: destination) else {
                 NSWorkspace.shared.activateFileViewerSelecting([source])
                 return .staying
@@ -161,8 +161,8 @@ enum MoveToApplications {
 
         var failure: NSDictionary?
         NSAppleScript(source: script)?.executeAndReturnError(&failure)
-        if let failure {
-            Pipeline.log.error("install: privileged copy failed: \(String(describing: failure), privacy: .public)")
+        if failure != nil {
+            Pipeline.log.error("install: privileged copy failed")
             return false
         }
         return FileManager.default.fileExists(atPath: destination.path)
@@ -176,7 +176,7 @@ enum MoveToApplications {
             try task.run()
             task.waitUntilExit()
         } catch {
-            Pipeline.log.error("install: clearing quarantine failed: \(error, privacy: .public)")
+            Pipeline.log.error("install: clearing quarantine failed")
         }
     }
 
@@ -193,7 +193,7 @@ enum MoveToApplications {
         do {
             try task.run()
         } catch {
-            Pipeline.log.error("install: relaunch failed: \(error, privacy: .public)")
+            Pipeline.log.error("install: relaunch failed")
         }
         quit()
     }

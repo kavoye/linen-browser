@@ -11,7 +11,7 @@ nonisolated struct SearchHit: Sendable {
 }
 
 nonisolated enum SnippetFetcher {
-    static func search(query: String, limit: Int = 3) async -> [SearchHit] {
+    static func search(query: String, limit: Int = 6) async -> [SearchHit] {
         for source in Source.allCases {
             let hits = await fetch(query: query, limit: limit, from: source)
             if !hits.isEmpty {

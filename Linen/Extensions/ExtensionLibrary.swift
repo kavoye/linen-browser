@@ -227,7 +227,7 @@ final class ExtensionLibrary {
             guard !keep.contains(name) else { continue }
             guard includingStaging || !name.contains(".unpacking") else { continue }
             try? files.removeItem(at: item)
-            Pipeline.log.notice("ext: removed stale \(name, privacy: .public)")
+            Pipeline.log.notice("Stale extension removed")
         }
     }
 
@@ -291,13 +291,10 @@ final class ExtensionLibrary {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = complaints
         try process.run()
-        let message = complaints.fileHandleForReading.readDataToEndOfFile()
+        _ = complaints.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
-            Pipeline.log.error("""
-                ext: ditto exited \(process.terminationStatus, privacy: .public): \
-                \(String(decoding: message, as: UTF8.self), privacy: .public)
-                """)
+            Pipeline.log.error("Extension unpacking exited with status \(process.terminationStatus)")
             throw PackageError.unpackingFailed
         }
     }

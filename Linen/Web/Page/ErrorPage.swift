@@ -47,7 +47,7 @@ nonisolated enum ErrorPage {
         case NSURLErrorNetworkConnectionLost:
             return (
                 "The connection dropped",
-                String(localized: "The network went away mid-transfer. Try again.")
+                String(localized: "The connection was lost while loading the page. Try again.")
             )
         case NSURLErrorSecureConnectionFailed,
              NSURLErrorServerCertificateHasBadDate,

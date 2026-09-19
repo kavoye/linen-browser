@@ -27,7 +27,7 @@ enum DefaultBrowser {
             }
             return .answered
         } catch {
-            Pipeline.log.error("Default browser request refused: \(error, privacy: .public)")
+            Pipeline.log.error("Default browser request refused")
             openSystemSettings()
             return .handedOverToSystemSettings
         }

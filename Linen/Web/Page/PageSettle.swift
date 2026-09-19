@@ -10,39 +10,44 @@ enum PageSettle {
     static let navigationGrace: Duration = .milliseconds(400)
 
     @discardableResult
-    static func untilIdle(_ webView: WKWebView, timeout: Duration = loadCeiling) async -> Bool {
-        await wait(on: webView, timeout: timeout) { !$0.isLoading }
+    static func untilIdle(
+        _ webView: WKWebView,
+        timeout: Duration = loadCeiling,
+        clock: some Clock<Duration> = ContinuousClock()
+    ) async -> Bool {
+        await wait(on: webView, timeout: timeout, clock: clock) { !$0.isLoading }
     }
 
     static func afterInteraction(
         _ webView: WKWebView,
         grace: Duration = navigationGrace,
-        quietCeiling: Duration = .milliseconds(1500)
+        quietCeiling: Duration = .milliseconds(1500),
+        clock: some Clock<Duration> = ContinuousClock()
     ) async {
-        let navigated = await wait(on: webView, timeout: grace) { $0.isLoading }
+        let navigated = await wait(on: webView, timeout: grace, clock: clock) { $0.isLoading }
         if navigated {
-            await untilIdle(webView)
+            await untilIdle(webView, clock: clock)
         }
-        await untilQuiet(webView, ceiling: quietCeiling)
+        await untilQuiet(webView, ceiling: quietCeiling, clock: clock)
     }
 
     static func untilQuiet(
         _ webView: WKWebView,
         ceiling: Duration = .milliseconds(2500),
-        interval: Duration = .milliseconds(120)
+        interval: Duration = .milliseconds(120),
+        clock: some Clock<Duration> = ContinuousClock()
     ) async {
         var monitor = QuiescenceMonitor()
-        let deadline = ContinuousClock.now + ceiling
-        while ContinuousClock.now < deadline {
-            let remaining = deadline - ContinuousClock.now
+        let deadline = clock.now.advanced(by: ceiling)
+        while clock.now < deadline, !Task.isCancelled {
+            let remaining = clock.now.duration(to: deadline)
             guard let signature = await signature(of: webView, timeout: remaining) else { return }
             if monitor.record(signature) {
                 return
             }
-            try? await Task.sleep(for: interval)
-            if Task.isCancelled {
-                return
-            }
+            do {
+                try await clock.sleep(for: max(.zero, min(interval, clock.now.duration(to: deadline))))
+            } catch { return }
         }
     }
 
@@ -77,29 +82,35 @@ enum PageSettle {
     private static func wait(
         on webView: WKWebView,
         timeout: Duration,
+        clock: some Clock<Duration>,
         until isSatisfied: @escaping @MainActor (WKWebView) -> Bool
     ) async -> Bool {
+        guard !Task.isCancelled else { return false }
         if isSatisfied(webView) {
             return true
         }
         let gate = Gate()
-        return await withCheckedContinuation { continuation in
-            gate.arm(continuation)
-            gate.observation = webView.observe(\.isLoading, options: [.new]) { view, _ in
-                MainActor.assumeIsolated {
-                    if isSatisfied(view) {
-                        gate.close(satisfied: true)
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                gate.arm(continuation)
+                gate.observation = webView.observe(\.isLoading, options: [.new]) { view, _ in
+                    MainActor.assumeIsolated {
+                        if isSatisfied(view) {
+                            gate.close(satisfied: true)
+                        }
                     }
                 }
+                gate.timeoutTask = Task {
+                    try? await clock.sleep(for: timeout)
+                    guard !Task.isCancelled else { return }
+                    gate.close(satisfied: false)
+                }
+                if isSatisfied(webView) {
+                    gate.close(satisfied: true)
+                }
             }
-            gate.timeoutTask = Task {
-                try? await Task.sleep(for: timeout)
-                guard !Task.isCancelled else { return }
-                gate.close(satisfied: false)
-            }
-            if isSatisfied(webView) {
-                gate.close(satisfied: true)
-            }
+        } onCancel: {
+            Task { @MainActor in gate.close(satisfied: false) }
         }
     }
 

@@ -103,7 +103,7 @@ nonisolated enum ExtensionShims {
         } catch {
             return false
         }
-        Pipeline.log.notice("ext: gave \(package.lastPathComponent, privacy: .public) the WebKit compat shim")
+        Pipeline.log.notice("Extension compatibility shim installed")
         return true
     }
 }

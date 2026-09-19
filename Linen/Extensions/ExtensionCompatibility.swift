@@ -52,9 +52,13 @@ nonisolated enum ExtensionCompatibility {
         pattern: #"(?<![\w$./-])(?:chrome|browser)\.([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)"#
     )
 
-    static func report(forPackageAt url: URL, accepting accepted: Set<String>) -> Report {
+    static func report(
+        forPackageAt url: URL,
+        accepting accepted: Set<String>,
+        on version: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
+    ) -> Report {
         let dropped = declaredPermissions(at: url).subtracting(accepted)
-        guard membersAreKnown() else {
+        guard membersAreKnown(on: version) else {
             return Report(namespaces: dropped.sorted())
         }
         var members: Set<String> = []

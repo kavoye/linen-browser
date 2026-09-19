@@ -18,8 +18,12 @@ enum StoreInstallState: Equatable {
 final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     private(set) var controller: WKWebExtensionController
 
-    private(set) var installed: [InstalledExtension] = []
-    private(set) var systemExtensions: [InstalledExtension] = []
+    private(set) var installed: [InstalledExtension] = [] {
+        didSet { PasswordAutofill.shared.refreshPolicy() }
+    }
+    private(set) var systemExtensions: [InstalledExtension] = [] {
+        didSet { PasswordAutofill.shared.refreshPolicy() }
+    }
     private(set) var contexts: [String: WKWebExtensionContext] = [:]
     private var wakingBackgrounds: Set<String> = []
     private(set) var actionRevision = 0
@@ -294,14 +298,14 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
 
             let name = webExtension.displayName ?? record.displayName
             let ms = (ContinuousClock.now - started).milliseconds
-            Pipeline.log.notice("ext: loaded \(name, privacy: .public) in \(ms) ms")
+            Pipeline.log.notice("Extension loaded in \(ms) ms")
 
             if webExtension.hasBackgroundContent {
                 startBackgroundContent(of: context, id: record.id, name: name)
             }
             logErrors(of: context, id: record.id)
         } catch {
-            Pipeline.log.error("ext: loading \(record.id, privacy: .public) failed: \(error, privacy: .public)")
+            Pipeline.log.error("Extension loading failed")
         }
         Pipeline.signposter.endInterval("ext.load", state)
     }
@@ -311,22 +315,16 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         let watchdog = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(10))
             guard !Task.isCancelled else { return }
-            Pipeline.log.error("ext: \(name, privacy: .public) background never started")
+            Pipeline.log.error("Extension background start timed out")
             self?.logErrors(of: context, id: id)
         }
         backgroundStarts[id] = Task { @MainActor [weak self] in
             defer { watchdog.cancel() }
             do {
                 try await context.loadBackgroundContent()
-                Pipeline.log.notice("""
-                    ext: \(name, privacy: .public) background ready \
-                    (blocking rules: \(context.hasContentModificationRules, privacy: .public))
-                    """)
+                Pipeline.log.notice("Extension background ready")
             } catch {
-                Pipeline.log.error("""
-                    ext: \(name, privacy: .public) background failed: \
-                    \(error, privacy: .public)
-                    """)
+                Pipeline.log.error("Extension background failed")
             }
             self?.logErrors(of: context, id: id)
         }
@@ -335,7 +333,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     private func refuseReachingApp(for context: WKWebExtensionContext) -> NSError {
         let id = context.uniqueIdentifier
         if appsOutOfReach.insert(id).inserted {
-            Pipeline.log.notice("ext: \(id, privacy: .public) wanted its own app, which Linen cannot reach")
+            Pipeline.log.notice("Extension runtime event")
         }
         return NSError(
             domain: WKWebExtensionContext.errorDomain,
@@ -383,15 +381,13 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         do {
             try controller.unload(context)
         } catch {
-            Pipeline.log.error("ext: unloading \(id, privacy: .public) failed: \(error, privacy: .public)")
+            Pipeline.log.error("Extension unloading failed")
         }
     }
 
     private func logErrors(of context: WKWebExtensionContext, id: String) {
         guard !context.errors.isEmpty else { return }
-        for error in context.errors {
-            Pipeline.log.error("ext \(id, privacy: .public): \(error, privacy: .public)")
-        }
+        Pipeline.log.error("Extension reported \(context.errors.count) errors")
     }
 
     func errorCount(for id: String) -> Int {
@@ -407,7 +403,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     static let appOutOfReachReason = String(
-        localized: "This extension asked to talk to its own app. Linen can’t reach it, so the parts that need it won’t work."
+        localized: "The extension’s companion app is unavailable. Features that require it won’t work."
     )
 
     func loadedIcon(for id: String, size: CGFloat) -> NSImage? {
@@ -440,7 +436,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             }
             return icon
         } catch {
-            Pipeline.log.error("ext: reading icon for \(id, privacy: .public) failed: \(error, privacy: .public)")
+            Pipeline.log.error("Extension icon loading failed")
             return nil
         }
     }
@@ -482,14 +478,11 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
                 return
             }
             installState = .installed(id: id)
-            Pipeline.log.notice("""
-                ext: installed \(id, privacy: .public) from the \
-                \(store.rawValue, privacy: .public) store
-                """)
+            Pipeline.log.notice("Extension installed")
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             installState = .failed(id: id, message: message)
-            Pipeline.log.error("ext: install of \(id, privacy: .public) failed: \(error, privacy: .public)")
+            Pipeline.log.error("Extension installation failed")
         }
     }
 
@@ -523,8 +516,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             ExtensionCompatibility.report(forPackageAt: unpacked, accepting: accepted)
         }.value
         if !unsupported.isEmpty {
-            let names = unsupported.names.joined(separator: ", ")
-            Pipeline.log.notice("ext: \(id, privacy: .public) needs \(names, privacy: .public)")
+            Pipeline.log.notice("Extension requests unsupported capabilities")
         }
         return await ExtensionConsent.confirmInstall(
             name: webExtension.displayName ?? id,
@@ -565,7 +557,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         installed = library.records
         anchors[id] = nil
         iconCache[id] = nil
-        Pipeline.log.notice("ext: uninstalled \(id, privacy: .public)")
+        Pipeline.log.notice("Extension uninstalled")
     }
 
     func isInstalled(_ id: String) -> Bool {
@@ -689,10 +681,10 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             }
 
             guard reloadedForEmptyPopup.insert(id).inserted else {
-                Pipeline.log.error("ext: \(id, privacy: .public) popup still empty after a reload")
+                Pipeline.log.error("ext operation failed")
                 return
             }
-            Pipeline.log.notice("ext: \(id, privacy: .public) popup page missing, reloading the extension")
+            Pipeline.log.notice("Extension runtime event")
 
             presentedPopup?.performClose(nil)
             presentedPopup = nil

@@ -445,7 +445,7 @@ final class HistoryStore {
         do {
             return try database.writer.write(updates)
         } catch {
-            Pipeline.log.error("history: write failed: \(error, privacy: .public)")
+            Pipeline.log.error("history: write failed")
             return nil
         }
     }
@@ -454,7 +454,7 @@ final class HistoryStore {
         do {
             return try database.writer.read(value)
         } catch {
-            Pipeline.log.error("history: read failed: \(error, privacy: .public)")
+            Pipeline.log.error("history: read failed")
             return nil
         }
     }

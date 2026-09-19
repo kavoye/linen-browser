@@ -24,10 +24,10 @@ final class YouTubeResolver {
             else {
                 return ResolvedVideo(videoID: nil, fallbackURL: resultsURL)
             }
-            Pipeline.log.info("YouTubeResolver: \(query, privacy: .private) → \(videoID, privacy: .public)")
+            Pipeline.log.info("Video search resolved")
             return ResolvedVideo(videoID: videoID, fallbackURL: resultsURL)
         } catch {
-            Pipeline.log.warning("YouTubeResolver failed: \(error.localizedDescription, privacy: .public)")
+            Pipeline.log.warning("Video search failed")
             return ResolvedVideo(videoID: nil, fallbackURL: resultsURL)
         }
     }
