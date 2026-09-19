@@ -8,19 +8,25 @@ import WebKit
 @testable import Linen
 
 @MainActor
-@Suite(.serialized, .boundedWebViews, .exclusiveExternalApp)
+@Suite(.serialized, .boundedWebViews, .exclusiveExternalApp, .timeLimit(.minutes(1)))
 struct AppHandoffTests {
     private func asked(for route: String, routes: [String: HTTPFixtureServer.Response]) async throws -> URL? {
         let server = try await HTTPFixtureServer.start(routes: routes)
-        var seen: URL?
-        ExternalApp.openerForTesting = { seen = $0 }
-        defer { ExternalApp.openerForTesting = nil }
+        let (openedURLs, continuation) = AsyncStream<URL>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        ExternalApp.openerForTesting = { continuation.yield($0) }
+        defer {
+            ExternalApp.openerForTesting = nil
+            continuation.finish()
+        }
 
         let tab = BrowserTab(opensBlank: false)
+        defer {
+            tab.webView.stopLoading()
+            withExtendedLifetime(server) {}
+        }
         tab.load(try server.url(route))
-        _ = await waitUntil { seen != nil }
-        _ = server
-        return seen
+        var iterator = openedURLs.makeAsyncIterator()
+        return await iterator.next()
     }
 
     @Test func aScriptedJumpToAnAppIsOffered() async throws {
