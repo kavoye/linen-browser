@@ -146,22 +146,34 @@ private struct AnyLanguageModelProvider: ModelProvider {
                 for: reasoningEffort,
                 adapter: configuration.adapter
             ),
-            toolCount: toolIDs.count
+            measuredSchemaTokens: estimatedToolSchemaTokens(makeAgentTools(toolkit: toolkit, enabledIDs: toolIDs) + [UpdateProgressTool()])
         )
         let runtime = LanguageModelRuntimeFactory.make(
             configuration: configuration,
             modelID: model,
             apiKey: credentials.key(for: configuration) ?? "",
             reasoningEffort: reasoningEffort,
-            responseTokens: budget.responseTokens,
-            maxToolCalls: budget.maxToolCalls
+            responseTokens: budget.responseTokens
         )
+        let nativeOpenAI: OpenAIResponsesClient?
+        if configuration.adapter == .openAIResponses, let endpoint = configuration.baseURL {
+            var settings = OpenAISettingsStore.load(providerID: configuration.id).forChat(endpoint: endpoint, model: model)
+            settings.reasoningEffort = reasoningEffort.rawValue
+            nativeOpenAI = .init(endpoint: endpoint, apiKey: credentials.key(for: configuration) ?? "", model: model, settings: settings, providerID: configuration.id)
+        } else {
+            nativeOpenAI = nil
+        }
         return AnyLanguageModelAgent(
             name: "\(configuration.name) (\(model))",
+            modelID: model,
+            reasoningEffort: reasoningEffort.rawValue,
+            openAI: nativeOpenAI,
             model: runtime.model,
             options: runtime.options,
             answerOptions: runtime.answerOptions,
             budget: budget,
+            acceptsImages: ModelImageSupport.acceptsImages(for: configuration, model: model),
+            onImageInputUnsupported: { ModelImageSupport.record(false, for: configuration, model: model) },
             enabledToolIDs: toolIDs,
             toolkit: toolkit,
             log: log
@@ -170,6 +182,10 @@ private struct AnyLanguageModelProvider: ModelProvider {
 
     func makeUtilityModel(model: String) -> (any LanguageModel)? {
         guard availability == .available else { return nil }
+        if configuration.adapter == .openAIResponses, let endpoint = configuration.baseURL {
+            let client = OpenAIResponsesClient(endpoint: endpoint, apiKey: credentials.key(for: configuration) ?? "", model: model)
+            return OpenAIUtilityModel(client: client, maxTokens: 4_096)
+        }
         let budget = ContextBudget.resolve(
             windowTokens: ContextWindow.tokens(for: configuration, model: model),
             desiredResponseTokens: LanguageModelRuntimeFactory.desiredResponseTokens(
@@ -182,8 +198,7 @@ private struct AnyLanguageModelProvider: ModelProvider {
             modelID: model,
             apiKey: credentials.key(for: configuration) ?? "",
             reasoningEffort: .low,
-            responseTokens: budget.responseTokens,
-            maxToolCalls: 1
+            responseTokens: budget.responseTokens
         ).model
     }
 }
@@ -212,8 +227,7 @@ private enum LanguageModelRuntimeFactory {
         modelID: String,
         apiKey: String,
         reasoningEffort: LLMSettings.ReasoningEffort,
-        responseTokens: Int,
-        maxToolCalls: Int
+        responseTokens: Int
     ) -> LanguageModelRuntime {
         var options = GenerationOptions(maximumResponseTokens: responseTokens)
 
@@ -227,8 +241,7 @@ private enum LanguageModelRuntimeFactory {
         case .openAIResponses:
             let effort = openAIEffort(reasoningEffort)
             options[custom: OpenAILanguageModel.self] = .init(
-                reasoning: .init(effort: effort),
-                maxToolCalls: maxToolCalls
+                reasoning: .init(effort: effort)
             )
             return LanguageModelRuntime(
                 model: OpenAILanguageModel(
@@ -316,7 +329,7 @@ private enum LanguageModelRuntimeFactory {
             .low
         case .medium:
             .medium
-        case .high:
+        case .high, .xhigh, .max:
             .high
         }
     }
@@ -331,7 +344,7 @@ private enum LanguageModelRuntimeFactory {
             1_024
         case .medium:
             4_096
-        case .high:
+        case .high, .xhigh, .max:
             8_192
         }
     }
@@ -349,7 +362,7 @@ private enum LanguageModelRuntimeFactory {
             .budget(1_024)
         case .medium:
             .budget(4_096)
-        case .high:
+        case .high, .xhigh, .max:
             .budget(8_192)
         }
     }
@@ -372,6 +385,10 @@ private enum LanguageModelRuntimeFactory {
             6_000
         case .high:
             10_000
+        case .xhigh:
+            24_000
+        case .max:
+            48_000
         }
     }
 

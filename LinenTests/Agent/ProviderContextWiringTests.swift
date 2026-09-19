@@ -55,7 +55,6 @@ struct ProviderContextWiringTests {
         #expect(budget.instructionTier == .full)
         #expect(budget.toolTier == .full)
         #expect(budget.toolOutput == .standard)
-        #expect(budget.maxToolCalls == 20)
     }
 
     @Test func theBudgetFollowsTheToolCount() {

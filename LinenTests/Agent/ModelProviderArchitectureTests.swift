@@ -7,6 +7,7 @@ import Testing
 @testable import Linen
 
 nonisolated private struct TestCredentialStore: ProviderCredentialStore {
+    var saveFailure: String?
     func key(for provider: Provider) -> String? {
         nil
     }
@@ -20,7 +21,7 @@ nonisolated private struct TestCredentialStore: ProviderCredentialStore {
         nil
     }
     func save(_ key: String, for provider: Provider) -> String? {
-        nil
+        saveFailure
     }
     func delete(for provider: Provider) {}
 }
@@ -103,6 +104,41 @@ private final class TestAgentRunner: AgentRunner {
 
 @MainActor
 struct ModelProviderArchitectureTests {
+    @Test func credentialChangesRefreshPanelsEvenWhenMaskedKeysAreIdentical() {
+        let model = credentialModel()
+        let revision = model.credentialRevision
+        model.keyDraft = ""
+        model.saveKey()
+        #expect(model.credentialRevision == revision)
+        model.keyDraft = "fixture-first"
+        model.saveKey()
+        #expect(model.credentialRevision == revision + 1)
+        model.keyDraft = "fixture-second"
+        model.saveKey()
+        #expect(model.credentialRevision == revision + 2)
+        model.removeKey()
+        #expect(model.credentialRevision == revision + 3)
+    }
+
+    @Test func failedCredentialSaveKeepsTheCurrentPanelConnection() {
+        let model = credentialModel(saveFailure: "Fixture save failure")
+        let revision = model.credentialRevision
+        model.keyDraft = "fixture-new"
+        model.saveKey()
+        #expect(model.credentialRevision == revision)
+        #expect(model.keyError == "Fixture save failure")
+    }
+
+    private func credentialModel(saveFailure: String? = nil) -> IntelligenceViewModel {
+        let provider = ProviderCatalog.openAI
+        let credentials = TestCredentialStore(saveFailure: saveFailure)
+        let registry = ModelProviderRegistry(credentials: credentials, factories: [provider.id: { configuration in
+            TestModelProvider(configuration: configuration, capabilities: [.toolCalling], availability: .available, models: [])
+        }])
+        return IntelligenceViewModel(catalog: TestProviderCatalog(providers: [provider], selectedID: provider.id),
+            credentials: credentials, modelProviders: registry, onConfigurationChanged: {})
+    }
+
     @Test func registeredMockProviderDrivesSettingsWithoutNetwork() async {
         let configuration = Provider(
             id: "mock",

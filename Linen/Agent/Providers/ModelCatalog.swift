@@ -48,6 +48,9 @@ nonisolated enum ModelCatalog {
             .compactMap { entry -> (id: String, created: Int)? in
                 guard let id = entry["id"] as? String else { return nil }
                 guard provider.isLocal || isTextModel(id) else { return nil }
+                if let support = ModelImageSupport.declaredSupport(in: entry) {
+                    ModelImageSupport.record(support, for: provider, model: id)
+                }
                 return (id, entry["created"] as? Int ?? 0)
             }
 

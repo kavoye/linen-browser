@@ -322,7 +322,7 @@ extension ProviderCatalog {
         Provider(
             id: "ollama",
             name: "Ollama",
-            blurb: String(localized: "Your own models, running locally."),
+            blurb: String(localized: "Run models on your Mac."),
             symbol: "desktopcomputer",
             baseURL: URL(string: "http://localhost:11434/v1"),
             wire: .chatCompletions,
@@ -378,7 +378,7 @@ extension ProviderCatalog {
         Provider(
             id: "groq",
             name: "Groq",
-            blurb: String(localized: "Open models served fast enough for voice."),
+            blurb: String(localized: "Fast responses from open models."),
             symbol: "bolt",
             baseURL: URL(string: "https://api.groq.com/openai/v1"),
             wire: .chatCompletions,
@@ -404,7 +404,7 @@ extension ProviderCatalog {
         Provider(
             id: "deepseek",
             name: "DeepSeek",
-            blurb: String(localized: "Inexpensive models that think before answering."),
+            blurb: String(localized: "DeepSeek models."),
             symbol: "water.waves",
             baseURL: URL(string: "https://api.deepseek.com/v1"),
             wire: .chatCompletions,
@@ -471,6 +471,8 @@ nonisolated enum LLMSettings {
         case low
         case medium
         case high
+        case xhigh
+        case max
 
         var id: String {
             rawValue
@@ -488,21 +490,29 @@ nonisolated enum LLMSettings {
                 "Medium"
             case .high:
                 "High"
+            case .xhigh:
+                "Extra high"
+            case .max:
+                "Maximum"
             }
         }
 
         var caption: LocalizedStringResource {
             switch self {
             case .none:
-                "Answers straight away."
+                "No additional reasoning."
             case .minimal:
-                "Thinks for a moment first."
+                "Minimal reasoning before responding."
             case .low:
-                "Plans a little before acting."
+                "Limited reasoning before responding."
             case .medium:
-                "Works through multi-step tasks."
+                "Moderate reasoning for multi-step tasks."
             case .high:
-                "Thinks as long as it needs."
+                "More reasoning for complex tasks."
+            case .xhigh:
+                "Extended reasoning for difficult tasks."
+            case .max:
+                "Maximum reasoning, with higher latency and token use."
             }
         }
     }

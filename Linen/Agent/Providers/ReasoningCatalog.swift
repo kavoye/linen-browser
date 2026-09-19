@@ -18,7 +18,9 @@ enum ReasoningCatalog {
             return []
         case .anthropic, .gemini:
             return standard
-        case .openAIResponses, .openAICompatible:
+        case .openAIResponses:
+            return nativeOpenAI(model: model)
+        case .openAICompatible:
             return openAI(model: model)
         }
     }
@@ -34,6 +36,18 @@ enum ReasoningCatalog {
             let b = abs((Effort.allCases.firstIndex(of: second) ?? 0) - wanted)
             return a == b ? first.rawValue < second.rawValue : a < b
         } ?? offered[0]
+    }
+
+    private static func nativeOpenAI(model: String) -> [Effort] {
+        let id = model.lowercased()
+        if id.hasPrefix("gpt-6") { return [.low, .medium, .high, .xhigh, .max] }
+        if id.hasPrefix("gpt-5.6") { return [.none, .low, .medium, .high, .xhigh, .max] }
+        if id.hasPrefix("gpt-5.3-codex") { return [.low, .medium, .high, .xhigh] }
+        if ["gpt-5.2", "gpt-5.3", "gpt-5.4", "gpt-5.5"].contains(where: id.hasPrefix) {
+            return id.contains("-pro") ? [.medium, .high, .xhigh] : [.none, .low, .medium, .high, .xhigh]
+        }
+        guard OpenAIModelSupport.reasoning(model) else { return [] }
+        return openAI(model: model)
     }
 
     private static func openAI(model: String) -> [Effort] {
