@@ -5,16 +5,28 @@ import SwiftUI
 
 struct AdvancedSettings: View {
     @Bindable var settings: BrowserSettings
+    var mcpServer: BrowserMCPServer?
+    var highlight: String?
 
     @FocusState private var customFieldFocused: Bool
     @State private var confirmingReset = false
     @State private var readingFeatures = false
+    @State private var readingMCP = false
 
     var body: some View {
-        if readingFeatures {
-            WebKitFeaturesPage { readingFeatures = false }
-        } else {
-            page
+        VStack(alignment: .leading, spacing: SettingsMetrics.sectionSpacing) {
+            if readingMCP, let mcpServer {
+                MCPSettingsPage(server: mcpServer) { readingMCP = false }
+            } else if readingFeatures {
+                WebKitFeaturesPage { readingFeatures = false }
+            } else {
+                page
+            }
+        }
+        .onChange(of: highlight, initial: true) { _, anchor in
+            guard let anchor, anchor.hasPrefix("advanced.") else { return }
+            readingMCP = anchor == "advanced.mcp"
+            readingFeatures = anchor == "advanced.features"
         }
     }
 
@@ -45,7 +57,7 @@ struct AdvancedSettings: View {
 
                 DrillInRow(
                     title: "Feature flags",
-                    caption: "WebKit’s own experiments, which can break websites."
+                    caption: "Experimental WebKit features may break websites."
                 ) {
                     readingFeatures = true
                 }
@@ -81,6 +93,18 @@ struct AdvancedSettings: View {
                             .focused($customFieldFocused)
                     }
                 }
+            }
+        }
+
+        if mcpServer != nil {
+            SettingsCard {
+                DrillInRow(
+                    title: "External Connections", symbol: "cable.connector",
+                    caption: "Connect an external assistant to tabs you choose."
+                ) {
+                    readingMCP = true
+                }
+                .settingsAnchor("advanced.mcp")
             }
         }
 
