@@ -55,10 +55,8 @@ final class ComputerWorkflowFixture {
         window.orderBack(nil)
         let base = try server.url()
         tab.load(base)
-        guard await waitUntil(timeout: .seconds(10), {
-            guard self.tab.webView.url == base, !self.tab.webView.isLoading else { return false }
-            return (try? await self.tab.webView.evaluateJavaScript("!!document.querySelector('#query')")) as? Bool == true
-        }) else {
+        guard await waitForObservation({ self.tab.committedURL == base && !self.tab.isLoading }),
+              (try? await tab.webView.evaluateJavaScript("!!document.querySelector('#query')")) as? Bool == true else {
             close()
             throw HarnessFixtureFailure()
         }

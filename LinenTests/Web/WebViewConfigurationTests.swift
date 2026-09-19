@@ -44,7 +44,7 @@ struct WebViewConfigurationTests {
     /// The bug 0.4.0 shipped: the assistant's own page turned JavaScript on
     /// for every tab, because the copy handed every configuration the same
     /// preferences to write on.
-    @Test func theAssistantsPageLeavesEveryTabsSettingsAlone() {
+    @Test(.boundedWebViews) func theAssistantsPageLeavesEveryTabsSettingsAlone() {
         let settings = BrowserSettings.shared
         let wasEnabled = settings.javaScriptEnabled
         settings.javaScriptEnabled = false
@@ -74,7 +74,7 @@ struct WebViewConfigurationTests {
         #expect(second.userContentController.userScripts.isEmpty)
     }
 
-    @Test func aBuiltViewKeepsItsOwnPreferences() {
+    @Test(.boundedWebViews) func aBuiltViewKeepsItsOwnPreferences() {
         let first = WebViewPool.shared.makeColdView()
         let second = WebViewPool.shared.makeColdView()
 

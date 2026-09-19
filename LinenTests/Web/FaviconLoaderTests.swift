@@ -190,7 +190,8 @@ struct FaviconLoaderTests {
         async let first = loader.load(forHost: "example.com")
         async let second = loader.load(forHost: "example.com")
 
-        try #require(await waitUntil { stub.responses.requestCount == 1 })
+        try #require(await stub.responses.waitForRequest())
+        #expect(stub.responses.requestCount == 1)
         stub.responses.open()
         let firstIcon = await first
         let secondIcon = await second

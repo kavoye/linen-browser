@@ -11,6 +11,17 @@ nonisolated final class ResponseGate: Sendable {
     }
 
     private let state = Mutex(State())
+    private let requests = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+
+    func waitForRequest() async -> Bool {
+        if requestCount > 0 {
+            return true
+        }
+        for await _ in requests.stream {
+            return true
+        }
+        return false
+    }
 
     var requestCount: Int { state.withLock {
         $0.requestCount }
@@ -23,6 +34,7 @@ nonisolated final class ResponseGate: Sendable {
             state.pending.append(response)
             return false
         }
+        requests.continuation.yield(())
         if sendNow {
             response()
         }

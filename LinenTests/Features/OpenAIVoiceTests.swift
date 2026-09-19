@@ -24,7 +24,8 @@ struct OpenAIVoiceTests {
             return result
         }
         input.yield(try sample())
-        #expect(await waitUntil { await socket.appendCount == 1 })
+        try #require(await socket.appended.waitForRequest())
+        #expect(await socket.appendCount == 1)
         #expect(await socket.commitCount == 0)
         input.finish()
         try await engine.finishSession()
@@ -43,7 +44,8 @@ struct OpenAIVoiceTests {
         let updates = engine.startSession(input: audio)
         let reader = Task { for try await _ in updates {} }
         input.yield(try sample())
-        #expect(await waitUntil { await socket.appendCount == 1 })
+        try #require(await socket.appended.waitForRequest())
+        #expect(await socket.appendCount == 1)
         await engine.cancelSession()
         input.finish()
         _ = try? await reader.value
@@ -174,6 +176,7 @@ struct OpenAIVoiceTests {
 }
 
 private actor VoiceSocketFixture: OpenAISocketConnection {
+    nonisolated let appended = ResponseGate()
     var appendCount = 0
     var commitCount = 0
     var closed = false
@@ -186,6 +189,7 @@ private actor VoiceSocketFixture: OpenAISocketConnection {
             push(["type": "session.updated"])
         case "input_audio_buffer.append":
             appendCount += 1
+            appended.submit {}
             push(["type": "conversation.item.input_audio_transcription.delta", "item_id": "turn", "delta": "Blue"])
         case "input_audio_buffer.commit":
             commitCount += 1

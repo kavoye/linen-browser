@@ -318,7 +318,8 @@ private final class ConversationFixture {
 
     func startResponse(created: Bool = true) async throws {
         session.start()
-        try #require(await waitUntil { self.session.phase == .listening })
+        try #require(await waitForObservation { self.session.phase == .listening || self.session.phase == .failed })
+        try #require(session.phase == .listening)
         await socket.push(["type": "input_audio_buffer.committed", "item_id": "user"])
         try #require(await socket.waitFor("response.create"))
         if created { await socket.push(["type": "response.created", "response": ["id": "response"]]) }

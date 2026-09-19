@@ -33,24 +33,33 @@ struct AttachmentTests {
         #expect(file.data == bytes)
     }
 
-    @Test func normalizesImagesAndRecognizesText() throws {
-        let file = try AttachmentImporter.prepare(data: image(), name: "receipt.png", type: .png)
+    @Test func normalizesImagesAndRecognizesText() async throws {
+        let data = try image()
+        let file = try await Task.detached {
+            try AttachmentImporter.prepare(data: data, name: "receipt.png", type: .png)
+        }.value
         #expect(file.images.count == 1)
         #expect(file.images.first?.mimeType == "image/jpeg")
         #expect(file.text.contains("INVOICE"))
         #expect(file.text.contains("42"))
     }
 
-    @Test func readsPDFTextAndKeepsPageImages() throws {
-        let file = try AttachmentImporter.prepare(data: pdf(), name: "invoice.pdf")
+    @Test func readsPDFTextAndKeepsPageImages() async throws {
+        let data = try pdf()
+        let file = try await Task.detached {
+            try AttachmentImporter.prepare(data: data, name: "invoice.pdf")
+        }.value
         #expect(file.isPDF)
         #expect(file.images.count == 1)
         #expect(file.text.contains("INVOICE 42"))
         #expect(file.text.contains("Page 1"))
     }
 
-    @Test func recognizesScannedPDFPages() throws {
-        let file = try AttachmentImporter.prepare(data: pdf(scanned: true), name: "scan.pdf")
+    @Test func recognizesScannedPDFPages() async throws {
+        let data = try pdf(scanned: true)
+        let file = try await Task.detached {
+            try AttachmentImporter.prepare(data: data, name: "scan.pdf")
+        }.value
         #expect(file.text.contains("INVOICE"))
         #expect(file.text.contains("42"))
         #expect(file.images.count == 1)
@@ -128,7 +137,7 @@ struct AttachmentTests {
         pasteboard.setData(try image(), forType: .png)
         let draft = AttachmentDraft()
         #expect(draft.paste(pasteboard))
-        #expect(await waitUntil { !draft.isImporting })
+        #expect(await waitForObservation { !draft.isImporting })
         #expect(draft.files.count == 1)
         #expect(draft.files.first?.images.count == 1)
         #expect(draft.error == nil)
@@ -145,7 +154,7 @@ struct AttachmentTests {
         pasteboard.writeObjects([url as NSURL])
         let draft = AttachmentDraft()
         #expect(draft.paste(pasteboard))
-        #expect(await waitUntil { !draft.isImporting })
+        #expect(await waitForObservation { !draft.isImporting })
         #expect(draft.files.first?.text == "Pasted document")
         #expect(draft.error == nil)
         draft.clear()
@@ -159,7 +168,7 @@ struct AttachmentTests {
         let provider = NSItemProvider(item: url as NSURL, typeIdentifier: UTType.fileURL.identifier)
         let draft = AttachmentDraft()
         #expect(draft.drop([provider]))
-        #expect(await waitUntil { !draft.isImporting })
+        #expect(await waitForObservation { !draft.isImporting })
         #expect(draft.files.first?.text == "Dropped document")
         #expect(draft.error == nil)
     }
@@ -169,7 +178,7 @@ struct AttachmentTests {
         draft.add([.bytes(Data("Hello".utf8), name: "notes.md", type: .plainText)])
         draft.clear()
         draft.add([.bytes(Data("New".utf8), name: "new.txt", type: .plainText)])
-        #expect(await waitUntil { !draft.isImporting })
+        #expect(await waitForObservation { !draft.isImporting })
         #expect(draft.files.map(\.name) == ["new.txt"])
     }
 
