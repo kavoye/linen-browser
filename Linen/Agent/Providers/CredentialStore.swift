@@ -7,6 +7,18 @@ import Security
 nonisolated enum CredentialStore {
     private static let service = "com.kavoye.Linen"
 
+    struct Storage: Sendable {
+        var read: @Sendable (String) -> String?
+        var write: @Sendable (String, String) -> OSStatus
+        var delete: @Sendable (String) -> OSStatus
+
+        static let keychain = Storage(
+            read: { CredentialStore.read(account: $0) },
+            write: { CredentialStore.write($0, account: $1) },
+            delete: { SecItemDelete(CredentialStore.query(account: $0) as CFDictionary) }
+        )
+    }
+
     enum Source: Equatable, Sendable {
         case keychain
         case environment(String)
@@ -68,31 +80,31 @@ nonisolated enum CredentialStore {
         delete(account: account(for: provider))
     }
 
-    static func mcpAuthorization(providerID: String, serverID: UUID) -> String? {
-        read(account: "openai-mcp:\(providerID):\(serverID.uuidString)")
+    static func mcpAuthorization(providerID: String, serverID: UUID, storage: Storage = .keychain) -> String? {
+        storage.read("openai-mcp:\(providerID):\(serverID.uuidString)")
     }
 
-    static func saveMCPAuthorization(_ value: String, providerID: String, serverID: UUID) -> String? {
+    static func saveMCPAuthorization(_ value: String, providerID: String, serverID: UUID, storage: Storage = .keychain) -> String? {
         let account = "openai-mcp:\(providerID):\(serverID.uuidString)"
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let status = value.isEmpty ? SecItemDelete(query(account: account) as CFDictionary) : write(value, account: account)
+        let status = value.isEmpty ? storage.delete(account) : storage.write(value, account)
         guard status != errSecSuccess && !(value.isEmpty && status == errSecItemNotFound) else { return nil }
         return String(localized: "The Keychain could not update the MCP authorization token.")
     }
 
-    static func mcpOAuth(providerID: String, serverID: UUID) -> OpenAIMCPOAuthCredential? {
-        guard let text = read(account: "openai-mcp-oauth:\(providerID):\(serverID.uuidString)") else { return nil }
+    static func mcpOAuth(providerID: String, serverID: UUID, storage: Storage = .keychain) -> OpenAIMCPOAuthCredential? {
+        guard let text = storage.read("openai-mcp-oauth:\(providerID):\(serverID.uuidString)") else { return nil }
         return try? JSONDecoder().decode(OpenAIMCPOAuthCredential.self, from: Data(text.utf8))
     }
 
-    static func saveMCPOAuth(_ credential: OpenAIMCPOAuthCredential?, providerID: String, serverID: UUID) throws {
+    static func saveMCPOAuth(_ credential: OpenAIMCPOAuthCredential?, providerID: String, serverID: UUID, storage: Storage = .keychain) throws {
         let account = "openai-mcp-oauth:\(providerID):\(serverID.uuidString)"
         let status: OSStatus
         if let credential {
             let data = try JSONEncoder().encode(credential)
-            status = write(String(decoding: data, as: UTF8.self), account: account)
+            status = storage.write(String(decoding: data, as: UTF8.self), account)
         } else {
-            status = SecItemDelete(query(account: account) as CFDictionary)
+            status = storage.delete(account)
         }
         guard status == errSecSuccess || (credential == nil && status == errSecItemNotFound) else { throw OpenAIMCPOAuthFailure.storage }
     }

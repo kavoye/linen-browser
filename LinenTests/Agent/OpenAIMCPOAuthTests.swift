@@ -3,6 +3,8 @@
 
 import AnyLanguageModel
 import Foundation
+import Security
+import Synchronization
 import Testing
 
 @testable import Linen
@@ -257,16 +259,47 @@ struct OpenAIMCPOAuthTests {
         #expect(trap.requestCount == 0)
     }
 
-    @Test func keychainRoundTripKeepsOAuthSeparateFromManualTokens() throws {
+    @Test func credentialRoundTripKeepsOAuthSeparateFromManualTokens() throws {
+        let values = Mutex<[String: String]>([:])
+        let storage = CredentialStore.Storage(
+            read: { account in values.withLock { $0[account] } },
+            write: { value, account in
+                values.withLock { $0[account] = value }
+                return errSecSuccess
+            },
+            delete: { account in
+                values.withLock { $0.removeValue(forKey: account) == nil ? errSecItemNotFound : errSecSuccess }
+            }
+        )
         let server = server
-        let providerID = "oauth-test-\(UUID().uuidString)"
+        let providerID = "fixture"
         let credential = try credential(server)
-        defer { try? CredentialStore.saveMCPOAuth(nil, providerID: providerID, serverID: server.id) }
-        try CredentialStore.saveMCPOAuth(credential, providerID: providerID, serverID: server.id)
-        #expect(CredentialStore.mcpOAuth(providerID: providerID, serverID: server.id) == credential)
-        #expect(CredentialStore.mcpAuthorization(providerID: providerID, serverID: server.id) == nil)
-        try CredentialStore.saveMCPOAuth(nil, providerID: providerID, serverID: server.id)
-        #expect(CredentialStore.mcpOAuth(providerID: providerID, serverID: server.id) == nil)
+        #expect(CredentialStore.saveMCPAuthorization("manual-token", providerID: providerID, serverID: server.id, storage: storage) == nil)
+        try CredentialStore.saveMCPOAuth(credential, providerID: providerID, serverID: server.id, storage: storage)
+        #expect(CredentialStore.mcpOAuth(providerID: providerID, serverID: server.id, storage: storage) == credential)
+        #expect(CredentialStore.mcpAuthorization(providerID: providerID, serverID: server.id, storage: storage) == "manual-token")
+        #expect(CredentialStore.mcpOAuth(providerID: "another-provider", serverID: server.id, storage: storage) == nil)
+        #expect(CredentialStore.mcpOAuth(providerID: providerID, serverID: UUID(), storage: storage) == nil)
+        try CredentialStore.saveMCPOAuth(nil, providerID: providerID, serverID: server.id, storage: storage)
+        #expect(CredentialStore.mcpOAuth(providerID: providerID, serverID: server.id, storage: storage) == nil)
+        #expect(CredentialStore.mcpAuthorization(providerID: providerID, serverID: server.id, storage: storage) == "manual-token")
+        try CredentialStore.saveMCPOAuth(nil, providerID: providerID, serverID: server.id, storage: storage)
+    }
+
+    @Test func credentialStorageReportsWriteAndDeleteFailures() throws {
+        let storage = CredentialStore.Storage(
+            read: { _ in nil },
+            write: { _, _ in errSecMissingEntitlement },
+            delete: { _ in errSecMissingEntitlement }
+        )
+        let server = server
+        let credential = try credential(server)
+        #expect(throws: OpenAIMCPOAuthFailure.storage) {
+            try CredentialStore.saveMCPOAuth(credential, providerID: "fixture", serverID: server.id, storage: storage)
+        }
+        #expect(throws: OpenAIMCPOAuthFailure.storage) {
+            try CredentialStore.saveMCPOAuth(nil, providerID: "fixture", serverID: server.id, storage: storage)
+        }
     }
 
     @Test func failedRotationStorageNeverReturnsAnUnpersistedAccessToken() async throws {
