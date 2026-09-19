@@ -9,7 +9,7 @@ struct ExperimentsSettings: View {
     var body: some View {
         SettingsPageHeader(
             title: "Experiments",
-            caption: "Unfinished work you can try. Anything here can change or go away."
+            caption: "Experimental features may change or be removed."
         )
 
         SettingsCard {
@@ -20,6 +20,7 @@ struct ExperimentsSettings: View {
                 SettingsToggle($settings.showsVideoInPlayer)
             }
             .settingsAnchor("experiments.videoInPlayer")
+
         }
     }
 }

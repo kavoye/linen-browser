@@ -88,8 +88,26 @@ final class AppCoordinator {
     let researchPreview = ResearchPreview()
     let settings = BrowserSettings.shared
 
+    @ObservationIgnored lazy var mcpServer = BrowserMCPServer(
+        browser: browser, defaults: BrowserMCPServer.appDefaults,
+        canListen: { [weak self] in
+            guard let self else { return false }
+            return !profiles.isPrivate && !isSwitchingProfile
+        }
+    ) { [weak self] in
+        guard let self else { return false }
+        return !profiles.isPrivate && !isSwitchingProfile && !agentTurns.isRunning
+    }
+
+    var conversationVoice: OpenAIRealtimeConversation?
+    var isVoiceConversationPresented = false
+    var voiceConversationMessage: String?
+    @ObservationIgnored var conversationSpaceID: UUID?
     let voiceInput: VoiceInputModel
-    let speech: any SpeechOutput
+    let speech: ProviderSpeechOutput
+    @ObservationIgnored var voiceConfigurationID: String?
+    @ObservationIgnored var remoteToolConfigurationID: String?
+    @ObservationIgnored var voicePreparation: Task<Void, Never>?
     let agentTurns: AgentTurnModel
     let activation: any ActivationSource = HoldToTalkMonitor()
     let modelProviders: any ModelProviderResolving
@@ -133,10 +151,14 @@ final class AppCoordinator {
         self.modelProviders = modelProviders
         let extensions = ExtensionManager(browser: browser)
         self.extensions = extensions
+        PasswordAutofill.shared.extensions = { [weak extensions] in
+            guard let extensions else { return [] }
+            return extensions.installed + extensions.systemExtensions
+        }
         media = MediaCenter()
 
         voiceInput = VoiceInputModel()
-        speech = AppleSpeechOutput()
+        speech = ProviderSpeechOutput()
         agentTurns = AgentTurnModel(
             browser: browser,
             log: conversationLog,
@@ -146,11 +168,13 @@ final class AppCoordinator {
             stored: UserDefaults.standard.object(forKey: Self.speechMutedKey)
         )
         speech.isMuted = isSpeechMuted
+        AutofillSuggestions.shared.openSettings = { [weak self] in self?.openSettings(.autofill) }
         speech.onSpeakingChange = { [weak self] speaking in
             self?.isAgentSpeaking = speaking
         }
         voiceInput.onWillBegin = { [weak self] in
             guard let self else { return }
+            endVoiceConversation()
             speech.stopSpeaking()
             agentTurns.cancel()
         }
@@ -162,7 +186,7 @@ final class AppCoordinator {
                 trace.end()
                 return
             }
-            Pipeline.log.notice("utterance: \"\(utterance, privacy: .private)\"")
+            Pipeline.log.notice("Voice request received")
             runAgent(with: utterance, trace: trace)
         }
         agentTurns.onTurnFinished = { [weak self] in
@@ -202,7 +226,7 @@ final class AppCoordinator {
     }
 
     private func observeAppearance() {
-        appearanceObservation = NSApp?.observe(\.effectiveAppearance) { @Sendable _, _ in
+        appearanceObservation = NSApp?.observe(\.effectiveAppearance) { @Sendable [weak self] _, _ in
             Task { @MainActor [weak self] in self?.reloadFaviconsIfSchemeChanged() }
         }
     }
@@ -262,6 +286,7 @@ final class AppCoordinator {
     }
 
     private func tabDidClose(_ tab: BrowserTab) {
+        if conversationSpaceID == tab.id { endVoiceConversation() }
         playedPages[tab.id] = nil
         FaviconTint.forget(tab.id)
         if peek.belongs(to: tab.id) {
@@ -294,11 +319,13 @@ final class AppCoordinator {
         UserDefaults.standard.set(isSpeechMuted, forKey: Self.speechMutedKey)
         speech.isMuted = isSpeechMuted
         if isSpeechMuted {
+            endVoiceConversation()
             speech.stopSpeaking()
         }
     }
 
     func stopAgentSpeech() {
+        endVoiceConversation()
         speech.stopSpeaking()
     }
 
@@ -307,6 +334,7 @@ final class AppCoordinator {
     }
 
     func readAloud(_ text: String) {
+        endVoiceConversation()
         guard !text.isEmpty else { return }
         if isAgentSpeaking {
             speech.stopSpeaking()
@@ -432,12 +460,25 @@ final class AppCoordinator {
 
     /// The panel is only on screen over the page it was opened from.
     var isPeekOnScreen: Bool {
-        guard let owner = peek.ownerID else { return false }
+        guard !peek.isCollapsed, let owner = peek.ownerID else { return false }
         return browser.activeTabID == owner || browser.activeSplit?.contains(owner) == true
     }
 
     var shownPeek: BrowserTab? {
         isPeekOnScreen ? peek.tab : nil
+    }
+
+    var pageCommandTab: BrowserTab? {
+        shownPeek ?? browser.activeTab
+    }
+
+    func togglePeekVisibility() {
+        guard let ownerID = peek.ownerID, let owner = browser.tab(id: ownerID) else { return }
+        let collapse = shownPeek != nil
+        tabPreview.dismiss()
+        if !collapse { browser.activate(owner) }
+        peek.setCollapsed(collapse)
+        applyHoverShield()
     }
 
     func openPeek(url: URL, from owner: BrowserTab?, at origin: CGPoint) {
@@ -446,6 +487,7 @@ final class AppCoordinator {
         if let standing = peek.tab, peek.ownerID == owner?.id {
             peek.aim(at: origin)
             standing.load(url, transition: .link)
+            applyHoverShield()
             return
         }
         closePeek()
@@ -491,7 +533,7 @@ final class AppCoordinator {
     }
 
     func printActivePage() {
-        guard let webView = browser.activeTab?.webView else { return }
+        guard let webView = pageCommandTab?.webView else { return }
         PagePrinting.begin(for: webView)
     }
 
@@ -500,7 +542,7 @@ final class AppCoordinator {
     }
 
     func copyCurrentURL() {
-        guard let tab = browser.activeTab else { return }
+        guard let tab = pageCommandTab else { return }
         copyLink(for: tab)
     }
 
@@ -694,6 +736,7 @@ final class AppCoordinator {
     }
 
     func stopAgent() {
+        endVoiceConversation()
         agentTurns.cancel()
         speech.stopSpeaking()
     }
@@ -730,7 +773,7 @@ final class AppCoordinator {
 
     // MARK: - Voice input
 
-    static let speechNotReadyMessage = String(localized: "The speech engine is still warming up.")
+    static let speechNotReadyMessage = String(localized: "Speech recognition is starting. Try again shortly.")
 
     static let microphoneDeniedMessage = String(
         localized: "Allow Linen to use the microphone under Privacy & Security > Microphone."
@@ -757,10 +800,14 @@ final class AppCoordinator {
             let granted = await MicrophoneAccess.request()
             guard let self else { return }
             isAskingForMicrophone = false
-            if granted {
+            if granted, isVoiceConversationPresented {
+                statusMessage = nil
+                startVoiceConversation()
+            } else if granted {
                 statusMessage = String(localized: "Hold \(ActivationSettings.talk.phrase) again to speak.")
             } else {
                 statusMessage = Self.microphoneDeniedMessage
+                if isVoiceConversationPresented { voiceConversationMessage = statusMessage }
             }
         }
     }
@@ -776,42 +823,72 @@ final class AppCoordinator {
         }
     }
 
+    @discardableResult
     private func runAgent(
         with utterance: String,
         mentionedTabIDs: [UUID] = [],
+        attachments: [AssistantAttachment] = [],
+        attachmentTextOnly: Bool = false,
         trace: LatencyTrace?,
         showsInChrome: Bool = true
-    ) {
+    ) -> Bool {
+        mcpServer.cancelActiveCall()
         let started = agentTurns.run(
             utterance: utterance,
             mentionedTabIDs: mentionedTabIDs,
+            attachments: attachments,
+            attachmentTextOnly: attachmentTextOnly,
             trace: trace,
             showsInChrome: showsInChrome
         )
         guard started else {
             statusMessage = "Add an API key for \(ProviderCatalog.shared.selected.name) in Settings, or enable Apple Intelligence."
             voiceInput.clearTranscript()
-            return
+            return false
         }
+        return true
     }
 
     // MARK: - Typed input
 
+    func continueAgent() {
+        endVoiceConversation()
+        voiceInput.cancel()
+        speech.stopSpeaking()
+        mcpServer.cancelActiveCall()
+        agentTurns.run(utterance: "", isContinuation: true, showsInChrome: false)
+    }
+
+    @discardableResult
     func handleTypedUtterance(
         _ raw: String,
         mentionedTabIDs: [UUID] = [],
+        attachments: [AssistantAttachment] = [],
         showsInChrome: Bool = true
-    ) async {
+    ) async -> Bool {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        let attachmentTextOnly = !ModelImageSupport.acceptsImages(for: selectedProvider, model: selectedModel)
+        guard !text.isEmpty || !attachments.isEmpty else { return false }
+        do {
+            try AttachmentRequest.validate(
+                attachments, message: text, textOnly: attachmentTextOnly,
+                windowTokens: ContextWindow.tokens(for: selectedProvider, model: selectedModel)
+            )
+        } catch {
+            statusMessage = error.localizedDescription
+            return false
+        }
 
+        endVoiceConversation()
         voiceInput.cancel()
         speech.stopSpeaking()
         agentTurns.cancel()
-        Pipeline.log.notice("typed utterance: \"\(text, privacy: .private)\"")
-        runAgent(
-            with: text,
+        Pipeline.log.notice("Typed request received")
+        return runAgent(
+            with: text.isEmpty ? String(localized: "Read the attached files.") : text,
             mentionedTabIDs: mentionedTabIDs,
+            attachments: attachments,
+            attachmentTextOnly: attachmentTextOnly,
             trace: LatencyTrace(),
             showsInChrome: showsInChrome
         )

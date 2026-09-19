@@ -72,7 +72,7 @@ struct SearchSettings: View {
                         if !settings.customSearchTemplate.isEmpty, !engineWorks {
                             SettingsNotice(
                                 symbol: "exclamationmark.triangle.fill",
-                                text: String(localized: "Linen can’t search with this URL. DuckDuckGo is answering instead.")
+                                text: String(localized: "This search URL isn’t valid. Using DuckDuckGo instead.")
                             )
                         }
                     }
@@ -97,7 +97,7 @@ struct SearchSettings: View {
         SettingsSection(title: "Address bar", symbol: "character.cursor.ibeam") {
             DetailRow(
                 title: "Always ask the assistant",
-                caption: "Questions go to \(coordinator.agentDisplayName); links still open."
+                caption: "Send questions to \(coordinator.agentDisplayName). Open links normally."
             ) {
                 SettingsToggle($settings.agentOnlyInput)
             }

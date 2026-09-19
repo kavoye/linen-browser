@@ -18,6 +18,10 @@ final class SettingsWorkspace {
 
     init(coordinator: AppCoordinator) {
         intelligence = IntelligenceViewModel(
+            onVoiceConfigurationChanged: { [weak coordinator] in
+                guard let coordinator else { return }
+                coordinator.configureVoice(for: coordinator.activeProvider ?? coordinator.selectedProvider)
+            },
             onConfigurationChanged: coordinator.configureEngines
         )
     }
@@ -151,6 +155,8 @@ private struct SettingsDetail: View {
                         AssistantSettings(model: intelligence, coordinator: coordinator)
                     case .profiles:
                         ProfileSettings(coordinator: coordinator)
+                    case .autofill:
+                        AutofillSettings(coordinator: coordinator, settings: coordinator.settings, highlight: highlight)
                     case .privacy:
                         PrivacySettings(coordinator: coordinator, settings: coordinator.settings)
                     case .websites:
@@ -163,7 +169,7 @@ private struct SettingsDetail: View {
                     case .extensions:
                         ExtensionsSettings(coordinator: coordinator)
                     case .advanced:
-                        AdvancedSettings(settings: coordinator.settings)
+                        AdvancedSettings(settings: coordinator.settings, mcpServer: coordinator.mcpServer, highlight: highlight)
                     case .experiments:
                         ExperimentsSettings(settings: coordinator.settings)
                     case .about:
@@ -306,7 +312,7 @@ private struct AboutSettings: View {
 
                 DrillInRow(
                     title: "Acknowledgements",
-                    caption: "The open source packages Linen is built with."
+                    caption: "Open source packages used by Linen."
                 ) {
                     readingAcknowledgements = true
                 }

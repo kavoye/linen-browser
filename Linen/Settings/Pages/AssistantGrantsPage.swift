@@ -31,7 +31,7 @@ struct AssistantGrantsPage: View {
             if policy.grants.isEmpty {
                 SettingsEmptyState(
                     symbol: "hand.raised",
-                    title: "Nothing always-allowed",
+                    title: "No saved permissions",
                     caption: "Websites appear here after you choose “Always Allow”."
                 )
             } else {

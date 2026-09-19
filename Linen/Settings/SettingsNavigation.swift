@@ -10,6 +10,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case provider
     case profiles
     case privacy
+    case autofill
     case websites
     case downloads
     case extensions
@@ -33,6 +34,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "Assistant"
         case .profiles:
             "Profiles"
+        case .autofill:
+            "Autofill"
         case .privacy:
             "Privacy"
         case .websites:
@@ -62,6 +65,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "sparkles"
         case .profiles:
             "person.2"
+        case .autofill:
+            "text.rectangle"
         case .privacy:
             "hand.raised"
         case .websites:
@@ -85,7 +90,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             .setup
         case .provider:
             .intelligence
-        case .privacy, .websites, .downloads, .extensions:
+        case .privacy, .autofill, .websites, .downloads, .extensions:
             .browsing
         case .advanced, .experiments, .about:
             .system
@@ -106,6 +111,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             Color(nsColor: .systemPurple)
         case .profiles:
             Color(nsColor: .systemCyan)
+        case .autofill:
+            Color(nsColor: .systemPink)
         case .privacy:
             Color(nsColor: .systemBlue)
         case .websites:
@@ -136,6 +143,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
              ]
         case .profiles:
             ["profile", "profiles", "work", "personal", "separate", "account", "switch", "identity"]
+        case .autofill:
+            ["contacts", "addresses", "name", "email", "phone", "passwords", "passkeys", "cards", "apple pay", "wallet"]
         case .privacy:
             ["cookies", "cache", "clear", "history", "storage", "tracking", "site data"]
         case .websites:
@@ -148,7 +157,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             ["user agent", "developer", "inspector", "devtools", "reset", "certificate", "proxy"]
         case .experiments:
             ["experiment", "experiments", "experimental", "flag", "flags", "feature", "preview",
-             "video", "player", "media",
+             "video", "player", "media", "apple pay", "wallet", "checkout",
              ]
         case .about:
             ["version", "update", "release", "build", "credits", "licence", "license", "open source"]

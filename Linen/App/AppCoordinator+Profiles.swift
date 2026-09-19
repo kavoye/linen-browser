@@ -16,10 +16,16 @@ extension AppCoordinator {
     private func performProfileSwitch(to profile: Profile) async {
         guard profile.id != profiles.current.id else { return }
         switchingTo = profile
-        defer { switchingTo = nil }
+        mcpServer.stop()
+        defer {
+            switchingTo = nil
+            mcpServer.resume()
+        }
 
         var timing = ProfileSwitchTiming()
 
+        conversationVoice?.stop()
+        conversationVoice = nil
         voiceInput.cancel()
         agentTurns.cancel()
         agentTurns.forgetEveryConversation()
@@ -76,6 +82,10 @@ extension AppCoordinator {
     }
 
     func applyProfileStores(_ profile: Profile, database prepared: AppDatabase? = nil) {
+        PaymentCardAutofill.shared.use(profileID: profile.id)
+        ContactAutofill.shared.use(profile: profile)
+        PasswordAutofill.shared.use(profileID: profile.id)
+        AutofillSaveCoordinator.shared.use(profileID: profile.id)
         let database: AppDatabase
         if profile.isPrivate {
             let session = privateSession ?? PrivateBrowsingSession(

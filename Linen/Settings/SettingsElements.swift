@@ -127,6 +127,7 @@ struct SiteRow<Trailing: View>: View {
 }
 
 struct DrillInRow: View {
+    @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
     let title: LocalizedStringResource
     var symbol: String?
     var tint: Color = .secondary
@@ -158,6 +159,7 @@ struct DrillInRow: View {
 
                     if let caption {
                         Text(caption)
+                            .lineLimit(descriptionLineLimit)
                             .font(Theme.Font.secondary)
                             .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
                             .fixedSize(horizontal: false, vertical: true)
@@ -330,6 +332,7 @@ struct PreviewChoiceCard<Thumbnail: View>: View {
 }
 
 struct SettingsEmptyState: View {
+    @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
     let symbol: String
     let title: LocalizedStringResource
     var caption: LocalizedStringResource?
@@ -347,6 +350,7 @@ struct SettingsEmptyState: View {
 
             if let caption {
                 Text(caption)
+                    .lineLimit(descriptionLineLimit)
                     .font(Theme.Font.secondary)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)

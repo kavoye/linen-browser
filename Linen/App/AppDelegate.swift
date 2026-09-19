@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        guard !isRunningTests else { return true }
         coordinator.showBrowser()
         return true
     }
@@ -44,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        coordinator.mcpServer.stop()
         guard coordinator.settings.clearsDataOnQuit else { return .terminateNow }
         Task {
             await coordinator.clearDataOnQuitIfNeeded()

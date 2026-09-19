@@ -39,7 +39,7 @@ private struct AssistantOverview: View {
     var body: some View {
         SettingsPageHeader(
             title: "Assistant",
-            caption: "Who answers, how it behaves, and what it may do without asking."
+            caption: "Choose the assistant’s model, behavior, and permissions."
         )
 
         AnsweringNotice(model: model, coordinator: coordinator)
@@ -63,6 +63,8 @@ private struct AssistantOverview: View {
         .padding(.top, 6)
 
         BehaviourSection(coordinator: coordinator)
+
+        AssistantExecutionSettings()
 
         SettingsSection(title: "Acting on websites", symbol: "hand.raised") {
             DrillInRow(
@@ -351,6 +353,11 @@ private struct ProviderPage: View {
         if model.supportsReasoningEffort {
             ThinkingSection(model: model)
         }
+        if provider.adapter == .openAIResponses {
+            OpenAISettingsSection(providerID: provider.id, modelID: model.selectedModel,
+                credentialRevision: model.credentialRevision, onSave: model.saveOpenAISettings)
+                .id(provider.id)
+        }
     }
 
     @ViewBuilder
@@ -396,7 +403,7 @@ private struct ReadinessRow: View {
                 tint: Theme.warning,
                 symbol: "key",
                 title: "Needs a key",
-                caption: "Add a key to let \(provider.name) answer."
+                caption: "Add an API key to use \(provider.name)."
             ) {}
 
         case .notRunning(let why):
@@ -459,7 +466,7 @@ private struct RemoveKeyButton: View {
             Button("Remove Key", role: .destructive) { model.removeKey() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The key is deleted from your Keychain, and \(model.subject.name) stops answering until you add another.")
+            Text("Deletes the key from Keychain. Add a new key to use \(model.subject.name) again.")
         }
     }
 }
@@ -838,7 +845,7 @@ private struct AgentToolsPage: View {
 
         SettingsPageHeader(
             title: "Tools",
-            caption: "What \(model.subject.name) may do in the browser. Every tool takes a share of the model’s context."
+            caption: "Choose which tools \(model.subject.name) can use. Tools use part of the context window."
         )
 
         if let warning = model.toolWarning {
@@ -916,6 +923,24 @@ enum ProviderReadiness: Equatable {
             .attention
         case .checking:
             .idle
+        }
+    }
+}
+
+private struct AssistantExecutionSettings: View {
+    @AppStorage(AgentExecutionPolicy.settingsKey) private var requestLimit = 0
+
+    var body: some View {
+        SettingsSection(title: "Long tasks", symbol: "arrow.trianglehead.2.clockwise") {
+            DetailRow(title: "Pause after", caption: "Keep working by default. An optional limit saves progress for Continue. A final summary may use one extra request.") {
+                Picker("Model requests", selection: $requestLimit) {
+                    Text("No limit").tag(0)
+                    Text("100 requests").tag(100)
+                    Text("250 requests").tag(250)
+                    Text("500 requests").tag(500)
+                }
+                .labelsHidden()
+            }
         }
     }
 }

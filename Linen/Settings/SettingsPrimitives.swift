@@ -3,6 +3,10 @@
 
 import SwiftUI
 
+extension EnvironmentValues {
+    @Entry var settingsDescriptionLineLimit: Int? = nil
+}
+
 enum SettingsMetrics {
     static let navWidth: CGFloat = 220
     static let navIconsWidth: CGFloat = 46
@@ -95,6 +99,7 @@ extension View {
 }
 
 struct SettingsPageHeader: View {
+    @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
     private let title: Text
     var detail: String?
     private var caption: Text?
@@ -144,6 +149,7 @@ struct SettingsPageHeader: View {
 
                 if let caption {
                     caption
+                        .lineLimit(descriptionLineLimit)
                         .font(Theme.Font.row)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -156,6 +162,7 @@ struct SettingsPageHeader: View {
 }
 
 struct SettingsSection<Content: View, Accessory: View>: View {
+    @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
     let title: LocalizedStringResource
     let symbol: String
     var footnote: LocalizedStringResource?
@@ -222,6 +229,7 @@ struct SettingsSection<Content: View, Accessory: View>: View {
 
             if let footnote {
                 Text(footnote)
+                    .lineLimit(descriptionLineLimit)
                     .font(Theme.Font.label)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -246,6 +254,7 @@ extension SettingsSection {
 }
 
 struct DetailRow<Content: View>: View {
+    @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
     enum Layout {
         case trailing
         case stacked
@@ -353,6 +362,7 @@ struct DetailRow<Content: View>: View {
 
                 if let caption {
                     caption
+                        .lineLimit(descriptionLineLimit)
                         .font(Theme.Font.secondary)
                         .foregroundStyle(isLit ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
                         .fixedSize(horizontal: false, vertical: true)
@@ -425,7 +435,7 @@ struct SettingsButton: View {
 
     private var label: AnyShapeStyle {
         if !isEnabled {
-            return AnyShapeStyle(.tertiary)
+            return AnyShapeStyle(.secondary)
         }
         if isDestructive {
             return hovering ? AnyShapeStyle(Theme.danger) : AnyShapeStyle(.primary)
@@ -464,7 +474,6 @@ struct SettingsButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .opacity(isEnabled ? 1 : 0.45)
         .onHover { hovering = isEnabled && $0 }
         .animation(Theme.Motion.quick, value: hovering)
     }

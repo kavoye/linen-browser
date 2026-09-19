@@ -11,7 +11,7 @@ struct SettingsNavigatorTests {
     @Test func categoryRawValuesAreStable() {
         let expected = [
             "general", "appearance", "search", "provider", "profiles",
-            "privacy", "websites", "downloads", "extensions", "advanced", "experiments", "about",
+            "privacy", "autofill", "websites", "downloads", "extensions", "advanced", "experiments", "about",
         ]
         #expect(SettingsCategory.allCases.map(\.rawValue) == expected)
     }

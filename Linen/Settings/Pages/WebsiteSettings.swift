@@ -218,12 +218,12 @@ private struct PermissionDetailPage: View {
             )
         }
 
-        SettingsSection(title: "Websites you’ve answered", symbol: "list.bullet") {
+        SettingsSection(title: "Saved website permissions", symbol: "list.bullet") {
             if origins.isEmpty {
                 SettingsEmptyState(
                     symbol: permission.slashedSymbol,
                     title: "No websites yet",
-                    caption: "Websites appear here after you answer their requests."
+                    caption: "Websites appear here after you grant or deny permission."
                 )
             } else {
                 ForEach(Array(origins.enumerated()), id: \.element) { index, origin in
@@ -364,14 +364,14 @@ private struct SiteDetailPage: View {
 
             if settings.sleepsInactiveTabs {
                 DetailRow(
-                    title: "Keep this website awake",
-                    caption: "It stays loaded even when you haven’t used it in a while."
+                    title: "Keep this website loaded",
+                    caption: "Keep this website loaded when inactive."
                 ) {
                     keepAwakeToggle
                 }
             } else {
                 DetailRow(
-                    title: "Keep this website awake",
+                    title: "Keep this website loaded",
                     attributedCaption: keepAwakeCaption,
                     isMuted: true
                 ) {

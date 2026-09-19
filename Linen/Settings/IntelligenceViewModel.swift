@@ -21,6 +21,7 @@ final class IntelligenceViewModel {
     private let modelProviders: any ModelProviderResolving
     private let contextProbe: any ContextWindowProbing
     private let onConfigurationChanged: () -> Void
+    private let onVoiceConfigurationChanged: (() -> Void)?
 
     private(set) var destination = Destination.overview
 
@@ -34,6 +35,7 @@ final class IntelligenceViewModel {
     private(set) var keySource = CredentialStore.Source.none
     private(set) var maskedKey: String?
     private(set) var keyError: String?
+    private(set) var credentialRevision = 0
 
     var customModelDraft = ""
     private(set) var isEditingCustomModel = false
@@ -54,6 +56,7 @@ final class IntelligenceViewModel {
         credentials: any ProviderCredentialStore = KeychainProviderCredentialStore(),
         modelProviders: (any ModelProviderResolving)? = nil,
         contextProbe: any ContextWindowProbing = OllamaContextProbe(),
+        onVoiceConfigurationChanged: (() -> Void)? = nil,
         onConfigurationChanged: @escaping () -> Void
     ) {
         self.catalog = catalog
@@ -61,6 +64,7 @@ final class IntelligenceViewModel {
         self.modelProviders = modelProviders ?? ModelProviderRegistry(credentials: credentials)
         self.contextProbe = contextProbe
         self.onConfigurationChanged = onConfigurationChanged
+        self.onVoiceConfigurationChanged = onVoiceConfigurationChanged
         selectedID = catalog.selected.id
         adoptSubject()
     }
@@ -88,7 +92,8 @@ final class IntelligenceViewModel {
     }
 
     var supportsReasoningEffort: Bool {
-        modelProviders.resolve(subject).capabilities.contains(.reasoning)
+        if subject.adapter == .openAIResponses { return !ReasoningCatalog.efforts(for: subject, model: selectedModel).isEmpty }
+        return modelProviders.resolve(subject).capabilities.contains(.reasoning)
     }
 
     var availableEfforts: [LLMSettings.ReasoningEffort] {
@@ -244,8 +249,8 @@ final class IntelligenceViewModel {
               current.count > recommended.count
         else { return nil }
         return String(localized: """
-            \(subject.name)’s context is small, and every tool takes a share of it. More than \
-            \(recommended.count) tools can push out page content and confuse smaller models.
+            \(subject.name) has a small context window. Enabling more than \
+            \(recommended.count) tools leaves less room for page content and may reduce accuracy.
             """)
     }
 
@@ -334,6 +339,7 @@ final class IntelligenceViewModel {
     }
 
     private func adoptSubject() {
+        credentialRevision += 1
         let provider = subject
         selectedModel = LLMSettings.model(for: provider)
         reasoningEffort = LLMSettings.reasoningEffort(for: provider)
@@ -404,6 +410,19 @@ final class IntelligenceViewModel {
         }
     }
 
+    func saveOpenAISettings(_ settings: OpenAIResponseSettings) {
+        var previous = OpenAISettingsStore.load(providerID: subject.id)
+        let voiceChanged = previous.voice != settings.voice
+        previous.voice = settings.voice
+        OpenAISettingsStore.save(settings, providerID: subject.id)
+        guard isSubjectInUse else { return }
+        if previous == settings, voiceChanged, let onVoiceConfigurationChanged {
+            onVoiceConfigurationChanged()
+        } else if previous != settings || voiceChanged {
+            onConfigurationChanged()
+        }
+    }
+
     func loadCatalog(force: Bool = false) async {
         let provider = subject
         let modelProvider = modelProviders.resolve(provider)
@@ -468,6 +487,7 @@ final class IntelligenceViewModel {
     }
 
     private func refreshKeyState() {
+        credentialRevision += 1
         keySource = credentials.source(for: subject)
         maskedKey = credentials.masked(for: subject)
         refreshProviderAvailability()
@@ -555,7 +575,7 @@ final class IntelligenceViewModel {
             return
         }
         guard !Self.isInsecureRemoteEndpoint(url) else {
-            customError = String(localized: "Use https — plain http would send your API key in the clear. Only localhost can use http.")
+            customError = String(localized: "Use HTTPS to encrypt your API key. HTTP is allowed only for localhost.")
             return
         }
         draft.name = name

@@ -60,10 +60,12 @@ extension AppCoordinator {
         let notifyExtensions = browser.onActiveTabChanged
         browser.onActiveTabChanged = { [weak self] newTab, previousTab in
             notifyExtensions?(newTab, previousTab)
+            if let self, conversationSpaceID != browser.activeSpaceID { conversationVoice?.stop() }
             self?.followMedia(to: newTab, from: previousTab)
             self?.applyHoverShield()
         }
         browser.onSpaceAnchorChanged = { [weak self] from, to in
+            if self?.conversationSpaceID == from { self?.conversationVoice?.stop() }
             self?.agentTurns.reassignSpace(from: from, to: to)
         }
         browser.onLinkHovered = { [weak self] tab, url, modifiers, anchor in
@@ -84,11 +86,12 @@ extension AppCoordinator {
             prepareWindowBloom()
         }
         showBrowser()
+        mcpServer.resume()
         if onboarding.isPresented {
             bloomWindowOpen()
         }
         if !AppDatabase.ownsSession {
-            show(notice: String(localized: "Another copy of Linen is open. Nothing here is saved."))
+            show(notice: String(localized: "Another copy of Linen is running. Changes in this window won’t be saved."))
         }
         drainQueuedExternalURLs()
 
@@ -119,17 +122,6 @@ extension AppCoordinator {
         installKeyMonitors()
 
         configureEngines()
-
-        do {
-            try await voiceInput.prepare()
-            Pipeline.log.notice("bootstrap: transcriber ready")
-            if statusMessage == Self.speechNotReadyMessage {
-                statusMessage = nil
-            }
-        } catch {
-            statusMessage = String(localized: "Couldn’t set up speech: \(error.localizedDescription)")
-            Pipeline.log.error("Transcriber prepare failed: \(error, privacy: .public)")
-        }
 
         Pipeline.log.notice("bootstrap: done")
     }
@@ -199,23 +191,24 @@ extension AppCoordinator {
             isUsingSelectedProvider = configuration.id == selectedProvider.id
         }
 
-        func unavailable(_ why: String) {
+        func unavailable() {
             agentTurns.use(nil)
             activeProvider = nil
             isUsingSelectedProvider = false
-            statusMessage = why
         }
 
         switch decision {
         case .use(let configuration, let notice):
             use(modelProviders.resolve(configuration))
             activeNotice = notice
-            statusMessage = notice
         case .unavailable(let message):
             activeNotice = message
-            unavailable(message)
+            unavailable()
         }
-        Pipeline.log.notice("agent engine = \(self.agentName, privacy: .public)")
+        statusMessage = selected.availability == .needsCredentials ? nil : activeNotice
+        configureRemoteTools(for: activeProvider ?? selectedProvider)
+        configureVoice(for: activeProvider ?? selectedProvider)
+        Pipeline.log.notice("Assistant engine configured")
         discoverLocalContextWindow()
     }
 
@@ -256,7 +249,7 @@ extension AppCoordinator {
                   window != LLMSettings.discoveredContextWindow(for: provider, model: model)
             else { return }
             LLMSettings.setDiscoveredContextWindow(window, for: provider, model: model)
-            Pipeline.log.notice("context window for \(model, privacy: .public) = \(window)")
+            Pipeline.log.notice("Local context window discovered")
             self?.configureEngines()
         }
     }
@@ -358,7 +351,7 @@ extension AppCoordinator {
             return true
         }
         let closedInspector = sidePanel.close()
-        if state == .listening || state == .executing {
+        if conversationVoice?.isActive == true || state == .listening || state == .executing {
             voiceInput.cancel()
             stopAgent()
             return true

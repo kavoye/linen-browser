@@ -52,7 +52,7 @@ struct DownloadsSettings: View {
 
             DetailRow(
                 title: "Remove download list items",
-                caption: "The files themselves stay in your Downloads folder."
+                caption: "Downloaded files aren’t deleted."
             ) {
                 SettingsMenu(
                     options: DownloadRetention.allCases.map {

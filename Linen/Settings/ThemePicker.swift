@@ -125,7 +125,7 @@ private struct ThemeThumbnailCard: View {
     }
 }
 
-private struct Slice: Shape {
+private nonisolated struct Slice: Shape {
     let start: CGFloat
     let end: CGFloat
 

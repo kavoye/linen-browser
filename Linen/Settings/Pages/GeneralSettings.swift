@@ -85,7 +85,7 @@ struct GeneralSettings: View {
         SettingsSection(title: "Browsing", symbol: "cursorarrow.rays") {
             DetailRow(
                 title: "Show link address",
-                caption: "See where a link goes, at the bottom of the page."
+                caption: "Show link addresses at the bottom of the page."
             ) {
                 SettingsToggle($settings.showsLinkPreview)
             }
