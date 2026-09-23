@@ -66,7 +66,9 @@ nonisolated final class OpenAITransportFixture: OpenAITransport, @unchecked Send
                 }
                 let response = try next(request)
                 if let streamEvents {
-                    for event in streamEvents { continuation.yield(event) }
+                    for event in streamEvents {
+                        continuation.yield(event)
+                    }
                 } else {
                     continuation.yield(.init(type: "response.future_notification", payload: ["future": true], id: nil))
                     continuation.yield(.init(type: "response.output_text.delta", payload: ["delta": "Checking…"], id: nil))

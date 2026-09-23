@@ -41,7 +41,7 @@ nonisolated enum AgentToolCatalog {
         AgentToolDescriptor(id: "readFrame", title: "Read Embedded Pages", summary: "Read an embedded website with separate permission.", category: .page, isCore: false),
         AgentToolDescriptor(id: "actInFrame", title: "Use Embedded Pages", summary: "Use controls on a permitted embedded website.", category: .page, isCore: false),
         AgentToolDescriptor(id: "chooseFilesOnPage", title: "Choose Files to Upload", summary: "Ask you to choose files for a website.", category: .page, isCore: false),
-        AgentToolDescriptor(id: "inspectDownloads", title: "Check Downloads", summary: "Check whether a task's downloads finished.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "inspectDownloads", title: "Check Downloads", summary: "Check whether a task’s downloads finished.", category: .page, isCore: false),
         AgentToolDescriptor(
             id: "searchWeb",
             title: "Search the Web",

@@ -86,23 +86,8 @@ final class BrowserTab: Identifiable {
         return webView.canGoForward
     }
 
-    var backList: [WKBackForwardListItem] {
-        guard isMaterialised else { return [] }
-        return webView.backForwardList.backList
-    }
-
     /// `urlString` may include a provisional navigation; this URL reflects the committed page.
     private(set) var committedURL: URL?
-
-    func goBack() {
-        webView.stopLoading()
-        webView.goBack()
-    }
-
-    func goForward() {
-        webView.stopLoading()
-        webView.goForward()
-    }
 
     var isUnderTopBar = false {
         didSet {
@@ -525,7 +510,7 @@ final class BrowserTab: Identifiable {
         }
         stoppedNavigation = false
         if let url = URL(string: urlString),
-           (webView.backForwardList.currentItem == nil || (wasStopped && url != committedURL)) {
+           webView.backForwardList.currentItem == nil || (wasStopped && url != committedURL) {
             load(url, transition: .reload)
             return
         }
@@ -570,24 +555,6 @@ final class BrowserTab: Identifiable {
         } else {
             replacement.load(URLRequest(url: url))
         }
-    }
-
-    private static func applyObscuredInsets(
-        to webView: WKWebView,
-        isUnderTopBar: Bool = false
-    ) {
-        let isFullscreen = switch webView.fullscreenState {
-        case .enteringFullscreen, .inFullscreen:
-            true
-        default:
-            false
-        }
-        webView.obscuredContentInsets = NSEdgeInsets(
-            top: isFullscreen || !isUnderTopBar ? 0 : Theme.topBarHeight,
-            left: 0,
-            bottom: 0,
-            right: 0
-        )
     }
 
     var onLocationRevoked: (() -> Void)?
@@ -668,40 +635,7 @@ final class BrowserTab: Identifiable {
 
     private(set) var zoomChanges = 0
 
-    var zoomLevel: CGFloat {
-        _ = zoomChanges
-        return webView.pageZoom
-    }
-
-    var isZoomed: Bool {
-        _ = zoomChanges
-        return abs(webView.pageZoom - BrowserSettings.shared.pageZoom) > 0.005
-            || abs(webView.magnification - 1) > 0.005
-    }
-
-    func zoomIn() {
-        setPageZoom(webView.pageZoom + TabWebView.zoomStep)
-    }
-
-    func zoomOut() {
-        setPageZoom(webView.pageZoom - TabWebView.zoomStep)
-    }
-
-    func resetZoom() {
-        webView.magnification = 1
-        webView.pageZoom = BrowserSettings.shared.pageZoom
-        zoomDidChange()
-    }
-
-    private func setPageZoom(_ value: CGFloat) {
-        webView.pageZoom = min(
-            max(value, TabWebView.zoomRange.lowerBound),
-            TabWebView.zoomRange.upperBound
-        )
-        zoomDidChange()
-    }
-
-    fileprivate func zoomDidChange() {
+    func zoomDidChange() {
         zoomChanges &+= 1
         recordSiteZoom()
     }
@@ -753,25 +687,6 @@ final class BrowserTab: Identifiable {
         webView.evaluateJavaScript(Self.restoreScrollScript(to: stored), completionHandler: nil)
     }
 
-    private static func restoreScrollScript(to y: Double) -> String {
-        """
-        (() => {
-          const target = \(y);
-          if (window.scrollY > 1) return;
-          let expected = window.scrollY;
-          let tries = 20;
-          const step = () => {
-            if (Math.abs(window.scrollY - expected) > 1) return;
-            window.scrollTo(0, target);
-            expected = window.scrollY;
-            if (Math.abs(expected - target) <= 1 || --tries <= 0) return;
-            setTimeout(step, 60);
-          };
-          step();
-        })();
-        """
-    }
-
     private(set) var pendingTransition: HistoryStore.Transition = .typed
 
     func noteTransition(_ transition: HistoryStore.Transition) {
@@ -812,6 +727,7 @@ final class BrowserTab: Identifiable {
     var reclaimState: TabReclaimState {
         processState.reclaimState
     }
+
     private var deferredState: Data?
     private var deferredURL: URL?
 
@@ -953,14 +869,6 @@ final class BrowserTab: Identifiable {
         )
     }
 
-    static func wouldFlash(painting color: NSColor?, inDark: Bool) -> Bool {
-        guard let painted = color?.usingColorSpace(.sRGB) else { return false }
-        let luminance = 0.2126 * painted.redComponent
-            + 0.7152 * painted.greenComponent
-            + 0.0722 * painted.blueComponent
-        return inDark ? luminance > 0.5 : luminance < 0.5
-    }
-
     func refreshChrome() {
         isLoading = webView.isLoading && isShowingRealPage && !stoppedNavigation
         canGoBackInWeb = webView.canGoBack
@@ -1012,11 +920,6 @@ final class BrowserTab: Identifiable {
     }
 
     var isShowingError = false
-
-    var isShowingRealPage: Bool {
-        guard let scheme = webView.url?.scheme else { return false }
-        return scheme != "about" && scheme != SystemPages.scheme
-    }
 
     func declaredFaviconChanged() {
         guard extensionBaseURL == nil, !isPrivate, !isShowingSystemPage else { return }

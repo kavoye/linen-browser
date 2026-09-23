@@ -320,7 +320,7 @@ final class IntelligenceViewModel {
         guard !provider.isOnDevice,
               !modelID.isEmpty,
               LLMSettings.discoveredContextWindow(for: provider, model: modelID) == nil,
-              (!provider.needsKey || credentials.isConfigured(provider)),
+              !provider.needsKey || credentials.isConfigured(provider),
               let window = await contextProbe.effectiveWindow(
                 for: provider, model: modelID, apiKey: credentials.key(for: provider)
               )

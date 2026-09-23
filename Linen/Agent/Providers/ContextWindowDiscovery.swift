@@ -156,8 +156,10 @@ nonisolated struct ProviderContextProbe: ContextWindowProbing {
 
     private static func window(in entry: [String: Any]) -> Int? {
         for key in ["context_length", "context_window", "context_window_tokens", "max_context_length",
-                    "max_model_len", "max_input_tokens", "inputTokenLimit"] {
-            if let window = positiveInt(entry[key]) { return window }
+                    "max_model_len", "max_input_tokens", "inputTokenLimit", ] {
+            if let window = positiveInt(entry[key]) {
+                return window
+            }
         }
         return nil
     }

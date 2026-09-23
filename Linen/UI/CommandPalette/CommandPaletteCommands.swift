@@ -31,6 +31,11 @@ struct CommandPaletteContext {
 }
 
 enum CommandPaletteAction: String, CaseIterable {
+    static let indexedTabs: [Self] = [
+        .showTab1, .showTab2, .showTab3, .showTab4,
+        .showTab5, .showTab6, .showTab7, .showTab8,
+    ]
+
     case newTab
     case openStartPage
     case openLocation
@@ -248,11 +253,7 @@ enum CommandPaletteCatalog {
 
         var tabs: [CommandPaletteCommand] {
             let pinTitle: LocalizedStringResource = context.isShowingPin ? "Unpin Tab" : "Pin This Page"
-            let indexedActions: [CommandPaletteAction] = [
-                .showTab1, .showTab2, .showTab3, .showTab4,
-                .showTab5, .showTab6, .showTab7, .showTab8,
-            ]
-            let indexedTabs = indexedActions.enumerated().compactMap { index, action -> CommandPaletteCommand? in
+            let indexedTabs = CommandPaletteAction.indexedTabs.enumerated().compactMap { index, action -> CommandPaletteCommand? in
                 let slot = index + 1
                 guard slot <= context.tabCount else { return nil }
                 return make(

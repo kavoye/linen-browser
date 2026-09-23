@@ -591,7 +591,7 @@ final class AnyLanguageModelAgent: AgentRunner {
             selected = makeAgentTools(toolkit: toolkit, tier: budget.toolTier)
         }
         let managed: [any Tool] = [UpdateProgressTool(), RecordTaskOutcomeTool(toolkit: toolkit),
-                                  VerifyTaskOutcomeTool(toolkit: toolkit), BlockTaskOutcomeTool(toolkit: toolkit)]
+                                  VerifyTaskOutcomeTool(toolkit: toolkit), BlockTaskOutcomeTool(toolkit: toolkit), ]
         let managedNames = Set(managed.map(\.name))
         return selected.filter { !managedNames.contains($0.name) && (acceptsImages || !AgentToolCatalog.visualToolIDs.contains($0.name)) }
             + managed

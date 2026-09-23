@@ -273,7 +273,9 @@ private final class OpenAIVisibleStream {
         let visible = String(message.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2_000))
         guard !visible.isEmpty else { return }
         let now = ContinuousClock.now
-        if !force, let lastProgressPublished, now - lastProgressPublished < .milliseconds(50) { return }
+        if !force, let lastProgressPublished, now - lastProgressPublished < .milliseconds(50) {
+            return
+        }
         lastProgressPublished = now
         onProgress(visible)
     }

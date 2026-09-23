@@ -53,7 +53,7 @@ private struct AssistantOverview: View {
     var body: some View {
         SettingsPageHeader(
             title: "Assistant",
-            caption: "Choose the assistant's model, behavior, and permissions."
+            caption: "Choose the assistant’s model, behavior, and permissions."
         )
 
         AnsweringNotice(model: model, coordinator: coordinator)
@@ -119,7 +119,7 @@ private struct AnsweringNotice: View {
             StatusRow(
                 tint: Theme.warning,
                 symbol: "exclamationmark",
-                title: "\(model.selected.name) isn't ready",
+                title: "\(model.selected.name) isn’t ready",
                 caption: "Linen is using \(active.name) instead."
             ) {
                 SettingsButton(title: "Set Up…", isProminent: true) {
@@ -403,7 +403,7 @@ private struct ProviderPage: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Its name and URL are removed. The server itself isn't affected.")
+            Text("Its name and URL are removed. The server itself isn’t affected.")
         }
     }
 }

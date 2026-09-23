@@ -126,7 +126,8 @@ struct CopyCatalogTests {
         "cached files", "cookies and site data", "local storage", "money transfers",
         "new tab", "on this mac", "page zoom", "posting and sending",
         "reset settings", "show lyrics", "show sidebar", "software update",
-        "start page",
+        "start page", "remove extension", "sign in", "extension options",
+        "clear list", "pop-up windows", "check for updates",
     ]
 
     /// Two keys that differ only in case are one label about to fork - the
@@ -168,7 +169,9 @@ struct SettingsIndexParityTests {
         // No static caption on the page: the row is its own label.
         "general.defaultBrowser",
         "search.custom", "appearance.theme", "profiles.list", "profiles.current",
-        "provider.model", "provider.connected",
+        "provider.model", "provider.connected", "provider.key", "provider.endpoint",
+        "openai.replyLength", "openai.voice.readingVoice", "openai.voice.readingSpeed",
+        "openai.developer", // The button opens a group of advanced settings.
         "appearance.sidebar", "appearance.sidebarStyle", "advanced.reset",
         "privacy.history",
         "websites.javascript", "privacy.trackers", "websites.list",
@@ -202,6 +205,9 @@ struct SettingsIndexParityTests {
         "Linen/Settings/SettingsView.swift",
         "Linen/Settings/Pages/ProfileSettings.swift",
         "Linen/Settings/Pages/IntelligenceSettings.swift",
+        "Linen/Settings/Pages/OpenAISettingsSection.swift",
+        "Linen/Settings/Pages/OpenAIVoiceSettingsView.swift",
+        "Linen/Settings/Pages/OpenAIDeveloperSettings.swift",
         "Linen/Settings/Pages/SearchSettings.swift",
         "Linen/Settings/Pages/AssistantGrantsPage.swift",
         "Linen/Extensions/ExtensionsSettingsSection.swift",

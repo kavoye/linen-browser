@@ -27,16 +27,19 @@ struct AgentReplyModelTests {
     }
 
     @Test func endingAStreamRetainsThenClearsTheReply() async {
-        let reply = AgentReplyModel()
+        let clock = TestClock()
+        let reply = AgentReplyModel(clock: clock)
         reply.beginStream()
         reply.setActivity("Searching")
         reply.update(text: "Done")
 
-        reply.endStream(retainFor: 0)
+        reply.endStream(retainFor: 1)
         #expect(!reply.isStreaming)
         #expect(reply.activity == nil)
         #expect(reply.text == "Done")
 
+        #expect(await waitUntil { clock.pendingCount == 1 })
+        clock.advance(by: .seconds(1))
         #expect(await waitUntil { reply.text == nil })
         #expect(!reply.isVisible)
     }

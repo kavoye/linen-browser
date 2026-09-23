@@ -55,7 +55,7 @@ struct AgentToolInspectionTests {
 
         let call = Transcript.ToolCall(id: "typed", toolName: "typeOnPage", arguments: GeneratedContent(properties: [
             "field": GeneratedContent("Destination"),
-            "text": GeneratedContent("private@example.test")
+            "text": GeneratedContent("private@example.test"),
         ]))
         let output = Transcript.ToolOutput(
             id: call.id, toolName: call.toolName,

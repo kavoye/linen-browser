@@ -180,7 +180,7 @@ struct OpenAIMCPSettingsView: View {
                   !servers.contains(where: { $0.id != candidate.id && $0.label == candidate.label }) else { throw OpenAIMCPFailure.configuration }
             guard candidate.oauth != nil || old == nil || (old?.destination == candidate.destination && old?.oauth == nil)
                     || !candidate.requiresAuthorization || !authorization.isEmpty else {
-                error = String(localized: "Enter a new authorization token when changing this connection's destination.")
+                error = String(localized: "Enter a new authorization token when changing this connection’s destination.")
                 return
             }
             if old?.oauth != candidate.oauth || old?.destination != candidate.destination {

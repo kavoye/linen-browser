@@ -116,12 +116,12 @@ struct WebsiteSettings: View {
         }
         .settingsAnchor("websites.permissions")
 
-        SettingsSection(title: "Websites you've changed", symbol: "list.bullet", isLongList: true) {
+        SettingsSection(title: "Websites you’ve changed", symbol: "list.bullet", isLongList: true) {
             if entries.isEmpty {
                 SettingsEmptyState(
                     symbol: "globe",
                     title: "No website settings changed",
-                    caption: "Use Website Settings in the toolbar to change a website's settings."
+                    caption: "Use Website Settings in the toolbar to change a website’s settings."
                 )
             } else {
                 ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
@@ -365,7 +365,7 @@ private struct SiteDetailPage: View {
             if settings.sleepsInactiveTabs {
                 DetailRow(
                     title: "Keep this website loaded",
-                    caption: "Don't unload this website when its tab is inactive."
+                    caption: "Don’t unload this website when its tab is inactive."
                 ) {
                     keepAwakeToggle
                 }
@@ -385,7 +385,7 @@ private struct SiteDetailPage: View {
             if settings.automaticPictureInPicture {
                 DetailRow(
                     title: "Automatic Picture in Picture",
-                    caption: "Turn this off to keep this website's video in its tab."
+                    caption: "Turn this off to keep this website’s video in its tab."
                 ) {
                     automaticPictureToggle
                 }

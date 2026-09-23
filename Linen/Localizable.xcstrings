@@ -48,7 +48,7 @@
     "%@ blocked" : {
       "comment" : "Fragment in the one-line summary under a website in the list, for permissions that were refused. %@ is a list of permission names already worded and joined. Lower case: joined with other fragments, never shown alone."
     },
-    "%@ doesn't offer suggestions." : {
+    "%@ doesn’t offer suggestions." : {
 
     },
     "%@ has a small context window. Enabling more than %lld tools leaves less room for page content and may reduce accuracy." : {
@@ -68,7 +68,7 @@
     "%@ in use" : {
       "comment" : "Tooltip on the permission badge in the address bar while a website is actively using a capability. %@ is the permission's own name, itself localized: Camera, Microphone, Location or Notifications. The phrase continues from that noun, so it is a fragment rather than a sentence."
     },
-    "%@ isn't ready" : {
+    "%@ isn’t ready" : {
 
     },
     "%@ of %@" : {
@@ -677,7 +677,7 @@
     "Add extensions from the Chrome Web Store or Firefox Add-ons." : {
       "comment" : "Caption under the Add extensions heading. These refers to the extensions listed below it. Chrome and Firefox are browser names and are never translated; their stores are the websites the extensions are downloaded from, and opening a store page in Linen is how the reader installs more."
     },
-    "Add Inspect Element to a page's right-click menu." : {
+    "Add Inspect Element to a page’s right-click menu." : {
 
     },
     "Add Key…" : {
@@ -686,7 +686,7 @@
     "Add Linen to %@" : {
       "comment" : "MCP client setup accessibility label. The placeholder is the client app name."
     },
-    "Add or change the selected provider's API key." : {
+    "Add or change the selected provider’s API key." : {
 
     },
     "Add Password" : {
@@ -871,7 +871,7 @@
     "Appearance" : {
       "comment" : "Name of the Appearance page in the Settings sidebar and the heading at the top of that page."
     },
-    "Appearance, search, privacy, websites, and downloads go back to their defaults. Tabs, history, shortcuts, and your provider aren't affected." : {
+    "Appearance, search, privacy, websites, and downloads go back to their defaults. Tabs, history, shortcuts, and your provider aren’t affected." : {
 
     },
     "Apple Intelligence" : {
@@ -1189,9 +1189,6 @@
     "cheapest" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the least expensive to use. Lowercase superlative, and the space is very tight."
     },
-    "Check downloads" : {
-
-    },
     "Check Downloads" : {
 
     },
@@ -1219,7 +1216,7 @@
     "Check this provider again" : {
       "comment" : "Settings → Assistant → a provider page. Tooltip on the refresh button beside the readiness status."
     },
-    "Check whether a task's downloads finished." : {
+    "Check whether a task’s downloads finished." : {
 
     },
     "Checking for updates" : {
@@ -1267,9 +1264,6 @@
     "Choose File…" : {
       "comment" : "Button beside the Bookmarks row. It opens the macOS file panel, where the user picks the exported bookmarks file. The ellipsis says that a panel opens; keep it."
     },
-    "Choose files to upload" : {
-
-    },
     "Choose Files to Upload" : {
 
     },
@@ -1288,7 +1282,7 @@
     "Choose Standard or Transparent." : {
 
     },
-    "Choose the assistant's model, behavior, and permissions." : {
+    "Choose the assistant’s model, behavior, and permissions." : {
 
     },
     "Choose the bookmarks file you exported from another browser." : {
@@ -1659,7 +1653,7 @@
     "Couldn’t Fill Saved Details" : {
 
     },
-    "Couldn't generate a password." : {
+    "Couldn’t generate a password." : {
 
     },
     "Couldn’t load saved contacts." : {
@@ -1686,16 +1680,13 @@
     "Couldn’t remember this choice. Try again." : {
 
     },
-    "Couldn't remove this address. Try again." : {
+    "Couldn’t remove this address. Try again." : {
 
     },
-    "Couldn't Reset Save Suggestions" : {
+    "Couldn’t Reset Save Suggestions" : {
 
     },
     "Couldn’t save these details." : {
-
-    },
-    "Couldn't save these details. Try again." : {
 
     },
     "Couldn’t save these details. Try again." : {
@@ -1839,7 +1830,7 @@
     "Don’t Allow" : {
       "comment" : "Button in the permission panel that refuses the website's request, beside “Allow Once” and “Always Allow”. Keep the curly apostrophe. Title Case, and the three buttons share one narrow row."
     },
-    "Don't unload this website when its tab is inactive." : {
+    "Don’t unload this website when its tab is inactive." : {
 
     },
     "Done" : {
@@ -1857,7 +1848,7 @@
     "Downloaded %@" : {
       "comment" : "Brief notice shown when a download finishes. %@ is the file's name. A past participle describing what happened, not a command."
     },
-    "Downloaded files aren't deleted." : {
+    "Downloaded files aren’t deleted." : {
 
     },
     "Downloading update" : {
@@ -1895,9 +1886,6 @@
     "Drag between points in a page screenshot." : {
 
     },
-    "Drag on page" : {
-
-    },
     "Drag on Page" : {
 
     },
@@ -1922,7 +1910,7 @@
     "Edit" : {
       "comment" : "Used twice, always as a verb on a button: the button that opens a custom provider endpoint for changing, and the corner button that opens the start page's own editor."
     },
-    "Edit a custom provider's server address." : {
+    "Edit a custom provider’s server address." : {
 
     },
     "Edit additional parameters and hosted tool definitions." : {
@@ -2003,7 +1991,7 @@
     "Enter a name." : {
       "comment" : "Error shown under the custom endpoint form when the name field was left empty."
     },
-    "Enter a new authorization token when changing this connection's destination." : {
+    "Enter a new authorization token when changing this connection’s destination." : {
 
     },
     "Enter a registered public client ID, or register one if the service allows it. Save the connection, then select Sign in." : {
@@ -2061,7 +2049,7 @@
     "European models, with small and fast tiers." : {
       "comment" : "One-line description of the Mistral provider in the provider list in Settings, also shown in that row's tooltip. “Tiers” means the sizes of model the vendor offers."
     },
-    "Every provider you've set up." : {
+    "Every provider you’ve set up." : {
 
     },
     "Every website asks the first time." : {
@@ -2543,7 +2531,7 @@
         }
       }
     },
-    "Its name and URL are removed. The server itself isn't affected." : {
+    "Its name and URL are removed. The server itself isn’t affected." : {
 
     },
     "JavaScript" : {
@@ -2687,7 +2675,7 @@
     "Linen couldn’t unlock or save your cards in Keychain. Try again in a signed build." : {
 
     },
-    "Linen encrypts saved contacts. Imported copies don't sync." : {
+    "Linen encrypts saved contacts. Imported copies don’t sync." : {
 
     },
     "Linen encrypts saved passwords. macOS manages passkeys." : {
@@ -2699,7 +2687,7 @@
     "Linen is your default browser." : {
       "comment" : "Caption under the Open links from other apps row, shown once Linen is the default browser. The alternative caption, shown while it is not, is Linen isn’t your default browser. Linen is the application name and is never translated."
     },
-    "Linen isn't your default browser." : {
+    "Linen isn’t your default browser." : {
 
     },
     "Linen manages model, input, instructions, tools, output limits, storage, service tier, and continuation fields. Use the controls for these settings." : {
@@ -2722,9 +2710,6 @@
     },
     "Links Copied" : {
       "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
-    },
-    "List embedded pages" : {
-
     },
     "List Embedded Pages" : {
 
@@ -2973,9 +2958,6 @@
     },
     "Move Pin to This Page" : {
       "comment" : "Item in the Edit Pinned Page submenu of a tab row: it hands the tab's single anchor to the page now open, replacing the old one. Use the same noun for “pin” as in “Pin This Page”. Title Case."
-    },
-    "Move pointer" : {
-
     },
     "Move Pointer" : {
 
@@ -3424,7 +3406,7 @@
     "Opened Tab" : {
       "comment" : "Detail suffix on an address bar result row that stands for an already-open tab; it is joined after the host with “ • ”, giving “example.com • Opened Tab”. Adjective plus noun, Title Case, very tight."
     },
-    "Opens a new issue on Linen's repository." : {
+    "Opens a new issue on Linen’s repository." : {
 
     },
     "Optional" : {
@@ -3808,9 +3790,6 @@
     "Record Task Outcomes" : {
 
     },
-    "Record unfinished work" : {
-
-    },
     "Record Unfinished Work" : {
 
     },
@@ -4152,7 +4131,7 @@
     "Save an address to fill forms." : {
 
     },
-    "Save an extra copy for retrieval through the OpenAI API. You don't need this for Linen's chat history." : {
+    "Save an extra copy for retrieval through the OpenAI API. You don’t need this for Linen’s chat history." : {
 
     },
     "Save and fill cards at checkout." : {
@@ -4353,7 +4332,7 @@
     "Send questions to the assistant. Open links normally." : {
       "comment" : "Settings search caption for Ask instead of search. The page caption names the chosen model instead."
     },
-    "Send the song and artist to LRCLIB to find lyrics. Private tabs don't send song details." : {
+    "Send the song and artist to LRCLIB to find lyrics. Private tabs don’t send song details." : {
 
     },
     "Send you notifications?" : {
@@ -4434,7 +4413,7 @@
     "Show %@ on the toolbar" : {
       "comment" : "Tooltip on the Pin button in the extensions overflow popover. %@ is the extension’s own display name, taken from the extension’s manifest — it is not translated. Show is a verb, and toolbar is the row of buttons at the top of the window."
     },
-    "Show a link's address at the bottom of the page when you point at it." : {
+    "Show a link’s address at the bottom of the page when you point at it." : {
 
     },
     "Show All" : {
@@ -4602,7 +4581,7 @@
     "Software updates can fail when Linen runs from another folder. Linen will move itself to Applications and reopen." : {
       "comment" : "Body of that alert, for a copy that can be moved — usually one sitting in the Downloads folder. The second sentence promises what the default button does. Use the system name of the Applications folder."
     },
-    "Some extension features aren't supported by WebKit. Other features remain available." : {
+    "Some extension features aren’t supported by WebKit. Other features remain available." : {
 
     },
     "Something else" : {
@@ -5132,7 +5111,7 @@
     "This provider has no endpoint set." : {
       "comment" : "Message shown for a user-added provider whose server address is missing, both as a reason it is unavailable and as an error when its model list is fetched. Provider means the AI provider; endpoint is the technical term for the server address."
     },
-    "This search URL isn't valid. Using DuckDuckGo instead." : {
+    "This search URL isn’t valid. Using DuckDuckGo instead." : {
 
     },
     "This server did not provide valid OAuth discovery information. Enter the connection details manually." : {
@@ -5213,10 +5192,10 @@
     "Turn this off if the website breaks." : {
       "comment" : "Caption under the Block known trackers switch on one website's page, saying what to do when tracker blocking stops a website working. Imperative."
     },
-    "Turn this off to keep this website's video in its tab." : {
+    "Turn this off to keep this website’s video in its tab." : {
 
     },
-    "Turning this off affects new replies. It does not delete earlier copies or change OpenAI's other data-retention policies." : {
+    "Turning this off affects new replies. It does not delete earlier copies or change OpenAI’s other data-retention policies." : {
 
     },
     "Type" : {
@@ -5372,13 +5351,13 @@
     "Use recommended" : {
 
     },
-    "Use the current website's color in the toolbar and sidebar." : {
+    "Use the current website’s color in the toolbar and sidebar." : {
 
     },
     "Use tool" : {
 
     },
-    "Use Website Settings in the toolbar to change a website's settings." : {
+    "Use Website Settings in the toolbar to change a website’s settings." : {
 
     },
     "Use your camera?" : {
@@ -5534,7 +5513,7 @@
     "Websites you visit most" : {
       "comment" : "Description of the Frequently Visited section in the start page editor. No final full stop."
     },
-    "Websites you've changed" : {
+    "Websites you’ve changed" : {
 
     },
     "Welcome to Linen" : {
@@ -5609,10 +5588,10 @@
     "You’re set" : {
       "comment" : "Heading of the last onboarding screen, shown once every choice is made. Warm and brief — the reader is finished. Keep it short: it is set in large type."
     },
-    "You're signed out of %lld websites, and their preferences are removed. Your history and downloads stay." : {
+    "You’re signed out of %lld websites, and their preferences are removed. Your history and downloads stay." : {
 
     },
-    "You're signed out of this website, and its preferences are removed." : {
+    "You’re signed out of this website, and its preferences are removed." : {
 
     },
     "You’re talking to AI. " : {

@@ -61,8 +61,8 @@ struct OpenAILiveRecorderTests {
         await #expect(throws: OpenAIFailure.self) {
             _ = try await OpenAIAPI(transport: transport).createResponse([:]) { _ in }
         }
-        #expect(recorder.snapshot.count == 1)
-        #expect(recorder.snapshot[0]["status"] == "failed")
-        #expect(recorder.snapshot[0]["error"] == "streamInterrupted")
+        #expect(recorder.snapshot.count == 2)
+        #expect(recorder.snapshot.allSatisfy { $0["status"] == "failed" })
+        #expect(recorder.snapshot.allSatisfy { $0["error"] == "streamInterrupted" })
     }
 }

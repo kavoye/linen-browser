@@ -250,7 +250,7 @@ private struct IssueList: View {
                     }
                 }
 
-                Text("Some extension features aren't supported by WebKit. Other features remain available.")
+                Text("Some extension features aren’t supported by WebKit. Other features remain available.")
                     .font(Theme.Font.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.top, 2)

@@ -34,7 +34,7 @@ struct WebsiteDataPage: View {
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("You're signed out of \(entries.count) websites, and their preferences are removed. Your history and downloads stay.")
+                    Text("You’re signed out of \(entries.count) websites, and their preferences are removed. Your history and downloads stay.")
                 }
             }
         }
@@ -89,7 +89,7 @@ struct WebsiteDataPage: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You're signed out of this website, and its preferences are removed.")
+            Text("You’re signed out of this website, and its preferences are removed.")
         }
     }
 

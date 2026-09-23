@@ -15,9 +15,12 @@ struct AgentToolInspection {
         var outputs: [String: Transcript.ToolOutput] = [:]
         for entry in checkpoint.transcript {
             switch entry {
-            case .toolCalls(let batch): calls.append(contentsOf: batch)
-            case .toolOutput(let output): outputs[output.id] = output
-            default: break
+            case .toolCalls(let batch):
+                calls.append(contentsOf: batch)
+            case .toolOutput(let output):
+                outputs[output.id] = output
+            default:
+                break
             }
         }
 
@@ -33,7 +36,9 @@ struct AgentToolInspection {
                     input: input(for: call),
                     result: output.flatMap { result(for: $0, tool: call.toolName) },
                     imageCount: output?.segments.filter {
-                        if case .image = $0 { return true }
+                        if case .image = $0 {
+                            return true
+                        }
                         return false
                     }.count ?? 0
                 )
@@ -54,7 +59,9 @@ struct AgentToolInspection {
     }
 
     private static func redacted(_ value: Any) -> Any {
-        if let array = value as? [Any] { return array.map(redacted) }
+        if let array = value as? [Any] {
+            return array.map(redacted)
+        }
         guard let dictionary = value as? [String: Any] else { return value }
         return dictionary.reduce(into: [String: Any]()) { result, entry in
             let key = entry.key.lowercased()
@@ -78,7 +85,9 @@ struct AgentToolInspection {
             return String(localized: "Tool result hidden.")
         }
         var text = output.segments.compactMap { segment -> String? in
-            if case .text(let value) = segment { return value.content }
+            if case .text(let value) = segment {
+                return value.content
+            }
             return nil
         }.joined(separator: "\n")
         text = text.replacingOccurrences(of: "<page-content untrusted=\"true\">", with: "")

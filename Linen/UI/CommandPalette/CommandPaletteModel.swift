@@ -616,28 +616,16 @@ final class CommandPaletteModel {
             browser.cycleTab(forward: false)
         case .lastTab:
             browser.activateLastTab()
-        case .showTab1:
-            browser.activateTab(at: 0)
-        case .showTab2:
-            browser.activateTab(at: 1)
-        case .showTab3:
-            browser.activateTab(at: 2)
-        case .showTab4:
-            browser.activateTab(at: 3)
-        case .showTab5:
-            browser.activateTab(at: 4)
-        case .showTab6:
-            browser.activateTab(at: 5)
-        case .showTab7:
-            browser.activateTab(at: 6)
-        case .showTab8:
-            browser.activateTab(at: 7)
+        case .showTab1, .showTab2, .showTab3, .showTab4, .showTab5, .showTab6, .showTab7, .showTab8:
+            if let index = CommandPaletteAction.indexedTabs.firstIndex(of: action) {
+                browser.activateTab(at: index)
+            }
         case .reload:
-            page?.webView.reload()
+            page?.reload()
         case .hardReload:
             page?.webView.reloadFromOrigin()
         case .stopLoading:
-            page?.webView.stopLoading()
+            page?.stopLoading()
         case .goBack:
             page?.goBack()
         case .goForward:

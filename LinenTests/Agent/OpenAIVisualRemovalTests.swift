@@ -19,7 +19,7 @@ struct OpenAIVisualRemovalTests {
     @Test func unsolicitedNativeComputerCallIsRejected() throws {
         let response = OpenAITransportFixture.response([[
             "type": "computer_call", "call_id": "old-call", "status": "completed", "actions": [["type": "screenshot"]],
-        ]])
+        ], ])
         #expect(throws: OpenAIFailure.self) { try OpenAIModelStep.output(response) }
     }
 }

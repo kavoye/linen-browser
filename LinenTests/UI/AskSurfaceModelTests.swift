@@ -181,7 +181,7 @@ struct AskSurfaceModelTests {
                     id: "page", kind: .history, title: "Some page",
                     completionText: "https://some.example/page"
                 ) {},
-            ])]
+            ]), ]
 
             model.hoverSuggestion(at: 1, in: sections)
 

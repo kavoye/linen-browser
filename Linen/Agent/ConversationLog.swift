@@ -110,7 +110,7 @@ final class ConversationLog {
         let startedAt: Date
         var steps: [Step]
         var response: String
-        var liveProgress: String? = nil
+        var liveProgress: String?
         var state: State
         var finishedAt: Date?
         let providerID: String?

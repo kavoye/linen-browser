@@ -304,7 +304,7 @@ private struct AboutSettings: View {
             SettingsCard {
                 DetailRow(
                     title: "Send feedback",
-                    caption: "Opens a new issue on Linen's repository."
+                    caption: "Opens a new issue on Linen’s repository."
                 ) {
                     SettingsButton(title: "Send…") {
                         coordinator.openNewTab(url: UpdateFeed.newIssueURL)

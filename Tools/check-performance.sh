@@ -55,16 +55,16 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
 fi
 
 check_average \
-  'BrowserPerformanceTests/testCreatingAUsableBlankTab()' \
+  'BrowserPerformanceTests/testCreatingAUsableStartPageTab()' \
   'com.apple.dt.XCTMetric_Clock.time.monotonic' \
   '0.100' \
-  'First usable blank tab' \
+  'First usable start page tab' \
   's'
 check_average \
-  'BrowserPerformanceTests/testCreatingAUsableBlankTab()' \
+  'BrowserPerformanceTests/testCreatingAUsableStartPageTab()' \
   'com.apple.dt.XCTMetric_Memory.physical' \
   '4096' \
-  'Blank tab memory growth' \
+  'Start page tab memory growth' \
   'kB'
 check_average \
   'BrowserPerformanceTests/testSwitchingTabsInACrowdedSession()' \

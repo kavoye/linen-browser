@@ -182,7 +182,7 @@ struct CommandPaletteRankingTests {
         let context = CommandPaletteContext(
             isPrivate: true,
             historyCount: 5,
-            tabCount: 3,
+            tabCount: 8,
             hasActiveTab: true,
             canGoBack: true,
             canGoForward: true,
@@ -217,10 +217,10 @@ struct CommandPaletteRankingTests {
 
         #expect(sections.map(\.id).prefix(2) == ["actions-tabs", "actions-page"])
         #expect(sections.flatMap(\.items).count == commands.count)
-        #expect(sections.first?.items.first?.title == "Open Start Page")
-        #expect(sections.first?.items.first?.symbol == "house")
-        #expect(sections.first?.items.first?.shortcut.isEmpty == true)
-        #expect(!commands.contains { $0.title == "New Tab" })
+        #expect(sections.first?.items.first?.title == "New Tab")
+        #expect(sections.first?.items.first?.symbol == "plus")
+        #expect(sections.first?.items.first?.shortcut == "⌘T")
+        #expect(sections.first?.items.dropFirst().first?.title == "Open Start Page")
     }
 
     private func section(_ id: String, count: Int) -> OmniboxSection {

@@ -185,7 +185,7 @@ private struct PasswordEditorSheet: View {
                 TextField("Username or email", text: $username)
                 AutofillPasswordField(password: $password)
                 Button("Generate Strong Password") {
-                    do { password = try SavedPassword.generate() } catch { self.error = String(localized: "Couldn't generate a password.") }
+                    do { password = try SavedPassword.generate() } catch { self.error = String(localized: "Couldn’t generate a password.") }
                 }
             }.textFieldStyle(.roundedBorder)
             if let error = error ?? model.error {

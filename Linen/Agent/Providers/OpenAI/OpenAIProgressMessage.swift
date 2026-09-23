@@ -22,7 +22,9 @@ nonisolated enum OpenAIProgressMessage {
                 raw.append(character)
             }
         }
-        if escaped { raw.removeLast() }
+        if escaped {
+            raw.removeLast()
+        }
         // A delta can stop halfway through a Unicode escape or surrogate pair.
         for _ in 0...12 {
             if let message = try? JSONDecoder().decode(String.self, from: Data(("\"" + raw + "\"").utf8)) {

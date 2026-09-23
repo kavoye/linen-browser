@@ -34,8 +34,12 @@ nonisolated enum PageComputerFailure: String, Error {
 private final class AssistantPointerView: NSView {
     var hideTask: Task<Void, Never>?
 
-    override var isFlipped: Bool { true }
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override var isFlipped: Bool {
+        true
+    }
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         let shape = NSBezierPath()
@@ -306,20 +310,7 @@ extension PageDriver {
         switch type {
         case "click", "double_click":
             guard let point else { throw PageComputerFailure.unavailable }
-            let button = action["button"].string ?? "left"
-            if button == "back" {
-                view.goBack(); return
-            }
-            if button == "forward" {
-                view.goForward(); return
-            }
-            if button == "right" {
-                _ = await evaluateJSON(scripted("document.addEventListener('contextmenu', e => e.preventDefault(), { once: true, capture: true }); return JSON.stringify({ ok: true });"), in: view)
-            }
-            for count in 1...(type == "double_click" ? 2 : 1) {
-                try computerMouse(point: point, button: button, phase: "down", count: count, modifiers: modifiers, in: view, window: window)
-                try computerMouse(point: point, button: button, phase: "up", count: count, modifiers: modifiers, in: view, window: window)
-            }
+            try await performComputerClick(action, type: type, point: point, modifiers: modifiers, in: view, window: window)
         case "move":
             guard let point else { throw PageComputerFailure.unavailable }
             try computerMouse(point: point, button: "left", phase: "move", modifiers: modifiers, in: view, window: window)
@@ -370,6 +361,26 @@ extension PageDriver {
             throw PageComputerFailure.unavailable
         }
         try Task.checkCancellation()
+    }
+
+    private static func performComputerClick(
+        _ action: OpenAIJSON, type: String, point: CGPoint, modifiers: NSEvent.ModifierFlags,
+        in view: WKWebView, window: NSWindow
+    ) async throws {
+        let button = action["button"].string ?? "left"
+        if button == "back" {
+            view.goBack(); return
+        }
+        if button == "forward" {
+            view.goForward(); return
+        }
+        if button == "right" {
+            _ = await evaluateJSON(scripted("document.addEventListener('contextmenu', e => e.preventDefault(), { once: true, capture: true }); return JSON.stringify({ ok: true });"), in: view)
+        }
+        for count in 1...(type == "double_click" ? 2 : 1) {
+            try computerMouse(point: point, button: button, phase: "down", count: count, modifiers: modifiers, in: view, window: window)
+            try computerMouse(point: point, button: button, phase: "up", count: count, modifiers: modifiers, in: view, window: window)
+        }
     }
 
     private static func showAssistantPointer(at point: CGPoint, in view: WKWebView) async {

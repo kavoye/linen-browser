@@ -89,7 +89,7 @@ private struct WindowStyleSettingsSection: View {
 
                 DetailRow(
                     title: "Website tint",
-                    caption: "Use the current website's color in the toolbar and sidebar."
+                    caption: "Use the current website’s color in the toolbar and sidebar."
                 ) {
                     SettingsToggle($settings.matchesWebsiteColor)
                 }

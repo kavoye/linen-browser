@@ -23,7 +23,7 @@ struct SearchSettings: View {
 
     private var suggestionsCaption: LocalizedStringResource {
         engine.suggestTemplate == nil
-            ? "\(engine.name) doesn't offer suggestions."
+            ? "\(engine.name) doesn’t offer suggestions."
             : "Suggestions from \(engine.name) appear as you type."
     }
 
@@ -72,7 +72,7 @@ struct SearchSettings: View {
                         if !settings.customSearchTemplate.isEmpty, !engineWorks {
                             SettingsNotice(
                                 symbol: "exclamationmark.triangle.fill",
-                                text: String(localized: "This search URL isn't valid. Using DuckDuckGo instead.")
+                                text: String(localized: "This search URL isn’t valid. Using DuckDuckGo instead.")
                             )
                         }
                     }

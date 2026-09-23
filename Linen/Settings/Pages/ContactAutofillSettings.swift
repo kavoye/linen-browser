@@ -26,7 +26,7 @@ struct ContactAutofillSettings: View {
         .disabled(store.profile.isPrivate)
         .settingsAnchor("autofill.contacts")
         AutofillSavePromptReset(kind: .contact, profileID: store.profile.id)
-        SettingsSection(title: "Saved addresses", symbol: "person.crop.rectangle", footnote: "Linen encrypts saved contacts. Imported copies don't sync.", accessory: {
+        SettingsSection(title: "Saved addresses", symbol: "person.crop.rectangle", footnote: "Linen encrypts saved contacts. Imported copies don’t sync.", accessory: {
             SettingsButton(title: "Add Address", symbol: "plus") { editing = AutofillContact() }
                 .disabled(!store.isLoaded || store.isBusy || store.contacts.count >= 100)
         }, content: {
@@ -59,7 +59,7 @@ struct ContactAutofillSettings: View {
             presenting: removing
         ) { contact in
             Button("Remove Address", role: .destructive) {
-                Task { saveError = await store.remove(contact.id) ? nil : String(localized: "Couldn't remove this address. Try again.") }
+                Task { saveError = await store.remove(contact.id) ? nil : String(localized: "Couldn’t remove this address. Try again.") }
             }
             Button("Cancel", role: .cancel) {}
         } message: { contact in
@@ -128,7 +128,7 @@ private struct ContactEditorSheet: View {
                 Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("Save") {
                     Task {
-                        if await store.save(contact) { dismiss() } else { error = String(localized: "Couldn't save these details. Try again.") }
+                        if await store.save(contact) { dismiss() } else { error = String(localized: "Couldn’t save these details. Try again.") }
                     }
                 }
                 .keyboardShortcut(.defaultAction)

@@ -102,7 +102,7 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                     )
                 }
 
-                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "ask", "tabs", "history"])
+                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "tabs", "history"])
                 XCTAssertEqual(projected.flattened.count, CommandPaletteBudget.typing)
             }
         }
@@ -176,7 +176,7 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                     )
                 }
 
-                XCTAssertEqual(projected.map(\.id), ["top", "history", "suggestions", "ask"])
+                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "history", "ask"])
                 XCTAssertLessThanOrEqual(projected.flattened.count, 10)
             }
         }

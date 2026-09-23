@@ -14,7 +14,7 @@ struct GeneralSettings: View {
     @State private var handedOver = false
 
     private var defaultBrowserCaption: LocalizedStringResource {
-        isDefault ? "Linen is your default browser." : "Linen isn't your default browser."
+        isDefault ? "Linen is your default browser." : "Linen isn’t your default browser."
     }
 
     private var defaultBrowserButton: LocalizedStringResource {
@@ -68,7 +68,7 @@ struct GeneralSettings: View {
         SettingsSection(title: "Browsing", symbol: "cursorarrow.rays") {
             DetailRow(
                 title: "Show link address",
-                caption: "Show a link's address at the bottom of the page when you point at it."
+                caption: "Show a link’s address at the bottom of the page when you point at it."
             ) {
                 SettingsToggle($settings.showsLinkPreview)
             }
@@ -99,7 +99,7 @@ struct GeneralSettings: View {
 
             DetailRow(
                 title: "Show lyrics",
-                caption: "Send the song and artist to LRCLIB to find lyrics. Private tabs don't send song details."
+                caption: "Send the song and artist to LRCLIB to find lyrics. Private tabs don’t send song details."
             ) {
                 SettingsToggle($settings.showsLyrics)
             }

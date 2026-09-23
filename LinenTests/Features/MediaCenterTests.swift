@@ -695,7 +695,8 @@ struct MediaScriptRectTests {
     }
 
     @Test func thePlayerRectIsReported() async {
-        let (_, collector) = await playerWebView()
+        let (webView, collector) = await playerWebView()
+        defer { withExtendedLifetime(webView) {} }
 
         let rect = await waitForRect(collector)
 
