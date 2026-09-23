@@ -493,7 +493,7 @@ nonisolated enum LLMSettings {
             case .xhigh:
                 "Extra high"
             case .max:
-                "Maximum"
+                "Max"
             }
         }
 

@@ -65,8 +65,9 @@ struct EffortSlider: View {
                     .frame(height: Metrics.track)
 
                 Capsule()
-                    .fill(Theme.accent)
+                    .fill(effort == .max ? Theme.thinkingMax : Theme.accent)
                     .frame(width: knobX, height: Metrics.track)
+                    .opacity(index == 0 ? 0 : 1)
 
                 ForEach(stops.indices, id: \.self) { stop in
                     Circle()
@@ -90,7 +91,7 @@ struct EffortSlider: View {
                         pick(at: value.location.x, inset: inset, step: step)
                     }
             )
-            .animation(Theme.Motion.quick, value: index)
+            .animation(Theme.Motion.settle, value: effort)
         }
         .frame(height: Metrics.lane)
     }

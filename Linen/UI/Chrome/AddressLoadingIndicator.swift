@@ -11,17 +11,21 @@ struct AddressLoadingIndicator: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var animation = AddressLoadingAnimation()
     @State private var isAnimating = false
+    @State private var timelineStart = Date()
 
     private var input: AddressLoadingInput {
         AddressLoadingInput(progress: progress, isLoading: isLoading)
     }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isAnimating || isSuppressed || reduceMotion)) { _ in
-            AddressLoadingArtwork(
-                frame: animation.frame(at: ProcessInfo.processInfo.systemUptime, reduceMotion: reduceMotion),
-                color: .accentColor
-            )
+        Group {
+            if isAnimating && !isSuppressed && !reduceMotion {
+                TimelineView(.periodic(from: timelineStart, by: 1.0 / 60)) { _ in
+                    artwork(at: ProcessInfo.processInfo.systemUptime)
+                }
+            } else {
+                artwork(at: ProcessInfo.processInfo.systemUptime)
+            }
         }
         .opacity(isSuppressed ? 0 : 1)
         .allowsHitTesting(false)
@@ -32,13 +36,20 @@ struct AddressLoadingIndicator: View {
             guard !input.isLoading else { return }
             if animation.hasProgress, !reduceMotion {
                 do {
-                    try await Task.sleep(for: .seconds(AddressLoadingAnimation.completionDuration))
+                    try await Task.sleep(for: .seconds(animation.completionDuration(at: ProcessInfo.processInfo.systemUptime)))
                 } catch {
                     return
                 }
             }
             isAnimating = false
         }
+    }
+
+    private func artwork(at time: Double) -> some View {
+        AddressLoadingArtwork(
+            frame: animation.frame(at: time, reduceMotion: reduceMotion),
+            color: .accentColor
+        )
     }
 }
 
@@ -53,12 +64,17 @@ struct AddressLoadingInput: Equatable {
 }
 
 struct AddressLoadingAnimation {
-    static let advanceDuration = 0.18
+    static let advanceSpeed = 1.2
     static let fadeDuration = 0.32
-    static let completionDuration = advanceDuration + fadeDuration
+    private static let slowdownStart = 0.88
+    private static let tailLength = 0.10
+    private static let cruiseSpeed = 0.32
+    private static let speedTransition = 0.15
 
     private var origin = 0.0
     private var target = 0.0
+    private var initialSpeed = 0.0
+    private var desiredSpeed = 0.0
     private var changedAt = 0.0
     private var startedAt = 0.0
     private var finishesAt: Double?
@@ -68,24 +84,48 @@ struct AddressLoadingAnimation {
         target > 0
     }
 
+    func completionDuration(at time: Double) -> Double {
+        max(0, (finishesAt ?? time) - time) + Self.fadeDuration
+    }
+
     mutating func update(_ input: AddressLoadingInput, at time: Double) {
         if input.isLoading {
             if !isLoading || (input.progress <= 0.1 && input.progress < target) {
                 origin = 0
                 target = max(0.05, input.progress)
+                initialSpeed = 0
+                desiredSpeed = Self.cruiseSpeed
                 changedAt = time
                 startedAt = time
                 finishesAt = nil
             } else if input.progress > target {
-                origin = fraction(at: time)
+                let currentDistance = distance(at: time)
+                initialSpeed = speed(at: time)
+                origin = currentDistance
                 target = input.progress
                 changedAt = time
             }
+            let checkpointSpeed = max(0, Self.distance(for: target) - origin) / 0.7
+            desiredSpeed = max(desiredSpeed, min(Self.advanceSpeed, checkpointSpeed))
         } else if isLoading {
-            origin = fraction(at: time)
+            let currentDistance = distance(at: time)
+            let currentSpeed = speed(at: time)
+            origin = Self.loadingProgress(for: currentDistance)
+            initialSpeed = currentSpeed * Self.tailScale(at: currentDistance)
+            desiredSpeed = Self.advanceSpeed
             target = 1
             changedAt = time
-            finishesAt = time + Self.advanceDuration
+            var lower = 0.0
+            var upper = 2.0
+            for _ in 0..<24 {
+                let midpoint = (lower + upper) / 2
+                if origin + travel(for: midpoint) >= 1 {
+                    upper = midpoint
+                } else {
+                    lower = midpoint
+                }
+            }
+            finishesAt = time + upper
         }
         isLoading = input.isLoading
     }
@@ -102,9 +142,41 @@ struct AddressLoadingAnimation {
     }
 
     private func fraction(at time: Double) -> Double {
-        let elapsed = Self.unit((time - changedAt) / Self.advanceDuration)
-        let eased = 1 - pow(1 - elapsed, 3)
-        return origin + (target - origin) * eased
+        if isLoading {
+            return Self.loadingProgress(for: distance(at: time))
+        }
+        return min(target, distance(at: time))
+    }
+
+    private func distance(at time: Double) -> Double {
+        let elapsed = max(0, time - changedAt)
+        return origin + travel(for: elapsed)
+    }
+
+    private func travel(for elapsed: Double) -> Double {
+        let transition = Self.speedTransition
+        return desiredSpeed * elapsed
+            + (initialSpeed - desiredSpeed) * transition * (1 - exp(-elapsed / transition))
+    }
+
+    private func speed(at time: Double) -> Double {
+        let elapsed = max(0, time - changedAt)
+        return desiredSpeed + (initialSpeed - desiredSpeed) * exp(-elapsed / Self.speedTransition)
+    }
+
+    private static func loadingProgress(for distance: Double) -> Double {
+        guard distance > slowdownStart else { return distance }
+        return slowdownStart + tailLength * (1 - exp(-(distance - slowdownStart) / tailLength))
+    }
+
+    private static func tailScale(at distance: Double) -> Double {
+        distance > slowdownStart ? exp(-(distance - slowdownStart) / tailLength) : 1
+    }
+
+    private static func distance(for progress: Double) -> Double {
+        guard progress > slowdownStart else { return progress }
+        let tailProgress = min(progress - slowdownStart, tailLength * 0.99)
+        return slowdownStart - tailLength * log(1 - tailProgress / tailLength)
     }
 
     private static func unit(_ value: Double) -> Double {

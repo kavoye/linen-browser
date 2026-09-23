@@ -104,26 +104,32 @@ struct EffortMeter: View {
     private var lit: Int {
         switch effort {
         case .none:
-            1
+            0
         case .minimal, .low:
-            2
+            1
         case .medium:
+            2
+        case .high:
             3
-        case .high, .xhigh, .max:
+        case .xhigh, .max:
             4
         }
+    }
+
+    private var litColor: Color {
+        effort == .max ? Theme.thinkingMax : Theme.Wash.scrim
     }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 1.5) {
             ForEach(0..<4, id: \.self) { index in
                 Capsule()
-                    .fill(index < lit ? Theme.Wash.scrim : Theme.Wash.strong)
+                    .fill(index < lit ? litColor : Theme.Wash.strong)
                     .frame(width: 2, height: 3 + CGFloat(index) * 2)
             }
         }
         .frame(height: 9, alignment: .bottom)
-        .animation(Theme.Motion.settle, value: lit)
+        .animation(Theme.Motion.settle, value: effort)
         .accessibilityHidden(true)
     }
 }
