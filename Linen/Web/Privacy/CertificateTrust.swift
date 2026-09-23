@@ -10,6 +10,7 @@ import Security
 @MainActor
 enum CertificateTrust {
     private static var accepted: [String: String] = [:]
+    private static var exceptionGeneration = 0
 
     enum Decision {
         case useDefaultHandling
@@ -22,12 +23,17 @@ enum CertificateTrust {
         allowsExceptions: Bool,
         in window: NSWindow?
     ) async -> Decision {
+        guard allowsExceptions else { return .useDefaultHandling }
         let space = challenge.protectionSpace
         guard space.authenticationMethod == NSURLAuthenticationMethodServerTrust,
               let trust = space.serverTrust
         else { return .useDefaultHandling }
 
-        if SecTrustEvaluateWithError(trust, nil) {
+        let generation = exceptionGeneration
+        guard let trusted = try? await evaluate(trust),
+              generation == exceptionGeneration
+        else { return .useDefaultHandling }
+        if trusted {
             return .useDefaultHandling
         }
 
@@ -38,10 +44,8 @@ enum CertificateTrust {
             return .proceed(URLCredential(trust: trust))
         }
 
-        guard allowsExceptions else { return .useDefaultHandling }
-
         let accepted = await ask(host: host, trust: trust, fingerprint: fingerprint, in: window)
-        guard accepted else { return .cancel }
+        guard accepted, generation == exceptionGeneration else { return .cancel }
 
         Self.accepted[host] = fingerprint
         Pipeline.log.notice("certificate exception accepted for a host this session")
@@ -50,6 +54,22 @@ enum CertificateTrust {
 
     static func forgetAll() {
         accepted.removeAll()
+        exceptionGeneration &+= 1
+    }
+
+    static func evaluate(
+        _ trust: SecTrust,
+        start: (SecTrust, DispatchQueue, @escaping SecTrustWithErrorCallback) -> OSStatus
+            = SecTrustEvaluateAsyncWithError
+    ) async throws -> Bool {
+        try await withCheckedThrowingContinuation { continuation in
+            let status = start(trust, .main) { _, trusted, _ in
+                continuation.resume(returning: trusted)
+            }
+            if status != errSecSuccess {
+                continuation.resume(throwing: NSError(domain: NSOSStatusErrorDomain, code: Int(status)))
+            }
+        }
     }
 
     static var acceptedHostCount: Int {
