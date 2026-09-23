@@ -28,10 +28,14 @@ nonisolated enum ChromeWebStore {
         }
         let parts = url.path().split(separator: "/")
         guard parts.first == "detail", let last = parts.last.map(String.init),
-              last.count == 32, last.allSatisfy({ ("a"..."p").contains($0) }) else {
+              isValidExtensionID(last) else {
             return nil
         }
         return last
+    }
+
+    static func isValidExtensionID(_ id: String) -> Bool {
+        id.count == 32 && id.allSatisfy { ("a"..."p").contains($0) }
     }
 
     static func downloadURL(for id: String) -> URL? {

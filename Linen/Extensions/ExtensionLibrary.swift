@@ -175,10 +175,25 @@ final class ExtensionLibrary {
             placements = decoded
         }
         adoptLegacyIndexIfPresent()
-        if renumberEveryProfile() {
+        let repairedSources = repairMissingSources()
+        let reordered = renumberEveryProfile()
+        if repairedSources || reordered {
             save()
         }
         sweep(includingStaging: true)
+    }
+
+    private func repairMissingSources() -> Bool {
+        var repaired = false
+        for index in catalogue.entries.indices {
+            let entry = catalogue.entries[index]
+            guard entry.source == nil,
+                  !ChromeWebStore.isValidExtensionID(entry.id),
+                  FirefoxAddons.isValidSlug(entry.id) else { continue }
+            catalogue.entries[index].source = .firefox
+            repaired = true
+        }
+        return repaired
     }
 
     private func adoptLegacyIndexIfPresent() {
@@ -193,7 +208,9 @@ final class ExtensionLibrary {
                 id: $0.id,
                 displayName: $0.displayName,
                 version: $0.version,
-                installedAt: $0.installedAt
+                installedAt: $0.installedAt,
+                source: $0.source == .chrome && !ChromeWebStore.isValidExtensionID($0.id)
+                    && FirefoxAddons.isValidSlug($0.id) ? .firefox : $0.source
             )
         }
         placements.profiles[Profile.originalID.uuidString] = Dictionary(

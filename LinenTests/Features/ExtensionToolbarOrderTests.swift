@@ -159,6 +159,26 @@ struct ExtensionToolbarOrderTests {
         #expect(library.records[0].displayName == "First")
     }
 
+    @Test func aLegacyFirefoxSlugKeepsItsUpdateStore() throws {
+        let (library, directory) = makeLibrary()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chromeID = "ddkjiahejlhfcafbddmgiahcphecmpfh"
+        let catalogue = """
+            {"entries":[
+                {"id":"\(chromeID)","displayName":"Chrome extension","version":"1","installedAt":1},
+                {"id":"violentmonkey","displayName":"Violentmonkey","version":"2","installedAt":2}
+            ]}
+            """
+        try Data(catalogue.utf8).write(to: directory.appendingPathComponent("library.json"))
+
+        library.load()
+
+        #expect(library.records.map(\.source) == [.chrome, .firefox])
+        let reopened = ExtensionLibrary(baseDirectory: directory)
+        reopened.load()
+        #expect(reopened.records.map(\.source) == [.chrome, .firefox])
+    }
+
     /// A half-migrated index - some records arranged, some written by an
     /// older build - puts the arranged ones first and leaves the rest in
     /// the order they were already in.

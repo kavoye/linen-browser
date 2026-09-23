@@ -22,9 +22,24 @@ nonisolated enum ExtensionShims {
         }
         if (browser.permissions) {
             const contains = browser.permissions.contains.bind(browser.permissions);
-            browser.permissions.contains = async query => { try { return await contains(query) } catch { return false } };
+            browser.permissions.contains = async query => {
+                if (!browser.downloads && query?.permissions?.includes("downloads")) return false;
+                try { return await contains(query) } catch { return false }
+            };
             const request = browser.permissions.request.bind(browser.permissions);
             browser.permissions.request = async query => { try { return await request(query) } catch { return false } };
+        }
+        for (const action of new Set([browser.action, browser.browserAction])) {
+            if (!action?.setIcon) continue;
+            const setIcon = action.setIcon.bind(action);
+            action.setIcon = (details, ...rest) => {
+                if (details && "path" in details && "imageData" in details) {
+                    details = { ...details };
+                    if (details.path != null) delete details.imageData;
+                    else delete details.path;
+                }
+                return setIcon(details, ...rest);
+            };
         }
         if (browser.runtime && browser.runtime.onConnect) {
             const prefix = "linen-external:";
@@ -88,7 +103,8 @@ nonisolated enum ExtensionShims {
             atomically: true,
             encoding: .utf8
         )
-        guard scripts.first != fileName else { return true }
+        let removedEmptyActionCommand = removeEmptyActionCommand(from: &root)
+        guard scripts.first != fileName || removedEmptyActionCommand else { return true }
 
         scripts.removeAll { $0 == fileName }
         scripts.insert(fileName, at: 0)
@@ -105,5 +121,21 @@ nonisolated enum ExtensionShims {
         }
         Pipeline.log.notice("Extension compatibility shim installed")
         return true
+    }
+
+    private static func removeEmptyActionCommand(from manifest: inout [String: Any]) -> Bool {
+        guard var commands = manifest["commands"] as? [String: Any] else { return false }
+        let actions = manifest["manifest_version"] as? Int == 3
+            ? ["action"] : ["browser_action", "page_action"]
+        var changed = false
+        for action in actions where manifest[action] is [String: Any] {
+            let command = "_execute_" + action
+            guard let definition = commands[command] as? [String: Any], definition.isEmpty else { continue }
+            // WebKit supplies this unbound action command when it is omitted, but rejects an empty entry.
+            commands.removeValue(forKey: command)
+            changed = true
+        }
+        if changed { manifest["commands"] = commands }
+        return changed
     }
 }

@@ -298,14 +298,14 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
 
             let name = webExtension.displayName ?? record.displayName
             let ms = (ContinuousClock.now - started).milliseconds
-            Pipeline.log.notice("Extension loaded in \(ms) ms")
+            Pipeline.log.notice("ext: \(name, privacy: .public) [\(record.id, privacy: .public)] loaded in \(ms)ms")
 
             if webExtension.hasBackgroundContent {
                 startBackgroundContent(of: context, id: record.id, name: name)
             }
             logErrors(of: context, id: record.id)
         } catch {
-            Pipeline.log.error("Extension loading failed")
+            Self.logFailure(error, id: record.id, name: record.displayName, operation: "loading")
         }
         Pipeline.signposter.endInterval("ext.load", state)
     }
@@ -315,16 +315,16 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         let watchdog = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(10))
             guard !Task.isCancelled else { return }
-            Pipeline.log.error("Extension background start timed out")
+            Pipeline.log.error("ext: \(name, privacy: .public) [\(id, privacy: .public)] background start timed out")
             self?.logErrors(of: context, id: id)
         }
         backgroundStarts[id] = Task { @MainActor [weak self] in
             defer { watchdog.cancel() }
             do {
                 try await context.loadBackgroundContent()
-                Pipeline.log.notice("Extension background ready")
+                Pipeline.log.notice("ext: \(name, privacy: .public) [\(id, privacy: .public)] background ready")
             } catch {
-                Pipeline.log.error("Extension background failed")
+                Self.logFailure(error, id: id, name: name, operation: "starting background")
             }
             self?.logErrors(of: context, id: id)
         }
@@ -386,8 +386,18 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     private func logErrors(of context: WKWebExtensionContext, id: String) {
-        guard !context.errors.isEmpty else { return }
-        Pipeline.log.error("Extension reported \(context.errors.count) errors")
+        let name = context.webExtension.displayName ?? record(for: id)?.displayName ?? id
+        for error in context.errors {
+            Self.logFailure(error, id: id, name: name, operation: "reported")
+        }
+    }
+
+    private static func logFailure(_ error: any Error, id: String, name: String, operation: String) {
+        let failure = error as NSError
+        Pipeline.log.error("""
+        ext: \(name, privacy: .public) [\(id, privacy: .public)] \(operation, privacy: .public): \
+        \(failure.domain, privacy: .public) \(failure.code), \(failure.localizedDescription, privacy: .public)
+        """)
     }
 
     func errorCount(for id: String) -> Int {
