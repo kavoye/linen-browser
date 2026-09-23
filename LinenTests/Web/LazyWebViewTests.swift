@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import Foundation
 import Testing
 
@@ -114,10 +115,7 @@ struct LazyWebViewTests {
         #expect(!waiting.isMaterialised)
     }
 
-    /// A tab that has been shown keeps a view when it sleeps, and takes a
-    /// fresh one: it is the page that is given up, not the view. Only a tab
-    /// that has never been opened waits without one.
-    @Test func aSleptTabTakesAFreshViewAndWaitsToLoad() {
+    @Test func aSleptTabReleasesItsViewUntilOpened() {
         let model = BrowserModel(database: .temporary())
         let first = model.newTab(url: URL(string: "https://a.example/"))
         let second = model.newTab(url: URL(string: "https://b.example/"))
@@ -128,8 +126,8 @@ struct LazyWebViewTests {
         let before = first.webView
         first.discardWebContent()
 
-        #expect(first.isMaterialised, "a slept tab keeps a view to wake into")
-        #expect(first.webView !== before, "the page it was showing is gone")
+        #expect(!first.isMaterialised)
+        #expect(before.superview == nil)
         #expect(first.isDeferred)
     }
 
@@ -139,11 +137,25 @@ struct LazyWebViewTests {
         let second = model.newTab(url: URL(string: "https://b.example/"))
         model.activeTabID = second.id
         first.urlString = "https://a.example/"
+        let before = first.webView
         first.discardWebContent()
 
         model.activeTabID = first.id
 
         #expect(first.isMaterialised)
+        #expect(first.webView !== before)
         #expect(!first.isDeferred)
+    }
+
+    @Test func readingTheActivePageDoesNotWakeWaitingTabs() {
+        let reopened = reopen(session(tabs: 4))
+        guard let active = reopened.activeTab else {
+            Issue.record("the restored session has no active tab")
+            return
+        }
+        let toolkit = AgentToolkit(browser: reopened, media: MediaCenter(), log: ConversationLog(database: .temporary()))
+
+        #expect(toolkit.pageIdentifier(for: active.webView) == active.id.uuidString)
+        #expect(reopened.tabs.filter(\.isMaterialised).map(\.id) == [active.id])
     }
 }

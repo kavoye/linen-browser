@@ -20,18 +20,24 @@ enum NavigationHoldMenu {
     }
 
     static func reload(for tab: BrowserTab) -> NSMenu? {
-        guard !tab.isLoading else { return nil }
         let menu = NSMenu()
-        menu.addItem(title: "Reload Page", image: symbol("arrow.clockwise"), key: "r") { [weak tab] in
-            tab?.webView.reload()
+        if !tab.isLoading {
+            menu.addItem(title: "Reload Page", image: symbol("arrow.clockwise"), key: "r") { [weak tab] in
+                tab?.reload()
+            }
+            menu.addItem(
+                title: "Reload Page from Origin",
+                image: symbol("arrow.2.circlepath"),
+                key: "r",
+                modifiers: [.command, .shift]
+            ) { [weak tab] in
+                tab?.webView.reloadFromOrigin()
+            }
         }
-        menu.addItem(
-            title: "Reload Page from Origin",
-            image: symbol("arrow.2.circlepath"),
-            key: "r",
-            modifiers: [.command, .shift]
-        ) { [weak tab] in
-            tab?.webView.reloadFromOrigin()
+        if tab.extensionBaseURL == nil {
+            menu.addItem(title: "Restart Page", image: symbol("arrow.triangle.2.circlepath")) { [weak tab] in
+                tab?.restartPage()
+            }
         }
         return menu
     }

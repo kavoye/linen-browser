@@ -288,13 +288,13 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.showHistory()
     }
     @objc private func reload() {
-        activeWebView?.reload()
+        coordinator.pageCommandTab?.reload()
     }
     @objc private func hardReload() {
         activeWebView?.reloadFromOrigin()
     }
     @objc private func stopLoading() {
-        activeWebView?.stopLoading()
+        coordinator.pageCommandTab?.stopLoading()
     }
     @objc private func goBack() {
         coordinator.pageCommandTab?.goBack()

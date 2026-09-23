@@ -41,9 +41,7 @@ struct TabDiscardTests {
         #expect(model.tabs.contains { $0 === background })
     }
 
-    /// The view is replaced, not emptied - that is what hands the process
-    /// back. Anything drawing the tab has to be told, so it is observable.
-    @Test func discardingReplacesTheWebView() {
+    @Test func discardingReleasesTheWebView() {
         let model = makeModel()
         let background = model.newTab(url: URL(string: "https://example.com/a"))
         _ = model.newTab(url: URL(string: "https://example.com/b"))
@@ -51,9 +49,7 @@ struct TabDiscardTests {
 
         model.discardBackgroundTabs()
 
-        #expect(background.webView !== before)
-        // And the outgoing view is not left parented anywhere, which would
-        // keep it - and its process - alive for the life of the window.
+        #expect(!background.isMaterialised)
         #expect(before.superview == nil)
     }
 

@@ -292,6 +292,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         if let tab, !isLoadingErrorPage {
             tab.isShowingError = false
         }
+        tab?.noteNavigationStarted()
         tab?.provisionalNavigation = navigation
         tab?.refreshChrome()
         if let url = webView.url {
@@ -339,6 +340,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        tab?.committedNavigation = navigation
         tab?.autofillSave.resetDismissalsForNavigation()
         if tab?.provisionalNavigation === navigation {
             tab?.provisionalNavigation = nil

@@ -160,9 +160,9 @@ struct ContentNavBar: View {
             ) {
                 guard let tab = browser.activeTab else { return }
                 if tab.isLoading {
-                    tab.webView.stopLoading()
+                    tab.stopLoading()
                 } else {
-                    tab.webView.reload()
+                    tab.reload()
                 }
             }
         }

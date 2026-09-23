@@ -51,4 +51,8 @@ nonisolated final class ResponseGate: Sendable {
             response()
         }
     }
+
+    func close() {
+        state.withLock { $0.isOpen = false }
+    }
 }

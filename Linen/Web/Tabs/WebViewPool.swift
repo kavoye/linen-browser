@@ -311,6 +311,7 @@ final class WebViewPool {
     private var idle: [WKWebView] = []
     private let targetCount = 2
     private var refillTask: Task<Void, Never>?
+    private var refillNotBefore: ContinuousClock.Instant?
 
     private struct PooledScript {
         let source: String
@@ -386,7 +387,10 @@ final class WebViewPool {
         refillTask = Task { [weak self] in
             defer { self?.refillTask = nil }
             while self?.needsRefill == true {
-                try? await Task.sleep(for: .milliseconds(320))
+                let delay = self?.refillNotBefore.map {
+                    max(.milliseconds(320), ContinuousClock.now.duration(to: $0))
+                } ?? .milliseconds(320)
+                try? await Task.sleep(for: delay)
                 guard !Task.isCancelled else { return }
                 self?.appendWarmView()
             }
@@ -405,6 +409,13 @@ final class WebViewPool {
     func discardIdle() {
         idle.removeAll()
         scheduleRefill()
+    }
+
+    func discardIdleForMemoryPressure() {
+        refillTask?.cancel()
+        refillTask = nil
+        idle.removeAll()
+        refillNotBefore = ContinuousClock.now + .seconds(15)
     }
 
     func makeView(configuration: WKWebViewConfiguration) -> WKWebView {
@@ -428,8 +439,10 @@ final class WebViewPool {
         return makeWarmView()
     }
 
-    func makeColdView() -> WKWebView {
-        buildView()
+    func makeColdView(
+        dataStore: WKWebsiteDataStore? = nil
+    ) -> WKWebView {
+        buildView(dataStore: dataStore)
     }
 
     static let warmsPooledViews = false
@@ -441,9 +454,11 @@ final class WebViewPool {
         return view
     }
 
-    private func buildView() -> WKWebView {
+    private func buildView(
+        dataStore: WKWebsiteDataStore? = nil
+    ) -> WKWebView {
         let configuration = Self.makeConfiguration()
-        configuration.websiteDataStore = dataStore
+        configuration.websiteDataStore = dataStore ?? self.dataStore
         configuration.webExtensionController = extensionController
         BrowserSettings.shared.apply(to: configuration)
         MediaCenter.enablePictureInPicture(on: configuration.preferences)

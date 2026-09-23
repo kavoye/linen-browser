@@ -70,6 +70,7 @@ extension BrowserModel {
     }
 
     func relieveMemoryPressure(_ level: MemoryPressureMonitor.Level) {
+        WebViewPool.shared.discardIdleForMemoryPressure()
         guard BrowserSettings.shared.sleepsInactiveTabs else { return }
         let keep = level == .critical ? 0 : Self.warningKeepsRecent
         let discarded = discardBackgroundTabs(keepingRecent: keep)

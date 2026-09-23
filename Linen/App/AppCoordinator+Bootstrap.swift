@@ -10,11 +10,13 @@ extension AppCoordinator {
     // MARK: - Launch
 
     func bootstrap() async {
+        var timing = BootstrapTiming()
         Pipeline.log.notice("bootstrap: begin")
         OutputDucker.restoreAfterUncleanExit()
         settings.applyAppearance()
         followSettings()
         applyProfileStores(profiles.current)
+        timing.mark("profile and assistant")
         extensions.useLibrary(for: profiles.current)
         memoryPressure.onPressure = { [weak self] level in
             self?.browser.relieveMemoryPressure(level)
@@ -53,9 +55,10 @@ extension AppCoordinator {
             self?.browser.tabs.first { $0.isMaterialised && $0.webView === webView }
         }
         WebViewPool.shared.installExtensionController(extensions.controller)
-        WebViewPool.shared.warmUp()
+        timing.mark("web setup")
         browser.restoreSession()
         retainAgentMemory()
+        timing.mark("session")
         wireMedia()
         let notifyExtensions = browser.onActiveTabChanged
         browser.onActiveTabChanged = { [weak self] newTab, previousTab in
@@ -89,7 +92,9 @@ extension AppCoordinator {
         if onboarding.isPresented {
             prepareWindowBloom()
         }
+        timing.mark("window preparation")
         showBrowser()
+        timing.mark("show window")
         mcpServer.resume()
         if onboarding.isPresented {
             bloomWindowOpen()
@@ -98,9 +103,11 @@ extension AppCoordinator {
             show(notice: String(localized: "Another copy of Linen is running. Changes in this window won’t be saved."))
         }
         drainQueuedExternalURLs()
+        timing.mark("post-window setup")
 
         startUpdates()
         MoveToApplications.reregisterDefaultBrowserIfNeeded()
+        timing.mark("updates")
         Task { [weak self] in
             guard let self, await releaseNotes.shouldOpenForNewVersion() else { return }
             showReleaseNotes()
@@ -125,9 +132,8 @@ extension AppCoordinator {
         activation.start()
         installKeyMonitors()
 
-        configureEngines()
-
-        Pipeline.log.notice("bootstrap: done")
+        timing.mark("services")
+        timing.log()
     }
 
     func engine(for configuration: Provider) -> any ModelProvider {
@@ -365,9 +371,27 @@ extension AppCoordinator {
             return true
         }
         if let tab = browser.activeTab, tab.isLoading {
-            tab.webView.stopLoading()
+            tab.stopLoading()
             return true
         }
         return closedInspector
+    }
+}
+
+private struct BootstrapTiming {
+    private let start = ContinuousClock.now
+    private var last: ContinuousClock.Instant?
+    private var phases: [String] = []
+
+    mutating func mark(_ phase: String) {
+        let now = ContinuousClock.now
+        phases.append("\(phase) \((now - (last ?? start)).milliseconds)ms")
+        last = now
+    }
+
+    func log() {
+        let total = (ContinuousClock.now - start).milliseconds
+        let detail = phases.joined(separator: ", ")
+        Pipeline.log.notice("bootstrap: done in \(total, privacy: .public)ms, \(detail, privacy: .public)")
     }
 }

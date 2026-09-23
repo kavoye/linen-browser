@@ -214,12 +214,15 @@ final class BrowserTab: Identifiable {
         return urlString == pinnedURL.absoluteString
     }
     @ObservationIgnored private var liveView: WKWebView?
+    private var webViewGeneration = 0
+    @ObservationIgnored private var stoppedNavigation = false
 
     var isMaterialised: Bool {
         liveView != nil
     }
 
     var webView: WKWebView {
+        _ = webViewGeneration
         if let liveView {
             return liveView
         }
@@ -264,6 +267,7 @@ final class BrowserTab: Identifiable {
     private var secureContentObservation: NSKeyValueObservation?
     private let processState = TabProcessState()
     var provisionalNavigation: WKNavigation?
+    var committedNavigation: WKNavigation?
 
     init(
         id: UUID = UUID(),
@@ -467,6 +471,17 @@ final class BrowserTab: Identifiable {
         guard state != nil || url != nil else { return }
 
         let outgoing = webView
+        retire(outgoing)
+        stoppedNavigation = false
+
+        // Keep the session and create a replacement view when the tab becomes visible.
+        liveView = nil
+        hasPresentedContent = false
+        deferRestore(state: state, url: url)
+        processState.markUnloaded()
+    }
+
+    private func retire(_ outgoing: WKWebView) {
         outgoing.stopLoading()
         outgoing.navigationDelegate = nil
         outgoing.uiDelegate = nil
@@ -475,13 +490,89 @@ final class BrowserTab: Identifiable {
         (outgoing as? TabWebView)?.onPeekLink = nil
         (outgoing as? TabWebView)?.onSummarizeLink = nil
         (outgoing as? TabWebView)?.onPageActivity = nil
+        (outgoing as? TabWebView)?.onScrollPosition = nil
         (outgoing as? TabWebView)?.onFaviconDeclarationChange = nil
+        (outgoing as? TabWebView)?.onPopupBlocked = nil
         outgoing.removeFromSuperview()
+        progressObservation = nil
+        loadingObservation = nil
+        cameraObservation = nil
+        microphoneObservation = nil
+        pageBackgroundObservation = nil
+        addressObservation = nil
+        titleObservation = nil
+        backObservation = nil
+        forwardObservation = nil
+        fullscreenObservation = nil
+        secureContentObservation = nil
+        permissions.onRevoke = nil
+        navigationDelegate = nil
+    }
 
-        adopt(WebViewPool.shared.makeColdView())
+    func stopLoading() {
+        webView.stopLoading()
+        stoppedNavigation = true
+        isLoading = false
+    }
+
+    func noteNavigationStarted() {
+        stoppedNavigation = false
+    }
+
+    func reload() {
+        let wasStopped = stoppedNavigation
+        if wasStopped && webView.isLoading && extensionBaseURL == nil
+            && URL(string: urlString) != nil {
+            restartPage()
+            return
+        }
+        stoppedNavigation = false
+        if let url = URL(string: urlString),
+           (webView.backForwardList.currentItem == nil || (wasStopped && url != committedURL)) {
+            load(url, transition: .reload)
+            return
+        }
+        if webView.reload() == nil, extensionBaseURL == nil {
+            restartPage()
+        }
+    }
+
+    /// Replace an unresponsive WebKit view without closing the tab or its data store.
+    func restartPage() {
+        guard !isClosed, extensionBaseURL == nil,
+              let url = URL(string: urlString), let outgoing = liveView
+        else { return }
+        onContentProcessTerminated?()
+        retire(outgoing)
+        stoppedNavigation = false
+        provisionalNavigation = nil
+        committedNavigation = nil
+        isRestoring = false
+        isLoading = false
+        progress = 0
         hasPresentedContent = false
-        deferRestore(state: state, url: url)
-        processState.markUnloaded()
+        isShowingError = false
+        isPlayingAudio = false
+        hasVideo = false
+        isPictureOut = false
+        committedURL = nil
+        pendingTransition = .reload
+        clearPageActivity()
+        invalidateSessionState()
+        processState.finishReload()
+        releasePageColorHold()
+
+        let replacement = WebViewPool.shared.makeColdView(
+            dataStore: outgoing.configuration.websiteDataStore
+        )
+        adopt(replacement)
+        webViewGeneration &+= 1
+        permitSystemPage(url)
+        if url.isFileURL {
+            replacement.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        } else {
+            replacement.load(URLRequest(url: url))
+        }
     }
 
     private static func applyObscuredInsets(
@@ -873,7 +964,7 @@ final class BrowserTab: Identifiable {
     }
 
     func refreshChrome() {
-        isLoading = webView.isLoading && isShowingRealPage
+        isLoading = webView.isLoading && isShowingRealPage && !stoppedNavigation
         canGoBackInWeb = webView.canGoBack
         canGoForwardInWeb = webView.canGoForward
         let displaced = committedURL
