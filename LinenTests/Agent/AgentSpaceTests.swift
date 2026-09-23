@@ -6,10 +6,8 @@ import Testing
 
 @testable import Linen
 
-/// What the agent is looking at when two pages share the window. A split is
-/// one place to the person in front of it, so it is one session, one activity
-/// trail, and one thing the tab list describes - and both of its pages are
-/// readable without switching away from either.
+/// Split panes share a conversation and activity log. Both pages remain readable
+/// without switching focus.
 @MainActor
 @Suite(.boundedWebViews)
 struct AgentSpaceTests {
@@ -83,7 +81,6 @@ struct AgentSpaceTests {
         #expect(summary.contains("ON SCREEN, bottom"))
     }
 
-    /// Four is the ceiling, and every one of them is in the space.
     @Test func aGridOfFourIsOneSpaceCountedInReadingOrder() throws {
         let model = makeModel()
         let (left, right) = split(model)
@@ -105,8 +102,6 @@ struct AgentSpaceTests {
         #expect(summary.contains("Split view: the 4 pages"))
     }
 
-    /// One page on screen has no arrangement to explain, so the summary keeps
-    /// the shape it always had.
     @Test func oneTabIsDescribedWithoutASplitNote() throws {
         let model = makeModel()
         _ = model.newTab(url: URL(string: "https://example.com/alone"))
@@ -136,8 +131,7 @@ struct AgentSpaceTests {
         #expect(task.spaceID == left.id)
         #expect(log.begun.first?.tabID == left.id)
         #expect(turns.reply.spaceID == left.id)
-        // Both panes wear the working mark, so moving the focus ring between
-        // them mid-turn cannot lose it.
+        // Both panes remain marked as working when focus changes during a turn.
         #expect(left.isAgentWorking)
         #expect(right.isAgentWorking)
 
@@ -149,8 +143,6 @@ struct AgentSpaceTests {
 
     // MARK: - Renaming a space
 
-    /// A space is named after the page that leads it, so swapping the panes
-    /// renames it. Nothing was closed, so the conversation goes on.
     @Test func rearrangingTheGridCarriesTheConversationWithIt() {
         let model = makeModel()
         let (left, right) = split(model)
@@ -177,8 +169,6 @@ struct AgentSpaceTests {
         #expect(moves == ["\(left.id)→\(right.id)"])
     }
 
-    /// Dissolving a grid, or pulling one page out of it, leaves the name where
-    /// it is: the page that had it is still open and still has it.
     @Test func aPageLeavingTheGridRenamesNothing() {
         let model = makeModel()
         let (left, right) = split(model)
@@ -194,10 +184,7 @@ struct AgentSpaceTests {
         #expect(moves == 0)
     }
 
-    /// The other direction: a page joining a grid is joining that grid's
-    /// space, so what it was talking about goes with it - unless the grid is
-    /// already talking about something, which `ConversationLog.reassign`
-    /// refuses.
+    /// Move the tab's conversation to the grid unless the grid already has one.
     @Test func aPageJoiningAGridBringsItsConversationUnderTheGridsName() {
         let model = makeModel()
         let joining = model.newTab(url: URL(string: "https://example.com/joining"))
@@ -235,8 +222,6 @@ struct AgentSpaceTests {
         #expect(turns.reply.spaceID == right.id)
     }
 
-    /// Two conversations never become one, so a name already in use turns the
-    /// move down.
     @Test func aSpaceThatAlreadyHasATrailIsNotOverwritten() {
         let log = ConversationLog(database: .temporary())
         let one = UUID()
@@ -291,8 +276,6 @@ struct AgentSpaceTests {
         #expect((await toolkit.readPage(page: "the moon")).contains("No page on screen or mentioned matches"))
     }
 
-    /// A grid of four is addressed the same way, by ordinal or by the ends of
-    /// the line it stands in.
     @Test func readPageAddressesEveryPaneOfAGridOfFour() async throws {
         let server = try await HTTPFixtureServer.start(routes: [
             "/one": .html("<h1>Board one</h1>"),

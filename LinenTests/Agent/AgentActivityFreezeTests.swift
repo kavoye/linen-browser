@@ -10,12 +10,8 @@ import XCTest
 // XCTest owns and runs one instance serially. Sendable lets its synchronous
 // callbacks enter the app target's main-actor boundary.
 nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendable {
-    /// The panel once livelocked the main thread: its rows hold
-    /// AppKit-measured selectable text whose real heights disagreed with a
-    /// lazy stack's estimates, re-dirtying the layout graph on every pass.
-    /// This hosts the panel at its minimum width, streams worst-case traces
-    /// into it, sweeps the whole scroll range, and requires the main run
-    /// loop to go idle after every step - on a deadline, so a relapse fails
+    /// AppKit text heights once disagreed with lazy-stack estimates, causing repeated layout.
+    /// Require the run loop to become idle while streaming and scrolling at minimum width.
     func testStreamingAndScrollingTracesNeverWedgesTheMainRunLoop() {
         MainActor.assumeIsolated {
             let browser = BrowserModel(database: .temporary())
@@ -42,8 +38,6 @@ nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendabl
                 "initial layout of the activity panel never settled"
             )
 
-            // A live turn: the newest trace grows and new ones arrive, each
-            // arrival re-anchoring the column via `scrollToLatest`.
             let streamed = Self.worstCaseTraces(tabID: tabID, count: 8)
             for var arriving in streamed {
                 let finished = arriving

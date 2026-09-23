@@ -485,8 +485,7 @@ private struct ChatAssistantMessage: View {
         state == .running
     }
 
-    /// Selectable text is an AppKit text view; one per chunk of a streaming
-    /// answer costs more than the answer does.
+    /// Avoid creating AppKit text views for selectable text while the answer is streaming.
     @ViewBuilder private var answer: some View {
         if isStreaming {
             Text(verbatim: text)

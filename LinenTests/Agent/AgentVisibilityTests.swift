@@ -30,9 +30,6 @@ struct AgentVisibilityTests {
 
     // MARK: - The ring
 
-    /// An announced click draws the ring *before* the action lands: while
-    /// the click is still holding its pause, the ring is already on screen
-    /// and the button has not yet been pressed.
     @Test func theRingShowsBeforeAnAnnouncedActionLands() async throws {
         let webView = await loadedWebView(#"<button onclick="window.__hit = true">Continue reading</button>"#)
         let observation = await PageDriver.readRenderedPage(webView)
@@ -52,8 +49,6 @@ struct AgentVisibilityTests {
         }
     }
 
-    /// Nothing the ring draws survives its moment: it fades and removes
-    /// itself, leaving the page exactly as it was.
     @Test func theRingCleansUpAfterItself() async throws {
         let webView = await loadedWebView("<button>Fine</button>")
         _ = await PageDriver.click(ref: 0, label: "Fine", in: webView, announced: true)
@@ -65,10 +60,8 @@ struct AgentVisibilityTests {
         let webView = await loadedWebView(#"<button onclick="window.__hit = true">Go</button>"#)
         _ = await PageDriver.readRenderedPage(webView)
 
-        // Asked, not timed: timing compared one JS round trip against the
-        // pause's duration, which is a question about machine load - it failed
-        // by 18ms once in a parallel run. The recorder answers the real
-        // question: which path asks for a pause, and for how long.
+        // Record requested pauses instead of timing JavaScript round trips,
+        // whose duration varies with machine load.
         let requested = PauseRecorder()
         await PageDriver.$pauseSleeper.withValue({ await requested.record($0) }) {
             await PageDriver.announce(ref: 1, in: webView, pause: false)
@@ -79,8 +72,6 @@ struct AgentVisibilityTests {
         }
     }
 
-    /// Collects the pauses `PageDriver` asks for instead of serving them, so
-    /// the announced path costs a test nothing to assert on.
     private actor PauseRecorder {
         private(set) var durations: [Duration] = []
 

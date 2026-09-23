@@ -7,7 +7,6 @@ import WebKit
 
 @testable import Linen
 
-/// Which tab is controlled, which view is lent, and where the crop lands.
 @MainActor
 @Suite(.serialized, .boundedWebViews)
 struct MediaCenterTests {
@@ -324,8 +323,7 @@ struct MediaCenterTests {
         #expect(returned.first ?? nil === webView)
     }
 
-    /// Leaving full screen reports `inline` too, and must not send anybody
-    /// anywhere.
+    /// Leaving full screen also reports `inline`; it must not activate the tab.
     @Test func leavingFullScreenIsNotComingBackFromPictureInPicture() {
         let media = MediaCenter()
         var returned = 0
@@ -352,8 +350,7 @@ struct MediaCenterTests {
         #expect(returned.first ?? nil === webView)
     }
 
-    /// Every switch to another app asks again. The ask must not make the app
-    /// forget that the video is already out, or the way back is swallowed.
+    /// Repeated PiP requests must preserve the active view so it can return inline.
     @Test func askingAgainWhileItIsAlreadyOutKeepsTheWayBack() {
         let media = MediaCenter()
         var returned = 0
@@ -382,8 +379,6 @@ struct MediaCenterTests {
         #expect(returned == 0)
     }
 
-    /// WebKit warns about a return while the video is still on its way out, so
-    /// the warning must not drag the window forward the moment PiP starts.
     @Test func theTabWithTheFloatingWindowIsNamedToTheChrome() {
         let media = MediaCenter()
         var reports: [Bool] = []
@@ -413,9 +408,8 @@ struct MediaCenterTests {
         #expect(reports == [true, false])
     }
 
-    /// The bug: opening the docked tab from the player's arrow sent the video
-    /// *out* instead of bringing it back, because the way home was a toggle and
-    /// the app still believed a picture was out that WebKit had already closed.
+    /// A stale PiP flag once caused returning to the tab to start PiP again.
+    /// The exit path must not blindly toggle.
     @Test func askingAPictureHomeWhenItIsAlreadyHomeSendsNothingOut() {
         let media = MediaCenter()
         var reports: [Bool] = []
@@ -493,8 +487,7 @@ struct MediaCenterTests {
         #expect(!media.model.isInNativePiP)
     }
 
-    /// A background tab that navigates tears its own picture down, and only
-    /// WebKit reports that. It is not the user asking to be taken there.
+    /// Navigation can end PiP without a user request. Do not activate the background tab.
     @Test func aPictureTornDownUnderneathTakesTheUserNowhere() {
         let media = MediaCenter()
         var returned = 0
@@ -508,8 +501,7 @@ struct MediaCenterTests {
         #expect(!media.isPictureOut(webView), "the state still has to settle")
     }
 
-    /// A living page only speaks when something in it changed, so its word is
-    /// the user's word.
+    /// Treat a page's presentation-mode change as a user request.
     @Test func aPageThatSaysTheVideoCameHomeTakesTheUserToIt() {
         let media = MediaCenter()
         var returned = 0

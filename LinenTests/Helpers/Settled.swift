@@ -7,13 +7,8 @@ import WebKit
 
 @testable import Linen
 
-/// Waits for a tab to be standing on an address rather than on its way to one.
-/// A commit is not the end of a navigation, and asking for the next page while
-/// WebKit is still finishing the last one is a race no person can run.
-///
-/// A timeout says which half of that ran out: the address it stopped at, and
-/// whether WebKit was still loading. Without it the failure reads as a bare
-/// false and every diagnosis starts from nothing.
+/// Wait for the expected URL and for WebKit to finish loading before starting another navigation.
+/// Report the current URL and loading state on timeout.
 @MainActor
 func settled(
     _ tab: BrowserTab,
@@ -23,10 +18,8 @@ func settled(
     let reached = await waitUntil {
         guard !tab.webView.isLoading else { return false }
         guard tab.committedURL != url else { return true }
-        // A back served from the page cache fires no navigation callback and
-        // leaves WebKit's list naming the page that has gone. The view's own
-        // URL does not lag, and with nothing loading it is what the tab is
-        // standing on — the same rule `internalPage` reads by.
+        // Page-cache restores may skip navigation callbacks and leave `committedURL` stale.
+        // Use the idle web view's URL as a fallback, as `internalPage` does.
         return tab.isMaterialised && tab.webView.url == url
     }
     guard !reached else { return true }

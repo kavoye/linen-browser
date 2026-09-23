@@ -7,8 +7,6 @@ import WebKit
 
 @testable import Linen
 
-/// The shim rides in front of an extension's background scripts and fills
-/// the APIs WebKit is missing.
 struct ExtensionShimsTests {
     private func scratchPackage(manifest: [String: Any]) throws -> URL {
         let directory = FileManager.default.temporaryDirectory

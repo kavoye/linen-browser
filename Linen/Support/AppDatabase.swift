@@ -41,9 +41,7 @@ struct AppDatabase: Sendable {
             .appendingPathComponent("Linen", isDirectory: true)
     }
 
-    /// A test run keeps its files to itself: profiles, permissions, zoom and
-    /// the download list all hang off this, and none of them belong in the
-    /// support directory a person's copy of Linen is using.
+    /// Keep test profiles and stores separate from the installed app's Application Support directory.
     private nonisolated static let testSupportDirectory: URL = {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Linen-tests-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)

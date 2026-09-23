@@ -42,14 +42,12 @@ extension AppCoordinator {
         }
     }
 
-    /// The picture is borrowed only for the experiment that shows it, and never
-    /// while video leaves for the floating window on its own.
     func applyPictureLending() {
         media.lendsPicture = settings.showsVideoInPlayer && !settings.automaticPictureInPicture
     }
 
-    /// The video needs somewhere on screen to land, or WebKit will not let go
-    /// of it. The card counts as somewhere, so a lent picture stays put.
+    /// WebKit requires an on-screen destination before returning video from Picture in Picture.
+    /// The media card already provides one when it hosts this web view.
     func makeRoomForPicture(in webView: WKWebView?) {
         if let webView, webView !== media.model.pictureWebView,
            let tab = browser.tabs.first(where: { $0.isMaterialised && $0.webView === webView }) {
@@ -58,8 +56,6 @@ extension AppCoordinator {
         showBrowser()
     }
 
-    /// What left on its own comes back on its own: looking at the tab again is
-    /// the same answer as the floating window's return button.
     func returnPictureToTheTabInFront() {
         guard settings.automaticPictureInPicture, browserVisible, !isShowingSettings else { return }
         let inFront = browser.tabs.filter {

@@ -91,8 +91,7 @@ final class BrowserTab: Identifiable {
         return webView.backForwardList.backList
     }
 
-    /// What WebKit has committed. `urlString` answers for a provisional
-    /// navigation too, so the two disagree while a page is on its way in.
+    /// `urlString` may include a provisional navigation; this URL reflects the committed page.
     private(set) var committedURL: URL?
 
     func goBack() {
@@ -130,8 +129,7 @@ final class BrowserTab: Identifiable {
 
     private(set) var canvasColor: NSColor?
 
-    /// What the page itself is painted on: behind the web view before it has
-    /// presented, and above it while a pull holds it down.
+    /// Page background shown before the web view presents and during pull gestures.
     var surfaceColor: Color {
         canvasColor.map(Color.init(nsColor:)) ?? Theme.windowBackground
     }
@@ -187,8 +185,7 @@ final class BrowserTab: Identifiable {
         internalPage != nil || isShowingStartPage
     }
 
-    /// The one `linen:` address Linen asked for. Anything else asking is a
-    /// website, and is refused.
+    /// Only permit internal navigation to the `linen:` URL requested by the app.
     private var permittedSystemPage: URL?
 
     func permitSystemPage(_ url: URL?) {

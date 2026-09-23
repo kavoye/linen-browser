@@ -13,8 +13,7 @@ nonisolated struct LyricsMatch: Identifiable, Equatable, Sendable {
     let plain: String
     let isInstrumental: Bool
 
-    /// What sets one entry apart from the next in the match menu: two uploads of
-    /// the same song differ by album and by length, not by title.
+    /// Include album and duration to distinguish uploads of the same song.
     var label: String {
         var parts = [track.isEmpty ? artist : track]
         if !album.isEmpty, album != track {
@@ -27,8 +26,7 @@ nonisolated struct LyricsMatch: Identifiable, Equatable, Sendable {
         return parts.joined(separator: " · ")
     }
 
-    /// Entries carrying the same words are the same entry as far as the reader
-    /// is concerned, whatever the library calls them.
+    /// Deduplicate by lyrics rather than catalog ID.
     var wordsKey: String {
         let words = synced.isEmpty ? plain : synced
         return words.trimmingCharacters(in: .whitespacesAndNewlines)

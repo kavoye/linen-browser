@@ -39,9 +39,8 @@ final class MediaModel {
     }
 }
 
-/// Who says a video went out or came home. A live document only speaks when
-/// something in it changed, so the page speaks for the user; WebKit also speaks
-/// while tearing a page down, which nobody asked for.
+/// Page messages report presentation changes; WebKit also reports page teardown.
+/// Only page messages imply a user request without a separate return callback.
 enum PictureSource {
     case page
     case webKit
@@ -60,8 +59,7 @@ final class MediaCenter {
     let model = MediaModel()
     let watched = MediaModel()
 
-    /// Off in Settings, nothing docks: what plays stays in its own tab. The
-    /// watched model is untouched, so the lyrics still follow the tab you are on.
+    /// Disabling the dock leaves `watched` active so lyrics can still follow the current tab.
     var isEnabled = true {
         didSet {
             guard !isEnabled else { return }
@@ -69,8 +67,7 @@ final class MediaCenter {
         }
     }
 
-    /// Video that pops out on its own belongs in the floating window, so the
-    /// card keeps its artwork instead of cropping a picture nobody can see.
+    /// Disable video in the card when automatic Picture in Picture uses the floating window.
     var lendsPicture = true {
         didSet {
             guard !lendsPicture else { return }
@@ -422,11 +419,8 @@ final class MediaCenter {
         nativePiPView === webView
     }
 
-    /// Never a toggle: a stale belief that the video is out would otherwise send
-    /// it out at the very moment the user came back to watch it. Asking the page
-    /// for `inline` has no other direction to go, so it is always safe to ask,
-    /// and it covers a `_isPictureInPictureActive` that answers for a view it
-    /// cannot see.
+    /// Only toggle when WebKit confirms PiP is active. Otherwise request inline playback
+    /// explicitly, so stale state cannot accidentally start PiP.
     func exitPictureInPicture(for webView: WKWebView) {
         guard nativePiPView === webView else { return }
         returnAskedAt = Date()
@@ -440,8 +434,7 @@ final class MediaCenter {
         setPictureInPicture(false, for: webView, source: .webKit)
     }
 
-    /// WebKit answers for a view it can see. A tab parked off screen is not one,
-    /// so the synthesized gesture stays as the way in for those.
+    /// Off-screen web views need the synthesized gesture fallback.
     func togglePictureInPicture(for webView: WKWebView) {
         guard nativePiPView !== webView else {
             exitPictureInPicture(for: webView)
@@ -502,10 +495,8 @@ final class MediaCenter {
         onPictureOutChanged?(webView, false)
     }
 
-    /// Answers whether this is the user asking for the video back, and records
-    /// the ask, so the completion that follows is known to be their doing.
-    /// WebKit warns on the way *out* too, so an ask that arrives while the video
-    /// is still settling into the floating window is not one.
+    /// Ignore return callbacks during the initial PiP transition. WebKit sends them
+    /// while entering PiP too, before the user has requested a return.
     func notePictureReturnAsk(for webView: WKWebView) -> Bool {
         guard nativePiPView === webView else { return false }
         if let wentOut = pictureWentOutAt,
@@ -525,10 +516,8 @@ final class MediaCenter {
         setPictureInPicture(message == "picture-in-picture", for: webView, source: .page)
     }
 
-    /// One truth for "which view is out in the floating window", so a docked
-    /// video that gets undocked, or a second ask on the way out of the app,
-    /// cannot lose the way back. WebKit answers here through the tab's UI
-    /// delegate, and the injected script through its presentation-mode message.
+    /// Track PiP independently of the dock, using both WebKit delegate callbacks
+    /// and presentation-mode messages from the page.
     func setPictureInPicture(_ isNative: Bool, for webView: WKWebView, source: PictureSource) {
         if webView === controlledWebView {
             model.isInNativePiP = isNative
@@ -917,8 +906,7 @@ enum MediaRoster {
         )
     }
 
-    /// Pausing or muting must not take the words off the screen, so a tab that
-    /// played its current page stays the one the lyrics follow.
+    /// Keep lyrics visible after the current page pauses or mutes.
     static func isLyricsSource(
         isPlayingAudio: Bool,
         hasPlayed: Bool,
@@ -929,8 +917,6 @@ enum MediaRoster {
         return isPlayingAudio || hasPlayed
     }
 
-    /// The tab you are looking at owns the words. The dock is only the fallback,
-    /// so a docked stream cannot take the panel off the song in front of you.
     static func lyricsOwner(
         pinned: UUID?,
         active: UUID?,
@@ -945,8 +931,6 @@ enum MediaRoster {
         return nil
     }
 
-    /// Leaving the window takes the video with you: the tab in front goes
-    /// first, the dock answers for it, and a paused video stays where it is.
     static func pictureTarget(
         active: UUID?,
         isActivePlaying: Bool,

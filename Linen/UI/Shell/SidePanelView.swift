@@ -77,10 +77,8 @@ private struct AssistantExpandedBackdrop: View {
     }
 }
 
-/// A panel is an interaction boundary even where its SwiftUI content is
-/// visually empty. The native view sits behind the panel's controls, so their
-/// buttons and scroll views win hit testing while otherwise-empty regions no
-/// longer fall through to the web view underneath.
+/// Block clicks through empty panel regions while allowing controls in front
+/// to handle their own input.
 private struct SidePanelInteractionBoundary: NSViewRepresentable {
     func makeNSView(context: Context) -> BoundaryView {
         BoundaryView()

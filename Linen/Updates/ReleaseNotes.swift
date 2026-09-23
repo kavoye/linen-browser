@@ -101,8 +101,6 @@ final class ReleaseNotesModel {
         await load()
     }
 
-    /// Drafts belong to whoever is writing them, and the rolling `tip`
-    /// pre-release is one entry that would sit above every real version.
     nonisolated static func published(_ releases: [GitHubRelease]) -> [GitHubRelease] {
         releases
             .filter { !$0.isDraft && !$0.isPrerelease }

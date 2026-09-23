@@ -6,9 +6,6 @@ import Testing
 
 @testable import Linen
 
-/// Extensions take an update once a day, quietly. The sweep decides whether
-/// today's has already happened, and that decision is what keeps a launch
-/// from reaching the store every time.
 @MainActor
 struct ExtensionUpdateTests {
     private let key = "extensions.lastUpdateCheck"
@@ -59,8 +56,6 @@ struct ExtensionUpdateTests {
         #expect((stamped ?? .distantPast) > yesterday, "a day later the sweep runs again")
     }
 
-    /// The caller passes the clock in, so a machine that has been asleep for
-    /// a week is the same test as one that has not.
     @Test func theSweepJudgesTheClockItIsGiven() async {
         let defaults = scratchDefaults()
         defer { ExtensionManager.defaults = .standard }

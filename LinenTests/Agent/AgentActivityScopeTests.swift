@@ -91,8 +91,7 @@ struct AgentActivityScopeTests {
         #expect(log.failureCount(forTab: tab) == 1)
     }
 
-    /// The dot points at a column the click will fill. A failure on another tab
-    /// used to travel with it and open an empty column.
+    /// A failure from another tab once made the activity indicator open an empty panel.
     @Test func aFailureOnOneTabLeavesTheOtherTabsDotAlone() {
         let log = ConversationLog(database: .temporary())
         let tabA = UUID()
@@ -126,7 +125,6 @@ struct AgentActivityScopeTests {
         #expect(AgentActivityDot.state(isWorking: true, needsAttention: false) == .working)
     }
 
-    /// Reviewing one space says nothing about the next one.
     @Test func reviewingOneSpaceLeavesAnotherUnseen() {
         let attention = newAttention()
         let seen = UUID()

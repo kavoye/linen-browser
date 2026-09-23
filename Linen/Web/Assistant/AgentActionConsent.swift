@@ -59,8 +59,7 @@ enum AgentActionConsent {
         }
     }
 
-    /// A test bundle has nobody to answer a sheet, and `runModal()` hangs the
-    /// run rather than failing it. A gate that cannot ask denies.
+    /// Deny requests in tests because `runModal()` would wait indefinitely for user input.
     private static var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }

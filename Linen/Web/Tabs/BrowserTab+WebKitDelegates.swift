@@ -161,9 +161,8 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab?.onPictureInPictureChanged?(isOut)
     }
 
-    /// The floating window wants to hand the video back. WebKit will not finish
-    /// that while the page has nowhere on screen to return to, and it asks here
-    /// first, which is the only warning a window in the Dock ever gets.
+    /// WebKit requires an on-screen destination before returning video from PiP.
+    /// This callback lets the app restore a minimized window first.
     @objc(_webViewFullscreenMayReturnToInline:)
     func webViewFullscreenMayReturnToInline(_ webView: WKWebView) {
         tab?.onPictureReturnExpected?()

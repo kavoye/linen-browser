@@ -4,8 +4,6 @@
 import AppKit
 import SwiftUI
 
-/// The browser's chrome is one continuous surface: a top beam joined to the
-/// sidebar, with the page fitted into the beam's inner elbow.
 enum LoomChrome {
     /// The inset shared by chrome-owned surfaces.
     nonisolated static let canvasInset: CGFloat = 6
@@ -276,10 +274,7 @@ private struct LoomTransparentBackdrop: View {
     }
 }
 
-/// The one panel recipe, shared by the side panel, internal pages and Settings
-/// so they cannot drift apart. `NSVisualEffectView` behind the window already
-/// tints toward the desktop wallpaper — including when other windows are in the
-/// way — so a panel standing on it picks that up for free.
+/// Shared panel fill for the side panel, internal pages, and Settings.
 struct LoomPanelFill<S: Shape>: View {
     let shape: S
     var isVisible = true

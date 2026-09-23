@@ -48,7 +48,6 @@ struct PeekSurface: View {
 
     private static let arrival = Animation.spring(response: 0.34, dampingFraction: 0.84)
 
-    /// The panel grows out of the link that opened it.
     private func anchor(in size: CGSize) -> UnitPoint {
         guard size.width > 0, size.height > 0 else { return .center }
         let origin = coordinator.peek.origin

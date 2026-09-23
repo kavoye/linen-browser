@@ -39,8 +39,6 @@ struct AIDisclosureTests {
         #expect(plain.contains("hidden instructions"))
     }
 
-    /// The extra line is about publishing, so a purchase keeps the wording it
-    /// had even when the agent filled the form.
     @Test func nonPublicationCategoriesAreNotAnnotated() {
         let purchase = AgentActionConsent.body(
             label: "Place order",
@@ -59,8 +57,6 @@ struct AIDisclosureTests {
         #expect(value.hasPrefix("AI reply:"))
     }
 
-    /// Article 50 in plain words: every disclosure says it is AI, and the
-    /// onboarding copy also says it is not a person.
     @Test func disclosureCopySaysAINotAPerson() {
         for caption in [AIDisclosure.replyCaption, AIDisclosure.onboardingCaption, AIDisclosure.settingsCaption] {
             #expect(String(localized: caption).contains("AI"))
@@ -68,7 +64,6 @@ struct AIDisclosureTests {
         #expect(String(localized: AIDisclosure.onboardingCaption).contains("not a person"))
     }
 
-    /// The copy warns, in one short sentence, that replies can be wrong.
     @Test func disclosureCopyWarnsAboutMistakes() {
         for caption in [AIDisclosure.replyCaption, AIDisclosure.onboardingCaption, AIDisclosure.settingsCaption] {
             let text = String(localized: caption)

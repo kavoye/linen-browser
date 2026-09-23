@@ -21,8 +21,7 @@ enum LinkIntent: Equatable {
 struct LinkPreview: View {
     let address: String?
     var intent: LinkIntent = .open
-    /// What the chip stands on. Glass shows the page through it, so the ink has
-    /// to be decided from the page rather than from the window's appearance.
+    /// Choose text contrast from the page color visible through the glass.
     var ground: NSColor?
     var delay: Duration = .milliseconds(400)
     var obeysSetting = true

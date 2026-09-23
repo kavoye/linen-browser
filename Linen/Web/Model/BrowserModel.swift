@@ -225,8 +225,7 @@ final class BrowserModel {
 
     // MARK: - Peek
 
-    /// A peeked page is a tab no list holds: it reaches neither the sidebar,
-    /// the session file nor the extensions until you keep it.
+    /// Exclude peeked pages from the sidebar, saved session, and extensions until kept.
     func makePeekTab(_ url: URL) -> BrowserTab {
         let tab = makeTab(for: url)
         tab.onOpenInPeek = nil
