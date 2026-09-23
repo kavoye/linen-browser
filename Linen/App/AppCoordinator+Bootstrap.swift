@@ -215,7 +215,7 @@ extension AppCoordinator {
         }
         statusMessage = selected.availability == .needsCredentials ? nil : activeNotice
         configureRemoteTools(for: activeProvider ?? selectedProvider)
-        configureVoice(for: activeProvider ?? selectedProvider)
+        configureVoice()
         Pipeline.log.notice("Assistant engine configured")
         discoverContextWindow()
     }

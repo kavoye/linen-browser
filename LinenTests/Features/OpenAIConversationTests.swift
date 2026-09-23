@@ -169,6 +169,15 @@ struct OpenAIConversationTests {
         #expect(throws: OpenAIVoiceFailure.self) { try options.conversationConfiguration() }
     }
 
+    @Test func legacyVoiceServiceChoiceIsIgnored() throws {
+        let legacy = Data(#"{"usesOpenAI":false,"voice":"sage"}"#.utf8)
+        let options = try JSONDecoder().decode(OpenAIVoiceSettings.self, from: legacy)
+        #expect(options.voice == "sage")
+        let saved = try JSONEncoder().encode(options)
+        let fields = try #require(JSONSerialization.jsonObject(with: saved) as? [String: Any])
+        #expect(fields["usesOpenAI"] == nil)
+    }
+
     @Test func streamedAudioAndTranscriptsAreCorrelatedAndUsageIsCountedOnce() async throws {
         let fixture = ConversationFixture()
         defer { fixture.session.stop() }

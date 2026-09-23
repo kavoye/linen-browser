@@ -4,15 +4,19 @@
 import Foundation
 
 extension AppCoordinator {
-    func configureVoice(for provider: Provider) {
-        let options = OpenAISettingsStore.load(providerID: provider.id).voice
-        let key = CredentialStore.key(for: provider) ?? ""
-        let usesOpenAI = provider.adapter == .openAIResponses && options.usesOpenAI
+    func configureVoice() {
+        let provider = selectedProvider
+        let openAI: (endpoint: URL, key: String, options: OpenAIVoiceSettings)?
         let identity: String
-        if usesOpenAI, let endpoint = provider.baseURL {
+        if provider.adapter == .openAIResponses,
+           let endpoint = provider.baseURL,
+           let key = CredentialStore.key(for: provider), !key.isEmpty {
+            let options = OpenAISettingsStore.load(providerID: provider.id).voice
+            openAI = (endpoint, key, options)
             identity = OpenAIConversationState.binding(endpoint: endpoint, model: provider.id, credential: key)
                 + ((try? OpenAIJSON.encode(options).text()) ?? "")
         } else {
+            openAI = nil
             identity = "apple:" + provider.id
         }
         guard voiceConfigurationID != identity else { return }
@@ -23,8 +27,8 @@ extension AppCoordinator {
         voiceInput.cancel()
         speech.stopSpeaking()
         let transcriber: any TranscriberEngine
-        if usesOpenAI, let endpoint = provider.baseURL {
-            let client = OpenAIVoiceClient(endpoint: endpoint, key: key, settings: options)
+        if let openAI {
+            let client = OpenAIVoiceClient(endpoint: openAI.endpoint, key: openAI.key, settings: openAI.options)
             transcriber = OpenAITranscriberEngine(client: client)
             let output = OpenAISpeechOutput(client: client)
             output.onFailure = { [weak self] in
@@ -53,8 +57,7 @@ extension AppCoordinator {
 
 extension AppCoordinator {
     var supportsVoiceConversation: Bool {
-        let provider = activeProvider ?? selectedProvider
-        return provider.adapter == .openAIResponses && OpenAISettingsStore.load(providerID: provider.id).voice.usesOpenAI
+        selectedProvider.adapter == .openAIResponses
     }
 
     func startVoiceConversation() {
@@ -67,7 +70,7 @@ extension AppCoordinator {
             voiceConversationMessage = statusMessage ?? Self.microphoneDeniedMessage
             return
         }
-        let provider = activeProvider ?? selectedProvider
+        let provider = selectedProvider
         guard let endpoint = provider.baseURL, let key = CredentialStore.key(for: provider), !key.isEmpty else {
             statusMessage = String(localized: "Add an OpenAI API key in Settings to start a voice conversation.")
             voiceConversationMessage = statusMessage

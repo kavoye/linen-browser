@@ -20,7 +20,7 @@ final class SettingsWorkspace {
         intelligence = IntelligenceViewModel(
             onVoiceConfigurationChanged: { [weak coordinator] in
                 guard let coordinator else { return }
-                coordinator.configureVoice(for: coordinator.activeProvider ?? coordinator.selectedProvider)
+                coordinator.configureVoice()
             },
             onConfigurationChanged: coordinator.configureEngines
         )

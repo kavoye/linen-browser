@@ -4,7 +4,6 @@
 import Foundation
 
 nonisolated struct OpenAIVoiceSettings: Codable, Equatable, Sendable {
-    var usesOpenAI = true
     var transcriptionModel = "gpt-live-transcribe"
     var conversationModel = "gpt-realtime-2.1"
     var conversationVoice = "cedar"
@@ -16,12 +15,11 @@ nonisolated struct OpenAIVoiceSettings: Codable, Equatable, Sendable {
     init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case usesOpenAI, transcriptionModel, speechModel, voice, speed, instructions, conversationModel, conversationVoice
+        case transcriptionModel, speechModel, voice, speed, instructions, conversationModel, conversationVoice
     }
 
     init(from decoder: any Decoder) throws {
         let fields = try decoder.container(keyedBy: CodingKeys.self)
-        usesOpenAI = try fields.decodeIfPresent(Bool.self, forKey: .usesOpenAI) ?? true
         transcriptionModel = try fields.decodeIfPresent(String.self, forKey: .transcriptionModel) ?? "gpt-live-transcribe"
         speechModel = try fields.decodeIfPresent(String.self, forKey: .speechModel) ?? "gpt-4o-mini-tts"
         conversationModel = try fields.decodeIfPresent(String.self, forKey: .conversationModel) ?? "gpt-realtime-2.1"

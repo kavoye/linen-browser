@@ -68,8 +68,8 @@ External assistants can use explicitly shared tabs through Linen’s
   passwords or card numbers; browser autofill is separate.
 - API keys stay in Keychain and are sent only to their provider. Submitted
   messages, shared page content, and attachments go to the selected model.
-- Voice audio is transcribed on your Mac. The resulting text is sent to the
-  selected model.
+- On-device voice transcribes audio on your Mac. OpenAI dictation and voice
+  conversations send microphone audio to OpenAI.
 - Private browsing does not save history, tabs, or assistant transcripts.
 - Known third-party trackers are blocked by default. This is basic protection;
   extensions can provide more comprehensive blocking.
