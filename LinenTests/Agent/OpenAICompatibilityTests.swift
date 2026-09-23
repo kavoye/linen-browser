@@ -98,6 +98,22 @@ struct OpenAICompatibilityTests {
         #expect(await socket.closed)
     }
 
+    @Test(arguments: ["server_error", "previous_response_not_found", "websocket_connection_limit_reached", "context_length_exceeded"])
+    func websocketPreservesFailureMetadata(code: String) async throws {
+        let socket = OpenAISocketFixture([["type": "error", "status": 400, "error": ["code": .string(code)]]])
+        let pool = OpenAIResponseSocketPool { socket }
+        do {
+            try await pool.generate(["input": []]) { _ in }
+            Issue.record("Expected the provider error")
+        } catch let failure as OpenAIFailure {
+            #expect(failure.code == code)
+            #expect(failure.status == 400)
+            #expect(failure.kind == (code == "context_length_exceeded" ? .contextLimit : .http))
+        }
+        #expect(await socket.sent.count == 1)
+        #expect(await socket.closed)
+    }
+
     @Test func modelOptionsAndNewFieldsReachTheNativeRequest() throws {
         var settings = OpenAIResponseSettings()
         settings.reasoningEffort = "max"

@@ -12,7 +12,7 @@ nonisolated struct AgentEvaluationEvent: Codable, Equatable, Sendable {
             "generation", "response", "tool_proposed", "tool_accepted", "tool_completed",
             "tool_failed", "tool_stopped", "terminal", "context_compaction", "overflow_recovery",
             "progress_recovery", "checkpoint", "resume", "compaction_result", "progress_update",
-            "provider_usage", "first_text",
+            "provider_usage", "provider_failure", "first_text",
         ]
         self.kind = kinds.contains(kind) ? kind : "unknown"
         var safe: [String: String] = [:]
@@ -29,6 +29,26 @@ nonisolated struct AgentEvaluationEvent: Codable, Equatable, Sendable {
             if let value = values[key], statuses.contains(value) {
                 safe[key] = value
             }
+        }
+        let failureKinds: Set<String> = [
+            "configuration", "http", "invalidResponse", "incomplete", "streamInterrupted",
+            "contextLimit", "unsupportedAction", "network", "other",
+        ]
+        if let value = values["failure_kind"], failureKinds.contains(value) {
+            safe["failure_kind"] = value
+        }
+        let apiCodes: Set<String> = [
+            "server_error", "server_is_overloaded", "service_unavailable", "rate_limit_exceeded", "slow_down",
+            "credit_balance_exhausted", "organization_spend_limit_exceeded", "project_spend_limit_exceeded",
+            "organization_usage_limit_exceeded", "context_length_exceeded",
+            "previous_response_not_found", "websocket_connection_limit_reached", "websocket_stream_limit_reached",
+            "invalid_stream_id", "invalid_api_key", "invalid_request_error", "insufficient_quota", "billing_hard_limit_reached",
+        ]
+        if let value = values["api_code"], apiCodes.contains(value) {
+            safe["api_code"] = value
+        }
+        if let value = values["http_status"], let status = Int(value), (100...599).contains(status) {
+            safe["http_status"] = String(status)
         }
         for key in ["elapsed_ms", "input_tokens", "output_tokens", "cached_tokens", "cache_write_tokens", "reasoning_tokens",
                     "total_tokens", "count", "output_bytes", "output_images", ] {

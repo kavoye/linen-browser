@@ -40,6 +40,7 @@ final class AnyLanguageModelAgent: AgentRunner {
     let budget: ContextBudget
     private let enabledToolIDs: Set<String>?
     let toolkit: AgentToolkit
+    let retrySleep: @Sendable (Double) async throws -> Void
     let log: ConversationLog
 
     var sessions: [UUID: LanguageModelSession] = [:]
@@ -60,6 +61,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         acceptsImages: Bool = true,
         onImageInputUnsupported: @escaping () -> Void = {},
         enabledToolIDs: Set<String>? = nil,
+        retrySleep: @escaping @Sendable (Double) async throws -> Void = { try await Task.sleep(for: .seconds($0)) },
         toolkit: AgentToolkit,
         log: ConversationLog
     ) {
@@ -77,6 +79,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         self.budget = budget
         self.enabledToolIDs = enabledToolIDs
         self.toolkit = toolkit
+        self.retrySleep = retrySleep
         self.log = log
     }
 

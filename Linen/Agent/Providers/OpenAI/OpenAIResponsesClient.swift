@@ -120,13 +120,15 @@ nonisolated struct OpenAIResponsesClient: Sendable {
         let usage = OpenAIUsage(raw: response["usage"])
         guard response["status"].string == "completed" else {
             let kind: OpenAIFailure.Kind = response["error"]["code"].string == "context_length_exceeded" ? .contextLimit : .incomplete
-            throw OpenAIFailure(kind: kind, usage: usage)
+            throw OpenAIFailure(kind: kind, code: response["error"]["code"].string, usage: usage)
         }
         let output: (text: String, calls: [Transcript.ToolCall])
         do {
             output = try OpenAIModelStep.output(response, remoteTools: remoteTools(oauthTokens: oauthTokens), localDefinitions: request["tools"].array ?? [])
         } catch {
-            throw OpenAIFailure(kind: (error as? OpenAIFailure)?.kind ?? .invalidResponse, usage: usage)
+            var failure = error as? OpenAIFailure ?? OpenAIFailure(kind: .invalidResponse)
+            failure.usage = usage
+            throw failure
         }
         let previousCalls = Set(state.items.compactMap { item -> String? in
             if item["type"] == "function_call" || item["type"] == "shell_call" { return item["call_id"].string }

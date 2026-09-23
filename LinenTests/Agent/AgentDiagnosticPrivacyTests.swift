@@ -27,6 +27,22 @@ struct AgentDiagnosticPrivacyTests {
         #expect(decoded.values.isEmpty)
     }
 
+    @Test func providerFailureKeepsOnlySafeCategoryAndStatus() {
+        let event = AgentEvaluationEvent(kind: "provider_failure", values: [
+            "failure_kind": "streamInterrupted", "http_status": "502", "api_code": "server_error",
+            "error": "private@example.test",
+        ])
+        #expect(event.kind == "provider_failure")
+        #expect(event.values == ["failure_kind": "streamInterrupted", "http_status": "502", "api_code": "server_error"])
+        #expect(AgentEvaluationEvent(kind: "provider_failure", values: ["api_code": "private@example.test"]).values.isEmpty)
+    }
+
+    @Test(arguments: ["previous_response_not_found", "websocket_connection_limit_reached", "insufficient_quota"])
+    func providerFailureRetainsKnownActionableCodes(code: String) {
+        let event = AgentEvaluationEvent(kind: "provider_failure", values: ["api_code": code, "http_status": "400"])
+        #expect(event.values == ["api_code": code, "http_status": "400"])
+    }
+
     @Test func diagnosticExportDropsCustomModelAndEffortIdentifiers() {
         var diagnostics = AgentRunDiagnostics()
         diagnostics.model = "customer-private-finetune-123"

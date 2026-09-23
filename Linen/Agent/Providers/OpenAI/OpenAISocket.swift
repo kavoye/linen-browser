@@ -143,7 +143,7 @@ actor OpenAIResponseSocketPool {
                     let payload = try await socket.receive()
                     guard let type = payload["type"].string else { throw OpenAIFailure(kind: .invalidResponse) }
                     if type == "error" {
-                        throw OpenAIFailure(kind: payload["error"]["code"] == "context_length_exceeded" ? .contextLimit : .http)
+                        throw OpenAIFailure.event(payload)
                     }
                     if ["response.completed", "response.failed", "response.incomplete", "response.cancelled"].contains(type) {
                         return payload

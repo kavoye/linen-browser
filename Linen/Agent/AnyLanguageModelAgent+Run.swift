@@ -94,6 +94,14 @@ extension AnyLanguageModelAgent {
             } else {
                 state.stop = Self.isContextWindowError(error) || error is AgentCompactionFailure ? .contextLimit : .providerError
             }
+            if state.stop == .providerError {
+                let failure = error as? OpenAIFailure
+                event("provider_failure", [
+                    "failure_kind": failure?.kind.rawValue ?? (error is URLError ? "network" : "other"),
+                    "http_status": failure?.status.map(String.init) ?? "",
+                    "api_code": failure?.code ?? "",
+                ])
+            }
             if case AgentFailure.emptyResponse = error {
                 state.finalText = AgentFailure.emptyResponse.errorDescription
             }
@@ -190,6 +198,7 @@ extension AnyLanguageModelAgent {
         state.observer.calls = []
         state.session.toolExecutionDelegate = state.observer
         let transcriptBeforeRequest = state.session.transcript
+        let nativeStateBeforeRequest = state.nativeState
         let wasSubmitted = state.submittedUtterance
         state.responsePrefix = state.session.transcript.count + 1
         callbacks.event("generation", [:])
@@ -213,6 +222,20 @@ extension AnyLanguageModelAgent {
         } catch where !state.observer.calls.isEmpty {
             answer = ""
         } catch {
+            let remoteActions = openAI.map { !$0.settings.mcpServers.isEmpty || !$0.settings.hostedTools.isEmpty } ?? false
+            if !Task.isCancelled, let delay = AgentProviderRetry.delay(for: error, attempt: state.providerRetries, remoteActionsEnabled: remoteActions) {
+                state.session = makeSession(transcript: transcriptBeforeRequest)
+                state.nativeState = nativeStateBeforeRequest
+                state.submittedUtterance = wasSubmitted
+                if let limit = state.policy.maxModelRequests, state.diagnostics.modelRequests >= limit {
+                    state.stop = .requestLimit
+                    return nil
+                }
+                state.providerRetries += 1
+                callbacks.publishProgress(String(localized: "The model request failed temporarily. Retrying without repeating browser actions."))
+                try await retrySleep(delay)
+                return nil
+            }
             if let fallback = try imageFallback(
                 for: error, task: state.task, utterance: state.utterance,
                 transcript: transcriptBeforeRequest, prompt: state.prompt, images: state.images
@@ -237,6 +260,7 @@ extension AnyLanguageModelAgent {
             state.attachmentInput = nil
             return nil
         }
+        state.providerRetries = 0
         return answer
     }
 
@@ -363,6 +387,7 @@ extension AnyLanguageModelAgent {
         var attachmentInput: OpenAIAttachmentInput?
         var responsePrefix = 0
         var verificationRounds = 0
+        var providerRetries = 0
 
         init(agent: AnyLanguageModelAgent, utterance: String, task: AgentTaskContext, reply: AgentReplyModel) {
             self.task = task

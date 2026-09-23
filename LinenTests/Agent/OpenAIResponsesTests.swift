@@ -143,6 +143,76 @@ struct OpenAIResponsesTests {
         #expect(OpenAIProgressMessage.partial(#"{"other":"secret"}"#) == nil)
     }
 
+    @Test func retriesInterruptedStreamBeforeFirstEvent() async throws {
+        let wire = OpenAITransportFixture([OpenAITransportFixture.response([
+            OpenAITransportFixture.message("Ready"),
+        ]), ], failureStarts: 1)
+        let response = try await OpenAIAPI(transport: wire).createResponse([:]) { _ in }
+        #expect(response["status"] == "completed")
+        #expect(wire.requests.count == 2)
+    }
+
+    @Test func doesNotReplayRequestWithHostedTools() async throws {
+        let wire = OpenAITransportFixture([], failureStarts: 1)
+        let body: OpenAIJSON = ["tools": [["type": "web_search_preview"]]]
+        await #expect(throws: OpenAIFailure.self) {
+            try await OpenAIAPI(transport: wire).createResponse(body) { _ in }
+        }
+        #expect(wire.requests.count == 1)
+    }
+
+    @Test func retriesStreamErrorBeforeOutput() async throws {
+        let wire = OpenAITransportFixture([OpenAITransportFixture.response([
+            OpenAITransportFixture.message("Ready"),
+        ]), ], eventErrorsBeforeSuccess: 1)
+        let response = try await OpenAIAPI(transport: wire).createResponse([:]) { _ in }
+        #expect(response["status"] == "completed")
+        #expect(wire.requests.count == 2)
+    }
+
+    @Test func retriesStreamErrorWithoutCodeBeforeOutput() async throws {
+        let wire = OpenAITransportFixture([OpenAITransportFixture.response([
+            OpenAITransportFixture.message("Ready"),
+        ]), ], eventErrorsBeforeSuccess: 1, eventErrorCode: nil)
+        let response = try await OpenAIAPI(transport: wire).createResponse([:]) { _ in }
+        #expect(response["status"] == "completed")
+        #expect(wire.requests.count == 2)
+    }
+
+    @Test(arguments: ["previous_response_not_found", "websocket_connection_limit_reached"])
+    func retriesExpiredSocketStateOnceBeforeOutput(code: String) async throws {
+        let wire = OpenAITransportFixture([OpenAITransportFixture.response([OpenAITransportFixture.message("Ready")])],
+                                          eventErrorsBeforeSuccess: 1, eventErrorCode: code)
+        let response = try await OpenAIAPI(transport: wire).createResponse(["input": [["role": "user", "content": "Find trains"]]]) { _ in }
+        #expect(response["status"] == "completed")
+        #expect(wire.requests.count == 2)
+        #expect(wire.requests[0].body == wire.requests[1].body)
+    }
+
+    @Test func doesNotReplayAfterStreamOutputOrQuotaError() async throws {
+        for (code, output) in [("server_error", true), ("credit_balance_exhausted", false),
+                               ("previous_response_not_found", true), ("websocket_connection_limit_reached", true), ] {
+            let wire = OpenAITransportFixture([], eventErrorsBeforeSuccess: 1,
+                                              eventErrorCode: code, outputBeforeError: output)
+            await #expect(throws: OpenAIFailure.self) {
+                try await OpenAIAPI(transport: wire).createResponse([:]) { _ in }
+            }
+            #expect(wire.requests.count == 1)
+        }
+    }
+
+    @Test func failedResponseRetainsProviderCodeInDiagnostics() async throws {
+        var response = OpenAITransportFixture.response([], status: "failed")
+        response["error"] = ["code": "server_error", "message": "Private provider detail"]
+        let wire = OpenAITransportFixture([response, OpenAITransportFixture.response([OpenAITransportFixture.message("Paused")])])
+        let fixture = HarnessFixture([], openAI: client(wire))
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.stopReason == .providerError)
+        #expect(trace.diagnostics.events.contains { $0.kind == "provider_failure" && $0.values["api_code"] == "server_error" })
+        #expect(!trace.diagnostics.exported().contains("Private provider detail"))
+    }
+
     @Test func imageOnlyResponsesFinishWithoutASecondGeneration() async throws {
         let wire = OpenAITransportFixture([OpenAITransportFixture.response([
             ["type": "image_generation_call", "id": "image_fixture", "result": "AQID", "output_format": "png"],

@@ -37,7 +37,16 @@ nonisolated struct OpenAIFailure: LocalizedError, Sendable {
     }
     let kind: Kind
     var status: Int?
+    var code: String?
     var usage: OpenAIUsage?
+    var retryAfter: Double?
+
+    static func event(_ payload: OpenAIJSON) -> Self {
+        let code = payload["error"]["code"].string ?? payload["code"].string
+        return .init(kind: code == "context_length_exceeded" ? .contextLimit : .http,
+                     status: payload["status"].int, code: code)
+    }
+
     var errorDescription: String? {
         switch kind {
         case .configuration:
@@ -160,7 +169,10 @@ nonisolated final class OpenAIHTTPTransport: OpenAITransport {
         guard (200..<300).contains(http.statusCode) else {
             let error = try? OpenAIJSON.decode(data)
             let code = error?["error"]["code"].string
-            throw OpenAIFailure(kind: code == "context_length_exceeded" ? .contextLimit : .http, status: http.statusCode)
+            throw OpenAIFailure(kind: code == "context_length_exceeded" ? .contextLimit : .http,
+                                status: http.statusCode, code: code,
+                                retryAfter: AgentProviderRetry.retryAfter(http.value(forHTTPHeaderField: "Retry-After"),
+                                    milliseconds: http.value(forHTTPHeaderField: "retry-after-ms")))
         }
         let headers = http.allHeaderFields.reduce(into: [String: String]()) { result, entry in
             if let key = entry.key as? String, let value = entry.value as? String {

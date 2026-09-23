@@ -17,20 +17,51 @@ nonisolated struct OpenAIAPI: Sendable {
     func createResponse(_ body: OpenAIJSON, onEvent: @Sendable (OpenAIEvent) async -> Void) async throws -> OpenAIJSON {
         var body = body
         body["stream"] = true
-        for try await event in transport.events(.init(path: ["responses"], body: try body.data())) {
-            try Task.checkCancellation()
-            await onEvent(event)
-            switch event.type {
-            case "response.completed", "response.incomplete", "response.failed", "response.cancelled":
-                guard event.payload["response"].object != nil else { throw OpenAIFailure(kind: .invalidResponse) }
-                return event.payload["response"]
-            case "error":
-                throw OpenAIFailure(kind: event.payload["code"].string == "context_length_exceeded" ? .contextLimit : .http)
-            default:
-                break
+        let canReplay = (body["tools"].array ?? []).allSatisfy { $0["type"].string == "function" }
+        let request = OpenAIRequest(path: ["responses"], body: try body.data())
+        for attempt in 0..<2 {
+            var receivedOutput = false
+            do {
+                for try await event in transport.events(request) {
+                    try Task.checkCancellation()
+                    await onEvent(event)
+                    switch event.type {
+                    case "response.completed", "response.incomplete", "response.failed", "response.cancelled":
+                        guard event.payload["response"].object != nil else { throw OpenAIFailure(kind: .invalidResponse) }
+                        return event.payload["response"]
+                    case "error":
+                        throw OpenAIFailure.event(event.payload)
+                    case "response.created", "response.in_progress", "response.queued":
+                        break
+                    default:
+                        receivedOutput = true
+                    }
+                }
+                throw OpenAIFailure(kind: .streamInterrupted)
+            } catch {
+                guard attempt == 0, canReplay, !receivedOutput, Self.isRetryablePreOutputFailure(error) else { throw error }
+                try await Task.sleep(for: .seconds(2))
             }
         }
         throw OpenAIFailure(kind: .streamInterrupted)
+    }
+
+    private static func isRetryablePreOutputFailure(_ error: any Error) -> Bool {
+        if let failure = error as? OpenAIFailure {
+            if failure.kind == .streamInterrupted {
+                return true
+            }
+            guard failure.kind == .http else { return false }
+            if let code = failure.code {
+                return ["server_error", "server_is_overloaded", "service_unavailable", "rate_limit_exceeded", "slow_down",
+                        "previous_response_not_found", "websocket_connection_limit_reached", ].contains(code)
+            }
+            return failure.status.map { (500...599).contains($0) } ?? true
+        }
+        if let error = error as? URLError {
+            return [.timedOut, .networkConnectionLost, .cannotConnectToHost, .notConnectedToInternet].contains(error.code)
+        }
+        return false
     }
 
     func retrieveResponse(_ id: String) async throws -> OpenAIJSON {
