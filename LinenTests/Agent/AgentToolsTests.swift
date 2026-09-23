@@ -64,6 +64,8 @@ struct AgentToolsTests {
     @Test func theTableIncludesFormBatching() {
         #expect(Set(tools().map(\.name)) == [
             "askUser",
+            "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome",
+            "doubleClickAtPoint", "dragOnPage", "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
             "searchWeb",
             "navigate",
             "newTab",
@@ -78,6 +80,9 @@ struct AgentToolsTests {
             "setChecked",
             "waitForPage",
             "screenshotPage",
+            "movePointer",
+            "clickAtPoint",
+            "typeAtPointer",
             "hoverOnPage",
             "pressKey",
             "selectOption",

@@ -59,9 +59,6 @@ nonisolated final class OpenAILiveRecorder: @unchecked Sendable {
         if let failure = error as? OpenAIHostedLiveFailure {
             return "hosted_" + failure.rawValue
         }
-        if let failure = error as? OpenAIFileLibraryFailure {
-            return "file_" + failure.rawValue
-        }
         if let failure = error as? OpenAIVoiceFailure {
             return "voice_" + String(describing: failure)
         }

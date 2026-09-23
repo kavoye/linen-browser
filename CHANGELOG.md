@@ -12,10 +12,9 @@
   in assistant settings, interrupt a reply, and review the conversation in chat.
 - Use OpenAI models to search the web, create images, and work with data.
   Supported tools are available automatically. OpenAI usage charges apply.
-- Add documents for the OpenAI assistant to search, and connect external
-  services through MCP.
-- Let a supported OpenAI model use screenshots, clicks, and keyboard input to
-  interact with a page. Browser control requires your permission.
+- Connect external services to the OpenAI assistant through MCP.
+- Use the assistant's page screenshot, pointer, and keyboard tools to interact
+  with a page. Browser control requires your permission.
 - Connect an external assistant to Linen through its MCP server. Share selected
   tabs with read-only access or permission to control them. Setup is available
   for Codex, Claude Desktop, Claude Code, and Cursor.
@@ -27,8 +26,8 @@
 - Long conversations can compact their working context automatically or on
   demand. A context indicator shows estimated usage.
 - Assistant activity now shows progress updates and groups completed work.
-- OpenAI settings have separate pages for voice, documents, connections, and
-  permissions. Advanced options are under Developer Settings.
+- OpenAI settings have separate pages for voice, connections, and privacy
+  settings. Advanced options are under Developer Settings.
 - Collapse a Peek preview and reopen it without losing the page.
 - Use the arrow keys in the address field to preview a suggested address before
   opening it.

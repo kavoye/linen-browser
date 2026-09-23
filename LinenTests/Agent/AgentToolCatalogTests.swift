@@ -38,8 +38,8 @@ struct AgentToolCatalogTests {
         let enabled: Set<String> = ["searchWeb", "readPage", "playVideo"]
         let names = makeAgentTools(toolkit: toolkit(), enabledIDs: enabled).map(\.name)
 
-        #expect(Set(names) == enabled.union([AskUserTool.toolName]))
-        #expect(names == ["askUser", "searchWeb", "readPage", "playVideo"])
+        #expect(Set(names) == enabled.union([AskUserTool.toolName]).union(AgentToolCatalog.outcomeToolIDs))
+        #expect(names == ["askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome", "searchWeb", "readPage", "playVideo"])
     }
 
     @Test func everyCategoryListsItsToolsInCatalogOrder() {
@@ -47,7 +47,8 @@ struct AgentToolCatalogTests {
             AgentToolCatalog.descriptors(in: category).map(\.id)
         }
 
-        #expect(Set(flattened) == Set(AgentToolCatalog.all.map(\.id)))
+        #expect(Set(flattened) == AgentToolCatalog.configurableIDs)
+        #expect(Set(flattened).isDisjoint(with: AgentToolCatalog.visualToolIDs))
     }
 }
 
@@ -81,6 +82,8 @@ struct AgentToolPreferencesTests {
         let chosen: Set<String> = ["searchWeb", "readPage", "playVideo"]
         LLMSettings.setEnabledAgentTools(chosen, for: provider)
         #expect(AgentToolCatalog.resolvedIDs(for: provider, tier: .core) == chosen)
+        #expect(AgentToolCatalog.resolvedIDs(for: provider, tier: .full)
+            == chosen.union(AgentToolCatalog.visualToolIDs))
 
         LLMSettings.setEnabledAgentTools(["not-a-tool"], for: provider)
         #expect(

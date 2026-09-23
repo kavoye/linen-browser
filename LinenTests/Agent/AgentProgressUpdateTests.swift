@@ -8,6 +8,24 @@ import Testing
 
 @MainActor
 struct AgentProgressUpdateTests {
+    @Test func liveProgressIsVisibleButNotSavedAsACompletedUpdate() {
+        let database = AppDatabase.temporary()
+        let log = ConversationLog(database: database)
+        let tabID = UUID()
+        let taskID = log.beginTask("Inspect", tabID: tabID)
+
+        log.updateLiveProgress("I'll inspect", taskID: taskID)
+        #expect(log.latestTrace(forTab: tabID)?.liveProgress == "I'll inspect")
+        #expect(log.latestTrace(forTab: tabID)?.progressUpdates.isEmpty == true)
+        log.saveBlocking()
+        let restored = ConversationLog(database: database)
+        #expect(restored.latestTrace(forTab: tabID) != nil)
+        #expect(restored.latestTrace(forTab: tabID)?.liveProgress == nil)
+
+        log.updateLiveProgress(nil, taskID: taskID)
+        #expect(log.latestTrace(forTab: tabID)?.liveProgress == nil)
+    }
+
     @Test func commentaryIsInterleavedWithWorkAndSeparateFromTheFinalAnswer() async throws {
         let fixture = HarnessFixture([
             .commentary("I'll inspect the form first.", ["readPage"]),

@@ -55,7 +55,7 @@ extension PageDriver {
         if key == "Enter" || key == "Space", let category = SensitiveAction.category(of: found.label, context: found.context) {
             guard
                 await AgentActionConsent.permit(
-                    label: found.label, category: category, host: view.url?.host(),
+                    label: found.label, category: category, host: (selectedFrame?.url ?? view.url)?.host(),
                     authoredByAI: AgentAuthoredText.isPresent(in: view))
             else {
                 return SensitiveAction.declined(found.label, category: category)

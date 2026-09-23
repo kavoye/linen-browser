@@ -85,7 +85,6 @@ final class AppCoordinator {
     let linkPeek = LinkPeek()
     let peek = PeekPanel()
     let sidebarDrag = SidebarDragModel()
-    let researchPreview = ResearchPreview()
     let settings = BrowserSettings.shared
 
     @ObservationIgnored lazy var mcpServer = BrowserMCPServer(

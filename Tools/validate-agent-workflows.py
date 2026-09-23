@@ -6,8 +6,6 @@ the scripted provider's token values test accounting, not token efficiency.
 """
 
 import argparse
-import base64
-import io
 import json
 import os
 from pathlib import Path
@@ -45,7 +43,7 @@ def observation(text):
     return matches[-1]
 
 
-def next_message(scenario, messages):
+def workflow_message(scenario, messages):
     outputs = [content(m) for m in messages if m["role"] == "tool"]
     if scenario == "false-completion":
         return {"role": "assistant", "content": "Done."}
@@ -60,10 +58,10 @@ def next_message(scenario, messages):
     def click(label):
         return call("clickOnPage", **identity, ref=control(text, label), label="")
 
-    if scenario in {"fact-01", "search-01", "injection-01", "native-keyboard", "native-shortcut"}:
-        if scenario in {"search-01", "native-keyboard", "native-shortcut"} and index == 1:
+    if scenario in {"fact-01", "search-01", "injection-01", "native-keyboard"}:
+        if scenario in {"search-01", "native-keyboard"} and index == 1:
             return call("typeOnPage", **identity, ref=control(text, "Search catalogue"), field="",
-                        text="Wrong query" if scenario == "native-shortcut" else "Aster", submit=scenario == "search-01")
+                        text="Aster", submit=scenario == "search-01")
         if scenario == "native-keyboard" and index == 2:
             return call("pressKey", **identity, ref=control(text, "Search catalogue"), key="Enter")
         found = re.search(r"Aster\s*\|\s*Code\s+(ASTER-\d+)\s*\|\s*\$(\d+)\s*\|\s*(\d+)\s*grams", text)
@@ -102,6 +100,39 @@ def next_message(scenario, messages):
     return {"role": "assistant", "content": "The requested changes were saved and the resulting page was inspected."}
 
 
+
+def next_message(scenario, messages):
+    if scenario in {"fact-01", "injection-01", "stalled", "false-completion"}:
+        return workflow_message(scenario, messages)
+    outcomes = [content(m) for m in messages if m["role"] == "tool"]
+    if not any("Outcome recorded." in value for value in outcomes):
+        return call("recordTaskOutcome", outcomeID="result", requirement="Complete the requested fixture task and verify its result")
+    if any("Outcome blocked." in value for value in outcomes):
+        return {"role": "assistant", "content": "The saved selection is not exposed by this page, so its persistence remains unverified."}
+    filtered = [m for m in messages if m["role"] != "tool" or not any(
+        marker in content(m) for marker in ("Outcome recorded.", "Outcome verified", "Verification failed:")
+    )]
+    proposed = workflow_message(scenario, filtered)
+    if proposed.get("tool_calls") or any("Outcome verified" in value for value in outcomes):
+        return proposed
+    text = next(content(m) for m in reversed(filtered) if m["role"] == "tool")
+    address = re.search(r"^url: (.+)$", text, re.M)
+    if not address:
+        raise ValueError("Verification requires the URL from the actual page observation")
+    arguments = dict(outcomeID="result", page="", expectedURL=address[1], expectedText="")
+    if scenario in {"search-01", "native-keyboard"}:
+        match = re.search(r"Aster\s*\|\s*Code\s+(ASTER-\d+)", text)
+        if not match:
+            raise ValueError("Missing search result evidence")
+        arguments["expectedText"] = match[1]
+    elif scenario in {"draft-01", "publication-01"}:
+        arguments["expectedText"] = "Draft saved"
+    elif scenario == "preference-01":
+        arguments.update(controlRef=control(text, "theme"), observationID=observation(text), expectedValue="Dark")
+    elif scenario == "dynamic-01":
+        return call("blockTaskOutcome", outcomeID="result", reason="The fixture does not expose the saved selection after submission; persistence cannot be verified from the page.")
+    return call("verifyTaskOutcome", **arguments)
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--benchmark-root", type=Path, default=Path(__file__).resolve().parents[2] / "browser-agent-bench")
@@ -109,16 +140,11 @@ def main():
     parser.add_argument("--seeds", type=int, nargs="+", default=[17, 31, 47])
     parser.add_argument("--provider", choices=["compatible", "openai"], default="compatible")
     parser.add_argument("--tool-search", action="store_true", help="Validate native namespace discovery with scripted Responses output")
-    parser.add_argument("--computer-use", action="store_true", help="Validate native screenshots and keyboard actions through the benchmark worker")
     scenarios = ["fact-01", "search-01", "draft-01", "preference-01", "dynamic-01", "injection-01", "publication-01", "native-keyboard", "stalled", "false-completion"]
-    parser.add_argument("--scenarios", nargs="+", choices=scenarios + ["native-shortcut"], help="Select validation scenarios; defaults to the full validation set")
+    parser.add_argument("--scenarios", nargs="+", choices=scenarios, help="Select validation scenarios; defaults to the full validation set")
     args = parser.parse_args()
     if args.tool_search and args.provider != "openai":
         parser.error("--tool-search requires --provider openai")
-    if args.computer_use and args.provider != "openai":
-        parser.error("--computer-use requires --provider openai")
-    if args.scenarios and "native-shortcut" in args.scenarios and not args.computer_use:
-        parser.error("native-shortcut requires --computer-use")
     sys.path.insert(0, str(args.benchmark_root.resolve() / "src"))
     from fastapi import FastAPI, Request
     from browser_agent_bench.fixtures import Fixtures
@@ -155,33 +181,7 @@ def main():
                 messages.append(dict(role="tool", content=item["output"]))
             elif "role" in item:
                 messages.append(item)
-        message = None
-        if args.computer_use:
-            from PIL import Image
-            assert any(tool.get("type") == "computer" for tool in value.get("tools", [])), "Native computer definition missing"
-            native = [item for item in value["input"] if item.get("type") == "computer_call_output"]
-            for item in native:
-                image_url = item["output"]["image_url"]
-                assert image_url.startswith("data:image/jpeg;base64,"), "Native screenshot missing"
-                with Image.open(io.BytesIO(base64.b64decode(image_url.split(",", 1)[1], validate=True))) as image:
-                    assert image.width > 0 and image.height > 0
-                    image.verify()
-            current["computer_outputs"] = max(current["computer_outputs"], len(native))
-            outputs = [content(m) for m in messages if m["role"] == "tool"]
-            if current["scenario"] in {"native-keyboard", "native-shortcut"} and len(outputs) == 2:
-                phase = current["computer_phase"]
-                current["computer_phase"] += 1
-                if phase < 2:
-                    actions = [{"type": "screenshot"}] if phase == 0 else [{"type": "keypress", "keys": ["ENTER"]}]
-                    if phase == 1 and current["scenario"] == "native-shortcut":
-                        actions = [{"type": "keypress", "keys": ["CTRL", "A"]}, {"type": "type", "text": "Aster"}] + actions
-                    return dict(id="resp_" + uuid.uuid4().hex, object="response", status="completed", model=value["model"],
-                                output=[dict(type="computer_call", id="cu_" + uuid.uuid4().hex, call_id="call_" + uuid.uuid4().hex,
-                                             status="completed", actions=actions, pending_safety_checks=[])],
-                                usage=dict(input_tokens=10, output_tokens=10, total_tokens=20,
-                                           input_tokens_details=dict(cached_tokens=5, cache_write_tokens=0)))
-                message = call("readPage", page="", lookingFor="")
-        message = message or next_message(current["scenario"], messages)
+        message = next_message(current["scenario"], messages)
         output_items = []
         for tool in message.get("tool_calls", []):
             namespace = next((item for item in value.get("tools", []) if item.get("type") == "namespace"
@@ -205,28 +205,28 @@ def main():
 
     fixtures = Fixtures()
     os.environ["BAB_VALIDATION_KEY"] = "local-validation-only"
-    scenarios = args.scenarios or scenarios + (["native-shortcut"] if args.computer_use else [])
+    scenarios = args.scenarios or scenarios
     tasks = {t.id: t for t in catalogue()}
     results = []
     with Server(app) as provider, Server(fixtures.app) as site, Server(fixtures.app) as destination:
         fixtures.destination_url = destination.url
         config = AgentConfig(
-            id="linen-scripted-validation", adapter="linen", model="gpt-5.6-luna" if args.tool_search or args.computer_use else "validation-model", provider=args.provider,
+            id="linen-scripted-validation", adapter="linen", model="gpt-5.6-luna" if args.tool_search else "validation-model", provider=args.provider,
             base_url=provider.url + "/v1", credential_env="BAB_VALIDATION_KEY",
             revision=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
             command=[str(root / "Tools/run-benchmark-adapter.sh")],
             settings={"reasoning_effort": "none", "headless": False, "search_mode": "disabled", "max_model_requests": 20,
-                      "tool_search": args.tool_search, "computer_use": args.computer_use},
+                      "tool_search": args.tool_search},
         )
         provenance = dict(source_sha256=source_digest(), dataset_sha256=dataset_hash())
         for scenario in scenarios:
             for attempt, seed in enumerate(args.seeds):
-                current.update(scenario=scenario, calls=0, computer_phase=0, computer_outputs=0)
-                task = tasks["search-01"] if scenario in {"native-keyboard", "native-shortcut"} else tasks.get(scenario, tasks["fact-01"])
+                current.update(scenario=scenario, calls=0)
+                task = tasks["search-01"] if scenario == "native-keyboard" else tasks.get(scenario, tasks["fact-01"])
                 result = run_trial(fixtures, site.url, task, seed, attempt,
                                    config, output, provenance, mode="validation")
-                negative = scenario in {"stalled", "false-completion"}
-                expected_status = "budget_exceeded" if scenario == "stalled" else "completed"
+                negative = scenario in {"stalled", "false-completion", "dynamic-01"}
+                expected_status = "budget_exceeded" if scenario == "stalled" else "agent_error" if scenario == "dynamic-01" else "completed"
                 valid = (result.status == expected_status and result.success == (not negative)
                          and not result.forbidden_effect and result.usage.get("usage_complete") is True
                          and result.usage.get("model_calls") == current["calls"]
@@ -236,14 +236,12 @@ def main():
                              and result.usage.get("recovery_attempts") == 1
                              and result.usage.get("model_calls") == 7
                              and result.usage.get("model_generations") == 7)
-                if args.computer_use and scenario in {"native-keyboard", "native-shortcut"}:
-                    valid = valid and current["computer_outputs"] == 2 and result.usage.get("computer_calls") == 2
                 results.append(dict(scenario=scenario, seed=seed, validated=valid, trial_id=result.trial_id,
                                     status=result.status, success=result.success, elapsed_seconds=result.elapsed_seconds,
-                                    usage=result.usage, computer_outputs=current["computer_outputs"]))
+                                    usage=result.usage))
                 print(f"{scenario} seed={seed}: {'PASS' if valid else 'FAIL'} ({result.status}, {result.elapsed_seconds:.2f}s)", flush=True)
                 (output / "validation-summary.json").write_text(json.dumps(dict(
-                    mode="scripted_validation", provider=args.provider, tool_search=args.tool_search, computer_use=args.computer_use,
+                    mode="scripted_validation", provider=args.provider, tool_search=args.tool_search,
                     synthetic_provider_usage=True, competitor_scores=False,
                     checks_passed=sum(r["validated"] for r in results), checks_total=len(results), results=results,
                 ), indent=2) + "\n")

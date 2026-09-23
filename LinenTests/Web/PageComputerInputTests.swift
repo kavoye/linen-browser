@@ -45,6 +45,7 @@ struct PageComputerInputTests {
         defer { window.close() }
         var (frame, _) = try await PageDriver.computerFrame(in: view)
         try await PageDriver.computerAction(point(60, 40, frame: frame), frame: frame, in: view)
+        #expect(view.subviews.contains { $0.identifier?.rawValue == "assistant-pointer" })
         #expect(await PageSettle.untilIdle(view))
         let clicks = try await view.evaluateJavaScript("window.clicks || 0") as? Int
         let events = try await view.evaluateJavaScript("JSON.stringify(window.events)") as? String
@@ -76,6 +77,89 @@ struct PageComputerInputTests {
         view.loadHTMLString("<p>New document</p>", baseURL: nil)
         #expect(await PageSettle.untilIdle(view))
         await #expect(throws: PageComputerFailure.self) { try await PageDriver.validateComputerFrame(frame, in: view, checkRevision: false) }
+    }
+
+    @Test func coordinateClickSurvivesUnrelatedPageChangesButRejectsChangedTarget() async throws {
+        let (view, window) = await page("""
+            <button id='date' style='position:absolute;left:20px;top:20px;width:100px;height:50px'
+                onclick='window.selected=true'>29</button>
+            <p id='carousel' style='position:absolute;left:250px;top:200px'>First slide</p>
+            """)
+        defer { window.close() }
+
+        let (frame, _) = try await PageDriver.computerFrame(in: view)
+        let action = point(60, 45, frame: frame)
+        _ = try await view.evaluateJavaScript("document.querySelector('#carousel').textContent='Second slide'")
+        try await PageDriver.validateComputerAction(action, frame: frame, in: view)
+        try await PageDriver.computerAction(action, frame: frame, in: view)
+        #expect(try await view.evaluateJavaScript("window.selected === true") as? Bool == true)
+
+        let (fresh, _) = try await PageDriver.computerFrame(in: view)
+        _ = try await view.evaluateJavaScript("document.querySelector('#date').style.background='red'")
+        await #expect(throws: PageComputerFailure.stale) {
+            try await PageDriver.validateComputerAction(action, frame: fresh, in: view)
+        }
+    }
+
+    @Test func coordinateClickRejectsTargetChangedDuringPointerPreview() async throws {
+        let (view, window) = await page("""
+            <button id='target' style='position:absolute;left:20px;top:20px;width:120px;height:40px'
+              onclick='window.clicked=true'>Choose</button>
+            """)
+        defer { window.close() }
+        let (frame, _) = try await PageDriver.computerFrame(in: view)
+        let action = point(60, 40, frame: frame)
+        let click = Task { try await PageDriver.computerAction(action, frame: frame, in: view) }
+        #expect(await waitUntil(timeout: .seconds(2)) {
+            view.subviews.contains { $0.identifier?.rawValue == "assistant-pointer" }
+        })
+        _ = try await view.evaluateJavaScript("document.querySelector('#target').textContent='Changed'")
+        await #expect(throws: PageComputerFailure.stale) { try await click.value }
+        #expect(try await view.evaluateJavaScript("window.clicked === true") as? Bool == false)
+    }
+
+    @Test(arguments: ["", "L", "Lviv"])
+    func namedClickSendsMouseDownToPopupOption(value: String) async throws {
+        let (view, window) = await page("""
+            <input id='city' aria-label='City' value='\(value)'>
+            <div id='choice' role='option' style='position:absolute;left:20px;top:60px;width:140px;height:44px'>Lviv</div>
+            <script>document.querySelector('#choice').addEventListener('mousedown', event => {
+              if (event.isTrusted) { document.querySelector('#city').value='Lviv'; window.selected = true; event.currentTarget.remove(); }
+            }); document.querySelector('#city').focus();</script>
+            """)
+        defer { window.close() }
+        _ = await PageDriver.snapshot(view)
+        let result = await PageDriver.click(ref: 0, label: "Lviv", in: view)
+        #expect(result.hasPrefix("Clicked"))
+        #expect(try await view.evaluateJavaScript("window.selected === true") as? Bool == true)
+        #expect(try await view.evaluateJavaScript("document.querySelector('#city').value") as? String == "Lviv")
+    }
+
+    @Test(arguments: ["", "Lviv"])
+    func namedClickDoesNotConfirmOptionThatStaysOpen(value: String) async throws {
+        let (view, window) = await page("""
+            <input id='city' aria-label='City' value='\(value)'>
+            <div role='option' style='position:absolute;left:20px;top:60px;width:140px;height:44px'>Lviv</div>
+            <script>document.querySelector('#city').focus();</script>
+            """)
+        defer { window.close() }
+        _ = await PageDriver.snapshot(view)
+        let result = await PageDriver.click(ref: 0, label: "Lviv", in: view)
+        #expect(result.contains("not confirmed"))
+    }
+
+    @Test func selectedOptionCanRemainVisibleWithoutAFocusedInput() async throws {
+        let (view, window) = await page("""
+            <div id='choice' role='option' aria-selected='false' style='width:140px;height:44px'>Lviv</div>
+            <script>document.querySelector('#choice').addEventListener('mousedown', event => {
+              if (event.isTrusted) event.currentTarget.setAttribute('aria-selected', 'true');
+            });</script>
+            """)
+        defer { window.close() }
+        _ = await PageDriver.snapshot(view)
+        let result = await PageDriver.click(ref: 0, label: "Lviv", in: view)
+        #expect(result.hasPrefix("Clicked"))
+        #expect(try await view.evaluateJavaScript("document.querySelector('#choice').getAttribute('aria-selected')") as? String == "true")
     }
 
     @Test func printableKeysHavePhysicalCodesAndShiftedCharacters() async throws {

@@ -9,6 +9,7 @@ nonisolated enum PageRuntime {
       const refIDs = new WeakMap();
       const refSignatures = new Map();
       const expectedValues = new WeakMap();
+      let lastControlQuery = null;
       window.__linenRefs = [];
       const parentOf = el => el.parentElement || el.getRootNode()?.host || el.ownerDocument?.defaultView?.frameElement;
 
@@ -74,6 +75,8 @@ nonisolated enum PageRuntime {
         if (['textbox', 'searchbox'].includes(role)) return 'field';
         if (role === 'combobox') return el.isContentEditable || tag === 'INPUT' ? 'field' : 'combobox';
         if (['button', 'tab', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'link', 'option'].includes(role)) return 'button';
+        if (role === 'gridcell' && el.hasAttribute('tabindex')
+          && !el.querySelector('button,a[href],input,select,textarea,[role=button]')) return 'button';
         if (el.hasAttribute && el.hasAttribute('onclick')) return 'button';
         if (el.isContentEditable && !(el.parentElement && el.parentElement.isContentEditable)) return 'field';
         if (role === 'region' || (el.scrollHeight > el.clientHeight + 1 && ['auto','scroll'].includes(realm(el).getComputedStyle(el).overflowY))) return 'scrollarea';
@@ -138,6 +141,7 @@ nonisolated enum PageRuntime {
           const entry = { r: ref, k: kind, l: label };
           if (kind === 'link' && el.href.length <= 2048) entry.h = el.href;
           if (kind === 'field') {
+            if (el.readOnly || el.getAttribute('aria-readonly') === 'true') entry.ro = 1;
             entry.t = ((el.type || (el.isContentEditable ? 'editable' : 'text')) + '').toLowerCase();
             const v = norm(el.value || (el.isContentEditable ? el.textContent : '') || '');
             if (isSensitiveField(el)) {
@@ -273,8 +277,14 @@ nonisolated enum PageRuntime {
           set('pointer-events', 'none');
           set('transition', 'opacity 0.2s');
           doc.documentElement.appendChild(ring);
-          const track = () => {
-            if (!el.isConnected || !ring.isConnected) { ring.remove(); return; }
+          let changes, sizeChanges;
+          const stop = () => {
+            changes?.disconnect();
+            sizeChanges?.disconnect();
+            ring.remove();
+          };
+          const sync = () => {
+            if (!el.isConnected || !ring.isConnected) { stop(); return; }
             const rect = el.getBoundingClientRect();
             set('left', (rect.left - 4) + 'px');
             set('top', (rect.top - 4) + 'px');
@@ -282,10 +292,21 @@ nonisolated enum PageRuntime {
             set('height', (rect.height + 8) + 'px');
             const radius = parseFloat(view.getComputedStyle(el).borderTopLeftRadius) || 0;
             set('border-radius', (radius + 4) + 'px');
-            view.requestAnimationFrame(track);
+          };
+          const track = () => {
+            sync();
+            if (ring.isConnected) view.requestAnimationFrame(track);
           };
           track();
-          setTimeout(() => { set('opacity', '0'); setTimeout(() => ring.remove(), 250); }, ms);
+          changes = new view.MutationObserver(records => {
+            if (records.some(record => record.target !== ring)) sync();
+          });
+          changes.observe(doc.documentElement, { attributes: true, childList: true, subtree: true });
+          if (view.ResizeObserver) {
+            sizeChanges = new view.ResizeObserver(sync);
+            sizeChanges.observe(el);
+          }
+          setTimeout(() => { set('opacity', '0'); setTimeout(stop, 250); }, ms);
         } catch (e) {}
       };
 
@@ -335,19 +356,28 @@ nonisolated enum PageRuntime {
         if (scope) { try { root = document.querySelector(scope); } catch (e) {} }
         if (scope && !root) return { error: 'No element matches that scope.' };
         const candidates = all.filter(c => (!root || within(root, window.__linenRefs[c.r - 1])) && (!viewportOnly || c.vp));
+        const availabilityOrder = (a, b) => Number(b.vp) - Number(a.vp) || Number(!!a.d) - Number(!!b.d);
         if (terms.length) candidates.sort((a, b) => {
-          const score = c => terms.reduce((n, t) => n + (c.l.toLowerCase().includes(t) ? 10 : 0), 0) + (c.vp ? 1 : 0);
-          return score(b) - score(a);
+          const score = c => terms.reduce((n, t) => n + (c.l.toLowerCase().includes(t) ? 10 : 0), 0);
+          return score(b) - score(a) || availabilityOrder(a, b);
         });
-        else candidates.sort((a, b) => Number(b.vp) - Number(a.vp));
-        const offset = Math.max(0, controlOffset);
+        else candidates.sort(availabilityOrder);
+        const controlQuery = JSON.stringify([norm(query).toLowerCase(), scope, viewportOnly]);
+        let offset = Math.max(0, controlOffset), controlReset = '';
+        if (offset > 0 && lastControlQuery !== null && lastControlQuery !== controlQuery) {
+          offset = 0; controlReset = 'query_changed';
+        } else if (offset > 0 && offset >= candidates.length) {
+          offset = 0; controlReset = 'out_of_range';
+        }
+        lastControlQuery = controlQuery;
         return { text: text.slice(start, end), textTotal: text.length, textStart: start,
           controls: candidates.slice(offset, offset + controlLimit), controlTotal: candidates.length, controlStart: offset,
+          controlReset,
           snapshot: window.__linenSnapshot, document: documentID, url: location.href };
       };
 
       return { matchesRef, expectValue, valueState, walk, documentID, norm, collect, pageText, viewportText, resolve, setValue, pressEnter,
-        labelOf, kindOf, highlight, isSensitiveField, disabled, actionable, observe };
+        labelOf, kindOf, visible, highlight, isSensitiveField, disabled, actionable, observe };
     })());
     """#
 

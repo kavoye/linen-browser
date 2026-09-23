@@ -41,17 +41,14 @@ struct WebViewConfigurationTests {
         #expect(second.defaultWebpagePreferences.allowsContentJavaScript)
     }
 
-    /// The bug 0.4.0 shipped: the assistant's own page turned JavaScript on
-    /// for every tab, because the copy handed every configuration the same
-    /// preferences to write on.
-    @Test(.boundedWebViews) func theAssistantsPageLeavesEveryTabsSettingsAlone() {
+    @Test(.boundedWebViews) func theLinkPreviewLeavesEveryTabsSettingsAlone() {
         let settings = BrowserSettings.shared
         let wasEnabled = settings.javaScriptEnabled
         settings.javaScriptEnabled = false
         defer { settings.javaScriptEnabled = wasEnabled }
 
         let tab = WebViewPool.shared.makeColdView()
-        _ = AgentToolkit.researchConfiguration(extensionController: nil)
+        _ = LinkPeekLoader.configuration()
 
         #expect(
             !tab.configuration.defaultWebpagePreferences.allowsContentJavaScript,
@@ -71,7 +68,8 @@ struct WebViewConfigurationTests {
             forMainFrameOnly: true
         ))
 
-        #expect(second.userContentController.userScripts.isEmpty)
+        #expect(!second.userContentController.userScripts.contains { $0.source == "void 0" })
+        #expect(second.userContentController.userScripts.contains { $0.source == PageFrameRegistry.script })
     }
 
     @Test(.boundedWebViews) func aBuiltViewKeepsItsOwnPreferences() {

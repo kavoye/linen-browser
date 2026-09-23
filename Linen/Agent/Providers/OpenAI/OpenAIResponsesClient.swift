@@ -8,7 +8,6 @@ nonisolated struct OpenAIResponsesClient: Sendable {
     let api: OpenAIAPI
     let model: String
     let binding: String
-    let fileLibraryBinding: String
     var settings: OpenAIResponseSettings = .init()
     private let mcpAuthorization: [UUID: String]
     private let providerID: String
@@ -34,9 +33,7 @@ nonisolated struct OpenAIResponsesClient: Sendable {
         let discoveryIdentity = settings.useToolSearch && OpenAIToolSearch.supports(model) ? "\u{0}tool-search:v1" : ""
         let shellTools = settings.hostedTools.filter { $0["type"] == "shell" }
         let shellIdentity = shellTools.isEmpty ? "" : "\u{0}hosted-shell:v1:" + ((try? OpenAIJSON.array(shellTools).text()) ?? "")
-        let computerIdentity = settings.useComputer ? "\u{0}computer:v1" : ""
-        self.binding = OpenAIConversationState.binding(endpoint: endpoint, model: model, credential: apiKey + remoteIdentity + discoveryIdentity + shellIdentity + computerIdentity)
-        self.fileLibraryBinding = OpenAIConversationState.binding(endpoint: endpoint, model: "file-collections", credential: apiKey)
+        self.binding = OpenAIConversationState.binding(endpoint: endpoint, model: model, credential: apiKey + remoteIdentity + discoveryIdentity + shellIdentity)
         self.settings = settings
         let http = OpenAIHTTPTransport(baseURL: endpoint, apiKey: apiKey)
         api = OpenAIAPI(transport: transport ?? (settings.useWebSocket ? OpenAIWebSocketTransport(http: http) : http))
@@ -49,8 +46,6 @@ nonisolated struct OpenAIResponsesClient: Sendable {
     func body(state: OpenAIConversationState, instructions: String, tools: [OpenAIJSON], maxTokens: Int,
               oauthTokens: [UUID: String] = [:]) throws -> OpenAIJSON {
         try settings.validate()
-        try OpenAIFileLibrary.validateSelection(tools: settings.hostedTools,
-            collections: OpenAIFileCollectionStore.load(binding: fileLibraryBinding))
         var body = settings.additionalParameters
         body["model"] = .string(model)
         body["input"] = .array(state.mcpRequestItems(toolsEnabled: !settings.mcpServers.isEmpty))
@@ -59,14 +54,7 @@ nonisolated struct OpenAIResponsesClient: Sendable {
             ? "\nA previously approved remote tool call has an unconfirmed outcome. Its approval cannot be reused. "
                 + "Report the uncertainty, verify effects with read-only tools, and do not repeat the action automatically."
             : ""
-        let computerInstructions = settings.useComputer
-            ? "\nComputer actions control only the authorized browser page. Request a screenshot before acting and after a stopped action. "
-                + "Coordinates refer to the returned image. Browser tab changes, navigation, resizing or interruption can invalidate the view. "
-                + "A failed computer action may have partially run: inspect the current screen and verify effects before deciding what to do next. "
-                + "Hover requires the browser window to be in the foreground. Keypress uses US ANSI keys and Shift for capitals; use type for Unicode text. "
-                + "System shortcuts and access to the system clipboard are unavailable."
-            : ""
-        body["instructions"] = .string(instructions + uncertain + computerInstructions)
+        body["instructions"] = .string(instructions + uncertain)
         body["max_output_tokens"] = .integer(Int64(maxTokens))
         body["store"] = .bool(settings.store)
         if OpenAIModelSupport.reasoning(model) {
@@ -96,7 +84,6 @@ nonisolated struct OpenAIResponsesClient: Sendable {
         body["include"] = .array(includes)
         let local = OpenAIToolSearch.definitions(tools, enabled: settings.useToolSearch && OpenAIToolSearch.supports(model))
         body["tools"] = .array(try local + OpenAIHostedShell.definitions(settings.hostedTools, state: state) + remoteTools(oauthTokens: oauthTokens))
-        if settings.useComputer { body["tools"] = .array((body["tools"].array ?? []) + [["type": "computer"]]) }
         return body
     }
 
@@ -108,12 +95,13 @@ nonisolated struct OpenAIResponsesClient: Sendable {
     func respond(
         transcript: Transcript, prompt: String, images: [Transcript.ImageSegment], state: OpenAIConversationState,
         tools: [any Tool], maxTokens: Int, attachmentInput: OpenAIAttachmentInput? = nil,
-        onText: @escaping @MainActor (String) -> Void
+        onText: @escaping @MainActor (String) -> Void,
+        onProgress: @escaping @MainActor (String) -> Void = { _ in }
     ) async throws -> OpenAIModelStep {
         var entries = Array(transcript)
         entries.append(.prompt(.init(segments: [.text(.init(content: prompt))] + images.map { .image($0) })))
         var state = try state.synchronizing(Transcript(entries: entries), attachmentInput: attachmentInput)
-        let definitions = try tools.filter { $0.name != OpenAIComputerCall.toolName }.map { tool -> OpenAIJSON in
+        let definitions = try tools.map { tool -> OpenAIJSON in
             [
                 "type": "function", "name": .string(tool.name), "description": .string(tool.description),
                 "parameters": try OpenAISchema.strict(tool.parameters, dependencies: OpenAISchema.browserDependencies), "strict": true,
@@ -127,7 +115,7 @@ nonisolated struct OpenAIResponsesClient: Sendable {
         let request = try body(state: state, instructions: OpenAIConversationState.instructions(transcript), tools: definitions,
                                maxTokens: maxTokens, oauthTokens: oauthTokens)
         state.mcpDestinations = Dictionary(settings.mcpServers.map { ($0.label, $0.destination) }, uniquingKeysWith: { first, _ in first })
-        let streaming = OpenAIVisibleStream(onText: onText)
+        let streaming = OpenAIVisibleStream(onText: onText, onProgress: onProgress)
         let response = try await api.createResponse(request) { notification in await streaming.receive(notification) }
         let usage = OpenAIUsage(raw: response["usage"])
         guard response["status"].string == "completed" else {
@@ -144,7 +132,7 @@ nonisolated struct OpenAIResponsesClient: Sendable {
             if item["type"] == "function_call" || item["type"] == "shell_call" { return item["call_id"].string }
             if item["type"] == "mcp_approval_request" { return item["id"].string }
             return nil
-        }).union(state.computerCallIDs ?? [])
+        })
         guard output.calls.allSatisfy({ !previousCalls.contains($0.id) }) else { throw OpenAIFailure(kind: .invalidResponse, usage: usage) }
         let shellIDs = (response["output"].array ?? []).filter { $0["type"] == "shell_call" }.compactMap { $0["call_id"].string }
         guard shellIDs.allSatisfy({ id in !previousCalls.contains(id) && !output.calls.contains(where: { $0.id == id }) }) else {
@@ -205,13 +193,9 @@ nonisolated struct OpenAIModelStep {
                 guard let id = item["call_id"].string, let name = item["name"].string, let arguments = item["arguments"].string,
                     !id.isEmpty, !name.isEmpty, !calls.contains(where: { $0.id == id })
                 else { throw OpenAIFailure(kind: .invalidResponse) }
-                guard name != OpenAIComputerCall.toolName else { throw OpenAIFailure(kind: .unsupportedAction) }
                 calls.append(.init(id: id, toolName: name, arguments: try GeneratedContent(json: arguments)))
             } else if type == "computer_call" {
-                guard localDefinitions.contains(where: { $0["type"] == "computer" }) else { throw OpenAIFailure(kind: .unsupportedAction) }
-                let computer = try OpenAIComputerCall(item)
-                guard !calls.contains(where: { $0.id == computer.id }) else { throw OpenAIFailure(kind: .invalidResponse) }
-                calls.append(try computer.proposal())
+                throw OpenAIFailure(kind: .unsupportedAction)
             } else if type == "tool_search_call" || type == "tool_search_output" {
                 try OpenAIToolSearch.validateHostedEvent(item)
             } else if type == "mcp_approval_request" {
@@ -238,13 +222,35 @@ private final class OpenAIVisibleStream {
     var text = ""
     private let started = ContinuousClock.now
     private var lastPublished: ContinuousClock.Instant?
+    private var lastProgressPublished: ContinuousClock.Instant?
+    private var progressArguments: [Int: String] = [:]
     private(set) var firstTextMilliseconds: Int?
     let onText: @MainActor (String) -> Void
-    init(onText: @escaping @MainActor (String) -> Void) {
+    let onProgress: @MainActor (String) -> Void
+    init(onText: @escaping @MainActor (String) -> Void, onProgress: @escaping @MainActor (String) -> Void) {
         self.onText = onText
+        self.onProgress = onProgress
     }
     func receive(_ event: OpenAIEvent) {
-        if event.type == "response.output_text.delta", let delta = event.payload["delta"].string {
+        if event.type == "response.output_item.added",
+           event.payload["item"]["type"] == "function_call",
+           event.payload["item"]["name"].string == UpdateProgressTool.toolName,
+           let index = event.payload["output_index"].int {
+            progressArguments[index] = event.payload["item"]["arguments"].string ?? ""
+        } else if event.type == "response.function_call_arguments.delta",
+                  let index = event.payload["output_index"].int,
+                  let delta = event.payload["delta"].string,
+                  var arguments = progressArguments[index] {
+            guard arguments.count + delta.count <= 16_000 else { return }
+            arguments += delta
+            progressArguments[index] = arguments
+            publishProgress(arguments)
+        } else if event.type == "response.function_call_arguments.done",
+                  let index = event.payload["output_index"].int,
+                  progressArguments[index] != nil,
+                  let arguments = event.payload["arguments"].string {
+            publishProgress(arguments, force: true)
+        } else if event.type == "response.output_text.delta", let delta = event.payload["delta"].string {
             text += delta
             let now = ContinuousClock.now
             if firstTextMilliseconds == nil, !delta.isEmpty {
@@ -257,5 +263,16 @@ private final class OpenAIVisibleStream {
             lastPublished = now
             onText(text)
         }
+    }
+
+    private func publishProgress(_ arguments: String, force: Bool = false) {
+        guard arguments.count <= 16_000,
+              let message = OpenAIProgressMessage.partial(arguments) else { return }
+        let visible = String(message.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2_000))
+        guard !visible.isEmpty else { return }
+        let now = ContinuousClock.now
+        if !force, let lastProgressPublished, now - lastProgressPublished < .milliseconds(50) { return }
+        lastProgressPublished = now
+        onProgress(visible)
     }
 }

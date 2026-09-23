@@ -29,7 +29,6 @@ extension AppCoordinator {
         voiceInput.cancel()
         agentTurns.cancel()
         agentTurns.forgetEveryConversation()
-        researchPreview.forget()
         media.releaseControl()
         statusMessage = nil
         closePalette()

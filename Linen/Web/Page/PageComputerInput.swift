@@ -14,18 +14,45 @@ final class PageComputerFrame {
     let pixels: CGSize
     let document: String
     let revision: Int
-    init(view: WKWebView, pixels: CGSize, document: String, revision: Int) {
+    let screenshot: Data
+    init(view: WKWebView, pixels: CGSize, document: String, revision: Int, screenshot: Data) {
         self.view = view
         self.geometry = view.bounds.size
         self.zoom = view.pageZoom
         self.pixels = pixels
         self.document = document
         self.revision = revision
+        self.screenshot = screenshot
     }
 }
 
 nonisolated enum PageComputerFailure: String, Error {
-    case stale, unavailable, sensitive, declined, unsupportedKey
+    case stale, unavailable, unverified, sensitive, declined, unsupportedKey
+}
+
+@MainActor
+private final class AssistantPointerView: NSView {
+    var hideTask: Task<Void, Never>?
+
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let shape = NSBezierPath()
+        shape.move(to: NSPoint(x: 2, y: 2))
+        shape.line(to: NSPoint(x: 2, y: 20))
+        shape.line(to: NSPoint(x: 6, y: 16))
+        shape.line(to: NSPoint(x: 9, y: 23))
+        shape.line(to: NSPoint(x: 13, y: 21))
+        shape.line(to: NSPoint(x: 10, y: 14))
+        shape.line(to: NSPoint(x: 17, y: 14))
+        shape.close()
+        NSColor.controlAccentColor.setFill()
+        shape.fill()
+        NSColor.white.setStroke()
+        shape.lineWidth = 2
+        shape.stroke()
+    }
 }
 
 extension PageDriver {
@@ -50,7 +77,7 @@ extension PageDriver {
             let after = await evaluateJSON(scripted("return JSON.stringify({ document: R.documentID, revision: window.__linenComputer?.revision });"), in: view)
             guard after?["document"] as? String == document else { throw PageComputerFailure.stale }
             if after?["revision"] as? Int == revision {
-                return (PageComputerFrame(view: view, pixels: CGSize(width: bitmap.pixelsWide, height: bitmap.pixelsHigh), document: document, revision: revision), data)
+                return (PageComputerFrame(view: view, pixels: CGSize(width: bitmap.pixelsWide, height: bitmap.pixelsHigh), document: document, revision: revision, screenshot: data), data)
             }
             await Task.yield()
         } while ContinuousClock.now < deadline
@@ -67,8 +94,46 @@ extension PageDriver {
               !checkRevision || state?["revision"] as? Int == frame.revision else { throw PageComputerFailure.stale }
     }
 
+    static func validateComputerAction(_ action: OpenAIJSON, frame: PageComputerFrame, in view: WKWebView) async throws {
+        try await validateComputerFrame(frame, in: view, checkRevision: false)
+        let state = await evaluateJSON(scripted("return JSON.stringify({ revision: window.__linenComputer?.revision });"), in: view)
+        guard let revision = state?["revision"] as? Int else { throw PageComputerFailure.stale }
+        guard revision != frame.revision else { return }
+
+        // Changes elsewhere on the page, such as a carousel, do not invalidate an unchanged target.
+        guard ["click", "double_click", "move", "drag", "drag_events"].contains(action["type"].string ?? ""),
+              let point = try? computerPoint(action["x"] == .null ? (action["path"].array?.first ?? .null) : action, frame: frame),
+              let (fresh, _) = try? await computerFrame(in: view),
+              screenshotMatches(frame, fresh, around: point)
+        else { throw PageComputerFailure.stale }
+    }
+
+    private static func screenshotMatches(_ before: PageComputerFrame, _ after: PageComputerFrame, around point: CGPoint) -> Bool {
+        guard before.geometry == after.geometry, before.zoom == after.zoom, before.pixels == after.pixels,
+              let first = NSBitmapImageRep(data: before.screenshot), let second = NSBitmapImageRep(data: after.screenshot)
+        else { return false }
+        let x = Int(point.x * before.pixels.width / before.geometry.width)
+        let y = Int(point.y * before.pixels.height / before.geometry.height)
+        let radius = 24
+        var sampled = 0
+        var changed = 0
+        for row in stride(from: max(0, y - radius), through: min(first.pixelsHigh - 1, y + radius), by: 4) {
+            for column in stride(from: max(0, x - radius), through: min(first.pixelsWide - 1, x + radius), by: 4) {
+                guard let a = first.colorAt(x: column, y: row)?.usingColorSpace(.deviceRGB),
+                      let b = second.colorAt(x: column, y: row)?.usingColorSpace(.deviceRGB) else { return false }
+                sampled += 1
+                if abs(a.redComponent - b.redComponent) > 0.08 ||
+                    abs(a.greenComponent - b.greenComponent) > 0.08 ||
+                    abs(a.blueComponent - b.blueComponent) > 0.08 {
+                    changed += 1
+                }
+            }
+        }
+        return sampled > 0 && changed * 100 <= sampled
+    }
+
     private static func computerPoint(_ action: OpenAIJSON, frame: PageComputerFrame) throws -> CGPoint {
-        guard let x = OpenAIComputerCall.number(action["x"]), let y = OpenAIComputerCall.number(action["y"]), x >= 0, y >= 0,
+        guard let x = action["x"].finiteNumber, let y = action["y"].finiteNumber, x >= 0, y >= 0,
               CGFloat(x) < frame.pixels.width, CGFloat(y) < frame.pixels.height else { throw PageComputerFailure.stale }
         return CGPoint(x: CGFloat(x) * frame.geometry.width / frame.pixels.width, y: CGFloat(y) * frame.geometry.height / frame.pixels.height)
     }
@@ -128,7 +193,7 @@ extension PageDriver {
             point = try computerPoint(first, frame: frame)
         } else { point = nil }
         let target = try await computerTarget(point: point, in: view)
-        let activates = ["click", "double_click", "drag"].contains(type)
+        let activates = ["click", "double_click", "drag", "drag_events"].contains(type)
             && !["back", "forward"].contains(action["button"].string ?? "")
         let submitsKey = type == "keypress" && (action["keys"].array ?? []).contains {
             ["ENTER", "RETURN", "SPACE", " "].contains($0.string?.uppercased() ?? "")
@@ -223,13 +288,21 @@ extension PageDriver {
             }
             try await Task.sleep(for: .milliseconds(20))
         } while ContinuousClock.now < deadline
-        throw PageComputerFailure.unavailable
+        throw PageComputerFailure.unverified
     }
 
     private static func performComputerAction(_ action: OpenAIJSON, frame: PageComputerFrame, point: CGPoint?, current: [String: Any],
                                               modifiers: NSEvent.ModifierFlags, in view: WKWebView, window: NSWindow) async throws {
         guard window.attachedSheet == nil else { throw PageComputerFailure.unavailable }
         let type = action["type"].string ?? ""
+        if let point, ["click", "double_click", "move", "drag", "drag_events"].contains(type) {
+            await showAssistantPointer(at: point, in: view)
+            try await validateComputerAction(action, frame: frame, in: view)
+            let target = try await computerTarget(point: point, in: view)
+            guard target["signature"] as? String == current["signature"] as? String else {
+                throw PageComputerFailure.stale
+            }
+        }
         switch type {
         case "click", "double_click":
             guard let point else { throw PageComputerFailure.unavailable }
@@ -250,6 +323,16 @@ extension PageDriver {
         case "move":
             guard let point else { throw PageComputerFailure.unavailable }
             try computerMouse(point: point, button: "left", phase: "move", modifiers: modifiers, in: view, window: window)
+        case "drag_events":
+            let path = try (action["path"].array ?? []).map { try computerPoint($0, frame: frame) }
+            guard (2...50).contains(path.count), let end = path.last else { throw PageComputerFailure.unavailable }
+            let destination = try await computerTarget(point: end, in: view)
+            if let category = SensitiveAction.category(of: destination["label"] as? String ?? "", context: destination["context"] as? String ?? "") {
+                guard await AgentActionConsent.permit(label: destination["label"] as? String ?? "Drop target", category: category,
+                    host: view.url?.host(), authoredByAI: AgentAuthoredText.isPresent(in: view)) else { throw PageComputerFailure.declined }
+            }
+            try await validateComputerFrame(frame, in: view, checkRevision: true)
+            try await dispatchDrag(path: path, modifiers: modifiers, in: view)
         case "drag":
             let path = try (action["path"].array ?? []).map { try computerPoint($0, frame: frame) }
             guard let start = path.first, let end = path.last else { throw PageComputerFailure.unavailable }
@@ -261,7 +344,7 @@ extension PageDriver {
             }
             try computerMouse(point: end, button: "left", phase: "up", modifiers: modifiers, in: view, window: window)
         case "scroll":
-            let x = OpenAIComputerCall.number(action["scroll_x"]) ?? 0, y = OpenAIComputerCall.number(action["scroll_y"]) ?? 0
+            let x = action["scroll_x"].finiteNumber ?? 0, y = action["scroll_y"].finiteNumber ?? 0
             let result = await evaluateJSON(scripted("""
                 let el = window.__linenComputerTarget;
                 while (el && el !== el.ownerDocument.scrollingElement) {
@@ -287,6 +370,29 @@ extension PageDriver {
             throw PageComputerFailure.unavailable
         }
         try Task.checkCancellation()
+    }
+
+    private static func showAssistantPointer(at point: CGPoint, in view: WKWebView) async {
+        let pointer = view.subviews.compactMap { $0 as? AssistantPointerView }.first ?? AssistantPointerView(frame: .zero)
+        pointer.identifier = NSUserInterfaceItemIdentifier("assistant-pointer")
+        let localY = view.isFlipped ? point.y : view.bounds.height - point.y
+        let destination = NSPoint(x: point.x - 2, y: localY - 2)
+        pointer.hideTask?.cancel()
+        if pointer.superview == nil {
+            pointer.frame = NSRect(origin: destination, size: NSSize(width: 24, height: 26))
+            view.addSubview(pointer)
+            try? await Task.sleep(for: .milliseconds(180))
+        } else {
+            await NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.18
+                pointer.animator().setFrameOrigin(destination)
+            }
+        }
+        pointer.hideTask = Task { [weak pointer] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            pointer?.removeFromSuperview()
+        }
     }
 
     private static func computerMouse(point: CGPoint, button: String, phase: String, count: Int = 1, modifiers: NSEvent.ModifierFlags = [], in view: WKWebView, window: NSWindow) throws {

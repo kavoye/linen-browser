@@ -107,3 +107,50 @@ nonisolated struct ScreenshotPageTool: Tool {
         await toolkit.withPageContext(page: arguments.page, observationID: nil) { await toolkit.screenshotPage() }
     }
 }
+
+nonisolated struct MovePointerTool: Tool {
+    let name = "movePointer"
+    let description = "Move the visible assistant pointer to pixel coordinates in the latest screenshot. Capture the page first. Use for visual hover when page controls are unavailable."
+    let toolkit: AgentToolkit
+    @Generable struct Arguments {
+        var page: String?
+        var x: Int
+        var y: Int
+    }
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.withPageContext(page: arguments.page, observationID: nil) {
+            await toolkit.visualAction(name: name, action: ["type": "move", "x": .integer(Int64(arguments.x)), "y": .integer(Int64(arguments.y))])
+        }
+    }
+}
+
+nonisolated struct ClickAtPointTool: Tool {
+    let name = "clickAtPoint"
+    let description = "Click pixel coordinates in the latest screenshot with the visible assistant pointer. Capture the page first. Prefer clickOnPage when a numbered control is available."
+    let toolkit: AgentToolkit
+    @Generable struct Arguments {
+        var page: String?
+        var x: Int
+        var y: Int
+    }
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.withPageContext(page: arguments.page, observationID: nil) {
+            await toolkit.visualAction(name: name, action: ["type": "click", "button": "left", "x": .integer(Int64(arguments.x)), "y": .integer(Int64(arguments.y))])
+        }
+    }
+}
+
+nonisolated struct TypeAtPointerTool: Tool {
+    let name = "typeAtPointer"
+    let description = "Type into the field focused by a visual click. Use the latest screenshot; filled sensitive fields are blocked. Prefer typeOnPage when a numbered field is available."
+    let toolkit: AgentToolkit
+    @Generable struct Arguments {
+        var page: String?
+        var text: String
+    }
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.withPageContext(page: arguments.page, observationID: nil) {
+            await toolkit.visualAction(name: name, action: ["type": "type", "text": .string(arguments.text)])
+        }
+    }
+}

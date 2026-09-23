@@ -34,7 +34,7 @@ struct PageAutomationGuard: Sendable {
     static func withCurrentDocument(in view: WKWebView, operation: () async -> String) async -> String {
         guard allowsExecution else { return PageDriver.staleMessage }
         guard let prior = current else { return await operation() }
-        let updated = Self(documentURL: view.url?.absoluteString ?? prior.documentURL,
+        let updated = Self(documentURL: PageDriver.selectedFrame?.url.absoluteString ?? view.url?.absoluteString ?? prior.documentURL,
                            snapshot: nil, validate: prior.validate)
         return await $current.withValue(updated) { await operation() }
     }

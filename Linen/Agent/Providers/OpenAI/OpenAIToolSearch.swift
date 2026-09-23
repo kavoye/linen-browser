@@ -17,6 +17,12 @@ nonisolated enum OpenAIToolSearch {
               functions: ["clickOnPage", "typeOnPage", "fillFields", "selectOption", "setChecked", "scrollPage", "hoverOnPage", "pressKey"]),
         .init(name: "browser_observation", description: "Inspect control state and dropdown options, wait for page changes, or capture the page viewport.",
               functions: ["inspectControl", "waitForPage", "screenshotPage"]),
+        .init(name: "browser_visual", description: "Move, click, double-click, type, or dispatch drag events using screenshot coordinates.",
+              functions: ["movePointer", "clickAtPoint", "typeAtPointer", "doubleClickAtPoint", "dragOnPage"]),
+        .init(name: "browser_frames", description: "Find embedded websites, request access, and read or interact with their controls.",
+              functions: ["listFrames", "readFrame", "actInFrame"]),
+        .init(name: "browser_files", description: "Ask the user to choose files for upload or inspect this task's downloads.",
+              functions: ["chooseFilesOnPage", "inspectDownloads"]),
         .init(name: "browser_tabs", description: "List, open, switch, and close browser tabs.", functions: ["listTabs", "newTab", "switchTab", "closeTab"]),
         .init(name: "browser_media", description: "Play videos and control or close media playback.", functions: ["playVideo", "closeVideo", "controlMedia"]),
     ]

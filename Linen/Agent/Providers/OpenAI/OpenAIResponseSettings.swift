@@ -11,7 +11,6 @@ nonisolated struct OpenAIResponseSettings: Codable, Equatable, Sendable {
     var reasoningSummary = false
     var useWebSocket = false
     var useToolSearch = false
-    var useComputer = false
     var voice = OpenAIVoiceSettings()
     var hostedTools: [OpenAIJSON] = []
     var mcpServers: [OpenAIMCPServer] = []
@@ -20,7 +19,7 @@ nonisolated struct OpenAIResponseSettings: Codable, Equatable, Sendable {
     init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case reasoningEffort, verbosity, serviceTier, store, reasoningSummary, useWebSocket, useToolSearch, useComputer, voice, hostedTools, mcpServers, additionalParameters
+        case reasoningEffort, verbosity, serviceTier, store, reasoningSummary, useWebSocket, useToolSearch, voice, hostedTools, mcpServers, additionalParameters
     }
 
     init(from decoder: any Decoder) throws {
@@ -32,7 +31,6 @@ nonisolated struct OpenAIResponseSettings: Codable, Equatable, Sendable {
         reasoningSummary = try values.decodeIfPresent(Bool.self, forKey: .reasoningSummary) ?? false
         useWebSocket = try values.decodeIfPresent(Bool.self, forKey: .useWebSocket) ?? false
         useToolSearch = try values.decodeIfPresent(Bool.self, forKey: .useToolSearch) ?? false
-        useComputer = try values.decodeIfPresent(Bool.self, forKey: .useComputer) ?? false
         voice = try values.decodeIfPresent(OpenAIVoiceSettings.self, forKey: .voice) ?? .init()
         mcpServers = try values.decodeIfPresent([OpenAIMCPServer].self, forKey: .mcpServers) ?? []
         hostedTools = try values.decodeIfPresent([OpenAIJSON].self, forKey: .hostedTools) ?? []
@@ -57,7 +55,7 @@ nonisolated struct OpenAIResponseSettings: Codable, Equatable, Sendable {
         guard mcpServers.count <= 20, Set(mcpServers.map(\.label)).count == mcpServers.count,
               Set(mcpServers.map(\.id)).count == mcpServers.count else { throw OpenAIMCPFailure.configuration }
         for server in mcpServers { _ = try server.definition(authorization: server.requiresAuthorization || server.oauth != nil ? "validation-only" : nil) }
-        let supported: Set<String> = ["web_search", "web_search_preview", "file_search", "code_interpreter", "image_generation", "shell"]
+        let supported: Set<String> = ["web_search", "web_search_preview", "code_interpreter", "image_generation", "shell"]
         guard hostedTools.allSatisfy({ supported.contains($0["type"].string ?? "") }) else { throw OpenAISettingsError.unsupportedTool }
         let shells = hostedTools.filter { $0["type"] == "shell" }
         guard shells.count <= 1 else { throw OpenAISettingsError.shellEnvironment }

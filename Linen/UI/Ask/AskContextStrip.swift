@@ -49,7 +49,7 @@ struct AskContextStrip: View {
                     .accessibilityHidden(true)
 
                 ChipFlow(spacing: 6) {
-                    Text("Can read")
+                    Text("Assistant can read")
                         .font(Theme.Font.caption)
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, 3)

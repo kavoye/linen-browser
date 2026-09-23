@@ -6,6 +6,18 @@ import Foundation
 import WebKit
 
 extension PageDriver {
+    static func verifyControl(ref: Int, value: String?, checked: Bool?, in view: WKWebView) async -> Bool {
+        guard await validateObservation(in: view, ref: ref), let encoded = jsonString(value ?? "") else { return false }
+        let result = await evaluateJSON(scripted("""
+            const el = window.__linenRefs[\(ref) - 1];
+            if (!R.matchesRef(\(ref)) || !R.visible(el) || R.isSensitiveField(el)) return JSON.stringify({ matched: false });
+            const valueMatches = \(value == nil) || ('value' in el && el.value === \(encoded));
+            const checkedMatches = \(checked == nil) || (['checkbox','radio'].includes(el.type) && el.checked === \(checked ?? false));
+            return JSON.stringify({ matched: valueMatches && checkedMatches });
+            """), in: view)
+        return result?["matched"] as? Bool == true
+    }
+
     static func inspectControl(ref: Int, offset: Int = 0, in view: WKWebView) async -> String {
         guard await validateObservation(in: view, ref: ref) else { return staleMessage }
         let start = max(0, offset)

@@ -83,6 +83,13 @@ nonisolated enum OpenAIJSON: Codable, Equatable, Sendable {
             Int(exactly: value) } else { nil
         }
     }
+    var finiteNumber: Double? {
+        switch self {
+        case .integer(let value): Double(value)
+        case .number(let value) where value.isFinite: value
+        default: nil
+        }
+    }
     var bool: Bool? {
         if case .bool(let value) = self {
             value } else { nil

@@ -165,7 +165,7 @@ nonisolated struct OpenAIMCPOAuthCredential: Codable, Equatable, Sendable {
             throw OpenAIMCPOAuthFailure.token
         }
         if response["expires_in"] != .null {
-            guard let seconds = OpenAIComputerCall.number(response["expires_in"]), seconds > 0, seconds <= 315_576_000 else { throw OpenAIMCPOAuthFailure.token }
+            guard let seconds = response["expires_in"].finiteNumber, seconds > 0, seconds <= 315_576_000 else { throw OpenAIMCPOAuthFailure.token }
             expiresAt = now.addingTimeInterval(seconds)
         }
     }

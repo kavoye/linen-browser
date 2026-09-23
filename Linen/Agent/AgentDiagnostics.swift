@@ -8,8 +8,9 @@ nonisolated enum AgentDiagnosticPrivacy {
         "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage", "fillFields",
         "selectOption", "scrollPage", "goBack", "askUser", "newTab", "listTabs",
         "switchTab", "closeTab", "playVideo", "closeVideo", "controlMedia",
-        "inspectControl", "setChecked", "waitForPage", "screenshotPage", "hoverOnPage", "pressKey",
-        "__linen_openai_computer",
+        "inspectControl", "setChecked", "waitForPage", "screenshotPage", "movePointer", "clickAtPoint", "typeAtPointer", "hoverOnPage", "pressKey",
+        "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome", "doubleClickAtPoint", "dragOnPage",
+        "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
     ]
 
     static func tool(_ name: String) -> String {
@@ -35,6 +36,16 @@ nonisolated enum AgentDiagnosticPrivacy {
     }
 
     private static let toolTitles: [String: String] = [
+        "recordTaskOutcome": String(localized: "Record task outcome"),
+        "verifyTaskOutcome": String(localized: "Verify result"),
+        "blockTaskOutcome": String(localized: "Record unfinished work"),
+        "doubleClickAtPoint": String(localized: "Double-click page"),
+        "dragOnPage": String(localized: "Drag on page"),
+        "listFrames": String(localized: "List embedded pages"),
+        "readFrame": String(localized: "Read embedded page"),
+        "actInFrame": String(localized: "Use embedded page"),
+        "chooseFilesOnPage": String(localized: "Choose files to upload"),
+        "inspectDownloads": String(localized: "Check downloads"),
         "readPage": String(localized: "Read page"),
         "searchWeb": String(localized: "Search web"),
         "navigate": String(localized: "Open page"),
@@ -46,7 +57,9 @@ nonisolated enum AgentDiagnosticPrivacy {
         "setChecked": String(localized: "Set checked state"),
         "waitForPage": String(localized: "Wait for page"),
         "screenshotPage": String(localized: "Capture page"),
-        "__linen_openai_computer": String(localized: "Use page"),
+        "movePointer": String(localized: "Move pointer"),
+        "clickAtPoint": String(localized: "Click page"),
+        "typeAtPointer": String(localized: "Type on page"),
         "hoverOnPage": String(localized: "Reveal hover content"),
         "pressKey": String(localized: "Press key"),
         "askUser": String(localized: "Ask user"),

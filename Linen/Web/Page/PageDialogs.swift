@@ -48,13 +48,15 @@ enum PageDialogs {
 
     static func chooseFiles(
         _ parameters: WKOpenPanelParameters,
-        in window: NSWindow?
+        in window: NSWindow?,
+        onPanel: ((NSOpenPanel) -> Void)? = nil
     ) async -> [URL]? {
         guard let window else { return nil }
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection
         panel.canChooseDirectories = parameters.allowsDirectories
+        onPanel?(panel)
         return await withCheckedContinuation { continuation in
             panel.beginSheetModal(for: window) { response in
                 continuation.resume(returning: response == .OK ? panel.urls : nil)

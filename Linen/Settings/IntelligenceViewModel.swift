@@ -297,7 +297,7 @@ final class IntelligenceViewModel {
                     model: LLMSettings.model(for: provider)
                 )
             )
-        ).count
+        ).intersection(AgentToolCatalog.configurableIDs).count
     }
 
     private var subjectWindowTokens: Int {

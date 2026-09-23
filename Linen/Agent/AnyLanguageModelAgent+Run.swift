@@ -18,10 +18,17 @@ extension AnyLanguageModelAgent {
         reply.setActivity(String(localized: "Thinking…"))
         let started = ContinuousClock.now
         let state = RunState(agent: self, utterance: utterance, task: task, reply: reply)
+        toolkit.taskLedger = task.isContinuation ? (state.checkpoint.taskLedger ?? .init()) : .init()
+        if task.isContinuation, !toolkit.taskLedger.outcomes.isEmpty || toolkit.taskLedger.actionRevision > 0 {
+            toolkit.taskLedger.actionRevision += 1
+        }
         func event(_ kind: String, _ values: [String: String] = [:]) {
             recordEvent(kind, values, diagnostics: &state.diagnostics, task: task)
         }
         func save() {
+            state.checkpoint.taskLedger = toolkit.taskLedger
+            let completion = toolkit.taskLedger.completion
+            state.checkpoint.completion = state.stop != nil && completion == .answered ? .unverified : completion
             var history = Array(state.session.transcript)
             if !state.submittedUtterance {
                 history.append(.prompt(.init(segments: [.text(.init(content: state.originalPrompt))] + state.originalImages.map { .image($0) })))
@@ -45,8 +52,13 @@ extension AnyLanguageModelAgent {
 
         func publishProgress(_ raw: String) {
             let text = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2_000))
-            guard !Task.isCancelled, !text.isEmpty,
-                  state.checkpoint.progressUpdates?.last?.text != text else { return }
+            guard !Task.isCancelled, !text.isEmpty else { return }
+            log.updateLiveProgress(nil, taskID: task.id)
+            if log.latestTrace(forTab: task.spaceID)?.response == text {
+                state.reply.update(text: "")
+                log.updateResponse("", taskID: task.id, closingSteps: false)
+            }
+            guard state.checkpoint.progressUpdates?.last?.text != text else { return }
             state.checkpoint.progressUpdates?.append(AgentProgressUpdate(
                 text: text, afterStepCount: log.latestTrace(forTab: task.spaceID)?.steps.count ?? 0
             ))
@@ -76,7 +88,6 @@ extension AnyLanguageModelAgent {
             state.stop = .interrupted
         } catch {
             state.finalText = (error as? AttachmentFailure)?.errorDescription
-                ?? (error as? OpenAIFileLibraryFailure)?.errorDescription
                 ?? (error as? OpenAIMCPFailure)?.errorDescription ?? state.finalText
             if error is AgentRequestLimitReached {
                 state.stop = .requestLimit
@@ -90,13 +101,13 @@ extension AnyLanguageModelAgent {
         }
 
         save()
-        let committed = await finishReply(
+        _ = await finishReply(
             stop: state.stop, text: state.finalText, session: state.session, nativeState: state.nativeState, task: task, reply: reply, speech: speech, event: event
         )
         state.diagnostics.elapsedMilliseconds = Self.milliseconds(since: started)
         log.setDiagnostics(state.diagnostics, taskID: task.id)
         log.saveNow()
-        toolkit.finishTask(task, commitResult: committed)
+        toolkit.finishTask(task)
         reply.setActivity(nil)
         reply.endStream()
     }
@@ -108,9 +119,10 @@ extension AnyLanguageModelAgent {
                 break
             }
             let resumeCharacters = state.task.isContinuation ? AgentCheckpoint.resumePrompt.count + state.utterance.count : 0
-            if isOverBudget(state.session, nativeState: state.nativeState, promptCharacters: state.prompt.count + state.images.count * 6_400 + resumeCharacters) {
+            let ledgerCharacters = toolkit.taskLedger.context.count
+            if isOverBudget(state.session, nativeState: state.nativeState, promptCharacters: state.prompt.count + ledgerCharacters + state.images.count * 6_400 + resumeCharacters) {
                 callbacks.event("context_compaction", ["reason": "input_budget"])
-                try await compact(state, pendingPromptTokens: max(1, (state.prompt.count + resumeCharacters) / 4) + state.images.count * 1_600,
+                try await compact(state, pendingPromptTokens: max(1, (state.prompt.count + ledgerCharacters + resumeCharacters) / 4) + state.images.count * 1_600,
                                   event: callbacks.event)
                 callbacks.save()
             }
@@ -130,6 +142,28 @@ extension AnyLanguageModelAgent {
             let calls = state.observer.calls
             if calls.isEmpty {
                 if !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if state.policy.requiresOutcomeVerification {
+                        switch toolkit.taskLedger.completion {
+                        case .unverified:
+                            state.verificationRounds += 1
+                            if state.verificationRounds < 2 {
+                                state.prompt = """
+                                    The requested outcomes are not verified. Record any missing outcomes, inspect the result and use verifyTaskOutcome \
+                                    for each one. Do not repeat an uncertain submission. If blocked, use blockTaskOutcome.
+                                    """
+                                continue
+                            }
+                            state.finalText = ""
+                            state.stop = .verificationRequired
+                            return
+                        case .blocked:
+                            state.finalText = answer
+                            state.stop = .blocked
+                            return
+                        case .answered, .verified:
+                            break
+                        }
+                    }
                     state.finalText = answer
                     break
                 }
@@ -148,7 +182,7 @@ extension AnyLanguageModelAgent {
                 state.stop = .noProgress
                 break
             }
-            await executeProposals(state, calls: calls, callbacks: callbacks)
+            try await executeProposals(state, calls: calls, callbacks: callbacks)
         }
     }
 
@@ -227,17 +261,22 @@ extension AnyLanguageModelAgent {
             state.nativeState = nativeState
         }
         return try await respond(
-            with: &session, nativeState: &nativeState, to: state.prompt, images: state.images, attachmentInput: state.attachmentInput,
+            with: &session, nativeState: &nativeState, to: state.prompt + toolkit.taskLedger.context, images: state.images, attachmentInput: state.attachmentInput,
             options: state.barrenTurns > 0 ? answerOptions : options,
-            onText: { [log] text in
+            onText: { [log, toolkit] text in
                 guard !Task.isCancelled else { return }
+                guard !state.policy.requiresOutcomeVerification || toolkit.taskLedger.completion != .unverified else { return }
                 state.reply.update(text: text)
                 log.updateResponse(text, taskID: state.task.id, closingSteps: false)
+            }, onProgress: { [log] text in
+                guard !Task.isCancelled else { return }
+                state.reply.update(text: text)
+                log.updateLiveProgress(text, taskID: state.task.id)
             }, event: event
         )
     }
 
-    private func executeProposals(_ state: RunState, calls: [Transcript.ToolCall], callbacks: RunCallbacks) async {
+    private func executeProposals(_ state: RunState, calls: [Transcript.ToolCall], callbacks: RunCallbacks) async throws {
         var needsRecovery = false
         var entries = Array(state.session.transcript)
         let existing = Set(entries.flatMap { entry -> [String] in
@@ -272,19 +311,25 @@ extension AnyLanguageModelAgent {
                 continue
             }
             callbacks.event("tool_proposed", ["name": call.toolName])
+            if AgentTaskLedger.mutations.contains(call.toolName) {
+                toolkit.taskLedger.beginAction(call.toolName)
+                callbacks.save()
+                try log.persistCheckpoint(taskID: state.task.id)
+            }
             let (output, failed) = await execute(call: call, reply: state.reply, event: callbacks.event)
             entries.append(.toolOutput(output))
             state.session = makeSession(transcript: Transcript(entries: entries))
-            if call.toolName == OpenAIComputerCall.toolName, toolkit.computerActionDeclined {
-                state.stop = .interrupted
-            }
             let text = Self.text(in: output.segments)
             if call.toolName == "askUser", !failed, !text.isEmpty {
                 state.checkpoint.userAnswers.append(text)
             }
             callbacks.save()
             let progress = inspectProgress(state.monitor.observe(
-                name: call.toolName, arguments: call.arguments.jsonString, output: text, failed: failed
+                name: call.toolName, arguments: call.arguments.jsonString, output: text, failed: failed,
+                images: output.segments.compactMap { segment in
+                    guard case .image(let image) = segment, case .data(let data, _) = image.source else { return nil }
+                    return data
+                }
             ), event: callbacks.event)
             needsRecovery = progress.recovery
             state.stop = progress.stop ?? state.stop
@@ -317,6 +362,7 @@ extension AnyLanguageModelAgent {
         var originalImages: [Transcript.ImageSegment]
         var attachmentInput: OpenAIAttachmentInput?
         var responsePrefix = 0
+        var verificationRounds = 0
 
         init(agent: AnyLanguageModelAgent, utterance: String, task: AgentTaskContext, reply: AgentReplyModel) {
             self.task = task

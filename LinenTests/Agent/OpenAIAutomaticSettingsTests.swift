@@ -18,7 +18,6 @@ struct OpenAIAutomaticSettingsTests {
         #expect(settings.serviceTier == "auto")
         #expect(settings.hostedTools.compactMap { $0["type"].string } == ["web_search", "code_interpreter", "image_generation"])
         #expect(!settings.store)
-        #expect(!settings.useComputer)
         #expect(settings.mcpServers.isEmpty)
         #expect(original.hostedTools.isEmpty)
         try settings.validate()
@@ -38,11 +37,10 @@ struct OpenAIAutomaticSettingsTests {
     @Test func preservesConfiguredToolsAndUserChoicesWithoutDuplicates() throws {
         var original = OpenAIResponseSettings()
         original.store = true
-        original.useComputer = true
         original.voice.conversationVoice = "marin"
-        original.hostedTools = [["type": "web_search", "search_context_size": "low"], ["type": "file_search", "vector_store_ids": ["vs_documents"]]]
+        original.hostedTools = [["type": "web_search", "search_context_size": "low"], ["type": "code_interpreter", "container": ["type": "auto"]]]
         let resolved = original.forChat(endpoint: endpoint, model: "gpt-6-astra")
-        #expect(resolved.store && resolved.useComputer)
+        #expect(resolved.store)
         #expect(resolved.voice == original.voice)
         #expect(resolved.hostedTools.prefix(2) == original.hostedTools[...])
         #expect(resolved.forChat(endpoint: endpoint, model: "gpt-6-astra") == resolved)

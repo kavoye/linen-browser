@@ -24,6 +24,36 @@ struct PageInteractionTests {
         try? await view.evaluateJavaScript(script)
     }
 
+    @Test func readOnlyDatePickerExposesClickableDays() async {
+        let view = await page("""
+            <input id='date' aria-label='Departure date' readonly value='September 23'>
+            <div id='calendar' hidden><h3>September</h3>
+              <div role='gridcell' tabindex='0' aria-disabled='true'>22</div>
+              <div id='day' role='gridcell' tabindex='0'><div>29</div></div>
+              <div role='gridcell'>Static cell</div>
+              <div role='gridcell' tabindex='0'><button>30</button></div>
+            </div>
+            <script>
+              document.querySelector('#date').addEventListener('click', () => document.querySelector('#calendar').hidden=false);
+              document.querySelector('#day').addEventListener('click', () => {
+                document.querySelector('#date').value='September 29'; document.querySelector('#calendar').hidden=true;
+              });
+            </script>
+            """)
+        let initial = await PageDriver.snapshot(view)
+        #expect(initial.contains("(read-only)"))
+        let calendar = await PageDriver.click(ref: 0, label: "Departure date", in: view)
+        #expect(calendar.contains("button \"29\""))
+        #expect(calendar.contains("button \"22\" (disabled)"))
+        #expect(!calendar.contains("button \"Static cell\""))
+        #expect(calendar.components(separatedBy: "button \"30\"").count == 2)
+        let disabled = await PageDriver.click(ref: 0, label: "22", in: view)
+        #expect(disabled.contains("disabled"))
+        let selected = await PageDriver.click(ref: 0, label: "29", in: view)
+        #expect(selected.hasPrefix("Clicked"))
+        #expect(await js(view, "document.querySelector('#date').value") as? String == "September 29")
+    }
+
     @Test func observationCannotBeReusedAfterNavigationOrRetargeting() async throws {
         let view = await page("<button id='a' onclick='window.hit=true'>Ordinary action</button>")
         _ = await PageDriver.snapshot(view)
@@ -121,11 +151,48 @@ struct PageInteractionTests {
         let query = await PageDriver.snapshot(view, lookingFor: "RareNeedle Choice 100")
         #expect(query.contains("RareNeedle"))
         #expect(query.contains("Choice 100"))
+        _ = await PageDriver.snapshot(view)
         let page = await PageDriver.snapshot(view, textLimit: 0, controlLimit: 10, controlOffset: 90)
         #expect(page.contains("[100]"))
         let observation = try #require(PageDriver.observation(in: view))
         #expect(!observation.refs.contains(1))
         #expect(await PageDriver.click(ref: 1, label: "", in: view) == PageDriver.staleMessage)
+    }
+
+    @Test func calendarPaginationRecoversFromRefOffsetsAndChangedQueries() async {
+        let controls = (1...13).map { "<button>Control \($0)</button>" }.joined()
+        let days = (1...30).map {
+            "<div role='gridcell' tabindex='0' style='display:inline-block;width:30px;height:30px' aria-disabled='\($0 < 23)'>\($0)</div>"
+        }.joined()
+        let view = await page(controls + "<h3>September</h3>" + days)
+        let initial = await PageDriver.snapshot(view)
+        #expect(initial.contains("button \"29\""))
+        let restarted = await PageDriver.snapshot(view, lookingFor: "calendar dates September 29", controlOffset: 140)
+        #expect(restarted.contains("button \"29\""))
+        #expect(restarted.contains("pagination restarted at 0"))
+        let filtered = await PageDriver.snapshot(view, lookingFor: "September calendar controls date 29", controlOffset: 40, viewportOnly: true)
+        #expect(filtered.contains("button \"29\""))
+        #expect(filtered.contains("pagination restarted at 0"))
+        let overflow = await PageDriver.snapshot(view, lookingFor: "September calendar controls date 29", controlOffset: 140, viewportOnly: true)
+        #expect(overflow.contains("button \"29\""))
+        #expect(overflow.contains("offset exceeds"))
+        #expect(overflow.contains("controlOffset=40"))
+        let continued = await PageDriver.snapshot(view, lookingFor: "September calendar controls date 29", controlOffset: 40, viewportOnly: true)
+        #expect(!continued.contains("pagination restarted"))
+        #expect(!continued.contains("button \"29\""))
+    }
+
+    @Test func labelActionsRejectObservationsFromThePreviousDocument() async throws {
+        let view = await page("<button>29</button>")
+        _ = await PageDriver.snapshot(view)
+        let before = try #require(PageDriver.observation(in: view))
+        view.loadHTMLString("<button onclick='window.hit=true'>29</button>", baseURL: nil)
+        #expect(await PageSettle.untilIdle(view, timeout: .seconds(20)))
+        let result = await PageDriver.$expectedObservation.withValue(before.id) {
+            await PageDriver.click(ref: 0, label: "29", in: view)
+        }
+        #expect(result == PageDriver.staleMessage)
+        #expect(await js(view, "window.hit === undefined") as? Bool == true)
     }
 
     @Test func compactBudgetAppliesAfterActionsIncludingLongOptions() async {

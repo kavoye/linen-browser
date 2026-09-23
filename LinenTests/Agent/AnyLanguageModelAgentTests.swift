@@ -10,6 +10,26 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct AnyLanguageModelAgentTests {
+    @Test(arguments: [false, true])
+    func visualProgressUsesScreenshotContent(changing: Bool) async throws {
+        let state = HarnessToolState()
+        let fixture = HarnessFixture(
+            Array(repeating: .calls(["clickAtPoint"]), count: 8) + [.text("Finished the pages.")], state: state
+        )
+        state.output = { index in
+            fixture.agent.toolkit.setComputerScreenshot(Data("screenshot-\(changing ? index : 0)".utf8))
+            return "CONTROL: Browser action completed. Updated screenshot captured."
+        }
+        defer { state.output = { "Observed state \($0)" } }
+
+        await fixture.run("Go through the pages")
+
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(state.calls == (changing ? 8 : 6))
+        #expect(trace.stopReason == (changing ? nil : .noProgress))
+        #expect(trace.state == (changing ? .completed : .paused))
+    }
+
     @Test func successfulAnswerCompletesTheTraceBeforeCoordinatorCleanup() async throws {
         let fixture = HarnessFixture([.text("Done.")])
         let taskID = fixture.log.beginTask("Finish the task", tabID: fixture.tabID)

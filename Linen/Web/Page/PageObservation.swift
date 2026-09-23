@@ -49,14 +49,15 @@ extension PageDriver {
         observations.object(forKey: view)
     }
 
-    static func validateObservation(in view: WKWebView, ref: Int) async -> Bool {
-        guard let prior = observation(in: view), prior.refs.contains(ref),
+    static func validateObservation(in view: WKWebView, ref: Int? = nil) async -> Bool {
+        guard let prior = observation(in: view), ref.map({ prior.refs.contains($0) }) ?? true,
             expectedObservation == nil || expectedObservation == prior.id
         else { return false }
+        let refState = ref.map { "window.__linen?.matchesRef(\($0)) ? 'valid' : 'changed'" } ?? "'valid'"
         let value =
             try? await view.evaluateJavaScript(
-                "[window.__linen?.documentID || '', window.__linenSnapshot || '', location.href, window.__linen?.matchesRef(\(ref)) ? 'valid' : 'changed']",
-                in: nil, contentWorld: PageAutomationGuard.world
+                "[window.__linen?.documentID || '', window.__linenSnapshot || '', location.href, \(refState)]",
+                in: selectedFrame?.frame, contentWorld: PageAutomationGuard.world
             ) as? [String]
         return value == [prior.documentID, prior.id, prior.url, "valid"] && PageAutomationGuard.allowsExecution
     }

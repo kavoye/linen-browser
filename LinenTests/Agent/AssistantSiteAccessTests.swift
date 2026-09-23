@@ -187,8 +187,8 @@ struct AgentToolkitAccessTests {
         #expect(!output.contains("<page-content"))
     }
 
-    @Test func backgroundResearchUsesAnEphemeralDataStore() {
-        let configuration = AgentToolkit.researchConfiguration(extensionController: nil)
+    @Test func linkPeekUsesAnEphemeralDataStore() {
+        let configuration = LinkPeekLoader.configuration()
         #expect(!configuration.websiteDataStore.isPersistent)
     }
 
@@ -276,6 +276,69 @@ struct AgentToolkitAccessTests {
         #expect(browser.activeTab?.assistantAccess.effectivePolicy == .ask)
         #expect(output.contains("wasn’t allowed"))
         #expect(!output.contains("New tab secret"))
+    }
+
+    @Test func visibleNavigationDoesNotReadAWebsiteThatDeniesAssistantAccess() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/": .html("<h1>Private page text</h1>"),
+        ])
+        let url = try server.url()
+        let permissions = SitePermissions(
+            storageURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("VisibleNavigation-\(UUID().uuidString).json")
+        )
+        permissions.setAssistantAccess(.deny, for: SitePermissions.origin(for: url))
+        let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let tab = browser.newTab()
+        let toolkit = AgentToolkit(
+            browser: browser,
+            media: MediaCenter(),
+            log: ConversationLog(database: .temporary())
+        )
+
+        let output = await toolkit.navigate(to: url.absoluteString)
+
+        #expect(browser.activeTab === tab)
+        #expect(tab.urlString == url.absoluteString)
+        #expect(output.contains("Assistant access is off"))
+        #expect(!output.contains("Private page text"))
+    }
+
+    @Test func navigatingToTheCurrentURLWaitsForTheNewRequest() async throws {
+        let response = ResponseGate()
+        response.open()
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/": .html("<h1>Reloaded page</h1>", headers: ["Cache-Control": "no-store"], gate: response),
+        ])
+        let url = try server.url()
+        let permissions = SitePermissions(
+            storageURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("SameURLNavigation-\(UUID().uuidString).json")
+        )
+        permissions.setAssistantAccess(.readOnly, for: SitePermissions.origin(for: url))
+        let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let tab = browser.newTab(url: url)
+        #expect(await waitForObservation({ tab.committedURL == url && !tab.isLoading }))
+        response.close()
+        defer { response.open() }
+
+        let toolkit = AgentToolkit(browser: browser, media: MediaCenter(), log: ConversationLog(database: .temporary()))
+        var completed = false
+        let navigation = Task { @MainActor in
+            let result = await toolkit.navigate(to: url.absoluteString)
+            completed = true
+            return result
+        }
+        let deadline = ContinuousClock.now + .seconds(3)
+        while response.requestCount < 2 && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(response.requestCount >= 2)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(!completed)
+
+        response.open()
+        #expect((await navigation.value).contains("Reloaded page"))
     }
 
     @Test func pageInstructionsStayInsideTheUntrustedFence() async throws {
@@ -375,7 +438,12 @@ struct AgentToolkitAccessTests {
         let source = try await HTTPFixtureServer.start(routes: [
             "/": .html("<a href=\"\(linkedURL.absoluteString)\">Read article</a>"),
         ])
-        let browser = BrowserModel(database: .temporary())
+        let permissions = SitePermissions(
+            storageURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("LinkedArticle-\(UUID().uuidString).json")
+        )
+        permissions.setAssistantAccess(.readOnly, for: SitePermissions.origin(for: linkedURL))
+        let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)
         let tab = browser.newTab(url: try source.url())
         tab.assistantAccess.persistsAnswers = false
         tab.assistantAccess.pageChanged(url: try source.url())

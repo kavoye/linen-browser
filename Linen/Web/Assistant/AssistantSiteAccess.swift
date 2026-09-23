@@ -42,6 +42,13 @@ final class TabAssistantAccessCenter {
         self.store = store
     }
 
+    func embeddedAccess(for url: URL) -> TabAssistantAccessCenter {
+        let access = TabAssistantAccessCenter(store: store)
+        access.persistsAnswers = persistsAnswers
+        access.pageChanged(url: url)
+        return access
+    }
+
     func authorize(_ capability: AssistantPageCapability) async -> Bool {
         let requestedOrigin = origin
         guard !requestedOrigin.isEmpty else { return false }

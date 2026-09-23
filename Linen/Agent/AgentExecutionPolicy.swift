@@ -8,6 +8,7 @@ nonisolated struct AgentExecutionPolicy: Equatable, Sendable {
     var maxModelRequests: Int?
     var repeatedActionLimit = 3
     var consecutiveFailureLimit = 3
+    var requiresOutcomeVerification = true
 
     static let interactive = Self()
 
@@ -28,9 +29,15 @@ nonisolated enum AgentStopReason: String, Codable, Sendable {
     case contextLimit = "context_limit"
     case providerError = "provider_error"
     case interrupted
+    case verificationRequired = "verification_required"
+    case blocked
 
     var message: String {
         switch self {
+        case .verificationRequired:
+            String(localized: "The requested result has not been verified. Progress is saved; choose Continue to check it.")
+        case .blocked:
+            String(localized: "The task needs your help. Unfinished outcomes and progress are saved.")
         case .requestLimit:
             String(localized: "Paused at your request limit. Your progress is saved; choose Continue to keep going.")
         case .noProgress:
@@ -38,7 +45,7 @@ nonisolated enum AgentStopReason: String, Codable, Sendable {
         case .contextLimit:
             String(localized: "Paused because the conversation couldn’t be compacted safely. Your progress is saved.")
         case .providerError:
-            String(localized: "Couldn’t reach the model provider. Your progress is saved; check the connection, then choose Continue.")
+            String(localized: "The model request failed. Your progress is saved; choose Continue to retry.")
         case .interrupted:
             String(localized: "Stopped. Your progress is saved; choose Continue to resume.")
         }

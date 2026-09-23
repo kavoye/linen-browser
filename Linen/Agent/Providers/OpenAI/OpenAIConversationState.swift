@@ -16,7 +16,6 @@ nonisolated struct OpenAIConversationState: Codable, Equatable, Sendable {
     var mcpDestinations: [String: String]?
     var mcpApprovalAttempts: Set<String>?
     var shellContainerID: String?
-    var computerCallIDs: Set<String>?
 
     func synchronizing(_ transcript: Transcript, attachmentInput: OpenAIAttachmentInput? = nil) throws -> Self {
         let entries = transcript.filter { if case .instructions = $0 { false } else { true } }
@@ -26,24 +25,6 @@ nonisolated struct OpenAIConversationState: Codable, Equatable, Sendable {
         var added: [OpenAIJSON] = []
         for entry in entries.dropFirst(anchor.count) {
             if case .toolOutput(let output) = entry,
-               let request = copy.items.first(where: { $0["type"] == "computer_call" && $0["call_id"].string == output.id }) {
-                guard !(copy.items + added).contains(where: { $0["type"] == "computer_call_output" && $0["call_id"].string == output.id }) else {
-                    throw OpenAIFailure(kind: .invalidResponse)
-                }
-                if let result = try OpenAIComputerCall(request).result(output) {
-                    added.append(result)
-                } else {
-                    copy.items.removeAll { $0["type"] == "computer_call" && $0["call_id"].string == output.id }
-                    let text = output.segments.compactMap { if case .text(let value) = $0 { value.content } else { nil } }.first ?? ""
-                    let failure = (try? OpenAIJSON.decode(Data(text.utf8)))?["failure"].string
-                    let message = failure == "declined"
-                        ? "The user declined the computer action. Stop and do not try another method to perform it."
-                        : failure == "sensitive"
-                            ? "The computer action targeted a sensitive field. The user must interact with it. Do not try another method."
-                            : "A computer action stopped without a confirmed screenshot and may have partially run. Inspect the current screen and verify effects before taking another action."
-                    added.append(["role": "user", "content": [["type": "input_text", "text": .string(message)]]])
-                }
-            } else if case .toolOutput(let output) = entry,
                let request = copy.items.first(where: { $0["type"] == "mcp_approval_request" && $0["id"].string == output.id }) {
                 guard !(copy.items + added).contains(where: { $0["type"] == "mcp_approval_response" && $0["approval_request_id"].string == output.id }) else {
                     throw OpenAIMCPFailure.invalidApproval
@@ -70,10 +51,6 @@ nonisolated struct OpenAIConversationState: Codable, Equatable, Sendable {
     mutating func received(_ response: OpenAIJSON, transcript: Transcript) throws {
         guard let output = response["output"].array else { throw OpenAIFailure(kind: .invalidResponse) }
         items += output
-        let computerIDs = output.filter { $0["type"] == "computer_call" }.compactMap { $0["call_id"].string }
-        if !computerIDs.isEmpty {
-            computerCallIDs = (computerCallIDs ?? []).union(computerIDs)
-        }
         if let shell = output.last(where: { $0["type"] == "shell_call" && $0["status"] == "completed" }),
            shell["environment"]["type"] == "container_reference", let id = shell["environment"]["container_id"].string, !id.isEmpty {
             shellContainerID = id

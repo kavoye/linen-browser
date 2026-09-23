@@ -336,6 +336,7 @@ final class WebViewPool {
         configuration.preferences = WKPreferences()
         configuration.defaultWebpagePreferences = WKWebpagePreferences()
         configuration.userContentController = WKUserContentController()
+        PageFrameRegistry.install(in: configuration.userContentController)
         return configuration
     }
 
@@ -486,6 +487,7 @@ final class WebViewPool {
         }
 
         configuration.userContentController = contentController
+        PageFrameRegistry.install(in: contentController)
         configuration.setURLSchemeHandler(SystemPageSchemeHandler(), forURLScheme: SystemPages.scheme)
 
         let view = TabWebView(

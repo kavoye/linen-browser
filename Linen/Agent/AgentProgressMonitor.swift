@@ -22,7 +22,7 @@ nonisolated struct AgentProgressMonitor {
         case pause
     }
 
-    mutating func observe(name: String, arguments: String, output: String, failed: Bool) -> Decision {
+    mutating func observe(name: String, arguments: String, output: String, failed: Bool, images: [Data] = []) -> Decision {
         guard name != "askUser" else {
             recent = []
             failures = 0
@@ -33,7 +33,14 @@ nonisolated struct AgentProgressMonitor {
         }
         let comparison = Self.comparison(name: name, arguments: arguments, output: output)
         let bytes = Data((name + "\u{0}" + comparison.arguments + "\u{0}" + comparison.output).utf8)
-        let key = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
+        var digest = SHA256()
+        digest.update(data: bytes)
+        // Visual tools return fixed status text. Compare their screenshots as well so
+        // advancing through pages at the same coordinates does not look like a loop.
+        for image in images {
+            digest.update(data: Data(SHA256.hash(data: image)))
+        }
+        let key = digest.finalize().map { String(format: "%02x", $0) }.joined()
         if recoveryAttempts > 0, !failed, !stalledKeys.contains(key) {
             progressKeys.insert(key)
             if progressKeys.count >= policy.repeatedActionLimit {
@@ -67,20 +74,23 @@ nonisolated struct AgentProgressMonitor {
         let pageTools: Set<String> = [
             "readPage", "clickOnPage", "typeOnPage", "fillFields", "selectOption", "scrollPage", "goBack",
             "inspectControl", "setChecked", "waitForPage", "hoverOnPage", "pressKey",
+            "readFrame", "actInFrame", "verifyTaskOutcome",
         ]
-        guard pageTools.contains(name) else { return (arguments, output) }
         var stableArguments = arguments
         if let data = arguments.data(using: .utf8),
            var object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            object.removeValue(forKey: "observationID")
+            if pageTools.contains(name) {
+                object.removeValue(forKey: "observationID")
+            }
             if let encoded = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]) {
                 stableArguments = String(decoding: encoded, as: UTF8.self)
             }
         }
+        guard pageTools.contains(name) else { return (stableArguments, output) }
         var lines = output.components(separatedBy: "\n")
         if let index = lines.lastIndex(where: { $0.hasPrefix("observationID: ") }) {
             let suffix = lines[(index + 1)...]
-            if suffix.allSatisfy({ $0.isEmpty || $0 == "</page-content>" || $0.hasPrefix("More text: ") || $0.hasPrefix("More controls: ") }) {
+            if suffix.allSatisfy({ $0.isEmpty || $0 == "</page-content>" || $0.hasPrefix("More text: ") || $0.hasPrefix("More controls: ") || $0.hasPrefix("frameID: ") }) {
                 lines.remove(at: index)
             }
         }

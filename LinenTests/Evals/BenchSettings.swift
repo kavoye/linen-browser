@@ -12,7 +12,6 @@ struct BenchSettings: Decodable {
     var searchMode = SearchMode.disabled
     var maxModelRequests: Int?
     var toolSearch = false
-    var computerUse = false
 
     init() {}
 
@@ -20,20 +19,16 @@ struct BenchSettings: Decodable {
         if toolSearch, adapter != .openAIResponses || !OpenAIToolSearch.supports(model) {
             throw ConfigurationError.unsupportedToolSearch
         }
-        if computerUse, adapter != .openAIResponses || headless {
-            throw ConfigurationError.unsupportedComputerUse
-        }
         var options = OpenAIResponseSettings()
         options.useToolSearch = toolSearch
-        options.useComputer = computerUse
         return options
     }
 
-    enum ConfigurationError: Error { case unsupportedToolSearch, unsupportedComputerUse }
+    enum ConfigurationError: Error { case unsupportedToolSearch }
 
     init(from decoder: any Decoder) throws {
         let fields = try decoder.container(keyedBy: Field.self)
-        let allowed: Set<String> = ["reasoningEffort", "headless", "searchMode", "maxModelRequests", "toolSearch", "computerUse"]
+        let allowed: Set<String> = ["reasoningEffort", "headless", "searchMode", "maxModelRequests", "toolSearch"]
         guard fields.allKeys.allSatisfy({ allowed.contains($0.stringValue) }) else {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported benchmark setting"))
         }
@@ -42,7 +37,6 @@ struct BenchSettings: Decodable {
         searchMode = try fields.decodeIfPresent(SearchMode.self, forKey: Field("searchMode")) ?? .disabled
         maxModelRequests = try fields.decodeIfPresent(Int.self, forKey: Field("maxModelRequests"))
         toolSearch = try fields.decodeIfPresent(Bool.self, forKey: Field("toolSearch")) ?? false
-        computerUse = try fields.decodeIfPresent(Bool.self, forKey: Field("computerUse")) ?? false
         if let maxModelRequests, !(1...500).contains(maxModelRequests) {
             throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Model request limit must be between 1 and 500"))
         }

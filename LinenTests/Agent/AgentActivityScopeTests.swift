@@ -7,10 +7,6 @@ import Testing
 
 @testable import Linen
 
-/// A space - one tab, or every pane of a split - owns its agent activity.
-/// These tests pin the three surfaces that could leak it - the toolbar's live
-/// preview, the inspector's research thumbnail, and the activity dot - to the
-/// space the agent is working.
 @MainActor
 struct AgentActivityScopeTests {
     // MARK: - The toolbar preview (the reply strip)
@@ -54,25 +50,6 @@ struct AgentActivityScopeTests {
         #expect(await waitUntil { !model.isRunning })
         #expect(!model.isRunning)
         #expect(model.reply.spaceID == browser.tabID)
-    }
-
-    // MARK: - The research thumbnail
-
-    @Test func theResearchPreviewBelongsToTheTaskSpace() {
-        let preview = ResearchPreview()
-        let controlled = UUID()
-        let other = UUID()
-
-        preview.begin(inSpace: controlled)
-        #expect(preview.spaceID == controlled)
-        #expect(preview.spaceID != other)
-
-        preview.end()
-        #expect(preview.spaceID == controlled)
-
-        preview.begin(inSpace: other)
-        #expect(preview.spaceID == other)
-        #expect(preview.snapshot == nil)
     }
 
     // MARK: - The log's tab boundary

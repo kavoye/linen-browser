@@ -20,6 +20,7 @@ final class DownloadManager: NSObject {
         let id: UUID
         var filename: String
         var source: String
+        var sourceOrigin: String?
         let sourceTabID: UUID?
         var isPrivate = false
         var destination: URL?
@@ -198,6 +199,10 @@ final class DownloadManager: NSObject {
             ),
             at: 0
         )
+        let originURL = source.flatMap { $0.scheme == "blob" ? URL(string: String($0.absoluteString.dropFirst(5))) : $0 }
+        if ["http", "https"].contains(originURL?.scheme ?? "") {
+            update(id) { $0.sourceOrigin = SitePermissions.origin(for: originURL) }
+        }
         if items.count > Self.capacity, let index = items.lastIndex(where: { !$0.isRunning }) {
             items.remove(at: index)
         }
@@ -594,6 +599,8 @@ private struct StoredDownload: Codable {
     let id: UUID
     let filename: String
     let source: String
+    let sourceOrigin: String?
+    let sourceTabID: UUID?
     let destination: URL?
     let bytesReceived: Int64
     let bytesExpected: Int64
@@ -605,6 +612,8 @@ private struct StoredDownload: Codable {
         id = item.id
         filename = item.filename
         source = item.source
+        sourceOrigin = item.sourceOrigin
+        sourceTabID = item.sourceTabID
         destination = item.destination
         bytesReceived = item.bytesReceived
         bytesExpected = item.bytesExpected
@@ -633,10 +642,11 @@ private struct StoredDownload: Codable {
             id: id,
             filename: filename,
             source: source,
-            sourceTabID: nil,
+            sourceTabID: sourceTabID,
             started: started
         )
         restored.destination = destination
+        restored.sourceOrigin = sourceOrigin
         restored.bytesReceived = bytesReceived
         restored.bytesExpected = bytesExpected
         switch outcome {

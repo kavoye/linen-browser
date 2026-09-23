@@ -10,17 +10,33 @@ import Testing
 nonisolated final class OpenAITransportFixture: OpenAITransport, @unchecked Sendable {
     private let lock = NSLock()
     private var responses: [OpenAIJSON]
+    private var failureStarts: Int
+    private var eventErrorsBeforeSuccess: Int
+    private let eventErrorCode: String?
+    private let outputBeforeError: Bool
+    private let streamEvents: [OpenAIEvent]?
     private var seen: [OpenAIRequest] = []
     var requests: [OpenAIRequest] {
         lock.withLock { seen }
     }
-    init(_ responses: [OpenAIJSON]) {
+    init(_ responses: [OpenAIJSON], failureStarts: Int = 0, eventErrorsBeforeSuccess: Int = 0,
+         eventErrorCode: String? = "server_error", outputBeforeError: Bool = false,
+         streamEvents: [OpenAIEvent]? = nil) {
         self.responses = responses
+        self.failureStarts = failureStarts
+        self.eventErrorsBeforeSuccess = eventErrorsBeforeSuccess
+        self.eventErrorCode = eventErrorCode
+        self.outputBeforeError = outputBeforeError
+        self.streamEvents = streamEvents
     }
 
     private func next(_ request: OpenAIRequest) throws -> OpenAIJSON {
         try lock.withLock {
             seen.append(request)
+            if failureStarts > 0 {
+                failureStarts -= 1
+                throw OpenAIFailure(kind: .streamInterrupted)
+            }
             guard !responses.isEmpty else { throw OpenAIFailure(kind: .streamInterrupted) }
             return responses.removeFirst()
         }
@@ -31,9 +47,30 @@ nonisolated final class OpenAITransportFixture: OpenAITransport, @unchecked Send
     func events(_ request: OpenAIRequest) -> AsyncThrowingStream<OpenAIEvent, any Error> {
         AsyncThrowingStream { continuation in
             do {
+                let eventError = lock.withLock { () -> Bool in
+                    guard eventErrorsBeforeSuccess > 0 else { return false }
+                    eventErrorsBeforeSuccess -= 1
+                    seen.append(request)
+                    return true
+                }
+                if eventError {
+                    continuation.yield(.init(type: "response.created", payload: ["type": "response.created"], id: nil))
+                    if outputBeforeError {
+                        continuation.yield(.init(type: "response.output_text.delta", payload: ["delta": "Partial"], id: nil))
+                    }
+                    var payload: OpenAIJSON = ["type": "error"]
+                    if let eventErrorCode { payload["code"] = .string(eventErrorCode) }
+                    continuation.yield(.init(type: "error", payload: payload, id: nil))
+                    continuation.finish()
+                    return
+                }
                 let response = try next(request)
-                continuation.yield(.init(type: "response.future_notification", payload: ["future": true], id: nil))
-                continuation.yield(.init(type: "response.output_text.delta", payload: ["delta": "Checking…"], id: nil))
+                if let streamEvents {
+                    for event in streamEvents { continuation.yield(event) }
+                } else {
+                    continuation.yield(.init(type: "response.future_notification", payload: ["future": true], id: nil))
+                    continuation.yield(.init(type: "response.output_text.delta", payload: ["delta": "Checking…"], id: nil))
+                }
                 continuation.yield(
                     .init(type: "response." + (response["status"].string ?? "completed"), payload: ["response": response], id: nil))
                 continuation.finish()
@@ -66,6 +103,46 @@ nonisolated final class OpenAITransportFixture: OpenAITransport, @unchecked Send
 
 @MainActor
 struct OpenAIResponsesTests {
+    @Test func progressToolArgumentsStreamBeforeTheResponseCompletes() async throws {
+        let message = "I'll inspect the page."
+        let arguments = #"{"message":"I'll inspect the page."}"#
+        let call: OpenAIJSON = [
+            "type": "function_call", "id": "item_progress", "call_id": "call_progress",
+            "name": "updateProgress", "arguments": .string(arguments),
+        ]
+        let events: [OpenAIEvent] = [
+            .init(type: "response.output_item.added", payload: [
+                "output_index": 0, "item": ["type": "function_call", "name": "updateProgress", "arguments": ""],
+            ], id: nil),
+            .init(type: "response.function_call_arguments.delta", payload: [
+                "output_index": 0, "delta": #"{"message":"I'll inspect"#,
+            ], id: nil),
+            .init(type: "response.function_call_arguments.delta", payload: [
+                "output_index": 0, "delta": #" the page."}"#,
+            ], id: nil),
+            .init(type: "response.function_call_arguments.done", payload: [
+                "output_index": 0, "arguments": .string(arguments),
+            ], id: nil),
+        ]
+        let wire = OpenAITransportFixture([OpenAITransportFixture.response([call])], streamEvents: events)
+        var visible: [String] = []
+        let client = client(wire)
+        let step = try await client.respond(
+            transcript: Transcript(), prompt: "Inspect", images: [], state: client.restoring(nil),
+            tools: [UpdateProgressTool()], maxTokens: 100, onText: { _ in }, onProgress: { visible.append($0) }
+        )
+        #expect(visible.first == "I'll inspect")
+        #expect(visible.last == message)
+        #expect(step.calls.map(\.toolName) == ["updateProgress"])
+    }
+
+    @Test func partialProgressDecodesEscapesOnlyWhenComplete() {
+        #expect(OpenAIProgressMessage.partial(#"{"message":"Wait \"#) == "Wait ")
+        #expect(OpenAIProgressMessage.partial(#"{"message":"Wait \uD83D"#) == "Wait ")
+        #expect(OpenAIProgressMessage.partial(#"{"message":"Wait \uD83D\uDE00"#) == "Wait 😀")
+        #expect(OpenAIProgressMessage.partial(#"{"other":"secret"}"#) == nil)
+    }
+
     @Test func imageOnlyResponsesFinishWithoutASecondGeneration() async throws {
         let wire = OpenAITransportFixture([OpenAITransportFixture.response([
             ["type": "image_generation_call", "id": "image_fixture", "result": "AQID", "output_format": "png"],

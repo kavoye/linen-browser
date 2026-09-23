@@ -20,7 +20,8 @@ struct DownloadListPersistenceTests {
         defer { try? FileManager.default.removeItem(at: file) }
 
         let downloads = DownloadManager(file: file)
-        let id = downloads.beginItem(source: URL(string: "https://example.com/report.pdf"))
+        let tabID = UUID()
+        let id = downloads.beginItem(source: URL(string: "https://example.com/report.pdf"), sourceTabID: tabID)
         downloads.noteCancelRequested(id)
         downloads.noteCancellation(id, resumeData: nil)
         downloads.writeNow()
@@ -30,6 +31,8 @@ struct DownloadListPersistenceTests {
         #expect(relaunched.items.count == 1)
         #expect(relaunched.items.first?.filename == "report.pdf")
         #expect(relaunched.items.first?.source == "example.com")
+        #expect(relaunched.items.first?.sourceOrigin == "https://example.com")
+        #expect(relaunched.items.first?.sourceTabID == tabID)
         #expect(relaunched.items.first?.state == .cancelled)
     }
 

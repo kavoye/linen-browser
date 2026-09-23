@@ -12,11 +12,12 @@ struct OpenAISettingsSection: View {
     @State private var options = OpenAIResponseSettings()
     @State private var loaded = false
     @State private var destination: OpenAISettingsDestination?
+    @Environment(\.settingsHighlight) private var highlight
 
     var body: some View {
-        SettingsSection(title: "OpenAI", symbol: "sparkles", footnote: "Supported models can search, create images, and work with data automatically. OpenAI usage charges apply.", accessory: {
+        SettingsSection(title: "OpenAI", symbol: "sparkles", footnote: "Supported models can search the web, create images, and analyze data. OpenAI charges for API use.", accessory: {
             Menu {
-                Button("Developer Settings…") { destination = .developer }
+                Button("Developer settings…") { destination = .developer }
             } label: { Image(systemName: "ellipsis") }
             .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("More OpenAI settings")
         }) {
@@ -28,31 +29,43 @@ struct OpenAISettingsSection: View {
                         Text("Long").tag("high")
                     }.labelsHidden()
                 }
+                .settingsAnchor("openai.replyLength")
                 RowSeparator()
             }
-            DrillInRow(title: "Voice", symbol: "waveform", caption: "Choose how your assistant sounds.") { destination = .voice }
-            RowSeparator()
-            DrillInRow(title: "Documents", symbol: "doc.text", caption: "Add documents for your assistant to search.") { destination = .documents }
+            DrillInRow(title: "Voice", symbol: "waveform", caption: "Choose voices for conversation and reading aloud.") { destination = .voice }
+                .settingsAnchor("openai.voice")
             RowSeparator()
             DrillInRow(title: "Connections", symbol: "link", caption: "Connect services your assistant can use.") { destination = .connections }
+                .settingsAnchor("openai.connections")
             RowSeparator()
-            DrillInRow(title: "Permissions and privacy", symbol: "hand.raised", caption: "Browser control and saved replies.") { destination = .privacy }
+            DrillInRow(title: "Data and privacy", symbol: "hand.raised", caption: "Choose whether you can retrieve replies through the OpenAI API.") { destination = .privacy }
+                .settingsAnchor("openai.privacy")
 
         }
+        .settingsAnchor("openai.developer")
         .disabled(!loaded)
         .task {
             guard !loaded else { return }
             options = OpenAISettingsStore.load(providerID: providerID)
             loaded = true
         }
+        .onChange(of: highlight, initial: true) { _, anchor in
+            guard let anchor else { return }
+            if anchor.hasPrefix("openai.voice") {
+                destination = .voice
+            } else if anchor.hasPrefix("openai.connections") {
+                destination = .connections
+            } else if anchor.hasPrefix("openai.privacy") {
+                destination = .privacy
+            } else if anchor.hasPrefix("openai.developer") {
+                destination = .developer
+            }
+        }
         .sheet(item: $destination) { page in
             OpenAISettingsSheet(title: page.title) {
                 switch page {
                 case .voice:
                     OpenAIVoiceSettingsView(options: savedOptions.voice)
-                case .documents:
-                    OpenAIFileSearchView(providerID: providerID, tools: savedOptions.hostedTools)
-                        .id("files:\(providerID):\(credentialRevision)")
                 case .connections:
                     OpenAIMCPSettingsView(providerID: providerID, servers: savedOptions.mcpServers)
                         .id("mcp:\(providerID):\(credentialRevision)")
@@ -74,7 +87,7 @@ struct OpenAISettingsSection: View {
 }
 
 private enum OpenAISettingsDestination: String, Identifiable {
-    case voice, documents, connections, privacy, developer
+    case voice, connections, privacy, developer
     var id: String {
         rawValue
     }
@@ -82,12 +95,10 @@ private enum OpenAISettingsDestination: String, Identifiable {
         switch self {
         case .voice:
             "Voice"
-        case .documents:
-            "Documents"
         case .connections:
             "Connections"
         case .privacy:
-            "Permissions and privacy"
+            "Data and privacy"
         case .developer:
             "Developer settings"
         }
@@ -126,15 +137,12 @@ private struct OpenAIPrivacySettings: View {
         Text("Linen saves chat history on this Mac. Your messages are still sent to OpenAI to generate replies.")
             .font(.callout).foregroundStyle(.secondary)
         SettingsCard {
-            DetailRow(title: "Control pages visually", caption: "Use screenshots, clicks, and typing on pages you allow the assistant to control.") {
-                SettingsToggle($options.useComputer)
-            }
-            RowSeparator()
-            DetailRow(title: "Keep replies in my OpenAI account", caption: "Save an extra copy for retrieval through the OpenAI API. You don’t need this for Linen’s chat history.") {
+            DetailRow(title: "Keep replies in my OpenAI account", caption: "Save an extra copy for retrieval through the OpenAI API. You don't need this for Linen's chat history.") {
                 SettingsToggle($options.store)
             }
+            .settingsAnchor("openai.privacy")
         }
-        Text("Turning this off affects new replies. It does not delete earlier copies or change OpenAI’s other data-retention policies.")
+        Text("Turning this off affects new replies. It does not delete earlier copies or change OpenAI's other data-retention policies.")
             .font(.caption).foregroundStyle(.secondary)
     }
 }

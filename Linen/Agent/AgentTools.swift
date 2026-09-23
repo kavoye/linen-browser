@@ -137,12 +137,12 @@ nonisolated struct ReadPageTool: Tool {
         var lookingFor: String
         @Guide(
             description:
-                "Page ID, title, site, split position, or research. Empty for the current target."
+                "Page ID, title, site, or split position. Empty for the active tab."
         )
         var page: String
         @Guide(description: "Continuation offset for page text; omit for the first excerpt.")
         var textOffset: Int?
-        @Guide(description: "Continuation offset for controls; omit for the first page.")
+        @Guide(description: "Use the suggested next controlOffset, not a [ref] number. Omit or use 0 when changing lookingFor, scope, or viewportOnly.")
         var controlOffset: Int?
         @Guide(description: "Optional CSS selector restricting the control list.")
         var scope: String?
@@ -165,7 +165,7 @@ nonisolated struct ClickOnPageTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        @Guide(description: "Page ID or title. Omit for the active tab.")
         var page: String?
         @Guide(description: "Exact observationID from the latest read or action result.")
         var observationID: String
@@ -193,7 +193,7 @@ nonisolated struct TypeOnPageTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        @Guide(description: "Page ID or title. Omit for the active tab.")
         var page: String?
         @Guide(description: "Exact observationID from the latest read or action result.")
         var observationID: String
@@ -243,7 +243,7 @@ nonisolated struct FillFieldsTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        @Guide(description: "Page ID or title. Omit for the active tab.")
         var page: String?
         @Guide(description: "Exact observationID from the latest read or action result.")
         var observationID: String
@@ -269,7 +269,7 @@ nonisolated struct SelectOptionTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "Page ID, title, or research. Omit for the current target.")
+        @Guide(description: "Page ID or title. Omit for the active tab.")
         var page: String?
         @Guide(description: "Exact observationID from the latest read or action result.")
         var observationID: String
@@ -387,7 +387,7 @@ nonisolated enum AgentToolTier: Hashable, Sendable {
 @MainActor
 func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>) -> [any Tool] {
     makeAgentTools(toolkit: toolkit, tier: .full).filter {
-        $0.name == AskUserTool.toolName || enabledIDs.contains($0.name)
+        $0.name == AskUserTool.toolName || AgentToolCatalog.outcomeToolIDs.contains($0.name) || enabledIDs.contains($0.name)
     }
 }
 
@@ -395,6 +395,9 @@ func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>) -> [any Tool
 func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any Tool] {
     let core: [any Tool] = [
         AskUserTool(toolkit: toolkit),
+        RecordTaskOutcomeTool(toolkit: toolkit),
+        VerifyTaskOutcomeTool(toolkit: toolkit),
+        BlockTaskOutcomeTool(toolkit: toolkit),
         WebSearchTool(toolkit: toolkit),
         NavigateTool(toolkit: toolkit),
         ReadPageTool(toolkit: toolkit),
@@ -418,6 +421,16 @@ func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any 
             SetCheckedTool(toolkit: toolkit),
             WaitForPageTool(toolkit: toolkit),
             ScreenshotPageTool(toolkit: toolkit),
+            MovePointerTool(toolkit: toolkit),
+            ClickAtPointTool(toolkit: toolkit),
+            DoubleClickAtPointTool(toolkit: toolkit),
+            DragOnPageTool(toolkit: toolkit),
+            ListFramesTool(toolkit: toolkit),
+            ReadFrameTool(toolkit: toolkit),
+            ActInFrameTool(toolkit: toolkit),
+            ChooseFilesOnPageTool(toolkit: toolkit),
+            InspectDownloadsTool(toolkit: toolkit),
+            TypeAtPointerTool(toolkit: toolkit),
             HoverOnPageTool(toolkit: toolkit),
             PressKeyTool(toolkit: toolkit),
             PlayVideoTool(toolkit: toolkit),

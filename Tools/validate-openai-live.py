@@ -30,13 +30,10 @@ def main():
     parser.add_argument("--tool-search-only", action="store_true", help="Compare direct and deferred browser tool catalogs with synthetic results")
     parser.add_argument("--mcp-only", action="store_true", help="Validate a public read-only remote MCP tool and native approval continuation")
     parser.add_argument("--shell-only", action="store_true", help="Validate hosted shell file generation, download and container continuation")
-    parser.add_argument("--computer-only", action="store_true", help="Validate native computer actions against an isolated synthetic browser page")
     parser.add_argument("--conversation-only", action="store_true", help="Validate a synthetic Realtime conversation without microphone or speaker access")
-    parser.add_argument("--files-only", action="store_true", help="Validate native PDF input and a temporary file-search collection")
+    parser.add_argument("--files-only", action="store_true", help="Validate native PDF input")
     parser.add_argument("--adhoc", action="store_true", help="Use ad-hoc signing; saved app Keychain keys may be inaccessible")
     args = parser.parse_args()
-    if args.computer_only and (not args.live or any((args.shell_only, args.hosted_tools, args.hosted_only, args.voice_only, args.files_only, args.conversation_only, args.mcp_only, args.tool_search_only))):
-        parser.error("--computer-only requires --live and cannot be combined with other acceptance modes")
     if args.shell_only and (not args.live or any((args.hosted_tools, args.hosted_only, args.voice_only, args.files_only, args.conversation_only, args.mcp_only, args.tool_search_only))):
         parser.error("--shell-only requires --live and cannot be combined with other acceptance modes")
     if (args.hosted_tools or args.hosted_only) and not args.live:
@@ -84,7 +81,6 @@ def main():
               "hosted_tools": args.hosted_tools or args.hosted_only, "hosted_only": args.hosted_only,
               "source_sha256": provenance("hash"), "voice_only": args.voice_only, "files_only": args.files_only, "conversation_only": args.conversation_only, "mcp_only": args.mcp_only, "tool_search_only": args.tool_search_only}
     config["shell_only"] = args.shell_only
-    config["computer_only"] = args.computer_only
     if args.model:
         config["model"] = args.model
     (output / "config.json").write_text(json.dumps(config, indent=2) + "\n")
@@ -95,8 +91,7 @@ def main():
     timed_out = False
     with (output / "test.log").open("w") as log:
         try:
-            suite = ("OpenAIComputerLiveTests" if args.computer_only else
-                     "OpenAIHostedShellLiveTests" if args.shell_only else
+            suite = ("OpenAIHostedShellLiveTests" if args.shell_only else
                      "OpenAIToolSearchLiveTests" if args.tool_search_only else
                      "OpenAIMCPLiveTests" if args.mcp_only else
                      "OpenAIConversationLiveTests" if args.conversation_only else

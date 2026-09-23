@@ -9,7 +9,10 @@ enum PageDriver {
     // MARK: - The page-side runtime
 
     static func scripted(_ body: String) -> String {
-        "(() => {\n" + PageAutomationGuard.scriptCheck + PageRuntime.script + "\n" + body + "\n})()"
+        let frameCheck = selectedFrame.flatMap { jsonString($0.id) }.map {
+            "if (window.__linenFrameToken !== \($0)) return JSON.stringify({ stale: true });\n"
+        } ?? ""
+        return "(() => {\n" + frameCheck + PageAutomationGuard.scriptCheck + PageRuntime.script + "\n" + body + "\n})()"
     }
 
     // MARK: - Reading
@@ -71,8 +74,16 @@ enum PageDriver {
         let start = object["textStart"] as? Int ?? 0
         let nextText = start + text.utf16.count
         let totalControls = object["controlTotal"] as? Int ?? 0
-        let nextControl = max(0, controlOffset) + refs.count
+        let nextControl = (object["controlStart"] as? Int ?? 0) + refs.count
+        if PageOutputBudget.cost(url) <= 350 {
+            result += "\nurl: \(url)"
+        }
         result += "\nobservationID: \(id)"
+        if let reset = object["controlReset"] as? String, !reset.isEmpty {
+            result += reset == "query_changed"
+                ? "\nControl pagination restarted at 0 because the query or filters changed."
+                : "\nControl pagination restarted at 0 because the offset exceeds the available controls. Offsets are list positions, not [ref] numbers."
+        }
         if nextText < totalText {
             result += "\nMore text: readPage textOffset=\(nextText) (\(totalText) UTF-16 units total)."
         }
@@ -158,6 +169,9 @@ enum PageDriver {
         if control["d"] as? Int == 1 {
             line += " (disabled)"
         }
+        if control["ro"] as? Int == 1 {
+            line += " (read-only)"
+        }
         return line
     }
 
@@ -173,7 +187,7 @@ enum PageDriver {
                 let permitted = await AgentActionConsent.permit(
                     label: found.label,
                     category: category,
-                    host: webView.url?.host(),
+                    host: (selectedFrame?.url ?? webView.url)?.host(),
                     authoredByAI: AgentAuthoredText.isPresent(in: webView)
                 )
                 guard permitted else {
@@ -190,6 +204,58 @@ enum PageDriver {
             await announce(ref: found.ref, in: webView, pause: announced)
             if let error = await prepareAction(ref: found.ref, in: webView) {
                 return error
+            }
+            let suggestionScript = scripted("""
+                   const el = window.__linenRefs[\(found.ref) - 1];
+                   if (!el?.isConnected || !R.matchesRef(\(found.ref))) return JSON.stringify({ stale: true });
+                   if (el.ownerDocument !== document) return JSON.stringify({ notSuggestion: true });
+                   const active = el.ownerDocument.activeElement;
+                   const typed = active?.matches('input:not([readonly]), textarea') ? R.norm(active.value).toLowerCase() : '';
+                   const label = R.norm(R.labelOf(el, R.kindOf(el))).toLowerCase();
+                   const option = el.getAttribute('role') === 'option';
+                   if (!option && (R.kindOf(el) !== 'button' || typed.length < 2 || !label.startsWith(typed))) {
+                     return JSON.stringify({ notSuggestion: true });
+                   }
+                   const error = R.actionable(el);
+                   if (error) return JSON.stringify({ error });
+                   const rect = el.getBoundingClientRect();
+                   return JSON.stringify({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+                   """)
+            let suggestion = await evaluateJSON(suggestionScript, in: webView)
+            if selectedFrame == nil, suggestion?["x"] is Double, suggestion?["y"] is Double {
+                guard let capture = try? await computerFrame(in: webView) else {
+                    return "Could not inspect “\(found.label)” on the visible page. Capture a new screenshot before trying again."
+                }
+                let currentSuggestion = await evaluateJSON(suggestionScript, in: webView)
+                guard let x = currentSuggestion?["x"] as? Double, let y = currentSuggestion?["y"] as? Double else {
+                    return staleMessage
+                }
+                let frame = capture.0
+                let action: OpenAIJSON = [
+                    "type": "click", "button": "left",
+                    "x": .number(x * Double(webView.pageZoom) * Double(frame.pixels.width / frame.geometry.width)),
+                    "y": .number(y * Double(webView.pageZoom) * Double(frame.pixels.height / frame.geometry.height)),
+                ]
+                do {
+                    try await computerAction(action, frame: frame, in: webView)
+                } catch PageComputerFailure.unverified {
+                    // The event may have reached the page even when its receipt was missed.
+                } catch {
+                    return "Could not click “\(found.label)” on the visible page. Capture a new screenshot and try again."
+                }
+                let deadline = ContinuousClock.now + .seconds(2)
+                repeat {
+                    let state = await evaluateJSON(scripted("""
+                        const el = window.__linenRefs[\(found.ref) - 1];
+                        return JSON.stringify({ dismissed: !el?.isConnected || !R.visible(el)
+                          || el.getAttribute('aria-selected') === 'true' });
+                        """), in: webView)
+                    if state?["dismissed"] as? Bool == true || webView.isLoading {
+                        return "Clicked “\(found.label)”. \(await settleAndSnippet(webView))"
+                    }
+                    try? await Task.sleep(for: .milliseconds(50))
+                } while ContinuousClock.now < deadline
+                return "Selection of “\(found.label)” was not confirmed. Read the current page before trying another option."
             }
             let script = scripted(
                 """
@@ -226,7 +292,7 @@ enum PageDriver {
                 let permitted = await AgentActionConsent.permit(
                     label: found.label,
                     category: category,
-                    host: webView.url?.host(),
+                    host: (selectedFrame?.url ?? webView.url)?.host(),
                     authoredByAI: true
                 )
                 guard permitted else {
@@ -435,7 +501,7 @@ enum PageDriver {
               text, refs: (window.__linenRefs || []).map(el =>
                 [el.isConnected, el.disabled, R.kindOf(el), el.name, el.id, markupWithoutValues(el)]) });
             """)
-        return (try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)) as? String
+        return (try? await webView.evaluateJavaScript(script, in: selectedFrame?.frame, contentWorld: PageAutomationGuard.world)) as? String
     }
 
     static func scroll(direction: String, ref: Int = 0, in webView: WKWebView) async -> String {
@@ -495,7 +561,7 @@ enum PageDriver {
               }
               return true;
             """)
-        _ = try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)
+        _ = try? await webView.evaluateJavaScript(script, in: selectedFrame?.frame, contentWorld: PageAutomationGuard.world)
         if pause {
             await pauseSleeper(announcePause)
         }
@@ -523,6 +589,9 @@ enum PageDriver {
             return .failure("Say which element: a [ref] number from readPage, or a visible label.")
         }
         if ref > 0, !(await validateObservation(in: webView, ref: ref)) {
+            return .failure(staleMessage)
+        }
+        if ref == 0, expectedObservation != nil, !(await validateObservation(in: webView)) {
             return .failure(staleMessage)
         }
         if ref == 0, expectedObservation == nil {
@@ -596,13 +665,13 @@ enum PageDriver {
     private static func snippet(of webView: WKWebView) async -> String {
         guard PageAutomationGuard.allowsExecution else { return "" }
         let script = scripted("return R.viewportText(1200);")
-        let text = (try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)) as? String ?? ""
+        let text = (try? await webView.evaluateJavaScript(script, in: selectedFrame?.frame, contentWorld: PageAutomationGuard.world)) as? String ?? ""
         return PageAutomationGuard.allowsExecution ? text : ""
     }
 
     static func evaluateJSON(_ script: String, in webView: WKWebView) async -> [String: Any]? {
         guard PageAutomationGuard.allowsExecution,
-            let raw = (try? await webView.evaluateJavaScript(script, in: nil, contentWorld: PageAutomationGuard.world)) as? String,
+            let raw = (try? await webView.evaluateJavaScript(script, in: selectedFrame?.frame, contentWorld: PageAutomationGuard.world)) as? String,
             PageAutomationGuard.allowsExecution,
             let data = raw.data(using: .utf8),
             let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -614,7 +683,7 @@ enum PageDriver {
         guard PageAutomationGuard.allowsExecution else { return nil }
         return
             (try? await webView.evaluateJavaScript(
-                "window.__linenSnapshot", in: nil, contentWorld: PageAutomationGuard.world
+                "window.__linenSnapshot", in: selectedFrame?.frame, contentWorld: PageAutomationGuard.world
             )) as? String
     }
 

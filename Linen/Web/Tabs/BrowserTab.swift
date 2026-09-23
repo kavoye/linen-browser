@@ -787,7 +787,8 @@ final class BrowserTab: Identifiable {
         webView.stopLoading()
     }
 
-    func load(_ url: URL, transition: HistoryStore.Transition = .typed) {
+    @discardableResult
+    func load(_ url: URL, transition: HistoryStore.Transition = .typed) -> WKNavigation? {
         autofillSave.clear()
         pendingTransition = transition
         discardDeferredSession()
@@ -795,9 +796,9 @@ final class BrowserTab: Identifiable {
         permitSystemPage(url)
         // WebKit refuses a plain request for a file: URL and leaves the tab blank.
         if url.isFileURL {
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+            return webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
         } else {
-            webView.load(URLRequest(url: url))
+            return webView.load(URLRequest(url: url))
         }
     }
 

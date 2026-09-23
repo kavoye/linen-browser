@@ -151,7 +151,7 @@ struct HarnessFixture {
     let tabID: UUID
 
     init(
-        _ actions: [HarnessScript.Action], policy: AgentExecutionPolicy = .interactive,
+        _ actions: [HarnessScript.Action], policy: AgentExecutionPolicy = .init(requiresOutcomeVerification: false),
         inputTokens: Int = 100_000, database: AppDatabase? = nil, tabID: UUID = UUID(),
         state: HarnessToolState? = nil, contextBudget: ContextBudget? = nil,
         openAI: OpenAIResponsesClient? = nil
@@ -168,7 +168,7 @@ struct HarnessFixture {
         agent = AnyLanguageModelAgent(
             name: "fixture", modelID: "gpt-5.6-luna", reasoningEffort: "medium",
             executionPolicy: policy,
-            toolOverrides: ["readPage", "typeOnPage", "askUser"].map { HarnessTool(name: $0, state: state) },
+            toolOverrides: ["readPage", "typeOnPage", "clickAtPoint", "askUser"].map { HarnessTool(name: $0, state: state) },
             openAI: openAI,
             model: model, options: GenerationOptions(),
             budget: contextBudget ?? ContextBudget(

@@ -10,19 +10,39 @@ final class AgentToolkit {
     private let media: MediaCenter
     private let log: ConversationLog
     private let services: Services
-    private let extensionController: WKWebExtensionController?
-    private let preview: ResearchPreview?
     private let questions: AgentQuestionModel?
     private var task: AgentTaskContext?
-    private var researchWebView: WKWebView?
-    private var finalResearchURL: URL?
-    private var usesResearchPage = false
     private var searchCache: [String: (expires: ContinuousClock.Instant, hits: [SearchHit])] = [:]
     private var hasSeenUntrustedContent = false
     private var discoveredDestinations: Set<String> = []
     private var seededContextTabIDs: Set<UUID> = []
     private var agentOpenedTabIDs: Set<UUID> = []
     private(set) var lastToolFailed = false
+    var taskLedger = AgentTaskLedger()
+    var fileSelection: ((WKOpenPanelParameters) async -> [URL]?)? {
+        services.chooseFiles
+    }
+    private var embeddedAccessCenters: [String: TabAssistantAccessCenter] = [:]
+
+    func embeddedAccess(for url: URL, in view: WKWebView) -> TabAssistantAccessCenter? {
+        let key = SitePermissions.origin(for: url)
+        if let access = embeddedAccessCenters[key] {
+            return access
+        }
+        guard let tab = onScreenTab(for: view) ?? mentionedTab(for: view) else { return nil }
+        let access = tab.assistantAccess.embeddedAccess(for: url)
+        embeddedAccessCenters[key] = access
+        return access
+    }
+
+    func taskDownloads(in view: WKWebView) -> [DownloadManager.Item] {
+        guard let tab = onScreenTab(for: view) ?? mentionedTab(for: view) else { return [] }
+        let origin = SitePermissions.origin(for: view.url)
+        return browser.downloads.items.filter {
+            $0.sourceTabID == tab.id && $0.started >= taskLedger.startedAt &&
+                $0.sourceOrigin == origin
+        }
+    }
 
     func rejectTool(name: String, reason: String) -> String {
         let step = beginTool(name: name, title: AgentDiagnosticPrivacy.title(for: name))
@@ -41,8 +61,6 @@ final class AgentToolkit {
         browser: BrowserModel,
         media: MediaCenter,
         log: ConversationLog,
-        extensionController: WKWebExtensionController? = nil,
-        preview: ResearchPreview? = nil,
         questions: AgentQuestionModel? = nil,
         services: Services = .live
     ) {
@@ -50,14 +68,7 @@ final class AgentToolkit {
         self.media = media
         self.log = log
         self.services = services
-        self.extensionController = extensionController
-        self.preview = preview
         self.questions = questions
-        preview?.source = { [weak self] in self?.researchWebView }
-    }
-
-    var actsOnVisiblePage: Bool {
-        targetWebView !== researchWebView
     }
 
     func withPageContext(
@@ -75,7 +86,6 @@ final class AgentToolkit {
 
     private(set) var pendingScreenshot: Data?
     var computerObservation: PageComputerFrame?
-    var computerActionDeclined = false
 
     func setComputerScreenshot(_ data: Data?) {
         pendingScreenshot = data
@@ -118,20 +128,26 @@ final class AgentToolkit {
             return denial
         }
         remember(links: links(in: output))
-        updateFinalResearchURL(from: view)
-        let succeeded = ["CONTROL:", "Condition met.", "Set checked", "Checked state", "Screenshot captured.", "Scrolled", "Already at", "Dispatched hover", "Sent "].contains { output.hasPrefix($0) }
+        let succeeded = [
+            "CONTROL:", "Condition met.", "Clicked", "Typed", "Selected", "Set checked", "Checked state",
+            "Screenshot captured.", "Scrolled", "Already at", "Dispatched hover", "Sent ",
+        ].contains { output.hasPrefix($0) }
         completeTool(step, output: output, failed: !succeeded)
         return fencedPageOutput(output)
     }
 
     func screenshotPage() async -> String {
         pendingScreenshot = nil
+        computerObservation = nil
         return await pageOperation(name: "screenshotPage", readOnly: true) { view in
-            guard let data = await PageDriver.screenshot(in: view) else {
+            guard let (frame, data) = try? await PageDriver.computerFrame(in: view) else {
+                computerObservation = nil
                 return "Screenshot unavailable. The page may contain filled sensitive fields. Use readPage for redacted text."
             }
+            computerObservation = frame
             pendingScreenshot = data
-            return "Screenshot captured.\n" + (await PageDriver.snapshot(view, viewportOnly: true))
+            return "Screenshot captured. Use its pixel coordinates with movePointer or clickAtPoint.\n"
+                + (await PageDriver.snapshot(view, viewportOnly: true))
         }
     }
 
@@ -141,7 +157,7 @@ final class AgentToolkit {
     ) async -> String {
         let scope = PageAutomationGuard(documentURL: view.url?.absoluteString ?? "about:blank", snapshot: nil) { [weak self, weak view] in
             guard let self, let view, self.postflightDenial(for: authorization, in: view) == nil else { return false }
-            guard let authorization else { return view === self.researchWebView }
+            guard let authorization else { return false }
             guard let tab = self.browser.tabs.first(where: { $0.id == authorization.tabID }) else { return false }
             let policy = tab.assistantAccess.effectivePolicy
             return policy.allows(capability) && (capability == .read || self.onScreenTab(for: view) === tab)
@@ -154,40 +170,20 @@ final class AgentToolkit {
     // MARK: - Task lifecycle
 
     func beginTask(_ task: AgentTaskContext) {
+        embeddedAccessCenters = [:]
         computerObservation = nil
-        researchWebView?.stopLoading()
-        researchWebView = nil
-        finalResearchURL = nil
         hasSeenUntrustedContent = false
         discoveredDestinations = []
-        usesResearchPage = false
         searchCache = [:]
         self.task = task
         seededContextTabIDs = Set(onScreenTabs.map(\.id))
         agentOpenedTabIDs = []
-        preview?.begin(inSpace: task.spaceID)
     }
 
-    func finishTask(_ completedTask: AgentTaskContext, commitResult: Bool) {
+    func finishTask(_ completedTask: AgentTaskContext) {
         guard task?.id == completedTask.id else { return }
         computerObservation = nil
-        preview?.end()
-        defer {
-            researchWebView?.stopLoading()
-            researchWebView = nil
-            finalResearchURL = nil
-            task = nil
-        }
-
-        guard commitResult,
-              let task,
-              let url = researchWebView?.url.flatMap(Self.webURL) ?? finalResearchURL,
-              let tab = browser.tabs.first(where: { $0.id == task.tabID })
-        else { return }
-
-        if tab.urlString != url.absoluteString {
-            tab.load(url, transition: .agent)
-        }
+        task = nil
     }
 
     // MARK: - Behaviour
@@ -213,6 +209,11 @@ final class AgentToolkit {
         guard domain.isEmpty || (domain.contains(".") && domain.range(of: #"^[a-z0-9.-]+$"#, options: .regularExpression) != nil
             && URL(string: "https://" + domain)?.host() == domain) else {
             let output = "Use a domain such as example.com, without a path or URL scheme."
+            completeTool(step, output: output, failed: true)
+            return output
+        }
+        guard visibleTaskTab != nil else {
+            let output = String(localized: "The active tab changed before the assistant could use it.")
             completeTool(step, output: output, failed: true)
             return output
         }
@@ -262,7 +263,6 @@ final class AgentToolkit {
             return ConversationLog.ActivityLink(title: hit.title, url: url)
         }
         remember(links: links)
-        finalResearchURL = SearchURLBuilder.searchURL(for: domain.isEmpty ? (queries.first ?? query) : "site:\(domain) \(queries.first ?? query)")
         completeTool(step, output: output, links: links)
         return fencedPageOutput(output)
     }
@@ -301,24 +301,51 @@ final class AgentToolkit {
             return output
         }
 
-        let webView = researchSurface()
-        webView.load(URLRequest(url: url))
-        let output = await PageDriver.$outputBudget.withValue(outputBudget.driverBudget) {
-            await PageDriver.readRenderedPage(
-            webView,
-            maxTextLength: outputBudget.pageTextCharacters,
-            controlLimit: outputBudget.controlLimit
-        )
+        guard let tab = visibleTaskTab else {
+            let output = String(localized: "The active tab changed before the assistant could use it.")
+            completeTool(step, output: output, failed: true)
+            return output
         }
+        let webView = tab.webView
+        guard let navigation = tab.load(url, transition: .agent) else {
+            let output = "Couldn’t open the page in the active tab."
+            completeTool(step, output: output, failed: true)
+            return output
+        }
+        let loaded = await waitForVisibleNavigation(navigation, in: tab)
         if let cancelled = cancellationOutput(for: step) {
-            webView.stopLoading()
+            tab.stopLoading()
             return cancelled
         }
-        finalResearchURL = webView.url.flatMap(Self.webURL) ?? url
+        guard loaded else {
+            let output = "Couldn’t open the page in the active tab."
+            completeTool(step, output: output, failed: true)
+            return output
+        }
+        let access = await authorize(.read, in: webView)
+        if let denial = access.denial {
+            completeTool(step, output: denial, failed: true)
+            return denial
+        }
+        let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .read) {
+            await PageDriver.readRenderedPage(
+                webView,
+                maxTextLength: outputBudget.pageTextCharacters,
+                controlLimit: outputBudget.controlLimit
+            )
+        }
+        if let cancelled = cancellationOutput(for: step) {
+            tab.stopLoading()
+            return cancelled
+        }
+        if let denial = postflightDenial(for: access.authorization, in: webView) {
+            completeTool(step, output: denial, failed: true)
+            return denial
+        }
         let links = links(in: output)
         remember(links: links)
-        completeTool(step, output: output, links: links)
-        return fencedPageOutput(output)
+        completeTool(step, output: output, links: links, failed: !output.hasPrefix("PAGE TEXT:"))
+        return fencedPageOutput("pageID: \(tab.id.uuidString)\n" + output)
     }
 
     func newTab(url rawURL: String?) async -> String {
@@ -338,7 +365,6 @@ final class AgentToolkit {
             }
             let tab = browser.newTab(url: url, transition: .agent)
             agentOpenedTabIDs.insert(tab.id)
-            usesResearchPage = false
             tab.assistantAccess.pageChanged(url: url)
             let access = await authorize(.read, in: tab.webView, requiresTaskTab: false)
             if let output = cancellationOutput(for: step) {
@@ -378,7 +404,6 @@ final class AgentToolkit {
         }
         let tab = browser.newTab()
         agentOpenedTabIDs.insert(tab.id)
-        usesResearchPage = false
         let output = "New empty tab opened and active."
         completeTool(step, output: output)
         return output
@@ -395,7 +420,6 @@ final class AgentToolkit {
             return output
         }
         browser.activate(tab)
-        usesResearchPage = false
         let output = "Switched to “\(tab.title)”."
         completeTool(step, output: output)
         return output
@@ -539,7 +563,25 @@ final class AgentToolkit {
         if let page = Self.requestedPage, !page.isEmpty {
             return pageSurface(named: page)
         }
-        return usesResearchPage ? researchWebView : browser.activeTab?.webView
+        return browser.activeTab?.webView
+    }
+
+    private var visibleTaskTab: BrowserTab? {
+        guard let tab = browser.activeTab else { return nil }
+        guard let task else { return tab }
+        guard browser.spaceID(of: tab.id) == task.spaceID || agentOpenedTabIDs.contains(tab.id) else { return nil }
+        return tab
+    }
+
+    private func waitForVisibleNavigation(_ navigation: WKNavigation, in tab: BrowserTab) async -> Bool {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(15))
+        while ContinuousClock.now < deadline, !Task.isCancelled {
+            if tab.committedNavigation === navigation {
+                return await PageSettle.untilIdle(tab.webView, timeout: .seconds(15)) && !tab.isShowingError
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return false
     }
 
     private var onScreenTabs: [BrowserTab] {
@@ -614,15 +656,11 @@ final class AgentToolkit {
     }
 
     func pageIdentifier(for view: WKWebView) -> String {
-        view === researchWebView ? "research" : (browser.tabs.first { $0.webView === view }?.id.uuidString ?? "")
+        browser.tabs.first { $0.isMaterialised && $0.webView === view }?.id.uuidString ?? ""
     }
 
     func pageSurface(named reference: String) -> WKWebView? {
-        if reference == "research" { return researchWebView }
-        if reference.isEmpty, usesResearchPage {
-            return researchWebView
-        }
-        if reference.isEmpty {
+        if reference.isEmpty || reference == "research" {
             return browser.activeTab?.webView
         }
         let needle = reference.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -682,9 +720,6 @@ final class AgentToolkit {
         in webView: WKWebView,
         requiresTaskTab: Bool = true
     ) async -> (authorization: VisiblePageAuthorization?, denial: String?) {
-        if webView === researchWebView {
-            return (nil, nil)
-        }
         let mentioned = capability == .read ? mentionedTab(for: webView) : nil
         guard let tab = onScreenTab(for: webView) ?? mentioned else {
             return (nil, String(localized: "The active tab changed before the assistant could use it."))
@@ -730,37 +765,6 @@ final class AgentToolkit {
     private func syncAssistantOrigin(of tab: BrowserTab, with webView: WKWebView) {
         guard let url = webView.url, url.absoluteString != "about:blank" else { return }
         tab.assistantAccess.pageChanged(url: url)
-    }
-
-    private func researchSurface() -> WKWebView {
-        usesResearchPage = true
-        if let researchWebView {
-            return researchWebView
-        }
-
-        let configuration = Self.researchConfiguration(extensionController: extensionController)
-
-        let webView = WKWebView(
-            frame: NSRect(x: 0, y: 0, width: 1100, height: 800),
-            configuration: configuration
-        )
-        BrowserSettings.shared.apply(to: webView)
-        webView.customUserAgent = WebViewPool.safariUserAgent
-        researchWebView = webView
-        return webView
-    }
-
-    static func researchConfiguration(
-        extensionController: WKWebExtensionController?
-    ) -> WKWebViewConfiguration {
-        let configuration = WebViewPool.makeConfiguration()
-        configuration.websiteDataStore = .nonPersistent()
-        configuration.webExtensionController = extensionController
-        BrowserSettings.shared.apply(to: configuration)
-        configuration.mediaTypesRequiringUserActionForPlayback = .all
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
-        configuration.preferences.inactiveSchedulingPolicy = .none
-        return configuration
     }
 
     nonisolated static func untrusted(_ pageText: String) -> String {
@@ -820,10 +824,6 @@ final class AgentToolkit {
         return output
     }
 
-    func updateFinalResearchURL(from webView: WKWebView) {
-        guard webView === researchWebView, let url = webView.url.flatMap(Self.webURL) else { return }
-        finalResearchURL = url
-    }
 }
 
 extension AgentToolkit {

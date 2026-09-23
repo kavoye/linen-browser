@@ -19,7 +19,6 @@ struct BenchAdapterTests {
         #expect(defaults.searchMode == .disabled)
         #expect(defaults.maxModelRequests == nil)
         #expect(!defaults.toolSearch)
-        #expect(!defaults.computerUse)
         #expect(try settings(#"{"tool_search":true}"#).toolSearch)
         let search = try settings(#"{"tool_search":true}"#)
         #expect(try search.openAIOptions(model: "gpt-5.6-luna", adapter: .openAIResponses).useToolSearch)
@@ -34,18 +33,6 @@ struct BenchAdapterTests {
             #expect(throws: (any Error).self) { try settings(invalid) }
         }
         #expect(throws: (any Error).self) { try settings(#"{"tool_search":"true"}"#) }
-    }
-
-    @Test func computerUseRequiresANativeProviderAndMountedPage() throws {
-        let enabled = try settings(#"{"computer_use":true}"#)
-        #expect(try enabled.openAIOptions(model: "gpt-5.6-luna", adapter: .openAIResponses).useComputer)
-        #expect(throws: BenchSettings.ConfigurationError.self) { try enabled.openAIOptions(model: "gpt-5.6-luna", adapter: .openAICompatible) }
-        let headless = try settings(#"{"computer_use":true,"headless":true}"#)
-        #expect(throws: BenchSettings.ConfigurationError.self) { try headless.openAIOptions(model: "gpt-5.6-luna", adapter: .openAIResponses) }
-        #expect(throws: (any Error).self) { try settings(#"{"computer_use":"true"}"#) }
-        let hybrid = try settings(#"{"computer_use":true,"tool_search":true}"#)
-        let options = try hybrid.openAIOptions(model: "gpt-5.6-luna", adapter: .openAIResponses)
-        #expect(options.useComputer && options.useToolSearch)
     }
 
     @Test(arguments: ["completed", "no_progress", "request_limit", "context_limit", "provider_error", "interrupted"])
@@ -66,7 +53,7 @@ struct BenchAdapterTests {
             .init(kind: "generation", values: [:]),
             .init(kind: "response", values: ["elapsed_ms": "50"]),
             .init(kind: "tool_accepted", values: ["name": "readPage"]),
-            .init(kind: "tool_accepted", values: ["name": OpenAIComputerCall.toolName]),
+            .init(kind: "tool_accepted", values: ["name": "clickAtPoint"]),
             .init(kind: "tool_completed", values: ["output_bytes": "400", "elapsed_ms": "20"]),
             .init(kind: "tool_failed", values: ["output_bytes": "100", "elapsed_ms": "10"]),
             .init(kind: "progress_recovery", values: [:]),
@@ -74,7 +61,6 @@ struct BenchAdapterTests {
         telemetry.consentRequests = 1
         telemetry.userQuestions = 2
         #expect(telemetry.usage["tool_output_bytes"] == 500)
-        #expect(telemetry.usage["computer_calls"] == 1)
         #expect(telemetry.usage["native_actions"] == 2)
         #expect(telemetry.usage["tool_elapsed_ms"] == 30)
         #expect(telemetry.usage["agent_response_elapsed_ms"] == 50)

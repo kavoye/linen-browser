@@ -50,9 +50,14 @@ struct AgentToolkitPolicyTests {
         let names = makeAgentTools(toolkit: toolkit()).map(\.name)
 
         #expect(names == [
-            "askUser", "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
+            "askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome",
+            "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
             "scrollPage", "goBack", "newTab", "listTabs", "switchTab", "closeTab",
-            "selectOption", "fillFields", "inspectControl", "setChecked", "waitForPage", "screenshotPage", "hoverOnPage", "pressKey", "playVideo", "closeVideo", "controlMedia",
+            "selectOption", "fillFields", "inspectControl", "setChecked", "waitForPage",
+            "screenshotPage", "movePointer", "clickAtPoint", "doubleClickAtPoint", "dragOnPage",
+            "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
+            "typeAtPointer", "hoverOnPage", "pressKey",
+            "playVideo", "closeVideo", "controlMedia",
         ])
     }
 
@@ -60,7 +65,8 @@ struct AgentToolkitPolicyTests {
         let names = makeAgentTools(toolkit: toolkit(), tier: .core).map(\.name)
 
         #expect(names == [
-            "askUser", "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
+            "askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome",
+            "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
             "scrollPage", "goBack",
         ])
     }
@@ -376,7 +382,14 @@ struct AgentToolkitPolicyTests {
                 ResolvedVideo(videoID: nil, fallbackURL: article)
             }
         )
-        let subject = toolkit(services: services)
+        let permissions = SitePermissions(
+            storageURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("VisibleSearch-\(UUID().uuidString).json")
+        )
+        permissions.setAssistantAccess(.readOnly, for: SitePermissions.origin(for: article))
+        let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let tab = browser.newTab()
+        let subject = toolkit(browser: browser, services: services)
 
         let results = await subject.searchWeb(query: " safe result ")
         #expect(results.hasPrefix("<page-content untrusted=\"true\">"))
@@ -385,8 +398,10 @@ struct AgentToolkitPolicyTests {
         #expect(!results.contains("Unsafe result"))
 
         let opened = await subject.navigate(to: article.absoluteString)
-        #expect(opened.contains("Safe article"))
+        #expect(opened.contains("Safe article"), "Navigation output: \(opened)")
         #expect(!opened.contains("For safety"))
+        #expect(browser.activeTab === tab)
+        #expect(tab.urlString == article.absoluteString)
     }
 
     @Test func videoToolsResolveControlAndCloseWithoutUsingAnUnsafeFallback() async {

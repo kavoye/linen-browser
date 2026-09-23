@@ -155,8 +155,6 @@ extension AppCoordinator {
             browser: browser,
             media: media,
             log: conversationLog,
-            extensionController: extensions.controller,
-            preview: researchPreview,
             questions: agentQuestions
         )
         agentTurns.onCancel = { [weak self] in self?.agentQuestions.abandon() }

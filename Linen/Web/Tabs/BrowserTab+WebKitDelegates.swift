@@ -202,7 +202,31 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         runOpenPanelWith parameters: WKOpenPanelParameters,
         initiatedByFrame frame: WKFrameInfo
     ) async -> [URL]? {
-        await PageDialogs.chooseFiles(parameters, in: webView.window)
+        let selection = PageFileSelection.pending.object(forKey: webView)
+        if let selection {
+            selection.requestedPanel = true
+            guard selection.validate(), frame.isMainFrame,
+                  SitePermissions.origin(for: frame.request.url) == selection.origin else {
+                selection.finish(nil)
+                return nil
+            }
+        }
+        let files: [URL]?
+        if let chooser = selection?.selectFiles {
+            files = await chooser(parameters)
+        } else {
+            files = await PageDialogs.chooseFiles(parameters, in: webView.window) { panel in
+                selection?.cancelPanel = { [weak panel] in panel?.cancel(nil) }
+            }
+        }
+        if let selection {
+            guard selection.validate(), await PageDriver.automationSnapshot(in: webView) == selection.observationID else {
+                selection.finish(nil)
+                return nil
+            }
+        }
+        selection?.finish(files?.count)
+        return files
     }
 
     // MARK: - The page's own print

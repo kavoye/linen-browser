@@ -10,6 +10,8 @@ nonisolated struct AgentCheckpoint: Codable, Equatable, Sendable {
     var userAnswers: [String] = []
     var progressUpdates: [AgentProgressUpdate]?
     var openAI: OpenAIConversationState?
+    var taskLedger: AgentTaskLedger?
+    var completion: AgentTaskLedger.Completion?
 
     static let resumePrompt = """
         Continue the unfinished task from the saved conversation. First read the current page: \

@@ -25,7 +25,7 @@ final class ComputerWorkflowFixture {
         log.latestTrace(forTab: tab.id)?.diagnostics.events.last(where: { $0.kind == "terminal" })?.values["status"] == "completed"
     }
 
-    init() async throws {
+    init(services: AgentToolkit.Services = .live) async throws {
         folder = FileManager.default.temporaryDirectory.appendingPathComponent("linen-computer-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         server = try await HTTPFixtureServer.start(routes: ["/": .html("""
@@ -41,13 +41,14 @@ final class ComputerWorkflowFixture {
         let database = AppDatabase.temporary()
         let permissions = SitePermissions(storageURL: folder.appendingPathComponent("permissions.json"))
         let store = WKWebsiteDataStore.nonPersistent()
-        browser = BrowserModel(database: database, sitePermissions: permissions, webViewFactory: {
+        browser = BrowserModel(database: database, sitePermissions: permissions,
+                               downloads: DownloadManager(destinationFolder: folder, asksWhereToSave: false), webViewFactory: {
             let config = WebViewPool.makeConfiguration()
             config.websiteDataStore = store
             return WKWebView(frame: NSRect(x: 0, y: 0, width: 500, height: 400), configuration: config)
         })
         log = ConversationLog(database: database)
-        toolkit = AgentToolkit(browser: browser, media: MediaCenter(), log: log)
+        toolkit = AgentToolkit(browser: browser, media: MediaCenter(), log: log, services: services)
         tab = browser.newTab(url: URL(string: "about:blank")!)
         window = NSWindow(contentRect: NSRect(x: 50, y: 50, width: 500, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false

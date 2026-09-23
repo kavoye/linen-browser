@@ -121,9 +121,6 @@ struct AgentInspector: View {
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94, anchor: .center)))
                 } else {
                     VStack(alignment: .leading, spacing: 6) {
-                        ResearchGlimpse(preview: coordinator.researchPreview, activeSpaceID: activeSpaceID)
-                            .padding(.horizontal, 12)
-
                         if let activeTabID {
                             AgentActivityPanel(
                                 traces: traces,
@@ -216,51 +213,6 @@ private struct ChatColumn: ViewModifier {
         content
             .frame(maxWidth: AssistantChatMetrics.column, alignment: .leading)
             .frame(maxWidth: .infinity)
-    }
-}
-
-private struct ResearchGlimpse: View {
-    let preview: ResearchPreview
-    let activeSpaceID: UUID?
-
-    private static var maxSnapshotWidth: CGFloat {
-        SidePanelMetrics.minWidth - 24
-    }
-
-    var body: some View {
-        if let snapshot = preview.snapshot, preview.spaceID == activeSpaceID, preview.isLive {
-            VStack(alignment: .leading, spacing: 5) {
-                Image(nsImage: snapshot)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: Self.maxSnapshotWidth)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(Theme.Wash.selection, lineWidth: 1)
-                    )
-
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(Theme.accent)
-                        .frame(width: 5, height: 5)
-                    Text(caption)
-                        .font(Theme.Font.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Spacer(minLength: 0)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .transition(.opacity)
-            .animation(Theme.Motion.settle, value: preview.isLive)
-        }
-    }
-
-    private var caption: LocalizedStringResource {
-        let place = preview.host ?? String(localized: "the research page")
-        return "Browsing \(place)…"
     }
 }
 

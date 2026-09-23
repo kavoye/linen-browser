@@ -47,7 +47,7 @@ final class LinkPeekLoader {
         let object = await evaluate(Self.script, in: view)
         try Task.checkCancellation()
 
-        let snapshot = await ResearchPreview.capture(view, width: Self.snapshotWidth)
+        let snapshot = await WebViewSnapshot.capture(view, width: Self.snapshotWidth)
         try Task.checkCancellation()
 
         return LinkPeekPage(
@@ -75,7 +75,7 @@ final class LinkPeekLoader {
         if let webView {
             return webView
         }
-        let configuration = AgentToolkit.researchConfiguration(extensionController: nil)
+        let configuration = Self.configuration()
         let view = WKWebView(
             frame: NSRect(x: 0, y: 0, width: 1000, height: 720),
             configuration: configuration
@@ -84,6 +84,16 @@ final class LinkPeekLoader {
         view.customUserAgent = WebViewPool.safariUserAgent
         webView = view
         return view
+    }
+
+    static func configuration() -> WKWebViewConfiguration {
+        let configuration = WebViewPool.makeConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        BrowserSettings.shared.apply(to: configuration)
+        configuration.mediaTypesRequiringUserActionForPlayback = .all
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        configuration.preferences.inactiveSchedulingPolicy = .none
+        return configuration
     }
 
     private func evaluate(_ script: String, in webView: WKWebView) async -> [String: Any]? {

@@ -7,9 +7,6 @@ import WebKit
 
 @testable import Linen
 
-/// The visible half of agency: the ring that shows what is about to be
-/// pressed, and the thumbnail that shows the hidden page. Both against real
-/// web views, because both are rendering behavior.
 @MainActor
 @Suite(.serialized, .boundedWebViews)
 struct AgentVisibilityTests {
@@ -64,9 +61,6 @@ struct AgentVisibilityTests {
         #expect(await waitUntil { await ringCount(webView) == 0 })
     }
 
-    /// Unannounced actions - the hidden research surface - draw the ring too
-    /// (the thumbnail picks it up) but never pause for an audience that
-    /// isn't there.
     @Test func unannouncedActionsDoNotPayTheAnnouncePause() async {
         let webView = await loadedWebView(#"<button onclick="window.__hit = true">Go</button>"#)
         _ = await PageDriver.readRenderedPage(webView)
@@ -108,47 +102,14 @@ struct AgentVisibilityTests {
         #expect(sawRing)
     }
 
-    // MARK: - The thumbnail
+    // MARK: - Snapshots used by link previews
 
-    /// The load-bearing assumption: a web view that is in no window renders
-    /// into a snapshot anyway. If this stops being true, the card goes
-    /// permanently blank and nothing else would say why.
     @Test func anUnparentedWebViewStillSnapshots() async throws {
         let webView = await loadedWebView(
             #"<div style="background:#3478F6;width:100%;height:100%">Agent page</div>"#
         )
-        let image = try #require(await ResearchPreview.capture(webView))
+        let image = try #require(await WebViewSnapshot.capture(webView))
         #expect(image.size.width > 0)
         #expect(image.size.height > 0)
-    }
-
-    @Test func thePreviewLoopPublishesFramesAndTheHost() async {
-        let webView = await loadedWebView("<h1>Research in progress</h1>")
-        let preview = ResearchPreview()
-        preview.source = { webView }
-
-        preview.begin()
-        #expect(preview.isLive)
-        #expect(preview.snapshot == nil, "begin clears the previous task's frame")
-
-        #expect(await waitUntil { preview.snapshot != nil })
-
-        preview.end()
-        #expect(!preview.isLive)
-        #expect(preview.snapshot != nil, "the last frame outlives the task, dimmed rather than blanked")
-    }
-
-    /// No research surface, no frames - and no crash asking for them.
-    @Test func thePreviewLoopIdlesWhenThereIsNothingToShow() async {
-        let preview = ResearchPreview()
-        var requests = 0
-        preview.source = {
-            requests += 1
-            return nil
-        }
-        preview.begin()
-        #expect(await waitUntil { requests > 0 })
-        #expect(preview.snapshot == nil)
-        preview.end()
     }
 }

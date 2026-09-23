@@ -14,7 +14,6 @@ struct BenchTelemetry {
         [
             "model_generations": events.filter { $0.kind == "generation" }.count,
             "native_actions": events.filter { $0.kind == "tool_accepted" }.count,
-            "computer_calls": events.filter { $0.kind == "tool_accepted" && $0.values["name"] == OpenAIComputerCall.toolName }.count,
             "failed_tools": events.filter { $0.kind == "tool_failed" }.count,
             "recovery_attempts": events.filter { $0.kind == "progress_recovery" }.count,
             "compactions": events.filter { $0.kind == "context_compaction" }.count,

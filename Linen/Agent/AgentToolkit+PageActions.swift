@@ -43,7 +43,6 @@ extension AgentToolkit {
             completeTool(step, output: output, failed: true)
             return output
         }
-        updateFinalResearchURL(from: webView)
         let links = links(in: output)
         remember(links: links)
         completeTool(step, output: output, links: links, failed: !output.hasPrefix("PAGE TEXT:"))
@@ -70,7 +69,7 @@ extension AgentToolkit {
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
-            await PageDriver.click(ref: ref, label: label, in: webView, announced: actsOnVisiblePage)
+            await PageDriver.click(ref: ref, label: label, in: webView, announced: true)
         }
         if let cancelled = cancellationOutput(for: step) {
             return cancelled
@@ -79,7 +78,6 @@ extension AgentToolkit {
             completeTool(step, output: output, failed: true)
             return output
         }
-        updateFinalResearchURL(from: webView)
         remember(links: links(in: output))
         completeTool(step, output: output, failed: !output.hasPrefix("Clicked"))
         return fencedPageOutput(output)
@@ -114,7 +112,7 @@ extension AgentToolkit {
             ref: ref,
             submit: submit,
             in: webView,
-            announced: actsOnVisiblePage
+            announced: true
         )
         }
         if let cancelled = cancellationOutput(for: step) {
@@ -124,7 +122,6 @@ extension AgentToolkit {
             completeTool(step, output: output, failed: true)
             return output
         }
-        updateFinalResearchURL(from: webView)
         remember(links: links(in: output))
         completeTool(step, output: output, failed: !output.hasPrefix("Typed"))
         return fencedPageOutput(output)
@@ -148,7 +145,7 @@ extension AgentToolkit {
             return denial
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
-            await PageDriver.fillFields(fields, in: webView, announced: actsOnVisiblePage)
+            await PageDriver.fillFields(fields, in: webView, announced: true)
         }
         if let cancelled = cancellationOutput(for: step) {
             return cancelled
@@ -189,7 +186,7 @@ extension AgentToolkit {
             ref: ref,
             field: field,
             in: webView,
-            announced: actsOnVisiblePage
+            announced: true
         )
         }
         if let cancelled = cancellationOutput(for: step) {
@@ -199,7 +196,6 @@ extension AgentToolkit {
             completeTool(step, output: output, failed: true)
             return output
         }
-        updateFinalResearchURL(from: webView)
         remember(links: links(in: output))
         completeTool(step, output: output, failed: !output.hasPrefix("Selected"))
         return fencedPageOutput(output)
@@ -265,7 +261,6 @@ extension AgentToolkit {
             completeTool(step, output: output, failed: true)
             return output
         }
-        updateFinalResearchURL(from: webView)
         completeTool(step, output: output, failed: output.hasPrefix("There is no"))
         return fencedPageOutput(output)
     }

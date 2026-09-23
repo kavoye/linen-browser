@@ -200,8 +200,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         for error: any Error, task: AgentTaskContext, utterance: String,
         transcript: Transcript, prompt: String, images: [Transcript.ImageSegment]
     ) throws -> (session: LanguageModelSession, prompt: String, originalPrompt: String)? {
-        guard openAI?.settings.useComputer != true,
-              acceptsImages, ModelImageSupport.isImageRejection(error),
+        guard acceptsImages, ModelImageSupport.isImageRejection(error),
               !images.isEmpty || ModelImageSupport.containsImages(transcript) else { return nil }
         acceptsImages = false
         onImageInputUnsupported()
@@ -280,14 +279,12 @@ final class AnyLanguageModelAgent: AgentRunner {
         attachmentInput: OpenAIAttachmentInput?,
         options: GenerationOptions,
         onText: @escaping @MainActor (String) -> Void,
+        onProgress: @escaping @MainActor (String) -> Void = { _ in },
         event: (String, [String: String]) -> Void
     ) async throws -> String {
         let started = ContinuousClock.now
         defer { event("response", ["elapsed_ms": String(Self.milliseconds(since: started))]) }
-        if var openAI, let state = nativeState {
-            if !acceptsImages {
-                openAI.settings.useComputer = false
-            }
+        if let openAI, let state = nativeState {
             let previous = session.transcript
             var submitted = Array(previous)
             submitted.append(.prompt(.init(segments: [.text(.init(content: prompt))] + images.map { .image($0) })))
@@ -296,7 +293,7 @@ final class AnyLanguageModelAgent: AgentRunner {
                 let step = try await openAI.respond(
                     transcript: previous, prompt: prompt, images: images, state: state,
                     tools: tools(), maxTokens: budget.responseTokens, attachmentInput: attachmentInput,
-                    onText: onText
+                    onText: onText, onProgress: onProgress
                 )
                 if let milliseconds = step.firstTextMilliseconds {
                     event("first_text", ["elapsed_ms": String(milliseconds)])
@@ -327,7 +324,6 @@ final class AnyLanguageModelAgent: AgentRunner {
         if var openAI, let state = nativeState {
             openAI.settings.hostedTools = []
             openAI.settings.mcpServers = []
-            openAI.settings.useComputer = false
             openAI.settings.additionalParameters = [:]
             do {
                 let step = try await openAI.respond(
@@ -591,9 +587,11 @@ final class AnyLanguageModelAgent: AgentRunner {
         } else {
             selected = makeAgentTools(toolkit: toolkit, tier: budget.toolTier)
         }
-        let native: [any Tool] = openAI?.settings.useComputer == true && acceptsImages ? [OpenAIComputerTool(toolkit: toolkit)] : []
-        return selected.filter { $0.name != UpdateProgressTool.toolName && $0.name != OpenAIComputerCall.toolName && (acceptsImages || $0.name != "screenshotPage") }
-            + [UpdateProgressTool()] + native
+        let managed: [any Tool] = [UpdateProgressTool(), RecordTaskOutcomeTool(toolkit: toolkit),
+                                  VerifyTaskOutcomeTool(toolkit: toolkit), BlockTaskOutcomeTool(toolkit: toolkit)]
+        let managedNames = Set(managed.map(\.name))
+        return selected.filter { !managedNames.contains($0.name) && (acceptsImages || !AgentToolCatalog.visualToolIDs.contains($0.name)) }
+            + managed
     }
 
     func makeSession(transcript: Transcript? = nil) -> LanguageModelSession {

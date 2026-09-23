@@ -84,8 +84,7 @@ struct BrowserAgentBenchWorker {
         let prompt = AgentInstructions.text(for: agent.budget.instructionTier)
         let digest = SHA256.hash(data: Data(prompt.utf8)).map { String(format: "%02x", $0) }.joined()
         let webKit = Bundle(for: WKWebView.self).object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
-        let capabilities = (settings.headless ? ["web"] : ["web", "native-keyboard", "screenshots"])
-            + (settings.computerUse ? ["openai-computer"] : [])
+        let capabilities = settings.headless ? ["web"] : ["web", "native-keyboard", "screenshots"]
         try #require(Set(start.requiredCapabilities ?? ["web"]).isSubset(of: Set(capabilities)))
         try await client.post("ready", BenchReady(capabilities: capabilities, metadata: [
             "model": start.config.model,
@@ -95,7 +94,7 @@ struct BrowserAgentBenchWorker {
             "adapter_version": "5",
             "openai_transport": provider.adapter == .openAIResponses ? "native_http_sse" : "unused",
             "system_prompt_sha256": digest,
-            "observations": settings.computerUse ? "Linen native page tools and OpenAI computer screenshots" : "Linen native page tools",
+            "observations": "Linen page tools and screenshots",
         ], settings: [
             "headless": String(settings.headless),
             "search_mode": settings.searchMode.rawValue,
@@ -104,10 +103,9 @@ struct BrowserAgentBenchWorker {
             "reasoning_effort": settings.reasoningEffort,
             "max_model_requests": settings.maxModelRequests.map(String.init) ?? "unlimited",
             "tool_search": String(settings.toolSearch),
-            "computer_use": String(settings.computerUse),
             "hover_policy": "requires_user_foreground_window",
             "preferences": "isolated_defaults",
-            "openai_options": "explicit_tool_search_computer_use_otherwise_defaults_no_storage",
+            "openai_options": "explicit_tool_search_otherwise_defaults_no_storage",
         ]))
         let grants = BenchGrantStorage()
         let policy = AgentActionPolicy(storage: grants)

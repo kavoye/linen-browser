@@ -29,10 +29,19 @@ nonisolated struct AgentToolDescriptor: Identifiable, Sendable {
     let summary: LocalizedStringResource
     let category: Category
     let isCore: Bool
+    var isConfigurable = true
 }
 
 nonisolated enum AgentToolCatalog {
     static let all: [AgentToolDescriptor] = [
+        AgentToolDescriptor(id: "recordTaskOutcome", title: "Record Task Outcomes", summary: "Keep track of each requested result.", category: .page, isCore: true, isConfigurable: false),
+        AgentToolDescriptor(id: "verifyTaskOutcome", title: "Verify Results", summary: "Check the page for the requested result.", category: .page, isCore: true, isConfigurable: false),
+        AgentToolDescriptor(id: "blockTaskOutcome", title: "Record Unfinished Work", summary: "Save why an outcome needs your help.", category: .page, isCore: true, isConfigurable: false),
+        AgentToolDescriptor(id: "listFrames", title: "List Embedded Pages", summary: "Find embedded websites on a page.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "readFrame", title: "Read Embedded Pages", summary: "Read an embedded website with separate permission.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "actInFrame", title: "Use Embedded Pages", summary: "Use controls on a permitted embedded website.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "chooseFilesOnPage", title: "Choose Files to Upload", summary: "Ask you to choose files for a website.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "inspectDownloads", title: "Check Downloads", summary: "Check whether a task's downloads finished.", category: .page, isCore: false),
         AgentToolDescriptor(
             id: "searchWeb",
             title: "Search the Web",
@@ -43,7 +52,7 @@ nonisolated enum AgentToolCatalog {
         AgentToolDescriptor(
             id: "navigate",
             title: "Open Websites",
-            summary: "Go to a web address in the research page.",
+            summary: "Open a web address in the active tab.",
             category: .research,
             isCore: true
         ),
@@ -101,7 +110,12 @@ nonisolated enum AgentToolCatalog {
         AgentToolDescriptor(id: "inspectControl", title: "Inspect Controls", summary: "Read control state and dropdown options.", category: .page, isCore: false),
         AgentToolDescriptor(id: "setChecked", title: "Set Checkboxes", summary: "Set a checkbox or radio selection.", category: .page, isCore: false),
         AgentToolDescriptor(id: "waitForPage", title: "Wait for Page Changes", summary: "Wait for expected text or loading to finish.", category: .page, isCore: false),
-        AgentToolDescriptor(id: "screenshotPage", title: "Capture the Page", summary: "Inspect the current viewport as an image.", category: .page, isCore: false),
+        AgentToolDescriptor(id: "screenshotPage", title: "Capture the Page", summary: "Inspect the current viewport as an image.", category: .page, isCore: false, isConfigurable: false),
+        AgentToolDescriptor(id: "movePointer", title: "Move Pointer", summary: "Move a visible pointer over the page.", category: .page, isCore: false, isConfigurable: false),
+        AgentToolDescriptor(id: "clickAtPoint", title: "Click Page Point", summary: "Click a point shown in a page screenshot.", category: .page, isCore: false, isConfigurable: false),
+        AgentToolDescriptor(id: "typeAtPointer", title: "Type in Focused Field", summary: "Type into a field selected from a screenshot.", category: .page, isCore: false, isConfigurable: false),
+        AgentToolDescriptor(id: "doubleClickAtPoint", title: "Double-Click", summary: "Double-click a point in a page screenshot.", category: .page, isCore: false, isConfigurable: false),
+        AgentToolDescriptor(id: "dragOnPage", title: "Drag on Page", summary: "Drag between points in a page screenshot.", category: .page, isCore: false, isConfigurable: false),
         AgentToolDescriptor(
             id: "newTab",
             title: "Open Tabs",
@@ -154,8 +168,12 @@ nonisolated enum AgentToolCatalog {
     ]
 
     static func descriptors(in category: AgentToolDescriptor.Category) -> [AgentToolDescriptor] {
-        all.filter { $0.category == category }
+        all.filter { $0.category == category && $0.isConfigurable }
     }
+
+    static let visualToolIDs: Set<String> = ["screenshotPage", "movePointer", "clickAtPoint", "typeAtPointer", "doubleClickAtPoint", "dragOnPage"]
+    static let outcomeToolIDs: Set<String> = ["recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome"]
+    static let configurableIDs = Set(all.filter(\.isConfigurable).map(\.id))
 
     static func defaultIDs(for tier: AgentToolTier) -> Set<String> {
         switch tier {
@@ -171,8 +189,9 @@ nonisolated enum AgentToolCatalog {
         guard let chosen = LLMSettings.enabledAgentTools(for: provider) else {
             return defaultIDs(for: tier)
         }
-        let valid = chosen.intersection(known)
-        return valid.isEmpty ? defaultIDs(for: tier) : valid
+        let valid = chosen.intersection(known).subtracting(visualToolIDs)
+        let selected = valid.isEmpty ? defaultIDs(for: tier) : valid
+        return tier == .full ? selected.union(visualToolIDs) : selected
     }
 }
 

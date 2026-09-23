@@ -6,24 +6,23 @@ adapter. Other providers use AnyLanguageModel. The implementation lives in
 
 ## Settings and tools
 
-Open Settings > Assistant > OpenAI to configure voice, searchable documents,
-external connections, and permissions. Developer Settings contains advanced JSON
-and model overrides.
+Open Settings > Assistant > OpenAI to configure voice, external connections,
+and data use. Developer Settings contains advanced JSON and model overrides.
 
 For supported models on the official OpenAI endpoint, Linen enables web search,
 code interpreter, and image generation automatically. Model capability checks
 control availability. Custom endpoints and utility jobs keep separate settings.
 OpenAI usage charges apply.
 
-Browser actions still pass through Linen's permission checks. Hosted tools do
-not grant extra access to local tabs, files, or credentials. Computer use requires
-explicit permission. Hosted shell runs in an OpenAI container; Linen does not
+Browser actions, including screenshot and pointer tools, pass through Linen's
+permission checks. Hosted tools do not grant extra access to local tabs, files,
+or credentials. Hosted shell runs in an OpenAI container; Linen does not
 execute local shell commands from model output. Unknown action types stop with
 an unsupported-action result.
 
 The assistant can display citations, reasoning summaries, and generated images.
-Users can save generated images and download cited files. Documents uploaded for
-file search and remote MCP connections have separate management pages.
+Users can save generated images and download cited files. Remote MCP connections
+have a separate management page.
 
 ## Conversation state
 
