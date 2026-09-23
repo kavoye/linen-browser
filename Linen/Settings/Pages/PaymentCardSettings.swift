@@ -18,7 +18,7 @@ struct PaymentCardSettings: View {
     var body: some View {
         SettingsPageHeader(title: "Payment cards")
         SettingsCard {
-            DetailRow(title: "Save and fill payment cards", caption: "Save and fill cards at checkout.") {
+            DetailRow(title: "Save and fill payment cards", caption: "Offer to save new cards at checkout.") {
                 SettingsToggle($settings.fillsPaymentCards)
             }
         }

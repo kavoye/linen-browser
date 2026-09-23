@@ -27,7 +27,7 @@ struct AutofillSavePromptReset: View {
                 .disabled(isBusy || profileID == Profile.privateID)
             }
         }
-        .alert("Couldn’t Reset Save Suggestions", isPresented: $showsError) {
+        .alert("Couldn't Reset Save Suggestions", isPresented: $showsError) {
             Button("OK", role: .cancel) {}
         }
     }

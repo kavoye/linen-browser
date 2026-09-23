@@ -10,7 +10,7 @@ struct MCPSettingsPage: View {
 
     var body: some View {
         SubPageHeader(backTitle: "Advanced", onBack: onBack)
-        SettingsPageHeader(title: "External Connections")
+        SettingsPageHeader(title: "External connections")
 
         SettingsCard {
             DetailRow(
@@ -29,7 +29,7 @@ struct MCPSettingsPage: View {
         }
 
         SettingsSection(title: "Clients", symbol: "app.connected.to.app.below.fill", accessory: {
-            SettingsButton(title: "Copy Configuration") {
+            SettingsButton(title: "Copy configuration") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(server.configuration, forType: .string)
             }
@@ -38,7 +38,7 @@ struct MCPSettingsPage: View {
         }
 
         if !server.sessions.isEmpty {
-            SettingsSection(title: "Connected Clients", symbol: "cable.connector") {
+            SettingsSection(title: "Connected clients", symbol: "cable.connector") {
                 ForEach(server.sessions) { session in
                     if session.id != server.sessions.first?.id {
                         RowSeparator()

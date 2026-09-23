@@ -7,9 +7,10 @@ struct OpenAIDeveloperSettings: View {
     @Binding var options: OpenAIResponseSettings
     @State private var showsJSON = false
     @State private var showsVoiceModels = false
+    @Environment(\.settingsHighlight) private var highlight
 
     var body: some View {
-        Text("These options are for custom API setups. You can use chat and voice without changing them.")
+        Text("Change these options only if your API setup needs them. Chat and voice work with the defaults.")
             .font(.callout).foregroundStyle(.secondary)
         SettingsSection(title: "API configuration", symbol: "curlybraces") {
             DetailRow(title: "Run commands at OpenAI", caption: "Allow a hosted shell to run commands and create files. Extra charges may apply.") {
@@ -22,16 +23,23 @@ struct OpenAIDeveloperSettings: View {
                     options = updated
                 }))
             }
+            .settingsAnchor("openai.developer.runCommands")
             RowSeparator()
             DrillInRow(title: "Voice models", caption: "Override the models used for listening and speech.") { showsVoiceModels = true }
+                .settingsAnchor("openai.developer.voiceModels")
             RowSeparator()
             DrillInRow(title: "API JSON", caption: "Edit additional parameters and hosted tool definitions.") { showsJSON = true }
+                .settingsAnchor("openai.developer.apiJSON")
         }
         .sheet(isPresented: $showsJSON) {
             OpenAISettingsSheet(title: "API JSON") { OpenAIJSONSettingsEditor(options: $options) }
         }
         .sheet(isPresented: $showsVoiceModels) {
             OpenAISettingsSheet(title: "Voice models") { OpenAIVoiceModelEditor(options: $options.voice) }
+        }
+        .onChange(of: highlight, initial: true) { _, anchor in
+            showsVoiceModels = anchor == "openai.developer.voiceModels"
+            showsJSON = anchor == "openai.developer.apiJSON"
         }
     }
 }
@@ -52,7 +60,7 @@ private struct OpenAIJSONSettingsEditor: View {
             Text(error).font(.callout).foregroundStyle(.red)
         }
         HStack {
-            SettingsButton(title: "Save Changes", isProminent: true, action: save)
+            SettingsButton(title: "Save changes", isProminent: true, action: save)
             if saved { Text("Saved").font(.callout).foregroundStyle(.secondary) }
         }
         .onChange(of: parameters) { saved = false }

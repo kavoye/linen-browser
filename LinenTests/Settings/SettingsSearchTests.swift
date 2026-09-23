@@ -77,4 +77,36 @@ struct SettingsSearchTests {
         #expect(!SettingsIndex.all.contains { $0.searchableTitle == "Time range" })
         #expect(SettingsIndex.search("time range").contains { $0.id == "privacy.clear" })
     }
+
+    @Test func providerAndAppearanceControlsHaveSearchResults() {
+        #expect(SettingsIndex.search("API key").contains { $0.id == "provider.key" })
+        #expect(SettingsIndex.search("endpoint").contains { $0.id == "provider.endpoint" })
+        #expect(SettingsIndex.search("transparency").contains { $0.id == "appearance.transparency" })
+        #expect(SettingsIndex.all.first { $0.id == "appearance.transparency" }?.targetAnchor
+            == "appearance.windowStyle")
+    }
+
+    @Test func openAISettingsBehindProviderNavigationAreSearchable() {
+        let expected: [(String, String)] = [
+            ("reply length", "openai.replyLength"),
+            ("speaking style", "openai.voice.speakingStyle"),
+            ("reading speed", "openai.voice.readingSpeed"),
+            ("MCP", "openai.connections"),
+            ("keep replies", "openai.privacy"),
+            ("run commands at OpenAI", "openai.developer.runCommands"),
+            ("voice models", "openai.developer.voiceModels"),
+            ("API JSON", "openai.developer.apiJSON"),
+        ]
+        for (query, id) in expected {
+            #expect(SettingsIndex.search(query).contains { $0.id == id })
+        }
+    }
+
+    @Test func newerAssistantAndExtensionControlsAreSearchable() {
+        #expect(SettingsIndex.search("pause after").contains { $0.id == "assistant.pauseAfter" })
+        #expect(SettingsIndex.search("embedded pages").contains { $0.id == "provider.tools" })
+        #expect(SettingsIndex.search("choose files to upload").contains { $0.id == "provider.tools" })
+        #expect(SettingsIndex.search("safari extensions").contains { $0.id == "extensions.installed" })
+        #expect(SettingsIndex.search("save suggestions").contains { $0.id == "autofill.passwords" })
+    }
 }

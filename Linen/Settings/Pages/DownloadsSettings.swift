@@ -52,7 +52,7 @@ struct DownloadsSettings: View {
 
             DetailRow(
                 title: "Remove download list items",
-                caption: "Downloaded files aren’t deleted."
+                caption: "Downloaded files aren't deleted."
             ) {
                 SettingsMenu(
                     options: DownloadRetention.allCases.map {
@@ -94,7 +94,7 @@ struct DownloadsSettings: View {
             "Clear the download list?",
             isPresented: $confirmingClear
         ) {
-            Button("Clear List", role: .destructive) { downloads.clearFinished() }
+            Button("Clear list", role: .destructive) { downloads.clearFinished() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("\(finishedCount) downloads will be removed from the list. The files stay in your Downloads folder.")

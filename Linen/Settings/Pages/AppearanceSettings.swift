@@ -27,7 +27,7 @@ struct AppearanceSettings: View {
 
             DetailRow(
                 title: "Page zoom",
-                caption: "The default for every website. Tabs can still be zoomed."
+                caption: "Set the default zoom for websites. You can also zoom individual tabs."
             ) {
                 SettingsMenu(
                     options: Self.sizes.map {
@@ -89,7 +89,7 @@ private struct WindowStyleSettingsSection: View {
 
                 DetailRow(
                     title: "Website tint",
-                    caption: "Use the current website’s color in the toolbar and sidebar."
+                    caption: "Use the current website's color in the toolbar and sidebar."
                 ) {
                     SettingsToggle($settings.matchesWebsiteColor)
                 }
@@ -99,7 +99,7 @@ private struct WindowStyleSettingsSection: View {
 
                 DetailRow(
                     title: "Tint selected tab",
-                    caption: "The selected tab uses the website icon’s color."
+                    caption: "Color the selected tab using the website icon."
                 ) {
                     SettingsToggle($settings.refractsTabColor)
                 }
@@ -110,7 +110,7 @@ private struct WindowStyleSettingsSection: View {
 
                     DetailRow(
                         title: "Transparency",
-                        caption: "Clear shows more of what’s behind Linen; tinted adds contrast.",
+                        caption: "Move left for more transparency or right for more contrast.",
                         layout: .stacked
                     ) {
                         LoomTransparencyControl(opacity: $settings.transparency)

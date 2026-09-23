@@ -70,7 +70,7 @@ struct WebsiteSettings: View {
     private var overview: some View {
         SettingsPageHeader(
             title: "Websites",
-            caption: "Defaults for every website, and the ones you’ve changed."
+            caption: "Set defaults for websites and review the settings you changed."
         )
 
         SettingsCard {
@@ -116,12 +116,12 @@ struct WebsiteSettings: View {
         }
         .settingsAnchor("websites.permissions")
 
-        SettingsSection(title: "Websites you’ve changed", symbol: "list.bullet", isLongList: true) {
+        SettingsSection(title: "Websites you've changed", symbol: "list.bullet", isLongList: true) {
             if entries.isEmpty {
                 SettingsEmptyState(
                     symbol: "globe",
-                    title: "No websites changed",
-                    caption: "Choose Site Settings in the toolbar to change one."
+                    title: "No website settings changed",
+                    caption: "Use Website Settings in the toolbar to change a website's settings."
                 )
             } else {
                 ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
@@ -186,19 +186,19 @@ private struct PermissionDetailPage: View {
     var body: some View {
         SubPageHeader(backTitle: "Websites", onBack: onBack) {
             if !origins.isEmpty {
-                SettingsButton(title: "Remove All…", isDestructive: true) {
+                SettingsButton(title: "Remove all…", isDestructive: true) {
                     confirmingRemoveAll = true
                 }
                 .confirmationDialog(
                     Text("Remove the \(permission.sentenceName) setting for every website?"),
                     isPresented: $confirmingRemoveAll
                 ) {
-                    Button("Remove All", role: .destructive) {
+                    Button("Remove all", role: .destructive) {
                         permissions.removeAll(for: permission)
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("\(origins.count) websites will be asked again the next time they ask.")
+                    Text("These \(origins.count) websites will need permission again.")
                 }
             }
         }
@@ -325,26 +325,26 @@ private struct SiteDetailPage: View {
 
     var body: some View {
         SubPageHeader(backTitle: "Websites", onBack: onBack) {
-            SettingsButton(title: "Reset This Website…", isDestructive: true) {
+            SettingsButton(title: "Reset this website…", isDestructive: true) {
                 confirmingReset = true
             }
             .confirmationDialog(
-                Text("Reset the settings for “\(SitePermissions.displayName(for: origin))”?"),
+                Text("Reset the settings for \"\(SitePermissions.displayName(for: origin))\"?"),
                 isPresented: $confirmingReset
             ) {
-                Button("Reset Website", role: .destructive) {
+                Button("Reset website", role: .destructive) {
                     reset()
                     onBack()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("The website asks again before using the camera, microphone, location, or notifications, and the assistant asks before reading it.")
+                Text("The website will ask again to use your camera, microphone, location, or notifications. The assistant will ask again before reading the website.")
             }
         }
 
         SettingsPageHeader(
             verbatimTitle: SitePermissions.displayName(for: origin),
-            verbatimCaption: String(localized: "Everything you’ve changed for this website.")
+            verbatimCaption: String(localized: "Settings you changed for this website.")
         )
 
         SettingsCard {
@@ -365,7 +365,7 @@ private struct SiteDetailPage: View {
             if settings.sleepsInactiveTabs {
                 DetailRow(
                     title: "Keep this website loaded",
-                    caption: "Keep this website loaded when inactive."
+                    caption: "Don't unload this website when its tab is inactive."
                 ) {
                     keepAwakeToggle
                 }
@@ -385,7 +385,7 @@ private struct SiteDetailPage: View {
             if settings.automaticPictureInPicture {
                 DetailRow(
                     title: "Automatic Picture in Picture",
-                    caption: "Turn this off to keep this website’s video in its tab."
+                    caption: "Turn this off to keep this website's video in its tab."
                 ) {
                     automaticPictureToggle
                 }
@@ -423,8 +423,8 @@ private struct SiteDetailPage: View {
 
         SettingsSection(title: "Media and windows", symbol: "play.rectangle") {
             DetailRow(
-                title: "Auto-Play",
-                caption: "What this website may start playing on its own."
+                title: "Autoplay",
+                caption: "Choose whether this website can play video and audio on its own."
             ) {
                 SettingsMenu(
                     options: AutoplayPolicy.allCases.map {
@@ -440,8 +440,8 @@ private struct SiteDetailPage: View {
             RowSeparator()
 
             DetailRow(
-                title: "Pop-up Windows",
-                caption: "What happens when this website opens a window by itself."
+                title: "Pop-up windows",
+                caption: "Choose whether this website can open new windows on its own."
             ) {
                 SettingsMenu(
                     options: PopupPolicy.allCases.map {

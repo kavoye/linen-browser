@@ -48,8 +48,8 @@
     "%@ blocked" : {
       "comment" : "Fragment in the one-line summary under a website in the list, for permissions that were refused. %@ is a list of permission names already worded and joined. Lower case: joined with other fragments, never shown alone."
     },
-    "%@ doesn’t offer suggestions." : {
-      "comment" : "Caption under the Search suggestions row, shown when the chosen engine has no suggestion service, in which case the switch beside it is disabled. %@ is the search engine's brand name, for example Wikipedia — leave the inserted name as is. Curly apostrophe."
+    "%@ doesn't offer suggestions." : {
+
     },
     "%@ has a small context window. Enabling more than %lld tools leaves less room for page content and may reduce accuracy." : {
       "comment" : "Warning on the Tools settings page. %@ is the provider name, %lld the recommended tool count.",
@@ -68,8 +68,8 @@
     "%@ in use" : {
       "comment" : "Tooltip on the permission badge in the address bar while a website is actively using a capability. %@ is the permission's own name, itself localized: Camera, Microphone, Location or Notifications. The phrase continues from that noun, so it is a fragment rather than a sentence."
     },
-    "%@ isn’t ready" : {
-      "comment" : "Settings → Assistant. %@ is the provider name the user chose, e.g. \"Groq\". Title of the warning shown when that provider cannot answer."
+    "%@ isn't ready" : {
+
     },
     "%@ of %@" : {
       "comment" : "Progress line under a file in the downloads list. The first %@ is the amount received and the second the file's total size, both already formatted by the system, e.g. “3.2 MB of 18 MB”; the order may be changed with positional specifiers."
@@ -498,6 +498,7 @@
     },
     "%lld websites will be asked again the next time they ask." : {
       "comment" : "Explanatory text in the confirmation sheet for removing one permission (location, camera, microphone or notifications) from every website, on the Websites settings page. %lld is how many websites had a saved answer for that permission.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -544,9 +545,6 @@
     "500 requests" : {
 
     },
-    "A blank page, with the address bar ready." : {
-      "comment" : "Caption for the new-tab choice that opens a blank tab."
-    },
     "A blocked pop-up appears in the toolbar so you can open it." : {
       "comment" : "Caption for the Block and Notify pop-up choice. One sentence."
     },
@@ -558,9 +556,6 @@
     },
     "A different server named linen is already configured. Review that entry in the client before adding Linen." : {
       "comment" : "External MCP client setup in Advanced settings."
-    },
-    "A file search collection is incomplete or expired. Turn off Use in chat for it, or upload the documents again in OpenAI settings." : {
-
     },
     "A key on its own would fire while you type. Hold a modifier with it, or press a modifier by itself." : {
       "comment" : "Warning shown under the shortcut recorder in Settings > Voice when a key was pressed with no modifier. “Modifier” means a modifier key: ⌘, ⌥, ⇧ or ⌃."
@@ -577,14 +572,8 @@
     "A new profile starts with no history, tabs, or sign-ins." : {
       "comment" : "Caption on the new-profile page, saying what the profile will contain."
     },
-    "A specific profile" : {
-      "comment" : "One of two choices for which profile the browser opens in."
-    },
     "A website may open pop-ups by itself." : {
       "comment" : "Caption for the Allow pop-up choice. One sentence."
-    },
-    "A website you choose." : {
-      "comment" : "Caption for the new-tab choice that opens a homepage."
     },
     "A week" : {
       "comment" : "An option in the Keep history for pop-up menu on the Privacy settings page; it completes “Keep history for …”. Sits with A day, A month, A year and Forever."
@@ -664,9 +653,6 @@
     "Add an API key for %@ in Settings, or enable Apple Intelligence" : {
       "comment" : "Status message when the chosen provider has no key and there is no fallback. %@ is the provider's name, e.g. OpenAI, Anthropic or Ollama. “Apple Intelligence” is Apple's product name and “Settings” is the app's Settings window."
     },
-    "Add an API key to upload documents." : {
-
-    },
     "Add an API key to use %@." : {
       "comment" : "Settings → Assistant → a provider page. %@ is the provider name, e.g. \"Anthropic\". Caption under the \"Needs a key\" status; the key is an API key."
     },
@@ -685,26 +671,23 @@
     "Add connection…" : {
 
     },
-    "Add documents for your assistant to search." : {
-
-    },
-    "Add documents, then ask your assistant questions about them in chat." : {
-
-    },
-    "Add Documents…" : {
-
-    },
     "Add extensions" : {
       "comment" : "Heading of the third onboarding screen, where the reader installs browser extensions in one click. An extension is an add-on that changes how websites behave."
     },
     "Add extensions from the Chrome Web Store or Firefox Add-ons." : {
       "comment" : "Caption under the Add extensions heading. These refers to the extensions listed below it. Chrome and Firefox are browser names and are never translated; their stores are the websites the extensions are downloaded from, and opening a store page in Linen is how the reader installs more."
     },
+    "Add Inspect Element to a page's right-click menu." : {
+
+    },
     "Add Key…" : {
       "comment" : "Button in the API key row in Settings > Provider that opens the key-entry popover; it reads Change… once a key is stored. Title Case; the trailing character is a real ellipsis (…) promising a popover, so keep it."
     },
     "Add Linen to %@" : {
       "comment" : "MCP client setup accessibility label. The placeholder is the client app name."
+    },
+    "Add or change the selected provider's API key." : {
+
     },
     "Add Password" : {
 
@@ -715,8 +698,8 @@
     "Add Profile" : {
       "comment" : "Button that makes the profile described on the new-profile page."
     },
-    "Add Profile…" : {
-      "comment" : "Row at the end of the profile list that opens the page for making a profile. The ellipsis says a page follows."
+    "Add profile…" : {
+
     },
     "Add Provider…" : {
       "comment" : "Settings → Assistant. Row that opens the list of providers not yet set up. Matches \"Add Profile…\" on the Profiles page."
@@ -741,9 +724,6 @@
     },
     "Address from Contacts" : {
 
-    },
-    "Adds Inspect Element to the page’s right-click menu." : {
-      "comment" : "Caption under the Web Inspector switch on the Advanced settings page, and its settings search caption."
     },
     "Advanced" : {
       "comment" : "Name of the Advanced page in the Settings sidebar and the heading at the top of that page."
@@ -785,6 +765,9 @@
 
     },
     "Allow %@ to Access This Tab?" : {
+
+    },
+    "Allow a hosted shell to run commands and create files." : {
 
     },
     "Allow a hosted shell to run commands and create files. Extra charges may apply." : {
@@ -834,9 +817,6 @@
     },
     "Always ask the assistant" : {
       "comment" : "Title of the Settings switch that sends anything you type in the address bar to the assistant instead of the search engine. \"Always\" is about typed questions only — a link or a web address still opens as usual, which the caption underneath says. The feature is called the assistant throughout, never \"AI\". Sentence case, no final full stop."
-    },
-    "An HTML file exported from Safari, Chrome, Firefox, or Edge." : {
-      "comment" : "Caption under the Bookmarks row in the Import section of the General settings page, and the caption of that same row in Settings search. The four names are products — leave them as they are."
     },
     "An HTML file from another browser." : {
       "comment" : "Caption under the Bookmarks row on the last onboarding screen. It names the file the user picks. It must stay on one line, so it is shorter than its twin on the General settings page."
@@ -891,13 +871,7 @@
     "Appearance" : {
       "comment" : "Name of the Appearance page in the Settings sidebar and the heading at the top of that page."
     },
-    "Appearance, downloads, and keyboard shortcuts are shared by every profile." : {
-      "comment" : "Footnote naming the settings that profiles share."
-    },
-    "Appearance, search, privacy, websites, and downloads go back to their defaults. Tabs, history, shortcuts, and your provider aren’t affected." : {
-      "comment" : "Explanatory text in the confirmation sheet for Reset settings on the Advanced settings page. Each noun names a Settings page or area; keep the order so it matches the pages in the sidebar. Curly apostrophes."
-    },
-    "Apple" : {
+    "Appearance, search, privacy, websites, and downloads go back to their defaults. Tabs, history, shortcuts, and your provider aren't affected." : {
 
     },
     "Apple Intelligence" : {
@@ -912,14 +886,8 @@
     "Apple Pay" : {
 
     },
-    "Apple supports dictation and read aloud. Voice conversation requires OpenAI." : {
-
-    },
     "Apply" : {
       "comment" : "Button beside the field where a model identifier is typed by hand in Settings > Provider. A verb (a command)."
-    },
-    "Approve This Action" : {
-
     },
     "ask" : {
       "comment" : "Hint word printed beside a key cap under the address field — “⌘ ↩ ask” beside the Return hint, and “↩ ask” when the line starts with @ or when the browser is set to agent-only input. It means: send this to the assistant. One lowercase verb, tiny type."
@@ -928,7 +896,7 @@
       "comment" : "The policy meaning Linen asks each time before a website may use a permission; an option in the pop-up menus on the Websites settings page. A verb here, not the noun “a question”."
     },
     "Ask %@" : {
-      "comment" : "Section heading over the assistant's row in the address bar results and in the ⌘K palette. %@ is the name of the answering provider and model, e.g. “OpenAI (gpt-5.6-luna)” — never translated. “Ask” is the verb. Title Case."
+      "comment" : "Assistant action text in the command palette and section heading in the address bar results. %@ is the provider and model name, such as “OpenAI (gpt-5.6-luna)”. Keep that name unchanged."
     },
     "Ask about the %@ page" : {
       "comment" : "Heading of the empty assistant chat that sits beside a page. %@ is the name of the website the chat will read, taken from its address, e.g. “Github” — never translated. The same heading reads “Ask about this page” when there is no page yet."
@@ -954,6 +922,9 @@
     "Ask where to save each file" : {
       "comment" : "Title of the switch on the Downloads settings page that makes Linen prompt for a folder on every download, and the title of that same row in Settings search. Sentence case."
     },
+    "Ask you to choose files for a website." : {
+
+    },
     "Ask, or enter website name" : {
       "comment" : "Placeholder in the address/ask field when the browser is set to agent-only input, where there is no web search. Sentence case; “Ask” is the verb. Match the wording of “Search, “@” to ask, or enter website name”."
     },
@@ -971,6 +942,9 @@
     },
     "Assistant access wasn’t allowed on %@." : {
 
+    },
+    "Assistant can read" : {
+      "comment" : "Label before the list of pages the assistant is allowed to read for this question: the page or split panes on screen, plus any attached tabs."
     },
     "assistant has no access" : {
       "comment" : "Fragment in the one-line summary under a website, meaning the assistant may neither read nor use it. Lower case: joined with other fragments."
@@ -1017,9 +991,6 @@
     "Auto Picture in Picture" : {
       "comment" : "Compact label for the automatic Picture in Picture switch in the website settings toolbar menu."
     },
-    "Auto-Play" : {
-      "comment" : "Row title in Website Settings for what a website may start playing on its own. Title Case, hyphenated as Safari writes it."
-    },
     "auto-play allowed" : {
       "comment" : "One phrase in the summary line under a website in the changed-websites list. Phrases are joined with “ · ”, so this is lowercase and never a sentence."
     },
@@ -1050,8 +1021,8 @@
     "Automatic Picture in Picture" : {
       "comment" : "Title of the row that makes video float in its own window on its own: on the General settings page, in Settings search, on a single website’s page under Websites, and in the Site Settings menu in the toolbar. “Picture in Picture” is the macOS name of that window — use the system’s own wording. Title Case."
     },
-    "Automatic Picture in Picture is off while “Show video in the player” is on in Experiments." : {
-      "comment" : "Footnote under the Media card on the General settings page, shown only while the Experiments row is on and the Automatic Picture in Picture switch above is dimmed. It says why that switch cannot be used. The quoted phrase is the exact title of the Experiments row — translate it identically there and here, and keep the curly quotation marks. Full sentence."
+    "Automatic Picture in Picture is off while \"Show video in the player\" is on in Experiments." : {
+
     },
     "Automatic Picture in Picture is off, so video stays in its tab everywhere." : {
       "comment" : "Caption on the per-website Automatic Picture in Picture row, shown when the setting is off for every website. “Automatic Picture in Picture” is a link to that row on the General page — spell it exactly as that title."
@@ -1088,9 +1059,6 @@
     },
     "Best for longer, complex tasks. Your key stays in your Keychain." : {
       "comment" : "Caption for the remote-model choice on the onboarding provider screen. Keychain is the macOS password store — use Apple's own name for it."
-    },
-    "Blank" : {
-      "comment" : "Option in the New tab segmented control on the General settings page: new tabs open with an empty page. An adjective; space in a segment is tight, so keep it to one short word."
     },
     "Block" : {
       "comment" : "Pop-up choice: the window does not open and nothing is shown. One word, Title Case. Sits beside “Block and Notify” and “Allow”."
@@ -1140,14 +1108,8 @@
     "Browser" : {
       "comment" : "Heading of the first group in the Settings sidebar, covering the General and Appearance pages. A noun."
     },
-    "Browser control and saved replies." : {
-
-    },
     "Browsing" : {
       "comment" : "Heading of the Settings sidebar group covering the Privacy, Websites, Downloads and Extensions pages. A noun naming the activity, not an instruction."
-    },
-    "Browsing %@…" : {
-      "comment" : "Caption under the live snapshot in the agent activity column while the assistant is on a page. %@ is the page's host, e.g. example.com, or the fallback phrase “the research page”, so it is a noun dropped mid-sentence. Real ellipsis character — keep it."
     },
     "browsing history" : {
       "comment" : "Lowercase name of one kind of browsing data, inserted mid-sentence into the confirmation before clearing, which reads roughly: browsing history and cached files will be cleared for the last hour. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Browsing history is a separate string."
@@ -1157,6 +1119,9 @@
     },
     "Browsing now" : {
       "comment" : "Caption under the profile you are currently in, in the profile switcher — also under Private Browsing while it is the active session. A status, not a command."
+    },
+    "By default, the assistant works until it finishes. Set a limit to pause and resume with Continue. The final summary may use one more request." : {
+
     },
     "cached files" : {
       "comment" : "Lowercase name of one kind of browsing data, inserted mid-sentence into the confirmation before clearing, which reads roughly: browsing history and cached files will be cleared for the last hour. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Cached files is a separate string."
@@ -1169,9 +1134,6 @@
     },
     "Camera" : {
       "comment" : "Name of the camera permission: a row on the Websites settings page and a label in the permission badge in the toolbar."
-    },
-    "Can read" : {
-      "comment" : "Label before the list of pages the assistant is allowed to read for this question: the page or split panes on screen, plus any attached tabs."
     },
     "Can’t find this website" : {
       "comment" : "Headline on the error page shown when a website's address cannot be resolved. Curly apostrophe; the explanatory sentence below it is a separate entry."
@@ -1212,6 +1174,9 @@
     "Change the model or reasoning level" : {
 
     },
+    "Change these options only if your API setup needs them. Chat and voice work with the defaults." : {
+
+    },
     "Change…" : {
       "comment" : "Button that reopens the API key popover once a key is stored; it reads Add Key… when none is. A verb, with a real ellipsis (…) promising a popover."
     },
@@ -1224,7 +1189,16 @@
     "cheapest" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the least expensive to use. Lowercase superlative, and the space is very tight."
     },
+    "Check downloads" : {
+
+    },
+    "Check Downloads" : {
+
+    },
     "Check for new models" : {
+
+    },
+    "Check for updates" : {
 
     },
     "Check for Updates" : {
@@ -1239,8 +1213,14 @@
     "Check the JSON and try again." : {
 
     },
+    "Check the page for the requested result." : {
+
+    },
     "Check this provider again" : {
       "comment" : "Settings → Assistant → a provider page. Tooltip on the refresh button beside the readiness status."
+    },
+    "Check whether a task's downloads finished." : {
+
     },
     "Checking for updates" : {
 
@@ -1275,6 +1255,9 @@
     "Choose a Tab for Lyrics" : {
       "comment" : "Tooltip on the lyrics panel title while more than one tab has media; the title opens a menu that lists those tabs so the user can pick which one the lyrics follow. Title Case. Twin of “Choose Which Tab to Control”, which is the same control on the media dock."
     },
+    "Choose a time range to clear history, cookies, and cached files." : {
+
+    },
     "Choose Configuration" : {
       "comment" : "External MCP client setup in Advanced settings."
     },
@@ -1284,20 +1267,20 @@
     "Choose File…" : {
       "comment" : "Button beside the Bookmarks row. It opens the macOS file panel, where the user picks the exported bookmarks file. The ellipsis says that a panel opens; keep it."
     },
+    "Choose files to upload" : {
+
+    },
+    "Choose Files to Upload" : {
+
+    },
     "Choose files, not folders." : {
 
     },
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
-    "Choose how your assistant sounds." : {
+    "Choose short, medium, or long replies." : {
 
-    },
-    "Choose PDFs, text files, or other supported documents." : {
-
-    },
-    "Choose Site Settings in the toolbar to change one." : {
-      "comment" : "Guidance under No websites changed, saying where per-website settings are made. Site Settings is the name of a menu in the browser toolbar — translate it the same way there. Imperative."
     },
     "Choose stable releases or preview builds." : {
       "comment" : "Detail line for the Update channel row in the Settings search results. Covers both choices, because the search index cannot know which one is set."
@@ -1305,7 +1288,7 @@
     "Choose Standard or Transparent." : {
 
     },
-    "Choose the assistant’s model, behavior, and permissions." : {
+    "Choose the assistant's model, behavior, and permissions." : {
 
     },
     "Choose the bookmarks file you exported from another browser." : {
@@ -1314,23 +1297,41 @@
     "Choose the provider and model" : {
 
     },
+    "Choose the voice used during conversations." : {
+
+    },
+    "Choose the voice used to read replies aloud." : {
+
+    },
     "Choose the ZIP exported by Safari or its PaymentCards.json file." : {
 
     },
-    "Choose up to 10 supported documents, at most 20 MB each and 40 MB total." : {
+    "Choose voices for conversation and reading aloud." : {
+
+    },
+    "Choose voices for conversation and reading aloud. Voice features send audio or text to OpenAI." : {
 
     },
     "Choose what to clear and how far back to go. This can’t be undone." : {
       "comment" : "Message in that dialog, naming its two controls: the checkboxes for what, and the time-range menu for how far back. Do not list the kinds themselves here — they are the checkbox labels, and unticking one would make a list go stale. Curly apostrophe."
+    },
+    "Choose whether this website can open new windows on its own." : {
+
+    },
+    "Choose whether this website can play video and audio on its own." : {
+
+    },
+    "Choose whether you can retrieve replies through the OpenAI API." : {
+
+    },
+    "Choose which profile opens when Linen starts." : {
+
     },
     "Choose Which Tab to Control" : {
       "comment" : "Tooltip on the media dock title while more than one tab is playing; the title opens a menu that lists those tabs so the user can pick which one the transport drives. Title Case, narrow dock."
     },
     "Choose which tools %@ can use. Tools use part of the context window." : {
       "comment" : "Caption under the Tools page title. %@ is the provider name."
-    },
-    "Choose your voice and reading preferences. OpenAI voice features send audio or text to OpenAI." : {
-
     },
     "Choose…" : {
       "comment" : "Button on the Downloads settings page that opens the macOS panel for picking the download folder. A verb, with a real ellipsis (…) promising a panel."
@@ -1356,6 +1357,9 @@
     "Clear browsing data?" : {
       "comment" : "Title of the dialog opened by the Clear button in Privacy settings. The dialog holds a time-range menu and a checkbox for each kind of data, so the title asks the question the controls answer. Sentence case with a question mark, as macOS dialog titles are written."
     },
+    "Clear cookies, site data, and cached files when you quit Linen." : {
+
+    },
     "Clear History" : {
       "comment" : "Button that confirms clearing one profile’s history."
     },
@@ -1364,6 +1368,9 @@
     },
     "Clear History…" : {
       "comment" : "Command that raises the confirmation for deleting all browsing history: an item in the History menu and an action in the command palette. Title Case; the real ellipsis (…) promises a dialog rather than an immediate wipe, so keep it."
+    },
+    "Clear list" : {
+
     },
     "Clear List" : {
       "comment" : "The destructive confirming button in the sheet that empties the list of finished downloads. Title Case; “Clear” is a verb and “List” is the downloads list, not the files."
@@ -1374,14 +1381,11 @@
     "Clear Search" : {
 
     },
-    "Clear shows more of what’s behind Linen; tinted adds contrast." : {
-      "comment" : "Caption under the Transparency slider on the Appearance settings page. “Clear” and “tinted” are the two ends of that slider, so keep whatever words the slider's own ends use."
-    },
     "Clear the download list?" : {
       "comment" : "Heading of the confirmation sheet for emptying the list of finished downloads, raised from the downloads popover and from the Downloads settings page. Only the list is emptied, not the files."
     },
-    "Clear the history in “%@”?" : {
-      "comment" : "Question in the dialog that confirms clearing one profile’s history. %@ is a profile name."
+    "Clear the history in \"%@\"?" : {
+
     },
     "Clear…" : {
       "comment" : "Button on the Downloads settings page that raises the confirmation for emptying the download list. A verb, with a real ellipsis (…) promising a dialog."
@@ -1389,11 +1393,20 @@
     "Click" : {
       "comment" : "Tool name in assistant settings: clicking controls on a web page."
     },
+    "Click a point shown in a page screenshot." : {
+
+    },
     "Click control" : {
 
     },
     "Click for options · drag to move this page" : {
       "comment" : "Tooltip on the small pill floating over each page shown beside another. Two hints for the same control, separated by an interpunct: a click opens its menu, a drag moves the page. Sentence case, no final period."
+    },
+    "Click page" : {
+
+    },
+    "Click Page Point" : {
+
     },
     "Click to Talk" : {
       "comment" : "Tooltip on the microphone button in the toolbar while it is idle: one click starts listening. Title Case; alternates with “Stop and Run”."
@@ -1490,6 +1503,9 @@
     "Color" : {
       "comment" : "Label of the color swatches that tint a profile’s symbol."
     },
+    "Color the selected tab using the website icon." : {
+
+    },
     "Compact" : {
 
     },
@@ -1505,16 +1521,19 @@
     "Compare AirPods prices" : {
 
     },
+    "Completed" : {
+
+    },
     "completes a purchase" : {
       "comment" : "Clause that completes the sentence This … and usually can’t be undone. in the dialog asking the user to approve an action the assistant wants to take. Lowercase, third person singular, and the implied subject is the action being approved."
+    },
+    "Configure hosted commands, voice models, and API JSON." : {
+
     },
     "Configure one hosted shell with an automatic container or an existing container ID. Local shell execution is not supported." : {
 
     },
     "Connect an external assistant to tabs you choose." : {
-
-    },
-    "Connect an MCP service to give your assistant access to its tools. Linen asks you to approve each tool call." : {
 
     },
     "Connect any server that uses the OpenAI chat API, usually a base URL ending in /v1." : {
@@ -1523,11 +1542,14 @@
     "Connect external assistants to tabs you choose. Private tabs are never shared." : {
       "comment" : "MCP settings: private browsing pauses access without changing the saved enabled preference."
     },
+    "Connect MCP services your assistant can use." : {
+
+    },
     "Connect services your assistant can use." : {
 
     },
-    "Connected Clients" : {
-      "comment" : "Section heading on the External Connections settings page."
+    "Connected clients" : {
+
     },
     "Connecting…" : {
 
@@ -1547,14 +1569,11 @@
     "Contact" : {
 
     },
-    "Contact Details" : {
+    "Contact details" : {
 
     },
     "Contacts and addresses" : {
 
-    },
-    "Contents" : {
-      "comment" : "Heading over the list of what one profile is holding."
     },
     "Context compacted" : {
 
@@ -1568,13 +1587,10 @@
     "Continue only if you expected this — a development server, or a proxy your organization runs. The exception lasts until you quit." : {
 
     },
-    "Continue past a certificate macOS rejects. Forgotten on quit." : {
-      "comment" : "Caption under Certificate exceptions on the Advanced settings page. The second sentence says the exception lasts only for this run of the app. Two short sentences."
-    },
-    "Control media" : {
+    "Continue past a certificate macOS rejects. Linen forgets the exception when you quit." : {
 
     },
-    "Control pages visually" : {
+    "Control media" : {
 
     },
     "Conversation" : {
@@ -1595,17 +1611,14 @@
     "Cookies and site data" : {
       "comment" : "Name of one of the three kinds of data listed with tick boxes on the Privacy settings page. A noun phrase at the head of a row; a separate lowercase variant exists for use inside sentences."
     },
-    "Cookies, site data, and cached files, on every quit." : {
-      "comment" : "Caption for the Clear on quit row on the Privacy settings page: what is deleted each time the app quits. A sentence fragment; site data is a fixed compound."
-    },
     "Copy" : {
       "comment" : "Standard macOS Edit menu item. Use the system's own wording. A verb."
     },
     "Copy Answer" : {
 
     },
-    "Copy Configuration" : {
-      "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
+    "Copy configuration" : {
+
     },
     "Copy Diagnostics" : {
 
@@ -1646,7 +1659,7 @@
     "Couldn’t Fill Saved Details" : {
 
     },
-    "Couldn’t generate a password." : {
+    "Couldn't generate a password." : {
 
     },
     "Couldn’t load saved contacts." : {
@@ -1661,9 +1674,6 @@
     "Couldn’t reach %@" : {
       "comment" : "Error shown when the model provider's server does not answer. %@ is the server address, e.g. http://localhost:11434 — an address, not a name. Curly apostrophe."
     },
-    "Couldn’t reach the model provider. Your progress is saved; check the connection, then choose Continue." : {
-
-    },
     "Couldn’t read saved contacts. Check Settings › Autofill." : {
 
     },
@@ -1676,13 +1686,16 @@
     "Couldn’t remember this choice. Try again." : {
 
     },
-    "Couldn’t remove this address. Try again." : {
+    "Couldn't remove this address. Try again." : {
 
     },
-    "Couldn’t Reset Save Suggestions" : {
+    "Couldn't Reset Save Suggestions" : {
 
     },
     "Couldn’t save these details." : {
+
+    },
+    "Couldn't save these details. Try again." : {
 
     },
     "Couldn’t save these details. Try again." : {
@@ -1718,9 +1731,6 @@
     "Current profile" : {
       "comment" : "Heading over the card describing the profile the browser is in right now."
     },
-    "Currently %@." : {
-      "comment" : "Caption naming the profile the browser would open in. %@ is a profile name."
-    },
     "Custom" : {
       "comment" : "Option in the User agent segmented control on the Advanced settings page, meaning a user agent string you type yourself. An adjective; space in a segment is tight."
     },
@@ -1736,7 +1746,7 @@
     "Dark" : {
       "comment" : "Option in the Theme segmented control on the Appearance settings page. Use the word macOS itself uses for Dark appearance; space in a segment is tight."
     },
-    "Decline" : {
+    "Data and privacy" : {
 
     },
     "DeepSeek models." : {
@@ -1748,20 +1758,14 @@
     "Default browser" : {
       "comment" : "Heading of the section on the General settings page about which app opens links, and the title of that same row in Settings search. Sentence case; “default” is an adjective."
     },
-    "Defaults for every website, and the ones you’ve changed." : {
-      "comment" : "Caption under the Websites page title. Two halves: the settings that apply everywhere, and the list of individual websites given their own rules. Curly apostrophe."
-    },
     "Delete" : {
       "comment" : "Standard macOS Edit menu item that deletes the selection. Use the system's own wording. A verb."
     },
+    "Delete \"%@\"?" : {
+
+    },
     "Delete “%@”?" : {
       "comment" : "Heading of the delete confirmation for a sidebar folder or a profile. %@ is its name as the user typed it."
-    },
-    "Delete Documents" : {
-
-    },
-    "Delete Documents…" : {
-
     },
     "Delete Folder" : {
       "comment" : "Verb on the destructive button of the delete-folder confirmation alert. Title Case, and it should read as the same command as the “Delete Folder…” menu item that raised the alert."
@@ -1769,17 +1773,17 @@
     "Delete Folder…" : {
       "comment" : "Item in the context menu of a folder in the sidebar. The real ellipsis character (…) marks that it opens a confirmation first — keep it. Title Case."
     },
-    "Delete Profile" : {
+    "Delete profile" : {
 
     },
-    "Delete Profile…" : {
-      "comment" : "Button that starts deleting a profile. The ellipsis says a question follows."
-    },
-    "Delete these documents from OpenAI?" : {
+    "Delete profile…" : {
 
     },
     "Deletes the key from Keychain. Add a new key to use %@ again." : {
       "comment" : "Explanatory text in the confirmation sheet for removing a stored API key. %@ is the provider’s name, e.g. OpenAI. “Keychain” is the macOS password store — use Apple’s own name for it."
+    },
+    "Deleting this profile removes its tabs, history, and sign-ins from this Mac. Downloads stay in the Downloads folder." : {
+
     },
     "deletions" : {
       "comment" : "Lowercase name of one category of assistant permission, inserted mid-sentence into a list under a website’s name, which reads roughly: Allowed without asking: purchases and deletions. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised label Deletions is a separate string."
@@ -1793,10 +1797,13 @@
     "Details" : {
 
     },
+    "Details unavailable for this step." : {
+
+    },
     "Developer settings" : {
 
     },
-    "Developer Settings…" : {
+    "Developer settings…" : {
 
     },
     "Dictation and read aloud" : {
@@ -1829,25 +1836,28 @@
     "Do you want to allow this page to open “%@”?" : {
       "comment" : "Heading of the alert asking whether a web page may launch another app on the Mac. %@ is that app's name as macOS displays it, inside curly quotes."
     },
-    "Document actions" : {
-
-    },
-    "Documents" : {
-
-    },
-    "Documents are uploaded to OpenAI. Storage and search charges may apply. Files expire after 7 days; document groups expire after 7 inactive days." : {
-
-    },
     "Don’t Allow" : {
       "comment" : "Button in the permission panel that refuses the website's request, beside “Allow Once” and “Always Allow”. Keep the curly apostrophe. Title Case, and the three buttons share one narrow row."
+    },
+    "Don't unload this website when its tab is inactive." : {
+
     },
     "Done" : {
       "comment" : "Button that closes something the user has finished with: the Done button on the find bar and the one on the release notes sheet. Use the wording macOS uses on such buttons."
     },
+    "Double-Click" : {
+
+    },
+    "Double-click a point in a page screenshot." : {
+
+    },
+    "Double-click page" : {
+
+    },
     "Downloaded %@" : {
       "comment" : "Brief notice shown when a download finishes. %@ is the file's name. A past participle describing what happened, not a command."
     },
-    "Downloaded files aren’t deleted." : {
+    "Downloaded files aren't deleted." : {
 
     },
     "Downloading update" : {
@@ -1882,8 +1892,17 @@
         }
       }
     },
-    "Drag a profile to change the order." : {
-      "comment" : "Footnote under the list of profiles in Settings, shown only when there is more than one, saying the rows can be reordered by dragging. The order is the one profiles appear in elsewhere in the app. Imperative with a final full stop."
+    "Drag between points in a page screenshot." : {
+
+    },
+    "Drag on page" : {
+
+    },
+    "Drag on Page" : {
+
+    },
+    "Drag to reorder." : {
+
     },
     "Drag to resize · double-click to reset" : {
       "comment" : "Tooltip on the draggable edge between the sidebar and the page. Two hints for the same edge, separated by an interpunct; “double-click” is the mouse gesture. Sentence case, no final period."
@@ -1897,26 +1916,32 @@
     "Each attachment must be 20 MB or smaller." : {
 
     },
-    "Each profile keeps its own sign-ins, history, tabs, and extensions." : {
-      "comment" : "Caption under the Profiles page title, saying what a profile is."
-    },
     "Each tab has a separate chat with access to its page. Type @ to include another tab." : {
 
     },
     "Edit" : {
       "comment" : "Used twice, always as a verb on a button: the button that opens a custom provider endpoint for changing, and the corner button that opens the start page's own editor."
     },
+    "Edit a custom provider's server address." : {
+
+    },
     "Edit additional parameters and hosted tool definitions." : {
+
+    },
+    "Edit additional response parameters and hosted tool definitions." : {
 
     },
     "Edit connection" : {
 
     },
-    "Edit Connection…" : {
+    "Edit connection…" : {
 
     },
     "Edit endpoint" : {
       "comment" : "Heading of the Settings page for a custom model server when an existing one is being changed; it reads “Custom endpoint” when a new one is being added. Sentence case; “Edit” is a verb."
+    },
+    "Edit or switch profiles." : {
+
     },
     "Edit Payment Card" : {
 
@@ -1925,6 +1950,9 @@
       "comment" : "Submenu in the context menu of a pinned tab row, holding the two ways to change what the tab returns to. Title Case."
     },
     "Edit Question" : {
+
+    },
+    "Edit the current profile." : {
 
     },
     "Edit the pinned page" : {
@@ -1951,12 +1979,6 @@
     "Enabled for this website" : {
       "comment" : "Status under Tracker Blocking in the website information popover when protection applies to this website. Sentence fragment."
     },
-    "Encrypted contacts; imported copies don’t sync." : {
-
-    },
-    "Encrypted passwords; passkeys use macOS." : {
-
-    },
     "End" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the End navigation key, which jumps to the end."
     },
@@ -1981,7 +2003,10 @@
     "Enter a name." : {
       "comment" : "Error shown under the custom endpoint form when the name field was left empty."
     },
-    "Enter a new authorization token when changing this connection’s destination." : {
+    "Enter a new authorization token when changing this connection's destination." : {
+
+    },
+    "Enter a registered public client ID, or register one if the service allows it. Save the connection, then select Sign in." : {
 
     },
     "Enter a three- or four-digit security code, or leave it empty." : {
@@ -2008,6 +2033,9 @@
     "Enter model ID…" : {
       "comment" : "Item at the bottom of the model pop-up menu in Settings > Provider that reveals a field for typing a model identifier by hand. “Model ID” is a technical identifier such as gpt-4o. Real ellipsis."
     },
+    "Enter the model ID as the provider lists it." : {
+
+    },
     "Esc" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the Escape key, abbreviated the way the key itself is printed."
     },
@@ -2033,20 +2061,14 @@
     "European models, with small and fast tiers." : {
       "comment" : "One-line description of the Mistral provider in the provider list in Settings, also shown in that row's tooltip. “Tiers” means the sizes of model the vendor offers."
     },
-    "Every provider you’ve set up." : {
-      "comment" : "Settings search description for the Providers section on the Assistant page. The page itself carries no caption there. A sentence fragment."
+    "Every provider you've set up." : {
+
     },
     "Every website asks the first time." : {
       "comment" : "Description of the Ask option for a permission's default, meaning each website raises its own request. Third person singular."
     },
-    "Every website with a rule of its own, and what that rule allows." : {
-      "comment" : "Settings search description for the Websites you’ve changed list. A rule means any per-website setting: a permission, assistant access, keep loaded, or a tracker exception."
-    },
     "every website you visit" : {
       "comment" : "The one entry that can appear in place of website names in the bulleted list of the extension install confirmation dialog, used when the extension can reach every website. It appears after a bullet character supplied by the app, so it is a phrase rather than a sentence and takes no full stop."
-    },
-    "Everything you’ve changed for this website." : {
-      "comment" : "Caption under a single website's name at the top of its settings page, saying the page collects every rule that website carries. Curly apostrophe."
     },
     "Exit Full Screen" : {
       "comment" : "Command that leaves full screen; the same command reads “Enter Full Screen” while the window is not full screen. Use Apple’s own wording for the standard macOS command."
@@ -2081,10 +2103,10 @@
     "Expiration year (YYYY)" : {
 
     },
-    "Expired or incomplete — add the documents again" : {
+    "Explain a paper to me" : {
 
     },
-    "Explain a paper to me" : {
+    "Export your bookmarks as an HTML file in the other browser first." : {
 
     },
     "Extended reasoning for difficult tasks." : {
@@ -2092,6 +2114,9 @@
     },
     "Extension" : {
       "comment" : "Placeholder name used for an installed extension whose package declares no name of its own. A generic noun."
+    },
+    "Extension options" : {
+
     },
     "Extension Options" : {
       "comment" : "Menu item that opens the settings page an extension provides for itself. It appears in the right-click menu of the extension's toolbar button and in the ellipsis menu of its row in Settings > Extensions, and only when that extension has such a page. Title Case."
@@ -2102,8 +2127,8 @@
     "External Connection" : {
       "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
     },
-    "External Connections" : {
-      "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
+    "External connections" : {
+
     },
     "Extra high" : {
 
@@ -2153,6 +2178,9 @@
     "Find Another Match" : {
       "comment" : "Menu item under the ⋯ button of the lyrics view. It searches the lyrics library again for other entries for the same song. Title Case, as macOS menu items are."
     },
+    "Find embedded websites on a page." : {
+
+    },
     "Find Next" : {
       "comment" : "Item in the Find submenu that jumps to the next match on the page. Title Case."
     },
@@ -2162,13 +2190,10 @@
     "Find on page" : {
       "comment" : "Placeholder in the find bar's text field, the strip that opens over the page for finding text on it. Sentence case, narrow field."
     },
-    "Find on Page…" : {
-      "comment" : "Command palette entry for the ⌘F find bar. The ellipsis promises a field to type in. Title Case."
-    },
     "Find Previous" : {
       "comment" : "Item in the Find submenu that jumps to the previous match on the page. Title Case."
     },
-    "Find Sign-in Settings" : {
+    "Find sign-in settings" : {
 
     },
     "Find…" : {
@@ -2204,9 +2229,6 @@
     "Forward 15 seconds" : {
       "comment" : "Tooltip on the skip-forward button in the media player docked at the foot of the sidebar. The player jumps ahead exactly fifteen seconds; keep the number. “Forward” is directional, not the browser's Forward command."
     },
-    "Frees memory when the Mac runs low. Tabs reload on return." : {
-      "comment" : "Caption under the “Sleep inactive tabs” switch on the General settings page, and the same wording in Settings search. Two short sentences: what it gains, then the reassurance that nothing is lost."
-    },
     "Frees up space. Pages load more slowly the next time." : {
       "comment" : "Caption under Cached files on the Privacy settings page. Only the next visit to a website is slower."
     },
@@ -2236,9 +2258,6 @@
     },
     "Go Back" : {
       "comment" : "Tool name in assistant settings: going back one page."
-    },
-    "Go to a web address in the research page." : {
-      "comment" : "Caption for the Open Websites tool in assistant settings."
     },
     "Go to the Tab Playing This" : {
       "comment" : "Tooltip on the arrow in the media dock while another tab is providing the sound; clicking switches to that tab. “This” means what is currently playing. Title Case."
@@ -2297,9 +2316,6 @@
     "History and website data" : {
       "comment" : "Heading of the Privacy settings group holding how long history is kept and how much websites have stored. A noun phrase covering both, not an instruction."
     },
-    "History, cookies, and cached files, over a time range." : {
-      "comment" : "Caption for the Clear browsing data row in Settings search results: what that section can delete and that a time span can be picked."
-    },
     "hold" : {
       "comment" : "First word of the hint under the empty address field, which the user reads as one phrase: “hold ⌥Space to speak”, with the recorded shortcut drawn as key caps between this string and “to speak”. Imperative verb, deliberately lowercase, tiny type — the two halves must fit together as one sentence in your language."
     },
@@ -2309,20 +2325,17 @@
     "Hold Shift and click a link to open a preview." : {
       "comment" : "Third of three things to try, on the last onboarding screen. Shift and click opens the link in a panel above the current page."
     },
-    "Hold Shift and point at a link to read the page first." : {
-      "comment" : "Caption under “Summarize a link on hover”. Shift is the key that shows the summary card. One sentence."
-    },
     "Hold Shift over a link to see a summary." : {
       "comment" : "Second of three things to try, on the last onboarding screen. Pointing at a link with Shift held shows a summary of the page."
     },
-    "Hold while speaking. Release to send." : {
-      "comment" : "Caption under Push to talk in Settings > Voice, and the caption of that same row in Settings search. Both sentences are imperatives about holding a key down."
+    "Hold Shift while pointing at a link to get a summary before opening it." : {
+
+    },
+    "Hold the shortcut to speak, then release it to send." : {
+
     },
     "Home" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the Home navigation key, which jumps to the start — nothing to do with a home page."
-    },
-    "Homepage" : {
-      "comment" : "Used twice: as an option in the New tab segmented control on the General settings page, and as the title of the row where the homepage address is typed. One word, as browsers write it."
     },
     "Hosted tool definitions" : {
 
@@ -2372,8 +2385,14 @@
     "Image generated." : {
 
     },
+    "Images returned: %lld" : {
+
+    },
     "Import" : {
       "comment" : "Used twice for bringing bookmarks in: the heading of the section on the General settings page (a noun there), and the confirming button in the import dialog and the file panel (a verb there)."
+    },
+    "Import an HTML file from Safari, Chrome, Firefox, or Edge." : {
+
     },
     "Import Bookmarks" : {
       "comment" : "Heading of the confirmation dialog shown after the file is read and before anything is imported. Title Case."
@@ -2399,23 +2418,14 @@
     "In System Settings, choose Linen as the default web browser." : {
 
     },
-    "In the other browser, export your bookmarks to an HTML file first." : {
-      "comment" : "Footnote under the Import section of the General settings page. It says what the user does in the other browser before choosing a file here."
-    },
     "In use" : {
       "comment" : "Status shown beside the selected provider in Settings > Provider when it is ready and answering. The row is very narrow — keep it to two short words."
-    },
-    "In use since %@" : {
-      "comment" : "How long a profile has been in use. %@ is a date, such as “March 4”."
     },
     "In use, allowed until you leave" : {
       "comment" : "Caption under a permission's name in the site permission panel: the site is using it right now, and the grant lasts only for this visit. Keep the comma, sentence case, one line."
     },
-    "Indexing did not finish in time. Delete the incomplete collection and try again." : {
+    "Input" : {
 
-    },
-    "Inspect" : {
-      "comment" : "Label on the disclosure control of a step row in the agent activity panel when the step has output but no links; it reveals what the step returned. Verb, narrow column; alternates with “%lld links”."
     },
     "Inspect control" : {
 
@@ -2441,9 +2451,6 @@
     "Installed" : {
       "comment" : "Marker shown in place of an Install button on a Chrome Web Store page for an extension Linen already has. A past participle describing a state, not a command. The Release Notes page shows the same word under its own key, releaseNotes.installedBadge."
     },
-    "Installed extensions" : {
-      "comment" : "Title of the Extensions list row in Settings search results. Sentence case; “installed” is an adjective."
-    },
     "Installed version %@" : {
       "comment" : "Update status shown when nothing is happening. %@ is the version number of the running app, e.g. 1.4.2."
     },
@@ -2467,6 +2474,7 @@
     },
     "Its %lld pages of history are removed, along with the start page tiles. Other profiles are not affected." : {
       "comment" : "Message in the dialog that confirms clearing one profile’s history. %lld is the number of pages in that profile’s history.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -2490,6 +2498,7 @@
     },
     "Its %lld pages of history, tabs, and sign-ins are removed from this Mac. Downloaded files stay in the Downloads folder." : {
       "comment" : "Message in the dialog that confirms deleting a profile. %lld is the number of pages in that profile’s history.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -2534,8 +2543,8 @@
         }
       }
     },
-    "Its name and URL are removed. The server itself isn’t affected." : {
-      "comment" : "Explanatory text in the confirmation sheet for removing a custom provider endpoint. “Its” refers to that endpoint; the machine it points at is untouched. Curly apostrophe."
+    "Its name and URL are removed. The server itself isn't affected." : {
+
     },
     "JavaScript" : {
       "comment" : "Title of the switch on the Websites settings page, and the title of that same row in Settings search. Name of the technology — leave as is."
@@ -2561,20 +2570,14 @@
     "Keep this website loaded" : {
 
     },
-    "Keep this website loaded when inactive." : {
+    "Keep track of each requested result." : {
 
     },
     "Keep Website Loaded" : {
 
     },
-    "Keep working by default. An optional limit saves progress for Continue. A final summary may use one extra request." : {
-
-    },
     "kept loaded" : {
       "comment" : "Fragment in the one-line summary under a website, meaning it is never unloaded to reclaim memory. Lower case: joined with other fragments."
-    },
-    "Kept separate from other profiles" : {
-      "comment" : "Heading over the list of what one profile keeps to itself."
     },
     "key %u" : {
       "comment" : "Fallback legend on a key cap in the shortcut recorder for a key that has no name and prints no character. %u is the raw macOS key code, a bare number; only the word “key” is translated. Very tight."
@@ -2611,6 +2614,9 @@
     },
     "Last used %@" : {
       "comment" : "When a profile was last open, shown in the profile list. %@ is a phrase such as “2 days ago”. A fragment, not a sentence."
+    },
+    "Last used profile" : {
+
     },
     "Latest action: %@" : {
       "comment" : "Most recent tool used by an external MCP connection. The inserted action name is already localized."
@@ -2669,6 +2675,9 @@
     "Linen can’t confirm that this certificate belongs to %@. Somebody may be impersonating the website." : {
 
     },
+    "Linen chooses these models unless you enter different IDs for your API setup." : {
+
+    },
     "Linen closed before this finished" : {
 
     },
@@ -2678,28 +2687,28 @@
     "Linen couldn’t unlock or save your cards in Keychain. Try again in a signed build." : {
 
     },
+    "Linen encrypts saved contacts. Imported copies don't sync." : {
+
+    },
+    "Linen encrypts saved passwords. macOS manages passkeys." : {
+
+    },
     "Linen is using %@ instead." : {
       "comment" : "Settings → Assistant. %@ is the provider name of the stand-in, e.g. \"Apple Intelligence\". Caption shown when the chosen provider is not ready and another one serves replies. Linen is the application name and is never translated."
     },
     "Linen is your default browser." : {
       "comment" : "Caption under the Open links from other apps row, shown once Linen is the default browser. The alternative caption, shown while it is not, is Linen isn’t your default browser. Linen is the application name and is never translated."
     },
-    "Linen isn’t your default browser." : {
-      "comment" : "Caption under the Open links from other apps row, shown while Linen is not the default browser. The alternative caption, shown once it is, is Linen is your default browser. Linen is the application name and is never translated; curly apostrophe."
+    "Linen isn't your default browser." : {
+
     },
     "Linen manages model, input, instructions, tools, output limits, storage, service tier, and continuation fields. Use the controls for these settings." : {
 
     },
-    "Linen opens in" : {
-      "comment" : "Heading on Profiles over the choice of which profile Linen starts in."
-    },
-    "Linen opens in the same profile every time." : {
-      "comment" : "Caption for the choice that pins the browser to one profile at launch."
-    },
     "Linen saves chat history on this Mac. Your messages are still sent to OpenAI to generate replies." : {
 
     },
-    "Linen supplies the model names automatically. Override them only for a specific API setup." : {
+    "Linen stores saved details on this Mac." : {
 
     },
     "Linen updates to preview builds, ahead of the release." : {
@@ -2713,6 +2722,12 @@
     },
     "Links Copied" : {
       "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
+    },
+    "List embedded pages" : {
+
+    },
+    "List Embedded Pages" : {
+
     },
     "List Tabs" : {
 
@@ -2741,7 +2756,7 @@
     "Location" : {
       "comment" : "Name of the location permission: a row on the Websites settings page and a label in the permission badge in the toolbar. Means the Mac's geographic location."
     },
-    "Login Details" : {
+    "Login details" : {
 
     },
     "Long" : {
@@ -2804,8 +2819,8 @@
     "Manually" : {
 
     },
-    "Maximum" : {
-
+    "Max" : {
+      "comment" : "Label for the highest Thinking level in model and provider settings."
     },
     "Maximum reasoning, with higher latency and token use." : {
 
@@ -2941,14 +2956,29 @@
     "Move" : {
       "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop only changes where the row sits in the list. Imperative verb, one word. Very tight space — a sidebar row is a few characters wide."
     },
+    "Move a visible pointer over the page." : {
+
+    },
     "Move between the tabs in the conversation." : {
       "comment" : "Caption for the Switch Tabs tool in assistant settings."
+    },
+    "Move left for more transparency or right for more contrast." : {
+
+    },
+    "Move left for more transparency or right for more contrast. Available with Transparent window style." : {
+
     },
     "Move Linen to the Applications folder?" : {
       "comment" : "Title of the alert Linen shows at launch when it runs from anywhere other than an Applications folder. Sentence case, and the question mark is the only closing punctuation macOS dialog titles take."
     },
     "Move Pin to This Page" : {
       "comment" : "Item in the Edit Pinned Page submenu of a tab row: it hands the tab's single anchor to the page now open, replacing the old one. Use the same noun for “pin” as in “Pin This Page”. Title Case."
+    },
+    "Move pointer" : {
+
+    },
+    "Move Pointer" : {
+
     },
     "Move the video into Picture in Picture and back." : {
       "comment" : "Caption for the Picture in Picture tool in assistant settings."
@@ -3026,16 +3056,10 @@
 
     },
     "New Tab" : {
-      "comment" : "The command that opens a tab, in several places: a File menu item, the row at the top of the sidebar, an action in the command palette and the sidebar's tooltip. Title Case, as commands are."
+      "comment" : "The File menu item and sidebar control that open the command palette to create a tab. Title Case."
     },
     "New Tab (⌘T)" : {
       "comment" : "Tooltip on the New Tab row, shown only when the sidebar is collapsed to icons and the row has no words of its own. ⌘T is the keyboard shortcut — keyboard symbols, keep exactly. Title Case."
-    },
-    "New tabs" : {
-      "comment" : "Heading over the choice of what a new tab opens with."
-    },
-    "New tabs open with this page." : {
-      "comment" : "Caption under Homepage on the General settings page, and the caption of that same row in Settings search."
     },
     "Next (⌘G)" : {
       "comment" : "Tooltip on the down-chevron in the find bar, which moves to the next match on the page. ⌘G is the keyboard shortcut — keyboard symbols, keep exactly, including the parentheses."
@@ -3072,9 +3096,6 @@
     },
     "No data stored" : {
       "comment" : "Shown under “Size on disk” when a profile is holding nothing."
-    },
-    "No documents yet" : {
-
     },
     "No extensions installed yet." : {
 
@@ -3172,14 +3193,14 @@
     "No website may ask." : {
       "comment" : "Description of the Deny option for a permission's default, meaning requests are refused without the person seeing them."
     },
+    "No website settings changed" : {
+
+    },
     "No website stores data on this Mac." : {
       "comment" : "Guidance under No website data. Singular no website rather than a count of zero, which reads as a measurement failure. Website is one word."
     },
     "No website stores data." : {
       "comment" : "Caption under the Website data row when no website holds cookies or storage on this Mac. Singular no website rather than a count of zero, which reads as a measurement failure. Website is one word."
-    },
-    "No websites changed" : {
-      "comment" : "Shown in place of the website list when no website has a rule of its own. A statement, not an error."
     },
     "No websites yet" : {
       "comment" : "Shown in place of the list on one permission's page when no website has asked for it yet."
@@ -3210,9 +3231,6 @@
     },
     "Not specified" : {
 
-    },
-    "Nothing in this profile is saved." : {
-      "comment" : "Shown instead of a date when the browser is in Private Browsing."
     },
     "Nothing installed on this Mac handles “%@” links." : {
       "comment" : "Explanatory text in the alert shown when no app can open a link. %@ is the link's scheme, e.g. mailto or tel, inside curly quotes — a technical token, never translated."
@@ -3247,6 +3265,15 @@
     "Now Playing" : {
       "comment" : "Fallback title in the media dock when the page never said what is playing. Apple's own term for this line — use the wording your platform uses. Title Case, one narrow line."
     },
+    "Offer to save contact details entered in forms." : {
+
+    },
+    "Offer to save new cards at checkout." : {
+
+    },
+    "Offer to save new logins after you sign in." : {
+
+    },
     "OK" : {
       "comment" : "Button that simply dismisses an alert, used both for a web page’s own JavaScript alert and for the warning that no app on the Mac handles a link type. It confirms nothing beyond having read the message."
     },
@@ -3255,6 +3282,9 @@
     },
     "On Device" : {
       "comment" : "Chip above the Apple Intelligence card on the model-choice onboarding screen, saying where that model runs. It pairs with “API key required” on the card beside it: both state a plain fact about the choice rather than recommending it. Title Case, and only a few characters wide."
+    },
+    "On launch" : {
+
     },
     "On the Page" : {
       "comment" : "Section title on the Tools settings page: tools that act on the current web page."
@@ -3268,14 +3298,11 @@
     "on-device" : {
       "comment" : "Small tag beside a provider in Settings, naming the kind of connection it uses — in this case a model running on the Mac itself rather than over the network. Deliberately lowercase and technical; the other tags in the same place are responses and OpenAI compatible. Very tight space."
     },
-    "Only if required by the service" : {
+    "Only if the service requires it" : {
 
     },
     "Only images and video on this page." : {
 
-    },
-    "Only the song and artist go to LRCLIB, never from a private tab." : {
-      "comment" : "Caption under the “Show lyrics” switch on the General settings page, and the same sentence in settings search. It says what the feature does and what leaves the Mac, since nothing else asks the user first. LRCLIB is the name of the website and is never translated. Two full sentences."
     },
     "Open" : {
       "comment" : "Button beside a finished download in Settings that opens the downloaded file. Imperative verb, not the adjective, and space is tight next to a file name."
@@ -3289,14 +3316,14 @@
     "Open a new tab when you ask for one." : {
       "comment" : "Caption for the Open Tabs tool in assistant settings."
     },
-    "Open a profile, or change its name, symbol, and color." : {
-      "comment" : "Settings search result caption for the profile list. Symbol means the small picture on the profile's tile. Full sentence."
-    },
     "open a second page below this one" : {
       "comment" : "Caption under the Split Down command in the command palette. Sentence fragment, lower case."
     },
     "open a second page beside this one" : {
       "comment" : "Caption under the Split Right command in the command palette. Sentence fragment, lower case."
+    },
+    "Open a web address in the active tab." : {
+
     },
     "Open a webpage in Linen, then ask %@ to try again." : {
 
@@ -3315,6 +3342,9 @@
     },
     "Open Image in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
+    },
+    "Open in current tab" : {
+      "comment" : "Shown with a history result in the command palette while Option is held."
     },
     "Open in Finder" : {
 
@@ -3340,8 +3370,14 @@
     "Open page" : {
 
     },
+    "Open profile" : {
+
+    },
     "Open source packages used by Linen." : {
 
+    },
+    "Open Start Page" : {
+      "comment" : "Command in the command palette that opens the Start Page in a new tab. Title Case."
     },
     "Open tab" : {
 
@@ -3364,6 +3400,9 @@
     "Open website in a new tab" : {
       "comment" : "Detail line under the second row of the ⌘K palette results when what was typed is an address; ⇧Return, or a Command-click, loads it beside the current page instead of in it. Verb phrase in sentence case."
     },
+    "Open website in current tab" : {
+      "comment" : "Command palette result while Option is held."
+    },
     "Open Websites" : {
       "comment" : "Tool name in assistant settings: opening a web address."
     },
@@ -3372,12 +3411,6 @@
     },
     "OpenAI compatible" : {
       "comment" : "Small tag beside a user-added endpoint in Settings, naming which API dialect the server speaks. OpenAI is a vendor name — leave as is; only the word compatible is translatable. Very tight space."
-    },
-    "OpenAI could not index every file. Delete the incomplete collection and try again." : {
-
-    },
-    "OpenAI paused this browser action for confirmation:" : {
-
     },
     "OpenAI receives microphone audio during voice chat. The voice is generated by AI." : {
 
@@ -3391,7 +3424,7 @@
     "Opened Tab" : {
       "comment" : "Detail suffix on an address bar result row that stands for an already-open tab; it is joined after the host with “ • ”, giving “example.com • Opened Tab”. Adjective plus noun, Title Case, very tight."
     },
-    "Opens a new issue on Linen’s repository." : {
+    "Opens a new issue on Linen's repository." : {
 
     },
     "Optional" : {
@@ -3415,11 +3448,11 @@
     "Other Pane" : {
       "comment" : "Menu command that moves focus to the second of two pages shown at once, so the address bar and Find follow it. Title Case. A noun phrase naming where focus goes, not a verb."
     },
-    "Other profiles" : {
-      "comment" : "Heading over the list of every profile except the one in use, on the Profiles page. Plural noun phrase."
-    },
     "Other websites" : {
       "comment" : "Label of the row that sets the answer for every website not listed individually below it, in the Websites permissions section. A noun phrase, not a heading."
+    },
+    "Override models used for dictation, read aloud, and conversation." : {
+
     },
     "Override the models used for listening and speech." : {
 
@@ -3444,9 +3477,6 @@
     },
     "Pages" : {
       "comment" : "Heading over the group of Settings pages matched by a search, shown beside a separate group of individual settings. Plural noun meaning the pages of the Settings window. Narrow column, keep it short."
-    },
-    "Pages of history" : {
-      "comment" : "Label under a number, counting the pages a profile has visited."
     },
     "Parts of this page aren’t encrypted" : {
       "comment" : "Label for the address bar's warning glyph on a mixed-content page: the page is served over https but pulls some content over http. Sentence case, no final period; keep the curly apostrophe."
@@ -3490,8 +3520,8 @@
     "Pause and Close" : {
       "comment" : "Tooltip on the close button in the media dock. It pauses what is playing and puts the player away; the tab it was playing from stays open. Title Case."
     },
-    "Pause or skip what’s playing from any tab." : {
-      "comment" : "Caption under the “Show media player” switch on the General settings page, and the same sentence in settings search. The player is a strip in the sidebar naming the track and carrying the transport buttons; it does not move the sound or the picture out of the tab. One full sentence."
+    "Pause or skip audio and video playing in any tab." : {
+
     },
     "Pause the video and close the media player." : {
       "comment" : "Caption for the Close the Player tool in assistant settings."
@@ -3525,9 +3555,6 @@
     },
     "Permissions" : {
       "comment" : "Title of the Websites settings section listing what each website may use (location, camera, microphone, notifications), and the same word in the Settings search index. Plural noun."
-    },
-    "Permissions and privacy" : {
-
     },
     "Permissions for this website" : {
       "comment" : "Tooltip on the permission badge in the address bar when a site has a standing allow or deny on record; clicking opens the permission panel. Sentence case; use “website” rather than “site”."
@@ -3568,7 +3595,7 @@
     "Play" : {
       "comment" : "Tooltip on the play/pause button in the media player docked at the foot of the sidebar, while playback is stopped. Verb; the dock is narrow, so keep it to one word."
     },
-    "Play a song in a tab to see synced lyrics from LRCLIB." : {
+    "Play a song in a tab to see synced lyrics." : {
 
     },
     "Play chill lofi" : {
@@ -3576,6 +3603,9 @@
     },
     "Play Videos" : {
       "comment" : "Tool name in assistant settings: finding and playing a video."
+    },
+    "Pop-up windows" : {
+
     },
     "Pop-up Windows" : {
       "comment" : "Row title in Website Settings for windows a website opens by itself. Title Case, hyphenated as Safari writes it."
@@ -3655,9 +3685,6 @@
     "Private, offline, and no API key. Best for short answers." : {
       "comment" : "Caption inside the Apple Intelligence card on the model-choice onboarding screen. Three properties, then what the model suits. It is set against the caption on the card beside it, which ends “Best for longer, complex tasks”, so keep that contrast. Two short lines."
     },
-    "Profile" : {
-      "comment" : "Label of the menu that picks which profile the browser opens in."
-    },
     "Profile — %@" : {
 
     },
@@ -3697,6 +3724,9 @@
     "Read aloud" : {
       "comment" : "Title of the Voice settings row that has answers spoken by the Mac, and the same wording in the Settings search index. Read is a verb here. Sentence case."
     },
+    "Read an embedded website with separate permission." : {
+
+    },
     "Read and change cookies, including sign-in cookies" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
@@ -3704,6 +3734,12 @@
       "comment" : "Heading line above a bulleted list of website names in the extension install confirmation dialog. The trailing colon is part of the string and must stay, since the hostnames follow directly beneath it."
     },
     "Read control state and dropdown options." : {
+
+    },
+    "Read embedded page" : {
+
+    },
+    "Read Embedded Pages" : {
 
     },
     "Read Only" : {
@@ -3745,9 +3781,6 @@
     "Ready to install" : {
       "comment" : "Status line under the Software Update heading in Settings once the update has been downloaded and unpacked. An adjective phrase describing the update, not an instruction."
     },
-    "Ready to search" : {
-
-    },
     "Reasoning summary" : {
 
     },
@@ -3769,13 +3802,25 @@
     "Recently visited pages" : {
       "comment" : "Description of the History section in the start page editor. Pages means web pages. No final full stop."
     },
+    "Record task outcome" : {
+
+    },
+    "Record Task Outcomes" : {
+
+    },
+    "Record unfinished work" : {
+
+    },
+    "Record Unfinished Work" : {
+
+    },
     "Red" : {
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
     },
     "Redo" : {
       "comment" : "Standard macOS Edit menu command, shortcut ⇧⌘Z. Use Apple’s own wording for it in the target language."
     },
-    "Register Public Client" : {
+    "Register public client" : {
 
     },
     "Register this redirect URI with your authorization server:" : {
@@ -3826,6 +3871,9 @@
     "Remove" : {
       "comment" : "Button beside a user-added endpoint in the Provider settings that deletes it from the list. Imperative verb; it opens a confirmation first."
     },
+    "Remove \"%@\"?" : {
+
+    },
     "Remove “%@”?" : {
       "comment" : "Heading of a confirmation sheet used in two places: removing a custom provider endpoint, and removing an installed extension. %@ is that endpoint's or extension's own name, inside curly quotes and never translated."
     },
@@ -3841,11 +3889,11 @@
     "Remove Address?" : {
 
     },
-    "Remove All" : {
-      "comment" : "Destructive confirming button inside the dialog that clears one permission setting for every website at once. Imperative verb plus its object; matches the wording of the button that opened the dialog."
+    "Remove all" : {
+
     },
-    "Remove All…" : {
-      "comment" : "Button in the Websites permissions list that opens the confirmation dialog for clearing one permission setting for every website. The real ellipsis is the promise that a dialog follows, so keep it."
+    "Remove all…" : {
+
     },
     "Remove Card" : {
 
@@ -3853,7 +3901,7 @@
     "Remove Card?" : {
 
     },
-    "Remove Connection" : {
+    "Remove connection" : {
 
     },
     "Remove download list items" : {
@@ -3861,6 +3909,9 @@
     },
     "Remove Endpoint" : {
       "comment" : "Destructive confirming button inside the dialog that deletes a user-added provider endpoint. Title Case, imperative verb plus its object."
+    },
+    "Remove extension" : {
+
     },
     "Remove Extension" : {
       "comment" : "Destructive command that uninstalls a browser extension. It is the confirming button in the dialog, the command in the right-click menu of the extension's toolbar button, and the last item in the ellipsis menu of its row in Settings > Extensions. Title Case, imperative verb plus object."
@@ -3874,8 +3925,8 @@
     "Remove from List" : {
       "comment" : "Tooltip on the close button of a download row, on the start page and in the Downloads view. It forgets the row only — the downloaded file stays on disk — so avoid a verb that sounds like deleting the file. Title Case."
     },
-    "Remove Key" : {
-      "comment" : "Destructive confirming button inside the dialog that deletes the stored API key. Key means API key. Title Case, imperative verb plus its object."
+    "Remove key" : {
+
     },
     "Remove Password" : {
 
@@ -3892,8 +3943,8 @@
     "Remove the %@ setting for every website?" : {
       "comment" : "Heading of the confirmation sheet for clearing one saved permission from all websites, on the Websites settings page. %@ is the permission named mid-sentence and deliberately lowercase — “location”, “camera”, “microphone” or “notifications”, each a separate catalog entry."
     },
-    "Remove the data stored by “%@”?" : {
-      "comment" : "Title of the confirmation for clearing one website's stored data. %@ is the website's own name, for example example.com, and is never translated. Keep the curly quotation marks around it."
+    "Remove the data stored by \"%@\"?" : {
+
     },
     "Remove the data stored by every website?" : {
       "comment" : "Title of the confirmation for clearing the stored data of every website in the list."
@@ -3949,23 +4000,20 @@
     "Reset settings" : {
       "comment" : "Sentence case title of the row that offers to restore defaults, and the same wording in the Settings search index. Reset is a verb, settings its object."
     },
-    "Reset Settings" : {
-      "comment" : "Destructive confirming button inside the dialog that restores the default settings. Title Case, imperative verb plus its object; Settings is the app’s own Settings window."
-    },
-    "Reset the settings for “%@”?" : {
-      "comment" : "Title of the confirmation for clearing one website's rules. %@ is the website's own address, for example example.com, and is never translated. Keep the curly quotation marks around it."
+    "Reset the settings for \"%@\"?" : {
+
     },
     "Reset the Timing" : {
       "comment" : "Tooltip on the offset reading at the foot of the lyrics view. Clicking it puts the shift between the words and the sound back to zero. Title Case."
     },
-    "Reset This Website…" : {
-      "comment" : "Button that clears every rule saved for one website. Title Case as a button naming a command, and the ellipsis is there because a confirmation follows."
+    "Reset this website…" : {
+
     },
     "Reset to Default" : {
       "comment" : "Tooltip on the small arrow button that puts a keyboard shortcut back to the one the app ships with. Default is a noun here, meaning the original value."
     },
-    "Reset Website" : {
-      "comment" : "The confirming button in that dialog. Title Case, and it repeats the verb from the question rather than saying OK."
+    "Reset website" : {
+
     },
     "Reset Zoom" : {
 
@@ -4005,6 +4053,9 @@
     "Restore prompts on excluded sites." : {
 
     },
+    "Result" : {
+
+    },
     "Resume" : {
 
     },
@@ -4035,14 +4086,14 @@
     "Revoke" : {
       "comment" : "Destructive confirming button inside the dialog that withdraws the assistant’s saved permissions for one website. Imperative verb, in the sense of taking a permission back."
     },
-    "Revoke All" : {
-      "comment" : "Button that withdraws every saved assistant permission for every website, and the destructive confirming button inside the dialog it opens. Imperative verb plus its object."
+    "Revoke all" : {
+
     },
     "Revoke every saved permission?" : {
       "comment" : "Heading of the confirmation sheet that clears every standing “Always Allow” the assistant was given, in the Assistant permissions section of the Privacy settings page."
     },
-    "Revoke the permissions for “%@”?" : {
-      "comment" : "Heading of the confirmation sheet that clears the assistant's standing permissions for one website, in the Assistant permissions list. %@ is the website's hostname, e.g. example.com, inside curly quotes."
+    "Revoke the permissions for \"%@\"?" : {
+
     },
     "Revoke…" : {
       "comment" : "Button on one website’s row that opens the dialog for withdrawing the assistant permissions saved for that site. The real ellipsis is the promise that a dialog follows, so keep it."
@@ -4101,7 +4152,7 @@
     "Save an address to fill forms." : {
 
     },
-    "Save an extra copy for retrieval through the OpenAI API. You don’t need this for Linen’s chat history." : {
+    "Save an extra copy for retrieval through the OpenAI API. You don't need this for Linen's chat history." : {
 
     },
     "Save and fill cards at checkout." : {
@@ -4131,7 +4182,7 @@
     "Save card?" : {
 
     },
-    "Save Changes" : {
+    "Save changes" : {
 
     },
     "Save connection" : {
@@ -4158,6 +4209,9 @@
     "Save suggestions" : {
 
     },
+    "Save why an outcome needs your help." : {
+
+    },
     "Saved" : {
 
     },
@@ -4168,9 +4222,6 @@
 
     },
     "Saved cards" : {
-
-    },
-    "Saved details, secure on this Mac." : {
 
     },
     "Saved in your Keychain." : {
@@ -4257,6 +4308,9 @@
     "Search with %@ in a new tab" : {
       "comment" : "Detail line under the second row of the ⌘K palette results when what was typed is a query; ⇧Return, or a Command-click, runs the search beside the current page instead of in it. %@ is the chosen search engine's name (DuckDuckGo, Google…) — never translated."
     },
+    "Search with %@ in current tab" : {
+      "comment" : "Command palette result while Option is held. %@ is the selected search engine."
+    },
     "Search, “@” to ask, or enter website name" : {
       "comment" : "Placeholder in the address/ask field at the top of the window and on the start page. The “@” is literal: typing it at the start of the line addresses the assistant instead of searching, so the character must stay, stay leading, and stay in quotes. “enter website name” follows Safari’s own placeholder — use the system’s wording for it. Sentence case."
     },
@@ -4299,6 +4353,9 @@
     "Send questions to the assistant. Open links normally." : {
       "comment" : "Settings search caption for Ask instead of search. The page caption names the chosen model instead."
     },
+    "Send the song and artist to LRCLIB to find lyrics. Private tabs don't send song details." : {
+
+    },
     "Send you notifications?" : {
       "comment" : "Question in the permission panel when a website asks to send notifications. The website is named in the header just above, so the question deliberately has no subject. Use “send” rather than “show”."
     },
@@ -4317,6 +4374,9 @@
     "Set a checkbox or radio selection." : {
 
     },
+    "Set a model request limit for long assistant tasks." : {
+
+    },
     "Set as Default" : {
       "comment" : "Button that makes Linen the Mac’s default browser. Default is a noun here, meaning the default browser; the button reads simply Default once that is already the case. Title Case."
     },
@@ -4329,14 +4389,32 @@
     "Set checked state" : {
 
     },
+    "Set defaults for websites and review the settings you changed." : {
+
+    },
+    "Set how the assistant speaks in conversations." : {
+
+    },
+    "Set the default zoom for websites. You can also zoom individual tabs." : {
+
+    },
+    "Set the speed for reading replies aloud." : {
+
+    },
     "Set the voice and speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)." : {
       "comment" : "Caption under the Read aloud toggle. The bracketed words are a link that opens the Spoken Content pane of System Settings; translate the words, never the address in parentheses."
+    },
+    "Set the voice and speed in your OpenAI provider settings." : {
+      "comment" : "Caption under the Read aloud toggle when an OpenAI provider is selected."
     },
     "Set Up…" : {
       "comment" : "Settings → Assistant. Button that opens the page of the chosen provider so its key or server can be fixed."
     },
     "Settings" : {
       "comment" : "Heading at the top of the Settings window’s sidebar, and the name of the entry that opens Settings from the command palette. Apple’s term for what used to be called Preferences — use Apple’s own translation."
+    },
+    "Settings you changed for this website." : {
+
     },
     "Settings…" : {
       "comment" : "Menu bar command in the application menu that opens the Settings window, shortcut ⌘,. Title Case with a real ellipsis. Use Apple’s own wording for the system Settings command."
@@ -4355,6 +4433,9 @@
     },
     "Show %@ on the toolbar" : {
       "comment" : "Tooltip on the Pin button in the extensions overflow popover. %@ is the extension’s own display name, taken from the extension’s manifest — it is not translated. Show is a verb, and toolbar is the row of buttons at the top of the window."
+    },
+    "Show a link's address at the bottom of the page when you point at it." : {
+
     },
     "Show All" : {
       "comment" : "Serves two places at once: the standard macOS application-menu command that unhides all applications, and a button at the end of the start page’s history list that reveals the full list. Use Apple’s own wording for the system command, since that is the one users recognise. Title Case, Show is a verb."
@@ -4394,9 +4475,6 @@
     },
     "Show link address" : {
 
-    },
-    "Show link addresses at the bottom of the page." : {
-      "comment" : "Caption under “Show link address” on the General settings page: the address of the link under the pointer appears in a chip at the bottom-left of the page. One sentence."
     },
     "Show lyrics" : {
       "comment" : "Title of the switch on the General settings page that adds the lyrics button to the media player, and its settings-search title. Sentence case, as settings rows are."
@@ -4455,10 +4533,13 @@
     "Sidebar" : {
       "comment" : "Title of the Appearance settings section for the tab sidebar. A noun heading beside an icon."
     },
+    "Sign in" : {
+
+    },
     "Sign In" : {
       "comment" : "Default button of the dialog a website shows when it asks for a username and password; pressing it submits what was typed. Title Case, imperative verb."
     },
-    "Sign In Again" : {
+    "Sign in again" : {
 
     },
     "Sign in to %@" : {
@@ -4470,7 +4551,7 @@
     "Sign in with the service" : {
 
     },
-    "Sign Out" : {
+    "Sign out" : {
 
     },
     "Sign-in method" : {
@@ -4493,9 +4574,6 @@
     },
     "Sites get an address only when you choose it." : {
 
-    },
-    "Size on disk" : {
-      "comment" : "Title of the row saying how much room a profile takes up."
     },
     "Skip" : {
 
@@ -4524,10 +4602,7 @@
     "Software updates can fail when Linen runs from another folder. Linen will move itself to Applications and reopen." : {
       "comment" : "Body of that alert, for a copy that can be moved — usually one sitting in the Downloads folder. The second sentence promises what the default button does. Use the system name of the Applications folder."
     },
-    "Some extension features aren’t supported by WebKit. Other features remain available." : {
-      "comment" : "Explanatory line at the foot of the panel listing an extension’s problems. A sentence fragment whose implied subject is the problem; the rest means the rest of the extension. WebKit is Apple’s browser engine — leave as is. Curly apostrophe."
-    },
-    "Some uploaded files could not be removed. Use Delete to retry." : {
+    "Some extension features aren't supported by WebKit. Other features remain available." : {
 
     },
     "Something else" : {
@@ -4585,10 +4660,10 @@
       "comment" : "Command that turns the microphone on so the person can speak to the assistant. The same command reads “Stop Listening” while it is on. Title Case."
     },
     "Start page" : {
-      "comment" : "Name of the page Linen shows in a new tab, offered as one choice in the New tab control. A noun phrase naming a specific screen in this app, not an instruction. Short segment, so keep it brief."
+      "comment" : "Name of the page Linen shows in a tab with no website open. A noun phrase naming a specific screen in this app."
     },
     "Start Page" : {
-      "comment" : "Heading of the popover that chooses which sections the start page shows. It is the app's name for the page a new tab opens on. Title Case."
+      "comment" : "Title of a Start Page tab and heading of the popover that chooses its sections. Title Case."
     },
     "Start voice conversation" : {
 
@@ -4602,6 +4677,9 @@
     "State or region" : {
 
     },
+    "Status" : {
+
+    },
     "Stop" : {
       "comment" : "Serves two places: the menu bar command under View that stops the page loading, shortcut ⌘., and the tooltip on the small cross that cancels a download in progress. Imperative verb in both."
     },
@@ -4610,9 +4688,6 @@
     },
     "Stop Listening" : {
       "comment" : "Command that turns the microphone off. The same command reads “Start Listening” while it is off. Title Case."
-    },
-    "Stop Loading" : {
-      "comment" : "Command that stops the page loading, the ⌘. command. Title Case."
     },
     "Stop Speaking" : {
       "comment" : "Tooltip on the toolbar's speaker button while the assistant is reading a reply aloud; clicking cuts the speech off mid-sentence. It does not change any setting. Title Case."
@@ -4675,7 +4750,7 @@
     "Supported hosted tools are web search, file search, code interpreter, image generation, and hosted shell." : {
 
     },
-    "Supported models can search, create images, and work with data automatically. OpenAI usage charges apply." : {
+    "Supported models can search the web, create images, and analyze data. OpenAI charges for API use." : {
 
     },
     "Swap Pages" : {
@@ -4696,7 +4771,7 @@
     "Switch to Tab" : {
       "comment" : "Section heading in the address bar results list over rows for tabs that are already open; choosing one switches to it rather than loading a second copy. Title Case."
     },
-    "Switch to This Profile" : {
+    "Switch to this profile" : {
 
     },
     "Symbol" : {
@@ -4705,7 +4780,7 @@
     "System" : {
       "comment" : "Name of the System group in the Settings sidebar. Short section heading."
     },
-    "System Settings is open. Choose Linen under “Default web browser.”" : {
+    "System Settings is open. Choose Linen under \"Default web browser.\"" : {
 
     },
     "tab" : {
@@ -4753,6 +4828,9 @@
     "The assistant can read it for this question" : {
 
     },
+    "The assistant can use tools from connected MCP services. Linen asks you to approve each tool call." : {
+
+    },
     "The assistant may do these without asking: %@. Change this in Assistant settings." : {
       "comment" : "Note on a website's page when the assistant holds standing permission there. %@ is a list of action kinds already worded and joined, for example purchases and money transfers. Assistant is the name of a Settings page."
     },
@@ -4793,9 +4871,6 @@
     "The client changed its configuration during setup. Try again after closing the client." : {
       "comment" : "External MCP client setup in Advanced settings."
     },
-    "The collection could not be fully deleted. Use Delete to retry." : {
-
-    },
     "The configuration could not be read. Fix its format or use Copy Configuration." : {
       "comment" : "External MCP client setup in Advanced settings."
     },
@@ -4804,9 +4879,6 @@
     },
     "The connection was lost while loading the page. Try again." : {
       "comment" : "Explanation on the error page shown when the connection was lost part way through loading, below the headline."
-    },
-    "The default for every website. Tabs can still be zoomed." : {
-      "comment" : "Caption under the Page zoom row, saying the chosen percentage applies everywhere but does not stop a single tab being zoomed on its own. Two sentences; website is one word."
     },
     "The downloaded add-on didn’t match its checksum" : {
 
@@ -4859,14 +4931,17 @@
     "the last hour" : {
       "comment" : "Lowercase phrase naming a time range, inserted mid-sentence into the confirmation before clearing browsing data, which reads roughly: browsing history will be cleared for the last hour. Deliberately lowercase, including the leading article — do not capitalise it. The capitalised menu label Last hour is a separate string."
     },
-    "The last profile used" : {
-      "comment" : "One of two choices for which profile the browser opens in."
-    },
     "The list shows the known tracker domains this page refers to. A request that is stopped before it loads can be missing." : {
 
     },
     "The model couldn’t group the tabs. Try again." : {
       "comment" : "Message shown when the Organize Tabs command asked the language model to sort the open tabs into folders and the reply could not be used. The model is the AI; try again is addressed to the person. Curly apostrophe."
+    },
+    "The model request failed temporarily. Retrying without repeating browser actions." : {
+
+    },
+    "The model request failed. Your progress is saved; choose Continue to retry." : {
+
     },
     "The model returned an empty response. Try again or choose another model." : {
       "comment" : "Error shown when the language model answers with nothing at all. Model means the AI model."
@@ -4898,11 +4973,8 @@
     "The remote tool request could not be verified. No approval was sent." : {
 
     },
-    "the research page" : {
-      "comment" : "Last-resort stand-in for a host name, dropped into “Browsing %@…” and “Finished on %@” in the agent activity column when the page the assistant is on has no host to show. Deliberately lowercase with an article because it lands mid-sentence."
-    },
-    "The selected tab uses the website icon’s color." : {
-      "comment" : "Caption under the “Tint selected tab” switch on the Appearance settings page, and the same wording in Settings search. One full sentence."
+    "The requested result has not been verified. Progress is saved; choose Continue to check it." : {
+
     },
     "The server accepted the connection but never replied." : {
       "comment" : "Explanation on the error page shown when a website timed out, below the headline."
@@ -4916,34 +4988,31 @@
     "The sign-in response could not be verified. Try signing in again." : {
 
     },
-    "The start page, your homepage, or nothing." : {
-      "comment" : "Description of the New tabs open with row, shown only in the Settings search results. Start page is the app's own new-tab page and homepage is the address the person chose; nothing means an empty tab. Sentence case with a final full stop."
-    },
     "The tab returns to this address." : {
       "comment" : "Body of the sheet that edits a pinned page. It says what the address below is for. One sentence."
+    },
+    "The task needs your help. Unfinished outcomes and progress are saved." : {
+
     },
     "The text in this form was written by AI, not by you. Publishing it puts AI-generated text out under your name." : {
 
     },
-    "The website asks again before using the camera, microphone, location, or notifications, and the assistant asks before reading it." : {
-      "comment" : "Message in the reset confirmation, saying what the website goes back to. Third person singular."
+    "The website will ask again to use your camera, microphone, location, or notifications. The assistant will ask again before reading the website." : {
+
     },
     "The website’s certificate couldn’t be verified, so Linen stopped before sending anything." : {
       "comment" : "Explanatory sentence on the certificate error page, under its headline. Curly apostrophes."
     },
-    "The websites you visit most, your recent requests, and your downloads." : {
-      "comment" : "Caption for the new-tab choice that opens the start page, naming what the start page shows."
-    },
     "Theme" : {
       "comment" : "Title of the Appearance settings row that chooses light, dark or automatic, and the same word in the Settings search index. Noun; a short row title."
+    },
+    "These %lld websites will need permission again." : {
+
     },
     "These attachments exceed this model’s context budget. Attach fewer pages or choose a model with a larger context window." : {
 
     },
     "These documents contain too much text. Attach a shorter selection." : {
-
-    },
-    "These options are for custom API setups. You can use chat and voice without changing them." : {
 
     },
     "Things to try" : {
@@ -4962,6 +5031,9 @@
       "comment" : "Status line under the assistant’s reply while it waits for the model, before any action has started. Real ellipsis; unlike the row title with the same word, this one is a progress message."
     },
     "This attachment couldn’t be read." : {
+
+    },
+    "This clears history and start page tiles for this profile. Other profiles keep their data." : {
 
     },
     "This connection isn’t private" : {
@@ -5060,16 +5132,10 @@
     "This provider has no endpoint set." : {
       "comment" : "Message shown for a user-added provider whose server address is missing, both as a reason it is unavailable and as an error when its model list is fetched. Provider means the AI provider; endpoint is the technical term for the server address."
     },
-    "This removes the uploaded files in this group. The original files on your Mac are kept." : {
+    "This search URL isn't valid. Using DuckDuckGo instead." : {
 
-    },
-    "This search URL isn’t valid. Using DuckDuckGo instead." : {
-      "comment" : "Caption under the custom search engine fields when the URL template the user typed cannot be used, so the default engine answers searches until it is fixed."
     },
     "This server did not provide valid OAuth discovery information. Enter the connection details manually." : {
-
-    },
-    "This voice is generated by AI." : {
 
     },
     "This website is asking for a username and password for “%@”." : {
@@ -5108,6 +5174,9 @@
     "Tool names, separated by commas" : {
 
     },
+    "Tool result hidden." : {
+
+    },
     "Tools" : {
       "comment" : "Title of the Tools settings page, and its row on the Assistant page."
     },
@@ -5144,10 +5213,10 @@
     "Turn this off if the website breaks." : {
       "comment" : "Caption under the Block known trackers switch on one website's page, saying what to do when tracker blocking stops a website working. Imperative."
     },
-    "Turn this off to keep this website’s video in its tab." : {
-      "comment" : "Caption on the per-website Automatic Picture in Picture row. “this website” is the one named at the top of the page."
+    "Turn this off to keep this website's video in its tab." : {
+
     },
-    "Turning this off affects new replies. It does not delete earlier copies or change OpenAI’s other data-retention policies." : {
+    "Turning this off affects new replies. It does not delete earlier copies or change OpenAI's other data-retention policies." : {
 
     },
     "Type" : {
@@ -5156,8 +5225,14 @@
     "Type > for commands" : {
       "comment" : "Note beside the Actions heading in the ⌘K palette, telling the reader that typing the greater-than sign filters the list down to commands only. Keep the “>” character as it is: it is the key the user presses, not punctuation."
     },
-    "Type the ID exactly as the provider spells it." : {
-      "comment" : "Caption above the field where a model identifier is typed by hand. ID means the model’s identifier string; provider means the AI provider. Type is a verb."
+    "Type in Focused Field" : {
+
+    },
+    "Type into a field selected from a screenshot." : {
+
+    },
+    "Type on page" : {
+
     },
     "Type your question" : {
       "comment" : "Stands in for the question in the Ask row of the address bar results, from the moment “@” is typed until a question is actually there. The row leads the list so that Return sends a question rather than attaching a tab. Sentence case, imperative."
@@ -5267,15 +5342,6 @@
     "Updated to %@" : {
 
     },
-    "Updates" : {
-
-    },
-    "Upload canceled." : {
-
-    },
-    "Uploading and indexing documents…" : {
-
-    },
     "Use %@" : {
       "comment" : "Settings → Assistant → a provider page. %@ is the provider name, e.g. \"Ollama\". Button that makes this provider the one that answers."
     },
@@ -5285,7 +5351,13 @@
     "Use %s where the search term goes." : {
       "comment" : "The same instruction as it is indexed for the Settings search, where the token is written out literally. %s here is not a placeholder to be filled in — it is the exact text the user has to type into their custom search address, so keep the two characters %s unchanged."
     },
-    "Use a registered public client ID or register one if the issuer supports it. Save the connection, then choose Sign In." : {
+    "Use controls on a permitted embedded website." : {
+
+    },
+    "Use embedded page" : {
+
+    },
+    "Use Embedded Pages" : {
 
     },
     "Use HTTPS to encrypt your API key. HTTP is allowed only for localhost." : {
@@ -5294,28 +5366,19 @@
     "Use Icons Only" : {
       "comment" : "Checkmark item in the right-click menu of the sidebar toggle button; switches the sidebar to its narrow favicons-without-titles look. The same choice Settings calls “Icons only”. Title Case."
     },
-    "Use in chat" : {
-
-    },
     "Use keyboard controls on a page." : {
 
     },
-    "Use page" : {
+    "Use recommended" : {
 
     },
-    "Use Recommended" : {
-      "comment" : "Button in the warning row on the Tools settings page."
-    },
-    "Use screenshots, clicks, and typing on pages you allow the assistant to control." : {
+    "Use the current website's color in the toolbar and sidebar." : {
 
-    },
-    "Use the current website’s color in the toolbar and sidebar." : {
-      "comment" : "Caption for the Website tint toggle in Appearance settings and the same wording in Settings search. Curly apostrophe."
-    },
-    "Use This Page" : {
-      "comment" : "Button that sets the homepage to the page currently open. Title Case, imperative verb; This Page means the page in the front tab."
     },
     "Use tool" : {
+
+    },
+    "Use Website Settings in the toolbar to change a website's settings." : {
 
     },
     "Use your camera?" : {
@@ -5344,6 +5407,12 @@
     },
     "Using `%@` from the environment." : {
       "comment" : "Caption under the API key row when the key is being taken from an environment variable rather than the Keychain. %@ is the variable’s name, for example OPENAI_API_KEY — leave it exactly as it is. The backticks mark it as code and must be kept."
+    },
+    "Verify result" : {
+
+    },
+    "Verify Results" : {
+
     },
     "Version %@" : {
       "comment" : "Line beside the Linen heading on the About page in Settings. %@ is the version number of the running app, for example 1.4.2."
@@ -5375,6 +5444,9 @@
     "View the installed version and check for updates." : {
       "comment" : "Caption describing the Software update section in the Settings search results. A sentence fragment naming what the section reports."
     },
+    "View websites with custom settings." : {
+
+    },
     "Voice" : {
 
     },
@@ -5394,9 +5466,6 @@
 
     },
     "Voice models" : {
-
-    },
-    "Voice service" : {
 
     },
     "Wait for expected text or loading to finish." : {
@@ -5450,8 +5519,8 @@
     "Websites" : {
       "comment" : "Title of the Websites page in Settings and its name in the Settings sidebar. Plural noun; a narrow sidebar row, so keep it short."
     },
-    "Websites appear here after you choose “Always Allow”." : {
-      "comment" : "Caption on the empty state of the assistant-permissions list, shown when no website has been granted anything. Always Allow is the exact label of a button in the assistant’s confirmation dialog, so translate it the same way there. Curly quotation marks."
+    "Websites appear here after you choose \"Always Allow\"." : {
+
     },
     "Websites appear here after you grant or deny permission." : {
       "comment" : "Guidance under No websites yet, explaining that the list fills itself as websites ask for the permission. Third person plural."
@@ -5462,20 +5531,14 @@
     "Websites use this data to keep you signed in and remember your preferences." : {
       "comment" : "Caption under the Website data page title, saying what the stored data is for before offering to remove it. Third person plural."
     },
-    "Websites with data" : {
-      "comment" : "Label under a number, counting the websites storing something in this profile."
-    },
     "Websites you visit most" : {
       "comment" : "Description of the Frequently Visited section in the start page editor. No final full stop."
     },
-    "Websites you’ve changed" : {
-      "comment" : "Heading of the list of individual websites that carry a rule of their own. Each row opens that website's page. Curly apostrophe."
+    "Websites you've changed" : {
+
     },
     "Welcome to Linen" : {
       "comment" : "Heading of the first onboarding screen, shown under the app icon. Linen is the application name and is never translated. Keep it short — it is set in large type."
-    },
-    "What happens when this website opens a window by itself." : {
-      "comment" : "Caption under the Pop-up Windows row on a website's own settings page. One sentence."
     },
     "what the assistant is doing" : {
       "comment" : "Caption under the Show Agent Activity command in the command palette; the panel lists the steps the assistant is taking. Sentence fragment, lower case."
@@ -5486,16 +5549,13 @@
     "What the assistant may do in the browser." : {
       "comment" : "Settings search result detail for the Tools page."
     },
-    "What the current profile stores." : {
-      "comment" : "Settings search result for the card describing the current profile."
-    },
-    "What this website may start playing on its own." : {
-      "comment" : "Caption under the Auto-Play row on a website's own settings page. One sentence."
-    },
     "What’s on Hacker News?" : {
       "comment" : "Label on one of three example prompt chips on the start page; clicking it asks the assistant that question. “Hacker News” is the name of a website — keep it. Keep the curly apostrophe; the prompt actually sent to the model is separate and stays in English."
     },
     "When Linen quits" : {
+
+    },
+    "When your Mac runs low on memory, inactive tabs unload. They reload when you open them." : {
 
     },
     "Where downloaded files are saved." : {
@@ -5506,9 +5566,6 @@
     },
     "Whether video and sound may start on their own." : {
       "comment" : "Caption describing the Autoplay setting in the Settings search results. A sentence fragment naming what the setting decides."
-    },
-    "Which profile Linen opens in." : {
-      "comment" : "Settings search result caption for the choice of which profile Linen starts in. Sentence fragment."
     },
     "Which websites may use your location, camera, microphone, and notifications." : {
       "comment" : "Caption describing the website Permissions section in the Settings search results. The four are the permissions a website can be granted; a sentence fragment."
@@ -5552,11 +5609,11 @@
     "You’re set" : {
       "comment" : "Heading of the last onboarding screen, shown once every choice is made. Warm and brief — the reader is finished. Keep it short: it is set in large type."
     },
-    "You’re signed out of %lld websites, and their preferences are removed. Your history and downloads stay." : {
-      "comment" : "Message in that confirmation. %lld is the number of websites; use a plural variation if the language needs one. The last sentence names what survives, which is the thing people worry about."
+    "You're signed out of %lld websites, and their preferences are removed. Your history and downloads stay." : {
+
     },
-    "You’re signed out of this website, and its preferences are removed." : {
-      "comment" : "Message in that confirmation, saying the consequence rather than the mechanism."
+    "You're signed out of this website, and its preferences are removed." : {
+
     },
     "You’re talking to AI. " : {
 

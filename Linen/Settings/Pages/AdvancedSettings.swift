@@ -36,7 +36,7 @@ struct AdvancedSettings: View {
         SettingsCard {
             DetailRow(
                 title: "Web Inspector",
-                caption: "Adds Inspect Element to the page’s right-click menu."
+                caption: "Add Inspect Element to a page's right-click menu."
             ) {
                 SettingsToggle($settings.webInspectorEnabled)
             }
@@ -46,7 +46,7 @@ struct AdvancedSettings: View {
 
             DetailRow(
                 title: "Certificate exceptions",
-                caption: "Continue past a certificate macOS rejects. Forgotten on quit."
+                caption: "Continue past a certificate macOS rejects. Linen forgets the exception when you quit."
             ) {
                 SettingsToggle($settings.allowsCertificateExceptions)
             }
@@ -99,7 +99,7 @@ struct AdvancedSettings: View {
         if mcpServer != nil {
             SettingsCard {
                 DrillInRow(
-                    title: "External Connections", symbol: "cable.connector",
+                    title: "External connections", symbol: "cable.connector",
                     caption: "Connect an external assistant to tabs you choose."
                 ) {
                     readingMCP = true
@@ -117,12 +117,12 @@ struct AdvancedSettings: View {
                     "Reset all settings?",
                     isPresented: $confirmingReset
                 ) {
-                    Button("Reset Settings", role: .destructive) { settings.resetToDefaults() }
+                    Button("Reset settings", role: .destructive) { settings.resetToDefaults() }
                     Button("Cancel", role: .cancel) {}
                 } message: {
                     Text("""
                         Appearance, search, privacy, websites, and downloads go back to their \
-                        defaults. Tabs, history, shortcuts, and your provider aren’t affected.
+                        defaults. Tabs, history, shortcuts, and your provider aren't affected.
                         """)
                 }
             }

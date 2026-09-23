@@ -38,14 +38,18 @@ final class SettingsWorkspace {
 
     func open(_ entry: SettingsEntry) {
         highlightTask?.cancel()
-        highlight = entry.id
+        highlight = nil
+        category = entry.category
+        onRoute?(entry.category)
+        let anchor = entry.targetAnchor
         highlightTask = Task { [weak self] in
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            self?.highlight = anchor
             try? await Task.sleep(for: .seconds(2.4))
             guard !Task.isCancelled else { return }
             self?.highlight = nil
         }
-        category = entry.category
-        onRoute?(entry.category)
     }
 
     func reveal(_ anchor: String) {
@@ -300,7 +304,7 @@ private struct AboutSettings: View {
             SettingsCard {
                 DetailRow(
                     title: "Send feedback",
-                    caption: "Opens a new issue on Linen’s repository."
+                    caption: "Opens a new issue on Linen's repository."
                 ) {
                     SettingsButton(title: "Send…") {
                         coordinator.openNewTab(url: UpdateFeed.newIssueURL)

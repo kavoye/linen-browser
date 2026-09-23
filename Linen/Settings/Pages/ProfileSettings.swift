@@ -20,10 +20,6 @@ struct ProfileSettings: View {
         coordinator.profiles
     }
 
-    private var listed: [Profile] {
-        store.profiles.filter { $0.id != store.current.id }
-    }
-
     var body: some View {
         switch destination {
         case .newProfile:
@@ -37,98 +33,72 @@ struct ProfileSettings: View {
 
     @ViewBuilder
     private var overview: some View {
-        SettingsPageHeader(
-            title: "Profiles",
-            caption: "Each profile keeps its own sign-ins, history, tabs, and extensions."
-        )
+        SettingsPageHeader(title: "Profiles")
 
-        SettingsSection(title: "Current profile", symbol: "person.crop.circle") {
-            ProfileHeroCard(coordinator: coordinator) {
-                destination = .profile(store.current.id)
-            }
-        }
-        .settingsAnchor("profiles.current")
-
-        SettingsSection(title: "Other profiles", symbol: "person.2", footnote: reorderHint) {
-            ForEach(Array(listed.enumerated()), id: \.element.id) { index, profile in
-                if index > 0 {
-                    RowSeparator()
-                }
-                ProfileListRow(
-                    coordinator: coordinator,
-                    profile: profile,
-                    dragging: $dragging,
-                    open: { destination = .profile(profile.id) }
-                )
-                .overlay(alignment: landing(above: profile) ? .top : .bottom) {
-                    if dropTarget == profile.id {
-                        Capsule()
-                            .fill(Theme.accent)
-                            .frame(height: 2)
+        VStack(alignment: .leading, spacing: 7) {
+            SettingsCard {
+                ForEach(Array(store.profiles.enumerated()), id: \.element.id) { index, profile in
+                    if index > 0 {
+                        RowSeparator()
                     }
-                }
-                .onDrop(
-                    of: [.text],
-                    delegate: ProfileDropDelegate(
+                    ProfileListRow(
                         profile: profile,
-                        store: store,
-                        target: $dropTarget,
-                        dragging: $dragging
+                        isCurrent: profile.id == store.current.id,
+                        dragging: $dragging,
+                        open: { destination = .profile(profile.id) }
                     )
-                )
-            }
-
-            if !listed.isEmpty {
-                RowSeparator()
-            }
-
-            AddRow(title: "Add Profile…") { destination = .newProfile }
-                .settingsAnchor("profiles.add")
-        }
-        .settingsAnchor("profiles.list")
-
-        SettingsSection(title: "Linen opens in", symbol: "power") {
-            OptionList(
-                options: [
-                    OptionList<Bool>.Option(
-                        value: false,
-                        label: "The last profile used",
-                        caption: "Currently \(store.profileToReturnTo.name)."
-                    ),
-                    OptionList<Bool>.Option(
-                        value: true,
-                        label: "A specific profile",
-                        caption: "Linen opens in the same profile every time."
-                    ),
-                ],
-                selection: store.launchProfileID != nil,
-                onSelect: { pinned in
-                    store.setLaunchProfile(pinned ? store.profileToReturnTo.id : nil)
-                }
-            )
-
-            if store.launchProfileID != nil {
-                RowSeparator()
-
-                DetailRow(title: "Profile") {
-                    SettingsMenu(
-                        options: store.profiles.map {
-                            SettingsMenu<UUID>.Option(value: $0.id, label: $0.name)
-                        },
-                        selection: Binding(
-                            get: { store.launchProfileID ?? store.profileToReturnTo.id },
-                            set: { store.setLaunchProfile($0) }
+                    .settingsAnchor(
+                        profile.id == store.current.id
+                            ? "profiles.current" : "profiles.row.\(profile.id)"
+                    )
+                    .overlay(alignment: landing(above: profile) ? .top : .bottom) {
+                        if dropTarget == profile.id {
+                            Capsule()
+                                .fill(Theme.accent)
+                                .frame(height: 2)
+                        }
+                    }
+                    .onDrop(
+                        of: [.text],
+                        delegate: ProfileDropDelegate(
+                            profile: profile,
+                            store: store,
+                            target: $dropTarget,
+                            dragging: $dragging
                         )
                     )
                 }
+
+                RowSeparator()
+                AddRow(title: "Add profile…") { destination = .newProfile }
+                    .settingsAnchor("profiles.add")
+            }
+            .settingsAnchor("profiles.list")
+
+            if store.hasMultiple {
+                Text("Drag to reorder.")
+                    .font(Theme.Font.label)
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 2)
+            }
+        }
+
+        SettingsSection(title: "On launch", symbol: "power") {
+            DetailRow(title: "Open profile") {
+                SettingsMenu<UUID?>(
+                    options: [
+                        .init(value: nil, label: String(localized: "Last used profile"))
+                    ] + store.profiles.map {
+                        .init(value: $0.id, label: $0.name)
+                    },
+                    selection: Binding(
+                        get: { store.launchProfileID },
+                        set: { store.setLaunchProfile($0) }
+                    )
+                )
             }
         }
         .settingsAnchor("profiles.launch")
-    }
-
-    private var reorderHint: LocalizedStringResource? {
-        guard store.hasMultiple else { return nil }
-        return "Drag a profile to change the order."
     }
 
     private func landing(above profile: Profile) -> Bool {
@@ -140,82 +110,12 @@ struct ProfileSettings: View {
     }
 }
 
-// MARK: - The profile you're in
-
-private struct ProfileHeroCard: View {
-    let coordinator: AppCoordinator
-    let edit: () -> Void
-
-    @State private var facts = ProfileFacts.empty
-    @State private var websites: Int?
-
-    private var profile: Profile {
-        coordinator.profiles.current
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 14) {
-                ProfileGlyph(profile: profile, size: 44)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: profile.name)
-                        .font(.system(size: 15, weight: .semibold))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    if profile.isPrivate {
-                        Text("Nothing in this profile is saved.")
-                            .font(Theme.Font.secondary)
-                            .foregroundStyle(.secondary)
-                    } else if let started = facts.firstVisit {
-                        Text("In use since \(started.formatted(.dateTime.month(.wide).day()))")
-                            .font(Theme.Font.secondary)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer(minLength: 8)
-
-                if !profile.isPrivate {
-                    SettingsButton(title: "Edit…", action: edit)
-                }
-            }
-            .padding(.vertical, SettingsMetrics.rowPaddingV)
-
-            if !profile.isPrivate {
-                RowSeparator()
-
-                StatStrip(figures: [
-                    StatStrip.Figure(
-                        value: coordinator.browser.tabs.count.formatted(),
-                        label: "Tabs"
-                    ),
-                    StatStrip.Figure(value: facts.pages.formatted(), label: "Pages of history"),
-                    StatStrip.Figure(
-                        value: coordinator.extensions.installed.count.formatted(),
-                        label: "Extensions"
-                    ),
-                    StatStrip.Figure(
-                        value: websites.map { $0.formatted() } ?? "—",
-                        label: "Websites with data"
-                    ),
-                ])
-            }
-        }
-        .task(id: profile.id) {
-            facts = await ProfileFacts.load(for: profile)
-            websites = profile.isPrivate ? nil : await BrowsingData.siteCount()
-        }
-    }
-}
-
 // MARK: - One row in the list
 
 private struct ProfilePageHeading<Trailing: View>: View {
     let profile: Profile
     let title: Text
-    let caption: Text
+    let caption: Text?
     @ViewBuilder let trailing: Trailing
 
     var body: some View {
@@ -226,9 +126,11 @@ private struct ProfilePageHeading<Trailing: View>: View {
                 title
                     .font(.system(size: 21, weight: .semibold))
 
-                caption
-                    .font(Theme.Font.body)
-                    .foregroundStyle(.secondary)
+                if let caption {
+                    caption
+                        .font(Theme.Font.body)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer(minLength: 8)
@@ -240,17 +142,12 @@ private struct ProfilePageHeading<Trailing: View>: View {
 }
 
 private struct ProfileListRow: View {
-    let coordinator: AppCoordinator
     let profile: Profile
+    let isCurrent: Bool
     @Binding var dragging: UUID?
     let open: () -> Void
 
-    @State private var facts = ProfileFacts.empty
     @State private var width: CGFloat = 0
-
-    private var store: ProfileStore {
-        coordinator.profiles
-    }
 
     var body: some View {
         Button(action: open) {
@@ -263,10 +160,11 @@ private struct ProfileListRow: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
 
-                    Text(verbatim: summary)
-                        .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    if isCurrent {
+                        Text("Current profile")
+                            .font(Theme.Font.secondary)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Spacer(minLength: 8)
@@ -284,21 +182,6 @@ private struct ProfileListRow: View {
         } preview: {
             dragPreview
         }
-        .task(id: profile.id) {
-            facts = await ProfileFacts.load(for: profile)
-        }
-    }
-
-    private var summary: String {
-        let used = store.lastUsed[profile.id]
-        guard facts.tabs > 0 || used != nil else {
-            return String(localized: ProfileSummary.neverOpened)
-        }
-        var parts = [ProfileSummary.tabs(facts.tabs)]
-        if let used {
-            parts.append(ProfileSummary.lastUsed(used))
-        }
-        return parts.joined(separator: " · ")
     }
 
     private var dragPreview: some View {
@@ -400,18 +283,18 @@ private struct ProfileDetailPage: View {
     private func page(_ profile: Profile) -> some View {
         SubPageHeader(backTitle: "Profiles", onBack: onBack) {
             if !profile.isOriginal {
-                SettingsButton(title: "Delete Profile…", isDestructive: true) { deleting = true }
+                SettingsButton(title: "Delete profile…", isDestructive: true) { deleting = true }
                     .disabled(coordinator.isSwitchingProfile)
                     .confirmationDialog(
-                        Text("Delete “\(profile.name)”?"),
+                        Text("Delete \"\(profile.name)\"?"),
                         isPresented: $deleting
                     ) {
-                        Button("Delete Profile", role: .destructive) {
+                        Button("Delete profile", role: .destructive) {
                             Task { await delete(profile) }
                         }
                         Button("Cancel", role: .cancel) { deleting = false }
                     } message: {
-                        Text("Its \(facts.pages) pages of history, tabs, and sign-ins are removed from this Mac. Downloaded files stay in the Downloads folder.")
+                        Text("Deleting this profile removes its tabs, history, and sign-ins from this Mac. Downloads stay in the Downloads folder.")
                     }
             }
         }
@@ -420,25 +303,17 @@ private struct ProfileDetailPage: View {
 
         lookSection(profile)
 
-        contentsSection(profile)
-
-        SettingsSection(
-            title: "Kept separate from other profiles",
-            symbol: "rectangle.split.2x1",
-            footnote: "Appearance, downloads, and keyboard shortcuts are shared by every profile."
-        ) {
-            ChipList(items: ProfileSummary.separated)
-        }
+        historySection(profile)
     }
 
     private func heading(_ profile: Profile) -> some View {
         ProfilePageHeading(
             profile: profile,
             title: Text(verbatim: profile.name),
-            caption: Text(verbatim: header(for: profile))
+            caption: isCurrent ? Text("Current profile") : nil
         ) {
             if !isCurrent {
-                SettingsButton(title: "Switch to This Profile") {
+                SettingsButton(title: "Switch to this profile") {
                     Task { await coordinator.switchProfile(to: profile) }
                 }
                 .disabled(coordinator.isSwitchingProfile)
@@ -483,75 +358,15 @@ private struct ProfileDetailPage: View {
         }
     }
 
-    private func opener(_ category: SettingsCategory, when condition: Bool) -> (() -> Void)? {
-        guard condition else { return nil }
-        return { coordinator.openSettings(category) }
-    }
-
-    private func contentsSection(_ profile: Profile) -> some View {
-        SettingsSection(title: "Contents", symbol: "tray.full") {
-            StatusRow(
-                tint: Color(nsColor: .systemGray),
-                symbol: "rectangle.stack",
-                title: "Tabs",
-                verbatimCaption: ProfileSummary.tabsAndFolders(
-                    tabs: isCurrent ? coordinator.browser.tabs.count : facts.tabs,
-                    folders: facts.folders
-                )
-            ) {
-                EmptyView()
-            }
-
-            RowSeparator()
-
-            StatusRow(
-                tint: SettingsCategory.privacy.tint,
-                symbol: "clock",
-                title: "History",
-                verbatimCaption: ProfileSummary.history(pages: facts.pages, since: facts.firstVisit)
-            ) {
-                if facts.pages > 0 {
-                    SettingsButton(title: "Clear…", isDestructive: true) { clearing = true }
-                }
-            }
-
-            RowSeparator()
-
-            StatusRow(
-                tint: SettingsCategory.extensions.tint,
-                symbol: "puzzlepiece.extension",
-                title: "Extensions",
-                verbatimCaption: ProfileSummary.extensions(facts.extensions),
-                action: opener(.extensions, when: isCurrent && facts.extensions > 0)
-            ) {
-                EmptyView()
-            }
-
-            RowSeparator()
-
-            StatusRow(
-                tint: SettingsCategory.websites.tint,
-                symbol: "hand.raised",
-                title: "Website permissions",
-                verbatimCaption: ProfileSummary.permissions(facts.permissionSites),
-                action: opener(.websites, when: isCurrent && facts.permissionSites > 0)
-            ) {
-                EmptyView()
-            }
-
-            RowSeparator()
-
-            StatusRow(
-                tint: Color(nsColor: .systemGray),
-                symbol: "internaldrive",
-                title: "Size on disk",
-                verbatimCaption: ProfileSummary.size(facts.bytes)
-            ) {
-                EmptyView()
+    private func historySection(_ profile: Profile) -> some View {
+        SettingsSection(title: "History", symbol: "clock") {
+            DetailRow(title: "Browsing history") {
+                SettingsButton(title: "Clear…", isDestructive: true) { clearing = true }
+                    .disabled(facts.pages == 0)
             }
         }
         .confirmationDialog(
-            Text("Clear the history in “\(profile.name)”?"),
+            Text("Clear the history in \"\(profile.name)\"?"),
             isPresented: $clearing
         ) {
             Button("Clear History", role: .destructive) {
@@ -559,24 +374,8 @@ private struct ProfileDetailPage: View {
             }
             Button("Cancel", role: .cancel) { clearing = false }
         } message: {
-            Text("Its \(facts.pages) pages of history are removed, along with the start page tiles. Other profiles are not affected.")
+            Text("This clears history and start page tiles for this profile. Other profiles keep their data.")
         }
-    }
-
-    private func header(for profile: Profile) -> String {
-        let tabs = isCurrent ? coordinator.browser.tabs.count : facts.tabs
-        let used = isCurrent ? nil : store.lastUsed[profile.id]
-        guard tabs > 0 || facts.bytes > 0 || used != nil else {
-            return String(localized: ProfileSummary.neverOpened)
-        }
-        var parts = [ProfileSummary.tabs(tabs)]
-        if facts.bytes > 0 {
-            parts.append(ProfileSummary.size(facts.bytes))
-        }
-        if let used {
-            parts.append(ProfileSummary.lastUsed(used))
-        }
-        return parts.joined(separator: " · ")
     }
 
     private func commit(_ profile: Profile) {

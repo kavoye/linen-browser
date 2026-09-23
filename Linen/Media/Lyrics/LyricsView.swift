@@ -306,7 +306,7 @@ struct LyricsBoard: View {
             PanelNotice(
                 symbol: "music.note",
                 title: "Nothing is playing",
-                caption: "Play a song in a tab to see synced lyrics from LRCLIB."
+                caption: "Play a song in a tab to see synced lyrics."
             )
         case .off:
             PanelNotice(

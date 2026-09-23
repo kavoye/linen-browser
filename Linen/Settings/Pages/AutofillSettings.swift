@@ -31,7 +31,7 @@ struct AutofillSettings: View {
                     ContactAutofillSettings(settings: settings, profile: coordinator.profiles.current)
                 }
             } else {
-                SettingsPageHeader(title: "Autofill", caption: "Saved details, secure on this Mac.")
+                SettingsPageHeader(title: "Autofill", caption: "Linen stores saved details on this Mac.")
                 SettingsCard {
                     DrillInRow(title: "Passwords", symbol: "key", tint: .orange, caption: "Save and fill website logins.") { destination = .passwords }
                     RowSeparator()

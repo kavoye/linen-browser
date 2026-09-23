@@ -68,20 +68,20 @@ private struct ExtensionRowMenu: View {
 
     var body: some View {
         SettingsMoreMenu {
-            Button("Check for Updates") {
+            Button("Check for updates") {
                 Task { await manager.checkForUpdate(id: record.id) }
             }
             .disabled(isChecking)
 
             if manager.hasOptionsPage(id: record.id) {
-                Button("Extension Options") {
+                Button("Extension options") {
                     manager.openOptionsPage(id: record.id)
                 }
             }
 
             Divider()
 
-            Button("Remove Extension", role: .destructive) {
+            Button("Remove extension", role: .destructive) {
                 manager.confirmUninstall(id: record.id)
             }
         }
@@ -250,7 +250,7 @@ private struct IssueList: View {
                     }
                 }
 
-                Text("Some extension features aren’t supported by WebKit. Other features remain available.")
+                Text("Some extension features aren't supported by WebKit. Other features remain available.")
                     .font(Theme.Font.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.top, 2)

@@ -27,7 +27,7 @@ struct OpenAIMCPSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Connect an MCP service to give your assistant access to its tools. Linen asks you to approve each tool call.")
+            Text("The assistant can use tools from connected MCP services. Linen asks you to approve each tool call.")
                 .font(.callout).foregroundStyle(.secondary)
             SettingsCard {
                 if servers.isEmpty {
@@ -46,14 +46,14 @@ struct OpenAIMCPSettingsView: View {
                         }
                         Spacer()
                         if server.oauth != nil {
-                            Button(server.authorizationRevision == nil ? "Sign In" : "Sign In Again") { signIn(server) }
+                            Button(server.authorizationRevision == nil ? "Sign in" : "Sign in again") { signIn(server) }
                         }
                         Menu {
-                            Button("Edit Connection…") { edit(server); showsEditor = true }
+                            Button("Edit connection…") { edit(server); showsEditor = true }
                             if server.oauth != nil && server.authorizationRevision != nil {
-                                Button("Sign Out") { signOut(server) }
+                                Button("Sign out") { signOut(server) }
                             }
-                            Button("Remove Connection", role: .destructive) { remove(server) }
+                            Button("Remove connection", role: .destructive) { remove(server) }
                         } label: { Image(systemName: "ellipsis") }
                         .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Connection actions")
                     }.padding(.vertical, 14)
@@ -88,7 +88,7 @@ struct OpenAIMCPSettingsView: View {
                         Text("Sign in with the service").tag(true)
                     }
                     if useOAuth {
-                        Button("Find Sign-in Settings", action: discoverOAuth)
+                        Button("Find sign-in settings", action: discoverOAuth)
                             .disabled(destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         if discoveredIssuers.count > 1 {
                             Picker("Authorization server", selection: $issuer) {
@@ -98,14 +98,14 @@ struct OpenAIMCPSettingsView: View {
                         }
                         OpenAIConnectionField(title: "Authorization server", placeholder: "HTTPS OAuth issuer", text: $issuer)
                         OpenAIConnectionField(title: "Client ID", placeholder: "Registered public client ID", text: $clientID)
-                        Button("Register Public Client", action: registerClient)
+                        Button("Register public client", action: registerClient)
                             .disabled(issuer.isEmpty || !clientID.isEmpty)
                         OpenAIConnectionField(title: "Requested access", placeholder: "Scopes, separated by spaces", text: $scope)
-                        OpenAIConnectionField(title: "Resource URL", placeholder: "Only if required by the service", text: $resource)
+                        OpenAIConnectionField(title: "Resource URL", placeholder: "Only if the service requires it", text: $resource)
                         Text("Register this redirect URI with your authorization server:")
                             .font(.caption).foregroundStyle(.secondary)
                         Text(verbatim: OpenAIMCPOAuthConfiguration.redirect).font(.caption).textSelection(.enabled)
-                        Text("Use a registered public client ID or register one if the issuer supports it. Save the connection, then choose Sign In.")
+                        Text("Enter a registered public client ID, or register one if the service allows it. Save the connection, then select Sign in.")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
                         VStack(alignment: .leading, spacing: 6) {
@@ -180,7 +180,7 @@ struct OpenAIMCPSettingsView: View {
                   !servers.contains(where: { $0.id != candidate.id && $0.label == candidate.label }) else { throw OpenAIMCPFailure.configuration }
             guard candidate.oauth != nil || old == nil || (old?.destination == candidate.destination && old?.oauth == nil)
                     || !candidate.requiresAuthorization || !authorization.isEmpty else {
-                error = String(localized: "Enter a new authorization token when changing this connection’s destination.")
+                error = String(localized: "Enter a new authorization token when changing this connection's destination.")
                 return
             }
             if old?.oauth != candidate.oauth || old?.destination != candidate.destination {

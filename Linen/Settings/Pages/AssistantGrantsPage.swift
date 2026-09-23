@@ -32,7 +32,7 @@ struct AssistantGrantsPage: View {
                 SettingsEmptyState(
                     symbol: "hand.raised",
                     title: "No saved permissions",
-                    caption: "Websites appear here after you choose “Always Allow”."
+                    caption: "Websites appear here after you choose \"Always Allow\"."
                 )
             } else {
                 ForEach(Array(policy.grantsByHost.enumerated()), id: \.element.host) { index, entry in
@@ -57,7 +57,7 @@ struct AssistantGrantsPage: View {
 
         if !policy.grants.isEmpty {
             SectionActions {
-                SettingsButton(title: "Revoke All", isDestructive: true, symbol: "hand.raised.slash") {
+                SettingsButton(title: "Revoke all", isDestructive: true, symbol: "hand.raised.slash") {
                     confirmingRevokeAll = true
                 }
             }
@@ -65,14 +65,14 @@ struct AssistantGrantsPage: View {
                 "Revoke every saved permission?",
                 isPresented: $confirmingRevokeAll
             ) {
-                Button("Revoke All", role: .destructive) { policy.revokeAll() }
+                Button("Revoke all", role: .destructive) { policy.revokeAll() }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("The assistant will ask again before acting on these websites.")
             }
             .confirmationDialog(
                 revokingHost.map {
-                    Text("Revoke the permissions for “\($0)”?")
+                    Text("Revoke the permissions for \"\($0)\"?")
                 } ?? Text(verbatim: ""),
                 isPresented: Binding(get: { revokingHost != nil }, set: { if !$0 { revokingHost = nil } })
             ) {

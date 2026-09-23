@@ -22,19 +22,19 @@ struct WebsiteDataPage: View {
     var body: some View {
         SubPageHeader(backTitle: "Privacy", onBack: onBack) {
             if !entries.isEmpty {
-                SettingsButton(title: "Remove All…", isDestructive: true) {
+                SettingsButton(title: "Remove all…", isDestructive: true) {
                     confirmingRemoveAll = true
                 }
                 .confirmationDialog(
                     "Remove the data stored by every website?",
                     isPresented: $confirmingRemoveAll
                 ) {
-                    Button("Remove All", role: .destructive) {
+                    Button("Remove all", role: .destructive) {
                         Task { await remove(Set(entries.map(\.displayName))) }
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("You’re signed out of \(entries.count) websites, and their preferences are removed. Your history and downloads stay.")
+                    Text("You're signed out of \(entries.count) websites, and their preferences are removed. Your history and downloads stay.")
                 }
             }
         }
@@ -79,7 +79,7 @@ struct WebsiteDataPage: View {
         .settingsAnchor("privacy.storage")
         .confirmationDialog(
             removingName.map {
-                Text("Remove the data stored by “\($0)”?")
+                Text("Remove the data stored by \"\($0)\"?")
             } ?? Text(verbatim: ""),
             isPresented: Binding(get: { removingName != nil }, set: { if !$0 { removingName = nil } })
         ) {
@@ -89,7 +89,7 @@ struct WebsiteDataPage: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You’re signed out of this website, and its preferences are removed.")
+            Text("You're signed out of this website, and its preferences are removed.")
         }
     }
 

@@ -42,7 +42,7 @@ struct PasswordSettings: View {
                         Text("Managed by \(provider.displayName)").foregroundStyle(.secondary)
                     }
                 } else {
-                    DetailRow(title: "Save and fill passwords", caption: "Save and fill website logins.") {
+                    DetailRow(title: "Save and fill passwords", caption: "Offer to save new logins after you sign in.") {
                         SettingsToggle($settings.fillsPasswords)
                     }
                 }
@@ -67,7 +67,7 @@ struct PasswordSettings: View {
             }
         }
         AutofillSavePromptReset(kind: .password, profileID: model.profileID)
-        SettingsSection(title: "Saved passwords", symbol: "key", footnote: "Encrypted passwords; passkeys use macOS.", accessory: {
+        SettingsSection(title: "Saved passwords", symbol: "key", footnote: "Linen encrypts saved passwords. macOS manages passkeys.", accessory: {
             HStack(spacing: 10) {
                 if model.isLoaded, !model.entries.isEmpty {
                     ToolbarSearchField(query: $query, placeholder: "Search passwords")
@@ -179,13 +179,13 @@ private struct PasswordEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Login Details").font(.headline)
+            Text("Login details").font(.headline)
             Form {
                 TextField("Website", text: $website)
                 TextField("Username or email", text: $username)
                 AutofillPasswordField(password: $password)
                 Button("Generate Strong Password") {
-                    do { password = try SavedPassword.generate() } catch { self.error = String(localized: "Couldn’t generate a password.") }
+                    do { password = try SavedPassword.generate() } catch { self.error = String(localized: "Couldn't generate a password.") }
                 }
             }.textFieldStyle(.roundedBorder)
             if let error = error ?? model.error {

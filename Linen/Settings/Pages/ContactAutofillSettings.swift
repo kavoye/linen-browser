@@ -19,14 +19,14 @@ struct ContactAutofillSettings: View {
     var body: some View {
         SettingsPageHeader(title: "Contacts and addresses")
         SettingsCard {
-            DetailRow(title: "Save and fill contacts and addresses", caption: "Save and fill contact details.") {
+            DetailRow(title: "Save and fill contacts and addresses", caption: "Offer to save contact details entered in forms.") {
                 SettingsToggle($settings.fillsContacts)
             }
         }
         .disabled(store.profile.isPrivate)
         .settingsAnchor("autofill.contacts")
         AutofillSavePromptReset(kind: .contact, profileID: store.profile.id)
-        SettingsSection(title: "Saved addresses", symbol: "person.crop.rectangle", footnote: "Encrypted contacts; imported copies don’t sync.", accessory: {
+        SettingsSection(title: "Saved addresses", symbol: "person.crop.rectangle", footnote: "Linen encrypts saved contacts. Imported copies don't sync.", accessory: {
             SettingsButton(title: "Add Address", symbol: "plus") { editing = AutofillContact() }
                 .disabled(!store.isLoaded || store.isBusy || store.contacts.count >= 100)
         }, content: {
@@ -59,7 +59,7 @@ struct ContactAutofillSettings: View {
             presenting: removing
         ) { contact in
             Button("Remove Address", role: .destructive) {
-                Task { saveError = await store.remove(contact.id) ? nil : String(localized: "Couldn’t remove this address. Try again.") }
+                Task { saveError = await store.remove(contact.id) ? nil : String(localized: "Couldn't remove this address. Try again.") }
             }
             Button("Cancel", role: .cancel) {}
         } message: { contact in
@@ -84,7 +84,7 @@ private struct ContactEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Contact Details").font(.headline)
+            Text("Contact details").font(.headline)
             ContactImportButton { selected in
                 let id = contact.id
                 contact = AutofillContact(contact: selected)
@@ -128,7 +128,7 @@ private struct ContactEditorSheet: View {
                 Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("Save") {
                     Task {
-                        if await store.save(contact) { dismiss() } else { error = String(localized: "Couldn’t save these details. Try again.") }
+                        if await store.save(contact) { dismiss() } else { error = String(localized: "Couldn't save these details. Try again.") }
                     }
                 }
                 .keyboardShortcut(.defaultAction)

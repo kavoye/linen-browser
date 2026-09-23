@@ -8,6 +8,7 @@ import SwiftUI
 struct AssistantSettings: View {
     @Bindable var model: IntelligenceViewModel
     let coordinator: AppCoordinator
+    @Environment(\.settingsHighlight) private var highlight
 
     var body: some View {
         Group {
@@ -27,6 +28,19 @@ struct AssistantSettings: View {
             }
         }
         .task { await model.onAppear() }
+        .onChange(of: highlight, initial: true) { _, anchor in
+            guard let anchor else { return }
+            if anchor == "provider.connected" || anchor == "privacy.assistant"
+                || anchor.hasPrefix("voice.") || anchor.hasPrefix("assistant.") {
+                model.showOverview()
+            } else if anchor.hasPrefix("provider.") {
+                model.open(model.selected)
+                if anchor == "provider.tools" { model.showTools() }
+            } else if anchor.hasPrefix("openai."),
+                      let provider = model.providers.first(where: { $0.adapter == .openAIResponses }) {
+                model.open(provider)
+            }
+        }
     }
 }
 
@@ -39,7 +53,7 @@ private struct AssistantOverview: View {
     var body: some View {
         SettingsPageHeader(
             title: "Assistant",
-            caption: "Choose the assistant’s model, behavior, and permissions."
+            caption: "Choose the assistant's model, behavior, and permissions."
         )
 
         AnsweringNotice(model: model, coordinator: coordinator)
@@ -105,7 +119,7 @@ private struct AnsweringNotice: View {
             StatusRow(
                 tint: Theme.warning,
                 symbol: "exclamationmark",
-                title: "\(model.selected.name) isn’t ready",
+                title: "\(model.selected.name) isn't ready",
                 caption: "Linen is using \(active.name) instead."
             ) {
                 SettingsButton(title: "Set Up…", isProminent: true) {
@@ -139,7 +153,7 @@ private struct BehaviourSection: View {
         SettingsSection(title: "How it behaves", symbol: "slider.horizontal.3") {
             DetailRow(
                 title: "Read aloud",
-                caption: "Set the voice and speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)."
+                caption: readAloudCaption
             ) {
                 SettingsToggle(Binding(
                     get: { !coordinator.isSpeechMuted },
@@ -156,7 +170,7 @@ private struct BehaviourSection: View {
 
             DetailRow(
                 title: "Push to talk",
-                caption: "Hold while speaking. Release to send."
+                caption: "Hold the shortcut to speak, then release it to send."
             ) {
                 ShortcutRecorder(
                     id: "talk",
@@ -176,7 +190,7 @@ private struct BehaviourSection: View {
 
             DetailRow(
                 title: "Summarize a link on hover",
-                caption: "Hold Shift and point at a link to read the page first."
+                caption: "Hold Shift while pointing at a link to get a summary before opening it."
             ) {
                 SettingsToggle($settings.peeksAtLinks)
             }
@@ -184,6 +198,14 @@ private struct BehaviourSection: View {
         }
         .onChange(of: recording) { _, listening in
             coordinator.setActivationSuspended(listening != nil)
+        }
+    }
+
+    private var readAloudCaption: LocalizedStringResource {
+        if coordinator.selectedProvider.adapter == .openAIResponses {
+            "Set the voice and speed in your OpenAI provider settings."
+        } else {
+            "Set the voice and speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)."
         }
     }
 }
@@ -334,7 +356,7 @@ private struct ProviderPage: View {
 
             DrillInRow(
                 title: "Tools",
-                detail: "\(model.enabledToolCount(for: provider)) of \(AgentToolCatalog.all.count)"
+                detail: "\(model.enabledToolCount(for: provider)) of \(AgentToolCatalog.configurableIDs.count)"
             ) {
                 model.showTools()
             }
@@ -373,7 +395,7 @@ private struct ProviderPage: View {
         }
         .settingsAnchor("provider.endpoint")
         .confirmationDialog(
-            "Remove “\(provider.name)”?",
+            "Remove \"\(provider.name)\"?",
             isPresented: $confirmingEndpointRemoval
         ) {
             Button("Remove Endpoint", role: .destructive) {
@@ -381,7 +403,7 @@ private struct ProviderPage: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Its name and URL are removed. The server itself isn’t affected.")
+            Text("Its name and URL are removed. The server itself isn't affected.")
         }
     }
 }
@@ -463,7 +485,7 @@ private struct RemoveKeyButton: View {
             "Remove the \(model.subject.name) key?",
             isPresented: $confirming
         ) {
-            Button("Remove Key", role: .destructive) { model.removeKey() }
+            Button("Remove key", role: .destructive) { model.removeKey() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Deletes the key from Keychain. Add a new key to use \(model.subject.name) again.")
@@ -651,7 +673,7 @@ private struct ModelControl: View {
             if model.isEditingCustomModel {
                 RowSeparator()
 
-                DetailRow(caption: "Type the ID exactly as the provider spells it.", layout: .stacked) {
+                DetailRow(caption: "Enter the model ID as the provider lists it.", layout: .stacked) {
                     HStack(spacing: 7) {
                         FieldChrome(isFocused: customFieldFocused) {
                             TextField("", text: $model.customModelDraft)
@@ -882,7 +904,7 @@ private struct AgentToolsPage: View {
 
     @ViewBuilder private var resetButton: some View {
         if model.toolWarning != nil {
-            SettingsButton(title: "Use Recommended", tint: Theme.warning) {
+            SettingsButton(title: "Use recommended", tint: Theme.warning) {
                 model.resetToolsToRecommended()
             }
         } else if !model.isUsingRecommendedTools {
@@ -932,7 +954,7 @@ private struct AssistantExecutionSettings: View {
 
     var body: some View {
         SettingsSection(title: "Long tasks", symbol: "arrow.trianglehead.2.clockwise") {
-            DetailRow(title: "Pause after", caption: "Keep working by default. An optional limit saves progress for Continue. A final summary may use one extra request.") {
+            DetailRow(title: "Pause after", caption: "By default, the assistant works until it finishes. Set a limit to pause and resume with Continue. The final summary may use one more request.") {
                 Picker("Model requests", selection: $requestLimit) {
                     Text("No limit").tag(0)
                     Text("100 requests").tag(100)
@@ -941,6 +963,7 @@ private struct AssistantExecutionSettings: View {
                 }
                 .labelsHidden()
             }
+            .settingsAnchor("assistant.pauseAfter")
         }
     }
 }

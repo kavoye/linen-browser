@@ -39,7 +39,7 @@ struct PrivacySettings: View {
 
             DetailRow(
                 title: "Clear browsing data",
-                caption: "History, cookies, and cached files, over a time range."
+                caption: "Choose a time range to clear history, cookies, and cached files."
             ) {
                 HStack(spacing: 10) {
                     if isClearing {
@@ -66,7 +66,7 @@ struct PrivacySettings: View {
 
             DetailRow(
                 title: "Clear on quit",
-                caption: "Cookies, site data, and cached files, on every quit."
+                caption: "Clear cookies, site data, and cached files when you quit Linen."
             ) {
                 SettingsToggle($settings.clearsDataOnQuit)
             }

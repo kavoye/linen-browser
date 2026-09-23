@@ -14,7 +14,7 @@ struct GeneralSettings: View {
     @State private var handedOver = false
 
     private var defaultBrowserCaption: LocalizedStringResource {
-        isDefault ? "Linen is your default browser." : "Linen isn’t your default browser."
+        isDefault ? "Linen is your default browser." : "Linen isn't your default browser."
     }
 
     private var defaultBrowserButton: LocalizedStringResource {
@@ -23,7 +23,7 @@ struct GeneralSettings: View {
 
     private var mediaFootnote: LocalizedStringResource? {
         guard settings.showsVideoInPlayer else { return nil }
-        return "Automatic Picture in Picture is off while “Show video in the player” is on in Experiments."
+        return "Automatic Picture in Picture is off while \"Show video in the player\" is on in Experiments."
     }
 
     var body: some View {
@@ -32,7 +32,7 @@ struct GeneralSettings: View {
         SettingsSection(title: "Tabs", symbol: "rectangle.on.rectangle") {
             DetailRow(
                 title: "Sleep inactive tabs",
-                caption: "Frees memory when the Mac runs low. Tabs reload on return."
+                caption: "When your Mac runs low on memory, inactive tabs unload. They reload when you open them."
             ) {
                 SettingsToggle($settings.sleepsInactiveTabs)
             }
@@ -60,7 +60,7 @@ struct GeneralSettings: View {
         }
 
         if handedOver {
-            Footnote("System Settings is open. Choose Linen under “Default web browser.”")
+            Footnote("System Settings is open. Choose Linen under \"Default web browser.\"")
         } else if askedToBeDefault, !isDefault {
             Footnote("If no panel appeared, set it in System Settings under Desktop & Dock.")
         }
@@ -68,7 +68,7 @@ struct GeneralSettings: View {
         SettingsSection(title: "Browsing", symbol: "cursorarrow.rays") {
             DetailRow(
                 title: "Show link address",
-                caption: "Show link addresses at the bottom of the page."
+                caption: "Show a link's address at the bottom of the page when you point at it."
             ) {
                 SettingsToggle($settings.showsLinkPreview)
             }
@@ -78,7 +78,7 @@ struct GeneralSettings: View {
         SettingsSection(title: "Media", symbol: "play.rectangle", footnote: mediaFootnote) {
             DetailRow(
                 title: "Show media player",
-                caption: "Pause or skip what’s playing from any tab."
+                caption: "Pause or skip audio and video playing in any tab."
             ) {
                 SettingsToggle($settings.showsMediaPlayer)
             }
@@ -99,7 +99,7 @@ struct GeneralSettings: View {
 
             DetailRow(
                 title: "Show lyrics",
-                caption: "Only the song and artist go to LRCLIB, never from a private tab."
+                caption: "Send the song and artist to LRCLIB to find lyrics. Private tabs don't send song details."
             ) {
                 SettingsToggle($settings.showsLyrics)
             }
@@ -125,11 +125,11 @@ private struct ImportSection: View {
         SettingsSection(
             title: "Import",
             symbol: "square.and.arrow.down",
-            footnote: "In the other browser, export your bookmarks to an HTML file first."
+            footnote: "Export your bookmarks as an HTML file in the other browser first."
         ) {
             BookmarkImportRow(
                 browser: coordinator.browser,
-                caption: "An HTML file exported from Safari, Chrome, Firefox, or Edge."
+                caption: "Import an HTML file from Safari, Chrome, Firefox, or Edge."
             )
             .settingsAnchor("general.import")
         }
