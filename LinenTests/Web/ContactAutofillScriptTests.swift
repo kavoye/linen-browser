@@ -124,4 +124,16 @@ struct ContactAutofillScriptTests {
         #expect(sink.body?["token"] as? String == nil)
         #expect(try await fill(UUID().uuidString, in: view) == 0)
     }
+
+    @Test(.boundedWebViews) func writingPromptsDoNotOfferContactSuggestions() async throws {
+        let (view, sink) = try await load(#"""
+        <textarea id="prompt" placeholder="Write a polite rejection email"></textarea>
+        <textarea id="address" placeholder="Shipping address"></textarea>
+        """#)
+        _ = try await view.evaluateJavaScript("document.getElementById('prompt').focus();")
+        #expect(sink.body?["token"] as? String == nil)
+        let token = try await select("address", in: view, sink: sink)
+        #expect(try await fill(token, in: view) == 1)
+        #expect(try await view.evaluateJavaScript("address.value") as? String == "123 Example Street\nFlat 4")
+    }
 }

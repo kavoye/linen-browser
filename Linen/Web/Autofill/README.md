@@ -52,10 +52,13 @@ explicit dismissal. Only explicit Save/Update writes a candidate to the existing
 Native code binds messages to WKFrameInfo origins. Filling additionally checks
 the document/form/field identity, selection token, focus, geometry, and policy
 before and after authentication. A new document at the same URL is still a
-different document. Password settings own a separate, page-scoped authentication
-context so management operations reuse their initial unlock. It is invalidated
-on page dismissal, sleep, screen lock, and user-session switch; browser filling
-and save prompts never share that context. Diagnostics contain static event names/counts only.
+different document. Browser password fills reuse an authenticated context for
+five minutes on the same top-level document, profile, and credential origin.
+The context is cleared on policy changes, authentication failure, sleep,
+screen lock, or user-session switch. Password settings own
+a separate, page-scoped context that is invalidated on page dismissal, sleep,
+screen lock, and user-session switch. Browser fills and save prompts never share
+that context. Diagnostics contain static event names/counts only.
 
 ## Limits and validation
 

@@ -5,6 +5,7 @@ import Foundation
 import LocalAuthentication
 import Synchronization
 import Testing
+import WebKit
 
 @testable import Linen
 
@@ -33,6 +34,45 @@ nonisolated final class MemoryAutofillStorage: AutofillSecureStorage {
 
 @MainActor
 struct SecureAutofillVaultTests {
+    @Test func passwordFillAuthenticationReusesOnlyTheSamePageAndOriginForFiveMinutes() async throws {
+        let cache = PasswordFillAuthenticationCache()
+        let view = WKWebView()
+        let profileID = UUID()
+        let start = Date(timeIntervalSince1970: 1_000)
+        var created = 0
+        func session(_ documentID: String, _ origin: String, _ profile: UUID, _ now: Date) async throws -> AutofillAuthenticationSession {
+            try await cache.session(for: view, profileID: profile, documentID: documentID, origin: origin, now: now) {
+                created += 1
+                return AutofillAuthenticationSession(service: "test", reason: "Test")
+            }
+        }
+
+        let first = try await session("page-1", "https://example.test", profileID, start)
+        let authenticated = try await session("page-1", "https://example.test", profileID, start)
+        #expect(authenticated !== first)
+        cache.markAuthenticated(authenticated, in: view, now: start)
+        #expect(try await session("page-1", "https://example.test", profileID, start.addingTimeInterval(299)) === authenticated)
+        cache.markAuthenticated(authenticated, in: view, now: start.addingTimeInterval(299))
+        let timedOut = try await session("page-1", "https://example.test", profileID, start.addingTimeInterval(300))
+        #expect(timedOut !== authenticated)
+        let otherOrigin = try await session("page-1", "https://other.test", profileID, start)
+        #expect(otherOrigin !== timedOut)
+        cache.markAuthenticated(otherOrigin, in: view, now: start)
+        let otherPage = try await session("page-2", "https://other.test", profileID, start)
+        #expect(otherPage !== otherOrigin)
+        cache.markAuthenticated(otherPage, in: view, now: start)
+        let otherProfileID = UUID()
+        let otherProfile = try await session("page-2", "https://other.test", otherProfileID, start)
+        #expect(otherProfile !== otherPage)
+        cache.markAuthenticated(otherProfile, in: view, now: start)
+        let expired = try await session("page-2", "https://other.test", otherProfileID, start.addingTimeInterval(300))
+        #expect(expired !== otherProfile)
+        cache.markAuthenticated(expired, in: view, now: start)
+        cache.clear()
+        #expect(try await session("page-2", "https://other.test", otherProfileID, start) !== expired)
+        #expect(created == 8)
+    }
+
     @Test func passwordsStayInSecureStorageAndAreIsolatedByProfile() async throws {
         let storage = MemoryAutofillStorage()
         let first = SecureAutofillVault<SavedPassword>(profileID: UUID(), kind: "passwords", reason: "Test", storage: storage)

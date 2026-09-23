@@ -43,14 +43,29 @@ final class AutofillSuggestions {
     private var choose: ((UUID) -> Void)?
     private var eventMonitor: Any?
     private var observers: [NSObjectProtocol] = []
+    private var securityObservers: [NSObjectProtocol] = []
     private var navigation: NSKeyValueObservation?
     private var loading: NSKeyValueObservation?
     private var isFilling = false
     private var geometryWatch: Task<Void, Never>?
+    private let passwordAuthentication = PasswordFillAuthenticationCache()
+
+    private init() {
+        for centerAndName in [
+            (NSWorkspace.shared.notificationCenter, NSWorkspace.sessionDidResignActiveNotification),
+            (NSWorkspace.shared.notificationCenter, NSWorkspace.willSleepNotification),
+            (DistributedNotificationCenter.default(), NSNotification.Name("com.apple.screenIsLocked")),
+        ] {
+            securityObservers.append(centerAndName.0.addObserver(forName: centerAndName.1, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.passwordAuthentication.clear() }
+            })
+        }
+    }
 
     func reset() {
         dismiss()
         requests.removeAllObjects()
+        passwordAuthentication.clear()
     }
 
     func dismiss(in view: WKWebView? = nil) {
@@ -355,8 +370,23 @@ final class AutofillSuggestions {
                 let fields: [String: Any]
                 switch request.kind {
                 case .password:
-                    guard let login = try await AutofillVaults.passwords(for: request.profileID).records().first(where: { $0.id == id }),
+                    let vault = AutofillVaults.passwords(for: request.profileID)
+                    let documentID = try await topDocumentID(in: view, world: request.world)
+                    guard let origin = SavedPassword.origin(for: request.frameURL) else { throw ContactAutofillError.changedPage }
+                    let authentication = try await passwordAuthentication.session(
+                        for: view, profileID: request.profileID, documentID: documentID, origin: origin,
+                        create: { await vault.makeAuthenticationSession() }
+                    )
+                    let records: [SavedPassword]
+                    do {
+                        records = try await vault.records(using: authentication)
+                    } catch {
+                        passwordAuthentication.clear(in: view)
+                        throw error
+                    }
+                    guard let login = records.first(where: { $0.id == id }),
                           login.origin == SavedPassword.origin(for: request.frameURL) else { throw ContactAutofillError.noField }
+                    passwordAuthentication.markAuthenticated(authentication, in: view)
                     fields = ["username": login.username, "password": login.password]
                 case .card:
                     guard let card = try await AutofillVaults.cards(for: request.profileID).cards().first(where: { $0.id == id }),
@@ -396,6 +426,76 @@ final class AutofillSuggestions {
                 await alert.beginSheetModal(for: window)
             }
         }
+    }
+
+    private func topDocumentID(in view: WKWebView, world: WKContentWorld) async throws -> String {
+        let value = try await view.callAsyncJavaScript(
+            "return globalThis.__linenAutofillForms?.documentID;", arguments: [:], in: nil, contentWorld: world
+        )
+        guard let documentID = value as? String, UUID(uuidString: documentID) != nil else {
+            throw ContactAutofillError.changedPage
+        }
+        return documentID
+    }
+}
+
+final class PasswordFillAuthenticationCache {
+    private final class Entry: NSObject {
+        let profileID: UUID
+        let documentID: String
+        let origin: String
+        let session: AutofillAuthenticationSession
+        var expiresAt: Date?
+
+        init(profileID: UUID, documentID: String, origin: String, session: AutofillAuthenticationSession) {
+            self.profileID = profileID
+            self.documentID = documentID
+            self.origin = origin
+            self.session = session
+        }
+    }
+
+    private let entries = NSMapTable<WKWebView, Entry>.weakToStrongObjects()
+    private let duration: TimeInterval = 5 * 60
+    private var generation = 0
+
+    func session(for view: WKWebView, profileID: UUID, documentID: String, origin: String,
+                 now: Date = .now, create: () async -> AutofillAuthenticationSession) async throws -> AutofillAuthenticationSession {
+        if let entry = entries.object(forKey: view), entry.profileID == profileID,
+           entry.documentID == documentID, entry.origin == origin,
+           let expiresAt = entry.expiresAt, now < expiresAt {
+            return entry.session
+        }
+        clear(in: view)
+        let generation = generation
+        let session = await create()
+        guard self.generation == generation else {
+            session.invalidate()
+            throw ContactAutofillError.changedPage
+        }
+        entries.setObject(Entry(profileID: profileID, documentID: documentID, origin: origin, session: session), forKey: view)
+        return session
+    }
+
+    func markAuthenticated(_ session: AutofillAuthenticationSession, in view: WKWebView, now: Date = .now) {
+        guard let entry = entries.object(forKey: view), entry.session === session else { return }
+        if entry.expiresAt == nil {
+            entry.expiresAt = now.addingTimeInterval(duration)
+        }
+    }
+
+    func clear(in view: WKWebView) {
+        generation += 1
+        entries.object(forKey: view)?.session.invalidate()
+        entries.removeObject(forKey: view)
+    }
+
+    func clear() {
+        generation += 1
+        for entry in entries.objectEnumerator()?.allObjects.compactMap({ $0 as? Entry }) ?? [] {
+            entry.session.invalidate()
+        }
+        entries.removeAllObjects()
     }
 }
 

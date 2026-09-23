@@ -125,6 +125,10 @@ nonisolated enum AutofillFormScript {
         if (el instanceof HTMLInputElement && !['text','email','tel','number','month'].includes(el.type)) return null;
         if (exact) return exact;
         if (declared.some(t => !/^(section-|shipping$|billing$|home$|work$|mobile$|on$|off$|webauthn$)/.test(t))) return null;
+        // A textarea can mention an email or name in a writing prompt without asking for contact details.
+        if (el instanceof HTMLTextAreaElement) {
+          return /\b(street address|mailing address|shipping address|billing address)\b/.test(words) ? 'street-address' : null;
+        }
         if (/\b(search|coupon|promo|captcha)\b/.test(words)) return null;
         if (/\b(card\s*(number|no)|cc\s*(number|num)|cardnumber|ccnumber)\b/.test(words)) return 'cc-number';
         if (/\b(cardholder|card holder|name on card|cc name)\b/.test(words)) return 'cc-name';
