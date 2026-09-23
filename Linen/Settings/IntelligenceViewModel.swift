@@ -55,7 +55,7 @@ final class IntelligenceViewModel {
         catalog: any ProviderCatalogProtocol = ProviderCatalog.shared,
         credentials: any ProviderCredentialStore = KeychainProviderCredentialStore(),
         modelProviders: (any ModelProviderResolving)? = nil,
-        contextProbe: any ContextWindowProbing = OllamaContextProbe(),
+        contextProbe: any ContextWindowProbing = ProviderContextProbe(),
         onVoiceConfigurationChanged: (() -> Void)? = nil,
         onConfigurationChanged: @escaping () -> Void
     ) {
@@ -111,6 +111,7 @@ final class IntelligenceViewModel {
         adoptSubject()
         probeLocalProviders()
         await loadCatalog()
+        await discoverContextWindow(for: subject)
     }
 
     // MARK: - Connected
@@ -197,9 +198,9 @@ final class IntelligenceViewModel {
         Task {
             if provider.isLocal, !provider.isOnDevice {
                 await probe(provider)
-                await discoverContextWindow(for: provider)
             }
             await loadCatalog()
+            await discoverContextWindow(for: provider)
         }
     }
 
@@ -308,14 +309,23 @@ final class IntelligenceViewModel {
     private(set) var discoveredWindows: [String: Int] = [:]
 
     func detectedContextWindow(for provider: Provider) -> Int? {
-        discoveredWindows[provider.id]
-            ?? LLMSettings.discoveredContextWindow(for: provider, model: LLMSettings.model(for: provider))
+        let model = LLMSettings.model(for: provider)
+        let key = "\(provider.id)\0\(provider.baseURL?.absoluteString ?? "")\0\(model)"
+        guard let stored = LLMSettings.discoveredContextWindow(for: provider, model: model) else { return nil }
+        return discoveredWindows[key] ?? stored
     }
 
     func discoverContextWindow(for provider: Provider) async {
         let modelID = LLMSettings.model(for: provider)
-        guard let window = await contextProbe.effectiveWindow(for: provider, model: modelID) else { return }
-        discoveredWindows[provider.id] = window
+        guard !provider.isOnDevice,
+              !modelID.isEmpty,
+              LLMSettings.discoveredContextWindow(for: provider, model: modelID) == nil,
+              (!provider.needsKey || credentials.isConfigured(provider)),
+              let window = await contextProbe.effectiveWindow(
+                for: provider, model: modelID, apiKey: credentials.key(for: provider)
+              )
+        else { return }
+        discoveredWindows["\(provider.id)\0\(provider.baseURL?.absoluteString ?? "")\0\(modelID)"] = window
         guard LLMSettings.discoveredContextWindow(for: provider, model: modelID) != window else { return }
         LLMSettings.setDiscoveredContextWindow(window, for: provider, model: modelID)
         if provider.id == selectedID {
@@ -334,9 +344,9 @@ final class IntelligenceViewModel {
         Task {
             if provider.isLocal {
                 await probe(provider)
-                await discoverContextWindow(for: provider)
             }
             await loadCatalog()
+            await discoverContextWindow(for: provider)
         }
     }
 
@@ -392,6 +402,7 @@ final class IntelligenceViewModel {
         if isSubjectInUse {
             onConfigurationChanged()
         }
+        Task { await discoverContextWindow(for: subject) }
     }
 
     func beginCustomModelEntry() {

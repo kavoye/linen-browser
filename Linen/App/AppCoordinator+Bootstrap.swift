@@ -219,7 +219,7 @@ extension AppCoordinator {
         configureRemoteTools(for: activeProvider ?? selectedProvider)
         configureVoice(for: activeProvider ?? selectedProvider)
         Pipeline.log.notice("Assistant engine configured")
-        discoverLocalContextWindow()
+        discoverContextWindow()
     }
 
     private func followSettings() {
@@ -251,15 +251,20 @@ extension AppCoordinator {
         updates.start()
     }
 
-    private func discoverLocalContextWindow() {
-        guard let provider = activeProvider, provider.isLocal, !provider.isOnDevice else { return }
+    private func discoverContextWindow() {
+        guard let provider = activeProvider, !provider.isOnDevice else { return }
         let model = LLMSettings.model(for: provider)
+        guard !model.isEmpty,
+              LLMSettings.discoveredContextWindow(for: provider, model: model) == nil
+        else { return }
         Task { [weak self] in
-            guard let window = await OllamaContextProbe().effectiveWindow(for: provider, model: model),
+            guard let window = await ProviderContextProbe().effectiveWindow(
+                    for: provider, model: model, apiKey: CredentialStore.key(for: provider)
+                  ),
                   window != LLMSettings.discoveredContextWindow(for: provider, model: model)
             else { return }
             LLMSettings.setDiscoveredContextWindow(window, for: provider, model: model)
-            Pipeline.log.notice("Local context window discovered")
+            Pipeline.log.notice("Model context window discovered")
             self?.configureEngines()
         }
     }

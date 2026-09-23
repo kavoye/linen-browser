@@ -160,7 +160,7 @@ struct AssistantToolSettingsTests {
 }
 
 nonisolated private struct SilentContextProbe: ContextWindowProbing {
-    func effectiveWindow(for provider: Provider, model: String) async -> Int? {
+    func effectiveWindow(for provider: Provider, model: String, apiKey: String?) async -> Int? {
         nil
     }
 }

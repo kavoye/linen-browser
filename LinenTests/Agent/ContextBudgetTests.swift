@@ -80,7 +80,7 @@ struct ContextBudgetTests {
 
 @Suite(.serialized)
 struct ContextWindowOverrideTests {
-    @Test func documentedLimitsAreScopedToTheModelAndEndpoint() {
+    @Test func discoveredLimitsAreScopedToTheModelAndEndpoint() {
         let previous = LLMSettings.defaults
         let suiteName = UUID().uuidString
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -90,22 +90,23 @@ struct ContextWindowOverrideTests {
             LLMSettings.defaults = previous
         }
         var provider = ProviderCatalog.openAI
-        let luna = ContextWindow.resolve(for: provider, model: "gpt-5.6-luna")
-        #expect(luna.tokens == 1_050_000)
-        #expect(luna.source == .documented)
-        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-unknown").source == .fallback)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-6-luna").source == .fallback)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-6-sol").source == .fallback)
 
-        LLMSettings.setDiscoveredContextWindow(500_000, for: provider, model: "gpt-5.6-luna")
-        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-luna").source == .discovered)
-        #expect(ContextWindow.tokens(for: provider, model: "gpt-5.6-luna") == 500_000)
+        LLMSettings.setDiscoveredContextWindow(500_000, for: provider, model: "gpt-6-luna")
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-6-luna").source == .discovered)
+        #expect(ContextWindow.tokens(for: provider, model: "gpt-6-luna") == 500_000)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-6-sol").source == .fallback)
+        let cacheKey = "llm.discoveredContextWindow.\(provider.id).\(provider.baseURL!.absoluteString).gpt-6-luna.checkedAt"
+        defaults.set(Date().timeIntervalSince1970 - 86_401, forKey: cacheKey)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-6-luna").source == .fallback)
+        LLMSettings.setDiscoveredContextWindow(500_000, for: provider, model: "gpt-6-luna")
         LLMSettings.setContextWindow(250_000, for: provider)
-        #expect(ContextWindow.tokens(for: provider, model: "gpt-5.6-luna") == 250_000)
-        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-luna").source == .configured)
+        #expect(ContextWindow.tokens(for: provider, model: "gpt-6-luna") == 250_000)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-6-luna").source == .configured)
         LLMSettings.setContextWindow(nil, for: provider)
-        LLMSettings.setDiscoveredContextWindow(nil, for: provider, model: "gpt-5.6-luna")
-
         provider.baseURL = URL(string: "https://example.com/v1")
-        #expect(ContextWindow.resolve(for: provider, model: "gpt-5.6-luna").source == .fallback)
+        #expect(ContextWindow.resolve(for: provider, model: "gpt-6-luna").source == .fallback)
     }
 
     @Test func aStoredOverrideWinsOverTheDefaultWindow() {

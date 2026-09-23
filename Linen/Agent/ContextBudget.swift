@@ -73,7 +73,7 @@ nonisolated struct ContextBudget: Hashable, Sendable {
 
 nonisolated enum ContextWindow {
     enum Source: Sendable {
-        case configured, discovered, documented, fallback
+        case configured, discovered, fallback
     }
 
     struct Resolution: Sendable {
@@ -91,10 +91,6 @@ nonisolated enum ContextWindow {
         }
         if let discovered = LLMSettings.discoveredContextWindow(for: provider, model: model) {
             return Resolution(tokens: discovered, source: .discovered)
-        }
-        if provider.baseURL?.host() == "api.openai.com",
-           ["gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-astra"].contains(model) {
-            return Resolution(tokens: 1_050_000, source: .documented)
         }
         let fallback = switch provider.adapter {
         case .system:
