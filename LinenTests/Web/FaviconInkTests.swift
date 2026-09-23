@@ -57,6 +57,20 @@ struct FaviconInkTests {
         }
     }
 
+    @MainActor
+    @Test func oversizedIconContrastUsesASmallDrawingSurface() {
+        let image = NSImage(size: NSSize(width: 4096, height: 4096), flipped: false) { bounds in
+            #expect(NSGraphicsContext.current?.cgContext.width == 32)
+            #expect(NSGraphicsContext.current?.cgContext.height == 32)
+            NSColor.black.setFill()
+            bounds.fill()
+            return true
+        }
+
+        #expect(FaviconContrast.needsInk(image, isDark: true))
+        #expect(!FaviconContrast.needsInk(image, isDark: false))
+    }
+
     /// The whole point of the saturation test: a brand keeps its colour.
     @Test func aColouredIconIsNeverInked() {
         for fill in ["#F05138", "#0066CC", "#34C759"] {

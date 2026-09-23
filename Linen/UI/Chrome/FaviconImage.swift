@@ -28,12 +28,8 @@ enum FaviconContrast {
         if let cached = cache.object(forKey: image) {
             flags = cached.intValue
         } else {
-            if let data = image.tiffRepresentation {
-                flags = (FaviconInk.needsInk(data, isDark: false) ? 1 : 0)
-                    | (FaviconInk.needsInk(data, isDark: true) ? 2 : 0)
-            } else {
-                flags = 0
-            }
+            let contrast = FaviconInk.contrast(of: image)
+            flags = (contrast.onLight ? 1 : 0) | (contrast.onDark ? 2 : 0)
             cache.setObject(NSNumber(value: flags), forKey: image)
         }
         return flags & (isDark ? 2 : 1) != 0

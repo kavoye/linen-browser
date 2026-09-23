@@ -15,9 +15,15 @@ nonisolated enum FaviconInk {
     }
 
     static func needsInk(_ data: Data, isDark: Bool) -> Bool {
-        guard let reading = read(data), reading.covered > 0 else { return false }
-        guard reading.chroma <= flatChroma, reading.range <= flatRange else { return false }
-        return isDark ? reading.luminance < darkLimit : reading.luminance > lightLimit
+        guard let image = NSImage(data: data) else { return false }
+        let result = contrast(of: image)
+        return isDark ? result.onDark : result.onLight
+    }
+
+    static func contrast(of image: NSImage) -> (onLight: Bool, onDark: Bool) {
+        guard let reading = read(image), reading.covered > 0,
+              reading.chroma <= flatChroma, reading.range <= flatRange else { return (false, false) }
+        return (reading.luminance > lightLimit, reading.luminance < darkLimit)
     }
 
     static func inked(_ data: Data, isDark: Bool, side: Int = 32) -> Data? {
@@ -43,8 +49,9 @@ nonisolated enum FaviconInk {
         var covered = 0
     }
 
-    private static func read(_ data: Data) -> Reading? {
-        guard let rep = bitmap(data) else { return nil }
+    private static func read(_ image: NSImage) -> Reading? {
+        // Icons may contain large source images. Bound the pixel work performed during layout.
+        guard let rep = rasterized(image) else { return nil }
         var luminance = 0.0
         var chroma = 0.0
         var covered = 0
@@ -77,7 +84,12 @@ nonisolated enum FaviconInk {
     }
 
     private static func rasterized(_ data: Data, side: Int = 32) -> NSBitmapImageRep? {
-        guard let image = NSImage(data: data), image.isValid,
+        guard let image = NSImage(data: data) else { return nil }
+        return rasterized(image, side: side)
+    }
+
+    private static func rasterized(_ image: NSImage, side: Int = 32) -> NSBitmapImageRep? {
+        guard image.isValid,
               let rep = makeRep(side: side),
               let context = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
 

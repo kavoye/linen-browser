@@ -273,6 +273,9 @@ extension BrowserModel {
     }
 
     func dressRow(_ tab: BrowserTab, fromHost host: String) {
+        // Internal page hosts name app screens, not sites to fetch icons from.
+        guard let scheme = URL(string: tab.urlString)?.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else { return }
         if tab.isPrivate {
             if let icon = FaviconLoader.shared.cached(for: host) {
                 tab.favicon = icon
@@ -282,6 +285,8 @@ extension BrowserModel {
         Task { [weak tab] in
             let icon = await FaviconLoader.shared.load(forHost: host)
             guard let tab, let icon,
+                  let scheme = URL(string: tab.urlString)?.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https",
                   URL(string: tab.urlString)?.host()?.lowercased() == host.lowercased()
             else { return }
             tab.favicon = icon
