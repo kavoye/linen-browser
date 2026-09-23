@@ -72,6 +72,7 @@ struct CommandPaletteResultsView: View {
     let sections: [OmniboxSection]
     let query: String
     let selection: Int
+    let optionHeld: Bool
     let maxHeight: CGFloat
     let onSelect: (Int) -> Void
     let onRun: (Int) -> Void
@@ -91,10 +92,12 @@ struct CommandPaletteResultsView: View {
                             sections: sections,
                             query: query,
                             selection: selection,
+                            optionHeld: optionHeld,
                             insetsVertically: false,
                             onSelect: onSelect,
                             onRun: onRun,
-                            onRunAlternate: onRunAlternate
+                            onRunAlternate: onRunAlternate,
+                            alternateClickModifier: .option
                         )
                     }
                     .contentMargins(.vertical, OmniboxList.Density.regular.padding, for: .scrollContent)
@@ -103,6 +106,7 @@ struct CommandPaletteResultsView: View {
                         proxy.scrollTo(index)
                     }
                 }
+
             }
         }
     }

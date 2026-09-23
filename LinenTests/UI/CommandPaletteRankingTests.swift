@@ -110,10 +110,9 @@ struct CommandPaletteRankingTests {
 
     @Test func theBestNamedCommandIsListedFirst() {
         let commands = CommandPaletteCatalog.commands(context: fixtureContext(), perform: { _ in })
-        let matched = CommandPaletteCatalog.matching("tab", in: commands)
+        let matched = CommandPaletteCatalog.matching("open start page", in: commands)
 
-        #expect(matched.first?.id == "action-newTab")
-        #expect(matched.contains { $0.id == "action-organizeTabs" })
+        #expect(matched.first?.id == "action-openStartPage")
         #expect(CommandPaletteCatalog.matching("zzqq", in: commands).isEmpty)
         #expect(CommandPaletteCatalog.bestScore("zzqq", in: commands) == 0)
     }
@@ -140,7 +139,7 @@ struct CommandPaletteRankingTests {
         #expect(!ids.contains("action-stopLoading"))
         #expect(!ids.contains("action-clearHistory"))
         #expect(!ids.contains("action-exitSplit"))
-        #expect(ids.contains("action-newTab"))
+        #expect(ids.contains("action-openStartPage"))
         #expect(ids.contains("action-settings"))
 
         let loaded = CommandPaletteCatalog.commands(
@@ -218,7 +217,10 @@ struct CommandPaletteRankingTests {
 
         #expect(sections.map(\.id).prefix(2) == ["actions-tabs", "actions-page"])
         #expect(sections.flatMap(\.items).count == commands.count)
-        #expect(sections.first?.items.first?.shortcut == "⌘T")
+        #expect(sections.first?.items.first?.title == "Open Start Page")
+        #expect(sections.first?.items.first?.symbol == "house")
+        #expect(sections.first?.items.first?.shortcut.isEmpty == true)
+        #expect(!commands.contains { $0.title == "New Tab" })
     }
 
     private func section(_ id: String, count: Int) -> OmniboxSection {

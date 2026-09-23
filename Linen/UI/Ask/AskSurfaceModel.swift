@@ -249,6 +249,11 @@ final class AskSurfaceModel {
         interaction.selection = index
     }
 
+    func hoverSuggestion(at index: Int, in sections: [OmniboxSection]) {
+        guard sections.flattened.indices.contains(index) else { return }
+        interaction.selection = index
+    }
+
     func finishEditing() {
         interaction.finish(restingText: restingText)
         setFocused(false)

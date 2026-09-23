@@ -101,7 +101,7 @@ struct SidebarSplitRow: View {
         }
         .frame(height: height)
         .sidebarRowSelectionEffect(
-            isSelected: isOnScreen || isSelected,
+            isSelected: (isOnScreen && !coordinator.isNewTabPaletteOpen) || isSelected,
             isHovering: interaction == .wholeRow && hoveringRow,
             radius: radius
         )

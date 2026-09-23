@@ -249,7 +249,7 @@ struct SidebarTabRow: View {
         .frame(height: SidebarMetrics.rowHeight)
         .environment(\.chromeIconExtent, SidebarMetrics.rowControlExtent)
         .sidebarRowSelectionEffect(
-            isSelected: isActive || isSelected,
+            isSelected: (isActive && !coordinator.isNewTabPaletteOpen) || isSelected,
             isHovering: hovering,
             glassTint: context.refractsTabColor
                 ? FaviconTint.of(tab.favicon, heldBy: tab.id)

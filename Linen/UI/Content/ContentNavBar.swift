@@ -201,11 +201,10 @@ enum ChromeBand {
     }
 
     static func showsStartPage(for tab: BrowserTab?) -> Bool {
-        guard let tab else { return BrowserSettings.shared.newTab != .blank }
+        guard let tab else { return true }
         if tab.isShowingStartPage {
             return true
         }
-        guard BrowserSettings.shared.newTab != .blank else { return false }
         return tab.hasNoPageYet && tab.internalPage == nil
     }
 }

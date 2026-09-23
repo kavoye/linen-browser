@@ -132,6 +132,7 @@ final class AppCoordinator {
     private(set) var windowControlsInset: CGFloat = 0
     private(set) var addressBarFocusToken = 0
     private(set) var isPaletteOpen = false
+    private(set) var isNewTabPaletteOpen = false
     var isProfileSwitcherOpen = false
     var profileButtonFrame: CGRect?
     private(set) var paletteToken = 0
@@ -601,6 +602,16 @@ final class AppCoordinator {
         return tab
     }
 
+    func requestNewTab() {
+        guard !isPaletteOpen else {
+            closePalette()
+            return
+        }
+        browser.sidebarSelection.clear()
+        openPalette()
+        isNewTabPaletteOpen = true
+    }
+
     func focusAddressBar() {
         if !browserVisible {
             showBrowser()
@@ -610,21 +621,23 @@ final class AppCoordinator {
 
     func openPalette() {
         showBrowser()
+        guard !isPaletteOpen else { return }
         paletteToken += 1
         isPaletteOpen = true
         linkPeek.suppress()
     }
 
     func togglePalette() {
-        if isPaletteOpen, browserIsFrontmost {
+        if isPaletteOpen {
             closePalette()
-            return
+        } else {
+            openPalette()
         }
-        openPalette()
     }
 
     func closePalette() {
         isPaletteOpen = false
+        isNewTabPaletteOpen = false
         linkPeek.resume()
     }
 

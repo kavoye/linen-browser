@@ -171,6 +171,28 @@ struct AskSurfaceModelTests {
         }
     }
 
+    @Test func hoveringAHistoryResultDoesNotReplaceTypedText() {
+        Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model()
+            model.replaceTextAndFocus("s")
+            let sections = [OmniboxSection(id: "history", title: "History", items: [
+                OmniboxItem(id: "query", kind: .search, title: "s") {},
+                OmniboxItem(
+                    id: "page", kind: .history, title: "Some page",
+                    completionText: "https://some.example/page"
+                ) {},
+            ])]
+
+            model.hoverSuggestion(at: 1, in: sections)
+
+            #expect(model.interaction.text == "s")
+            #expect(model.interaction.selection == 1)
+            model.interaction.text += "earch"
+            #expect(model.interaction.text == "search")
+            #expect(model.resultQuery == "search")
+        }
+    }
+
     @Test func typingAfterPreviewStartsANewQueryAndClearsSelection() {
         Omnibox.$agentOnlyForTesting.withValue(true) {
             let model = model()

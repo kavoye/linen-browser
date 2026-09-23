@@ -409,7 +409,7 @@ struct NewTabRow: View {
 
     var body: some View {
         Button {
-            coordinator.openNewTab()
+            coordinator.requestNewTab()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
@@ -428,7 +428,10 @@ struct NewTabRow: View {
             .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
             .frame(maxWidth: .infinity)
             .frame(height: 32)
-            .sidebarRowSelectionEffect(isSelected: false, isHovering: hovering)
+            .sidebarRowSelectionEffect(
+                isSelected: coordinator.isNewTabPaletteOpen,
+                isHovering: hovering
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

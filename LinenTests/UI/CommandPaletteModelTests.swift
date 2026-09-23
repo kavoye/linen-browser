@@ -9,6 +9,91 @@ import Testing
 
 @MainActor
 struct CommandPaletteModelTests {
+    @Test func openStartPageCommandCreatesAStartPageTab() throws {
+        let coordinator = AppCoordinator()
+        let previous = coordinator.browser.newTab()
+        previous.urlString = "https://example.com/"
+        let count = coordinator.browser.tabs.count
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+        model.prepare()
+        model.interaction.query = "> start"
+
+        let command = try #require(model.sections.flattened.first { $0.id == "action-openStartPage" })
+        #expect(command.title == "Open Start Page")
+        command.run()
+
+        #expect(coordinator.browser.tabs.count == count + 1)
+        #expect(coordinator.browser.activeTab !== previous)
+        #expect(coordinator.browser.activeTab?.hasNoPageYet == true)
+        #expect(ChromeBand.showsStartPage(browser: coordinator.browser))
+    }
+
+    @Test func newTabPaletteCreatesTabOnlyWhenOpeningAResult() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            let coordinator = AppCoordinator()
+            let active = coordinator.browser.newTab()
+            let count = coordinator.browser.tabs.count
+            let model = CommandPaletteModel(
+                browser: coordinator.browser,
+                coordinator: coordinator
+            ) {}
+            model.prepare()
+            #expect(coordinator.browser.tabs.count == count)
+
+            model.interaction.query = "https://example.com/new-tab-palette"
+            let result = try #require(model.sections.flattened.first { $0.id == "omnibox-go" })
+            result.run()
+
+            #expect(coordinator.browser.tabs.count == count + 1)
+            #expect(coordinator.browser.activeTab !== active)
+            #expect(coordinator.browser.activeTab?.urlString == "https://example.com/new-tab-palette")
+        }
+    }
+
+    @Test func newTabPaletteSearchCreatesTabAndTabMatchSwitchesWithoutCreatingOne() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            let coordinator = AppCoordinator()
+            let existing = coordinator.browser.newTab()
+            existing.title = "Existing page"
+            let active = coordinator.browser.newTab()
+            let count = coordinator.browser.tabs.count
+            let model = CommandPaletteModel(
+                browser: coordinator.browser,
+                coordinator: coordinator
+            ) {}
+            model.prepare()
+
+            let tabResult = try #require(model.sections.flattened.first { $0.id == "tab-\(existing.id)" })
+            tabResult.run()
+            #expect(coordinator.browser.activeTab?.id == existing.id)
+            #expect(coordinator.browser.tabs.count == count)
+
+            model.interaction.query = "winter hiking boots"
+            let searchResult = try #require(model.sections.flattened.first { $0.id == "omnibox-search" })
+            searchResult.run()
+            #expect(coordinator.browser.tabs.count == count + 1)
+            #expect(coordinator.browser.activeTab?.id != existing.id)
+            #expect(coordinator.browser.activeTab?.id != active.id)
+        }
+    }
+
+    @Test func optionReturnOpensTheSelectedWebResultInTheCurrentTab() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            let coordinator = AppCoordinator()
+            let active = coordinator.browser.newTab()
+            let count = coordinator.browser.tabs.count
+            let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+            model.prepare()
+            model.interaction.query = "https://example.com/current-tab"
+
+            model.submitInCurrentTab()
+
+            #expect(coordinator.browser.tabs.count == count)
+            #expect(coordinator.browser.activeTab === active)
+            #expect(active.urlString == "https://example.com/current-tab")
+        }
+    }
+
     @Test func currentPageCanBeMentionedInThePalette() throws {
         try Omnibox.$agentOnlyForTesting.withValue(true) {
             let coordinator = AppCoordinator()
@@ -64,6 +149,49 @@ struct CommandPaletteModelTests {
         }
     }
 
+    @Test func hoveringATabDoesNotReplaceTypedQuery() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(true) {
+            let coordinator = AppCoordinator()
+            let activeTab = coordinator.browser.newTab()
+            let tab = coordinator.browser.newTab()
+            tab.urlString = "https://some.example/page"
+            tab.title = "Some page"
+            coordinator.browser.activate(activeTab)
+            let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+            model.prepare()
+            model.interaction.query = "s"
+            let tabIndex = try #require(model.sections.flattened.firstIndex { $0.id == "omnibox-tab-\(tab.id)" })
+
+            model.hoverSuggestion(at: tabIndex)
+
+            #expect(model.interaction.query == "s")
+            #expect(model.interaction.selection == tabIndex)
+            model.interaction.query += "earch"
+            #expect(model.interaction.query == "search")
+            #expect(model.resultQuery == "search")
+        }
+    }
+
+    @Test func arrivingSuggestionsKeepTheSelectedResult() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            let coordinator = AppCoordinator()
+            let tab = coordinator.browser.newTab()
+            tab.title = "Project tab"
+            let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+            model.prepare()
+            model.interaction.query = "project"
+            let selectedID = "omnibox-tab-\(tab.id)"
+            let index = try #require(model.sections.flattened.firstIndex { $0.id == selectedID })
+            model.hoverSuggestion(at: index)
+
+            model.suggestions.store(["project ideas", "project plan"], for: "project", engine: SearchURLBuilder.engine)
+            model.suggestionsDidChange()
+
+            #expect(model.sections.flattened[model.interaction.selection].id == selectedID)
+            #expect(model.sections.first { $0.id == "suggestions" }?.items.count == 2)
+        }
+    }
+
     /// The palette walks the same way the ask surface does: arrows wrap, so
     /// up from the first row reaches the last one.
     @Test func selectionWrapsAndAChangedQueryReturnsToTheFirstRow() {
@@ -106,12 +234,45 @@ struct CommandPaletteModelTests {
             #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: key))
         }
         #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: "k"))
+        #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: "t"))
         #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .shift, key: "p"))
         #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [], key: "p"))
 
         #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: "l"))
         #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .control, key: "f"))
         #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .option, key: "p"))
+    }
+
+    @Test func paletteShortcutsToggleAndNewTabSelectionTracksThePalette() {
+        let coordinator = AppCoordinator()
+        let tab = coordinator.browser.newTab()
+        coordinator.browser.sidebarSelection.toggle(.tab(tab.id))
+
+        coordinator.togglePalette()
+        #expect(coordinator.isPaletteOpen)
+        #expect(!coordinator.isNewTabPaletteOpen)
+        let token = coordinator.paletteToken
+
+        coordinator.togglePalette()
+        #expect(!coordinator.isPaletteOpen)
+        #expect(coordinator.paletteToken == token)
+
+        coordinator.requestNewTab()
+        #expect(coordinator.isPaletteOpen)
+        #expect(coordinator.isNewTabPaletteOpen)
+        #expect(coordinator.browser.sidebarSelection.isEmpty)
+        #expect(coordinator.browser.tabs.count == 1)
+        #expect(coordinator.paletteToken == token + 1)
+
+        coordinator.requestNewTab()
+        #expect(!coordinator.isPaletteOpen)
+        #expect(!coordinator.isNewTabPaletteOpen)
+
+        coordinator.requestNewTab()
+        #expect(coordinator.isNewTabPaletteOpen)
+        coordinator.togglePalette()
+        #expect(!coordinator.isPaletteOpen)
+        #expect(!coordinator.isNewTabPaletteOpen)
     }
 
     /// A modified arrow is the palette moving its own selection. Dismissing on
@@ -165,13 +326,95 @@ struct CommandPaletteModelTests {
                 actions: noOpActions()
             )
 
-            #expect(sections.map(\.id) == ["top", "ask", "tabs", "history", "suggestions"])
-            // The top hit and the same hit in a new tab.
-            #expect(sections.first { $0.id == "top" }?.items.count == 2)
-            #expect(sections.first { $0.id == "tabs" }?.items.count == 3)
+            #expect(sections.map(\.id) == ["top", "suggestions", "tabs", "history"])
+            #expect(sections.first { $0.id == "top" }?.items.map(\.id) == ["omnibox-search", "ask-agent"])
+            #expect(sections.first { $0.id == "top" }?.items.last?.detail == "Ask Assistant")
+            #expect(sections.first { $0.id == "tabs" }?.items.count == 4)
             #expect(sections.first { $0.id == "history" }?.items.count == 3)
             #expect(sections.first { $0.id == "suggestions" }?.items.count == 3)
             #expect(sections.flattened.count == CommandPaletteBudget.typing)
+        }
+    }
+
+    @Test func paletteHasOneSearchResultWithACurrentTabAlternate() {
+        Omnibox.$agentOnlyForTesting.withValue(false) {
+            let sections = CommandPaletteProjection.sections(
+                query: "hell",
+                agentName: "Assistant",
+                history: fixtureHistory(count: 0),
+                tabs: [],
+                phrases: ["hello"],
+                actions: noOpActions()
+            )
+
+            let top = sections.first { $0.id == "top" }
+            #expect(top?.items.map(\.id) == ["omnibox-search", "ask-agent"])
+            #expect(top?.items.first?.symbol == OmniboxItem.Kind.newTab.defaultSymbol)
+            #expect(top?.items.first?.alternate != nil)
+            #expect(!sections.flattened.contains { $0.id == "omnibox-new-tab" })
+            #expect(sections.first { $0.id == "suggestions" }?.items.first?.alternate != nil)
+
+            let addressSections = CommandPaletteProjection.sections(
+                query: "example.com",
+                agentName: "Assistant",
+                history: fixtureHistory(count: 0),
+                tabs: [],
+                phrases: [],
+                actions: noOpActions()
+            )
+            #expect(addressSections.first?.items.first?.symbol == OmniboxItem.Kind.newTab.defaultSymbol)
+        }
+    }
+
+    @Test func holdingOptionChangesTheWebRowButNotTheAskRow() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            let sections = CommandPaletteProjection.sections(
+                query: "example.com",
+                agentName: "Assistant",
+                history: fixtureHistory(count: 0),
+                tabs: [],
+                phrases: [],
+                actions: noOpActions()
+            )
+            let web = try #require(sections.first?.items.first)
+            let ask = try #require(sections.first?.items.dropFirst().first)
+
+            #expect(OmniboxRowPresentation(item: web, optionHeld: false).symbol == OmniboxItem.Kind.newTab.defaultSymbol)
+            let current = OmniboxRowPresentation(item: web, optionHeld: true)
+            #expect(current.symbol == "arrow.up.right")
+            #expect(current.detail == String(localized: "Open website in current tab"))
+            #expect(current.replacesFavicon)
+            #expect(OmniboxRowPresentation(item: ask, optionHeld: true).detail == "Ask Assistant")
+        }
+    }
+
+    @Test func webResultsShareNewTabAndCurrentTabActions() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            var newTabURLs: [URL] = []
+            var currentTabURLs: [URL] = []
+            var actions = noOpActions()
+            actions.openNew = { newTabURLs.append($0) }
+            actions.openCurrent = { currentTabURLs.append($0) }
+            let sections = CommandPaletteProjection.sections(
+                query: "project",
+                agentName: "Assistant",
+                history: fixtureHistory(count: 1),
+                tabs: [],
+                phrases: ["project suggestion"],
+                actions: actions
+            )
+
+            for id in ["omnibox-search", "omnibox-phrase-project suggestion"] {
+                let item = try #require(sections.flattened.first { $0.id == id })
+                item.run()
+                item.alternate?()
+            }
+            let historyItem = try #require(sections.first { $0.id == "history" }?.items.first)
+            historyItem.run()
+            historyItem.alternate?()
+
+            #expect(newTabURLs.count == 3)
+            #expect(currentTabURLs == newTabURLs)
         }
     }
 
@@ -220,7 +463,7 @@ struct CommandPaletteModelTests {
                 actions: noOpActions()
             )
 
-            #expect(sections.map(\.id) == ["ask"])
+            #expect(sections.map(\.id) == ["top"])
         }
     }
 
@@ -235,8 +478,9 @@ struct CommandPaletteModelTests {
                 actions: noOpActions()
             )
 
-            #expect(sections.map(\.id) == ["top", "ask"])
+            #expect(sections.map(\.id) == ["top"])
             #expect(sections.first?.items.first?.id == "omnibox-go")
+            #expect(sections.first?.items.last?.id == "ask-agent")
         }
     }
 
@@ -263,7 +507,7 @@ struct CommandPaletteModelTests {
         #expect(sections.map(\.id) == ["tabs", "actions", "recent"])
         #expect(sections[1].items.allSatisfy { item in
             [
-                "action-newTab", "action-organizeTabs", "action-toggleSpeech",
+                "action-openStartPage", "action-organizeTabs", "action-toggleSpeech",
                 "action-clearHistory", "action-settings",
             ].contains(item.id)
         })
@@ -275,6 +519,20 @@ struct CommandPaletteModelTests {
         #expect(sections[2].items.allSatisfy { item in
             !openURLs.contains { item.detail.contains(URL(string: $0)?.displayHost ?? $0) }
         })
+    }
+
+    @Test func restingOpenTabsFollowActivationOrder() throws {
+        let coordinator = AppCoordinator()
+        let tabs = (0..<7).map { _ in coordinator.browser.newTab(activate: false) }
+        coordinator.browser.activate(tabs[0])
+        coordinator.browser.activate(tabs[2])
+
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+        model.prepare()
+        let openTabs = try #require(model.sections.first { $0.id == "tabs" }).items
+
+        #expect(openTabs.count == 5)
+        #expect(openTabs.prefix(2).map(\.id) == ["tab-\(tabs[2].id)", "tab-\(tabs[0].id)"])
     }
 
     @Test func actionRowsRunTheInjectedCommand() {
@@ -298,6 +556,32 @@ struct CommandPaletteModelTests {
         #expect(performed == [.settings])
     }
 
+    @Test func menuNavigationAndFindCommandsAreInTheCatalog() {
+        var context = fixtureContext()
+        context.canGoBack = true
+        let commands = CommandPaletteCatalog.commands(context: context) { _ in }
+        let byID = Dictionary(uniqueKeysWithValues: commands.map { ($0.id, $0) })
+        let expected: [(CommandPaletteAction, String, String)] = [
+            (.openLocation, "Open Location…", "⌘L"),
+            (.nextTab, "Show Next Tab", "⇧⌘]"),
+            (.previousTab, "Show Previous Tab", "⇧⌘["),
+            (.lastTab, "Show Last Tab", "⌘9"),
+            (.findNext, "Find Next", "⌘G"),
+            (.findPrevious, "Find Previous", "⇧⌘G"),
+            (.minimizeWindow, "Minimize", "⌘M"),
+            (.closeWindow, "Close Window", "⇧⌘W"),
+            (.quitLinen, "Quit Linen", "⌘Q"),
+        ]
+        for (action, title, shortcut) in expected {
+            let command = byID["action-\(action.rawValue)"]
+            #expect(command?.title == title)
+            #expect(command?.shortcut == shortcut)
+        }
+        #expect(byID["action-showTab1"]?.title == "Show Tab 1")
+        #expect(byID["action-showTab6"]?.shortcut == "⌘6")
+        #expect(byID["action-showTab7"]?.id == nil)
+    }
+
     @Test func aQueryThatNamesACommandLiftsItAboveThePages() {
         Omnibox.$agentOnlyForTesting.withValue(false) {
             let sections = CommandPaletteProjection.sections(
@@ -311,8 +595,9 @@ struct CommandPaletteModelTests {
             )
 
             #expect(sections.map(\.id).prefix(2) == ["top", "actions"])
+            #expect(sections.first?.items.map(\.id) == ["omnibox-search", "ask-agent"])
             #expect(sections.first { $0.id == "actions" }?.items.first?.id == "action-organizeTabs")
-            #expect(sections.last?.id == "suggestions")
+            #expect(sections.dropFirst(2).first?.id == "suggestions")
         }
     }
 
@@ -344,7 +629,7 @@ struct CommandPaletteModelTests {
                 actions: noOpActions()
             )
 
-            #expect(sections.map(\.id) == ["top", "ask", "actions"])
+            #expect(sections.map(\.id) == ["top", "actions"])
             #expect(sections.last?.items.first?.id == "action-organizeTabs")
         }
     }
@@ -362,7 +647,7 @@ struct CommandPaletteModelTests {
             )
             #expect(all.map(\.id).prefix(3) == ["actions-tabs", "actions-page", "actions-view"])
             #expect(all.flattened.count > 20)
-            #expect(all.flattened.contains { $0.id == "action-newTab" })
+            #expect(all.flattened.contains { $0.id == "action-openStartPage" })
 
             let filtered = CommandPaletteProjection.sections(
                 query: "> org",
@@ -391,19 +676,20 @@ struct CommandPaletteModelTests {
     @Test func commandReturnStaysWithThePalette() {
         for key in CommandPaletteShortcutPolicy.returnKeys {
             #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: key))
-            #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: .command, key: key))
+            #expect(!CommandPaletteShortcutPolicy.opensInCurrentTab(modifiers: .command, key: key))
         }
     }
 
-    /// ⇧↩ is the second destination, so ⌘↩ can stay on the assistant.
-    @Test func shiftReturnRunsTheRowInANewTab() {
+    /// ⌥↩ opens web results in the current tab, while ⌘↩ asks the assistant.
+    @Test func optionReturnRunsTheRowInTheCurrentTab() {
         for key in CommandPaletteShortcutPolicy.returnKeys {
-            #expect(CommandPaletteShortcutPolicy.opensInNewTab(modifiers: .shift, key: key))
-            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .shift, key: key))
+            #expect(CommandPaletteShortcutPolicy.opensInCurrentTab(modifiers: .option, key: key))
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .option, key: key))
         }
-        #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: .shift, key: "a"))
-        #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: [], key: "\r"))
-        #expect(!CommandPaletteShortcutPolicy.opensInNewTab(modifiers: [.shift, .command], key: "\r"))
+        #expect(!CommandPaletteShortcutPolicy.opensInCurrentTab(modifiers: .option, key: "a"))
+        #expect(!CommandPaletteShortcutPolicy.opensInCurrentTab(modifiers: [], key: "\r"))
+        #expect(!CommandPaletteShortcutPolicy.opensInCurrentTab(modifiers: [.option, .command], key: "\r"))
+        #expect(!CommandPaletteShortcutPolicy.opensInCurrentTab(modifiers: .shift, key: "\r"))
     }
 
     private func fixtureContext() -> CommandPaletteContext {

@@ -173,7 +173,9 @@ enum Omnibox {
 
     static func searchItem(
         for query: String,
+        symbol: String? = nil,
         openInNewTab: ((URL) -> Void)? = nil,
+        openInCurrentTab: ((URL) -> Void)? = nil,
         open: @escaping (URL) -> Void
     ) -> OmniboxItem? {
         if let location = location(for: query) {
@@ -182,7 +184,9 @@ enum Omnibox {
                 kind: .go,
                 title: query,
                 detail: String(localized: "Open website"),
-                alternate: openInNewTab.map { openNew in { openNew(location) } }
+                symbol: symbol,
+                alternate: openInCurrentTab.map { openCurrent in { openCurrent(location) } }
+                    ?? openInNewTab.map { openNew in { openNew(location) } }
             ) {
                 open(location)
             }
@@ -194,7 +198,9 @@ enum Omnibox {
             kind: .search,
             title: query,
             detail: String(localized: "Search with \(engineName)"),
-            alternate: openInNewTab.map { openNew in { openNew(search) } }
+            symbol: symbol,
+            alternate: openInCurrentTab.map { openCurrent in { openCurrent(search) } }
+                ?? openInNewTab.map { openNew in { openNew(search) } }
         ) {
             open(search)
         }
@@ -218,12 +224,20 @@ enum Omnibox {
 
     static func topSection(
         query: String,
+        symbol: String? = nil,
         openInNewTab: ((URL) -> Void)? = nil,
+        openInCurrentTab: ((URL) -> Void)? = nil,
         open: @escaping (URL) -> Void
     ) -> OmniboxSection? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty,
-              let row = searchItem(for: query, openInNewTab: openInNewTab, open: open)
+              let row = searchItem(
+                  for: query,
+                  symbol: symbol,
+                  openInNewTab: openInNewTab,
+                  openInCurrentTab: openInCurrentTab,
+                  open: open
+              )
         else { return nil }
         let items = [row, openInNewTab.flatMap { newTabItem(for: query, open: $0) }].compactMap { $0 }
         return OmniboxSection(id: "top", title: "", items: items)
@@ -234,11 +248,17 @@ enum Omnibox {
         phrases: [String],
         limit: Int,
         openInNewTab: ((URL) -> Void)? = nil,
+        openInCurrentTab: ((URL) -> Void)? = nil,
         open: @escaping (URL) -> Void
     ) -> OmniboxSection? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, !isAgentOnly, limit > 0 else { return nil }
-        let items = phraseItems(phrases.prefix(limit), openInNewTab: openInNewTab, open: open)
+        let items = phraseItems(
+            phrases.prefix(limit),
+            openInNewTab: openInNewTab,
+            openInCurrentTab: openInCurrentTab,
+            open: open
+        )
         guard !items.isEmpty else { return nil }
         return OmniboxSection(id: "suggestions", title: String(localized: "\(engineName) Suggestions"), items: items)
     }
@@ -350,6 +370,7 @@ enum Omnibox {
     private static func phraseItems(
         _ phrases: some Sequence<String>,
         openInNewTab: ((URL) -> Void)? = nil,
+        openInCurrentTab: ((URL) -> Void)? = nil,
         open: @escaping (URL) -> Void
     ) -> [OmniboxItem] {
         guard !isAgentOnly else { return [] }
@@ -359,7 +380,8 @@ enum Omnibox {
                 id: "omnibox-phrase-\(phrase)",
                 kind: .phrase,
                 title: phrase,
-                alternate: openInNewTab.map { openNew in { openNew(search) } }
+                alternate: openInCurrentTab.map { openCurrent in { openCurrent(search) } }
+                    ?? openInNewTab.map { openNew in { openNew(search) } }
             ) {
                 open(search)
             }
@@ -370,6 +392,7 @@ enum Omnibox {
         query: String,
         store: HistoryStore,
         limit: Int,
+        openInCurrentTab: ((URL) -> Void)? = nil,
         open: @escaping (URL) -> Void
     ) -> OmniboxSection? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -392,7 +415,8 @@ enum Omnibox {
                 title: entry.title,
                 detail: url.displayAddress ?? host,
                 iconHost: url.displayHost,
-                completionText: url.absoluteString
+                completionText: url.absoluteString,
+                alternate: openInCurrentTab.map { openCurrent in { openCurrent(url) } }
             ) {
                 open(url)
             }

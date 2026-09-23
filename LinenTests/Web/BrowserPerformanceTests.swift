@@ -9,12 +9,8 @@ import XCTest
 // XCTest owns and runs one instance serially. Sendable lets its synchronous
 // measurement callback enter the app target's main-actor boundary.
 nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable {
-    func testCreatingAUsableBlankTab() {
+    func testCreatingAUsableStartPageTab() {
         MainActor.assumeIsolated {
-            let previousNewTab = BrowserSettings.shared.newTab
-            BrowserSettings.shared.newTab = .blank
-            defer { BrowserSettings.shared.newTab = previousNewTab }
-
             measure(metrics: [XCTClockMetric(), XCTMemoryMetric()]) {
                 let browser = BrowserModel(database: .temporary())
                 let tab = browser.newTab()
@@ -28,10 +24,6 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
 
     func testSwitchingTabsInACrowdedSession() {
         MainActor.assumeIsolated {
-            let previousNewTab = BrowserSettings.shared.newTab
-            BrowserSettings.shared.newTab = .blank
-            defer { BrowserSettings.shared.newTab = previousNewTab }
-
             let browser = BrowserModel(database: .temporary())
             let first = browser.newTab()
             let second = browser.newTab()
@@ -110,7 +102,7 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                     )
                 }
 
-                XCTAssertEqual(projected.map(\.id), ["top", "ask", "tabs", "history", "suggestions"])
+                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "ask", "tabs", "history"])
                 XCTAssertEqual(projected.flattened.count, CommandPaletteBudget.typing)
             }
         }

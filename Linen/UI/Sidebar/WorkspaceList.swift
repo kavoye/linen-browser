@@ -95,7 +95,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
     @ViewBuilder
     private var emptySpaceMenu: some View {
         Button {
-            _ = coordinator.openNewTab()
+            coordinator.requestNewTab()
         } label: {
             Label("New Tab", systemImage: "plus")
         }

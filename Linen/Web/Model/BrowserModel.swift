@@ -192,7 +192,6 @@ final class BrowserModel {
         after opener: BrowserTab? = nil,
         transition: HistoryStore.Transition = .typed
     ) -> BrowserTab {
-        let url = adopting == nil ? (url ?? BrowserSettings.shared.newTabURL) : url
         let tab = makeTab(for: url, adopting: adopting)
         insert(tab, after: opener)
         onTabOpened?(tab)

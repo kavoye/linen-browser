@@ -129,7 +129,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var keywords: [String] {
         switch self {
         case .general:
-            ["startup", "home", "homepage", "new tab", "default browser", "launch", "import"]
+            ["default browser", "tabs", "import"]
         case .search:
             ["search", "engine", "google", "duckduckgo", "bing", "kagi", "suggestions",
              "omnibox", "address bar", "ask", "query",

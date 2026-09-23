@@ -260,9 +260,9 @@ enum AskSurfaceResults {
 
         var result = [
             Omnibox.topSection(query: input, open: open),
+            Omnibox.phrasesSection(query: input, phrases: phrases, limit: 3, open: open),
             Omnibox.historySection(query: input, store: history, limit: historyLimit, open: open),
             Omnibox.tabsSection(query: input, tabs: tabs, limit: tabLimit, switchTo: switchTo),
-            Omnibox.phrasesSection(query: input, phrases: phrases, limit: 6, open: open),
         ].compactMap { $0 }
         result.append(askSection(input, agentName: agentName, ask: ask))
         return result

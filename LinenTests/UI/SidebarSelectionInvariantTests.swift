@@ -197,10 +197,6 @@ struct SidebarSelectionInvariantTests {
     /// The page can land in the already-active blank tab, where nothing about
     /// `activeTabID` changes - the marks still have to go.
     @Test func showingHistoryOverABlankTabDropsMarks() {
-        let previous = BrowserSettings.shared.newTab
-        BrowserSettings.shared.newTab = .startPage
-        defer { BrowserSettings.shared.newTab = previous }
-
         let model = makeModel()
         let other = model.newTab()
         other.urlString = "https://example.com/"

@@ -13,7 +13,7 @@ nonisolated enum SystemPages {
 
     static let start = URL(string: "\(scheme)://\(startHost)")!
 
-    static let startSymbol = "square.grid.2x2"
+    static let startSymbol = "house"
 
     @MainActor static func showsStartFace(_ tab: BrowserTab) -> Bool {
         tab.isShowingStartPage || tab.hasNoPageYet

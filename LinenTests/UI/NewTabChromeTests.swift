@@ -28,6 +28,8 @@ struct NewTabChromeTests {
         }
         #expect(finished)
         #expect(tab.urlString.isEmpty)
+        #expect(tab.title == "Start Page")
+        #expect(SystemPages.startSymbol == "house")
     }
 
     /// Several tabs at once is the launch case: the pool only holds a couple

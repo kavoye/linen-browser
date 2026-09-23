@@ -202,10 +202,10 @@ struct AskSurfaceInteractionTests {
                 ask: { _ in }
             )
 
-            #expect(sections.map(\.id) == ["top", "history", "tabs", "suggestions", "ask"])
+            #expect(sections.map(\.id) == ["top", "suggestions", "history", "tabs", "ask"])
             #expect(sections.first { $0.id == "history" }?.items.count == 2)
             #expect(sections.first { $0.id == "tabs" }?.items.count == 1)
-            #expect(sections.first { $0.id == "suggestions" }?.items.count == 6)
+            #expect(sections.first { $0.id == "suggestions" }?.items.count == 3)
         }
     }
 

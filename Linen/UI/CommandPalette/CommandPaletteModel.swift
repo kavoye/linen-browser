@@ -61,8 +61,13 @@ enum CommandPaletteShortcutPolicy {
 
     static let returnKeys: Set<String> = ["\r", "\u{3}"]
 
-    static func opensInNewTab(modifiers: NSEvent.ModifierFlags, key: String) -> Bool {
-        modifiers.intersection(.deviceIndependentFlagsMask) == .shift && returnKeys.contains(key)
+    static func showsCurrentTab(modifiers: NSEvent.ModifierFlags) -> Bool {
+        let actionModifiers: NSEvent.ModifierFlags = [.command, .control, .option, .shift]
+        return modifiers.intersection(actionModifiers) == .option
+    }
+
+    static func opensInCurrentTab(modifiers: NSEvent.ModifierFlags, key: String) -> Bool {
+        showsCurrentTab(modifiers: modifiers) && returnKeys.contains(key)
     }
 
     static func shouldDismiss(modifiers: NSEvent.ModifierFlags, key: String) -> Bool {
@@ -70,7 +75,7 @@ enum CommandPaletteShortcutPolicy {
         let editingKeys: Set<String> = ["a", "c", "v", "x", "z"]
         let normalizedKey = key.lowercased()
         let isTextEditing = modifiers == .command && editingKeys.contains(normalizedKey)
-        let isPaletteShortcut = modifiers == .command && normalizedKey == "k"
+        let isPaletteShortcut = modifiers == .command && (normalizedKey == "k" || normalizedKey == "t")
         let isListNavigation = arrowKeys.contains(key)
         let isRun = returnKeys.contains(key)
         let isCommand = !modifiers.isDisjoint(with: [.command, .control, .option])
@@ -128,6 +133,7 @@ enum CommandPaletteProjection {
         tabs: [BrowserTab],
         mentions: [MentionChip] = [],
         activeTabID: UUID? = nil,
+        recentTabIDs: [UUID] = [],
         phrases: [String],
         actions: CommandPaletteActions
     ) -> [OmniboxSection] {
@@ -140,7 +146,13 @@ enum CommandPaletteProjection {
 
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else {
-            return restingSections(history: history, tabs: tabs, commands: commands, actions: actions)
+            return restingSections(
+                history: history,
+                tabs: tabs,
+                recentTabIDs: recentTabIDs,
+                commands: commands,
+                actions: actions
+            )
         }
 
         if AskSurfaceInteraction.mentionFragment(in: query) != nil {
@@ -175,13 +187,18 @@ enum CommandPaletteProjection {
 
         let matched = actionsSection(CommandPaletteCatalog.matching(needle, in: commands))
         let promoted = CommandPaletteCatalog.bestScore(needle, in: commands) >= CommandMatch.strong
-
+        let webItems = Omnibox.topSection(
+            query: needle,
+            symbol: OmniboxItem.Kind.newTab.defaultSymbol,
+            openInCurrentTab: actions.openCurrent,
+            open: actions.openNew
+        )?.items ?? []
         var slots = [
             CommandPaletteBudget.Slot(
-                Omnibox.topSection(
-                    query: needle,
-                    openInNewTab: actions.openNew,
-                    open: actions.openCurrent
+                OmniboxSection(
+                    id: "top",
+                    title: "",
+                    items: webItems + [askItem(needle, agentName: agentName, ask: actions.ask)]
                 ),
                 floor: 1,
                 quota: 2
@@ -191,9 +208,15 @@ enum CommandPaletteProjection {
             slots.append(CommandPaletteBudget.Slot(matched, floor: 1, quota: 3))
         }
         slots.append(CommandPaletteBudget.Slot(
-            askSection(needle, agentName: agentName, ask: actions.ask),
-            floor: 1,
-            quota: 1
+            Omnibox.phrasesSection(
+                query: needle,
+                phrases: phrases,
+                limit: 3,
+                openInCurrentTab: actions.openCurrent,
+                open: actions.openNew
+            ),
+            floor: 2,
+            quota: 3
         ))
         slots.append(CommandPaletteBudget.Slot(
             Omnibox.tabsSection(query: needle, tabs: tabs, limit: 4, switchTo: actions.switchTo),
@@ -201,24 +224,19 @@ enum CommandPaletteProjection {
             quota: 4
         ))
         slots.append(CommandPaletteBudget.Slot(
-            Omnibox.historySection(query: needle, store: history, limit: 5, open: actions.openNew),
+            Omnibox.historySection(
+                query: needle,
+                store: history,
+                limit: 5,
+                openInCurrentTab: actions.openCurrent,
+                open: actions.openNew
+            ),
             floor: 2,
             quota: 5
         ))
         if !promoted {
             slots.append(CommandPaletteBudget.Slot(matched, floor: 1, quota: 3))
         }
-        slots.append(CommandPaletteBudget.Slot(
-            Omnibox.phrasesSection(
-                query: needle,
-                phrases: phrases,
-                limit: 3,
-                openInNewTab: actions.openNew,
-                open: actions.openCurrent
-            ),
-            floor: 2,
-            quota: 3
-        ))
 
         return CommandPaletteBudget.fit(slots, total: CommandPaletteBudget.typing)
     }
@@ -230,13 +248,25 @@ enum CommandPaletteProjection {
     ) -> OmniboxSection {
         OmniboxSection(
             id: "ask",
-            title: String(localized: "Ask \(agentName)"),
-            items: [
-                OmniboxItem(id: "ask-agent", kind: .ask, title: prompt, shortcut: "⌘↩") {
-                    ask(prompt)
-                },
-            ]
+            title: "",
+            items: [askItem(prompt, agentName: agentName, ask: ask)]
         )
+    }
+
+    private static func askItem(
+        _ prompt: String,
+        agentName: String,
+        ask: @escaping (String) -> Void
+    ) -> OmniboxItem {
+        OmniboxItem(
+            id: "ask-agent",
+            kind: .ask,
+            title: prompt,
+            detail: String(localized: "Ask \(agentName)"),
+            shortcut: "⌘↩"
+        ) {
+            ask(prompt)
+        }
     }
 
     private static func actionsSection(_ commands: [CommandPaletteCommand], hint: String = "") -> OmniboxSection? {
@@ -252,10 +282,15 @@ enum CommandPaletteProjection {
     private static func restingSections(
         history: HistoryStore,
         tabs: [BrowserTab],
+        recentTabIDs: [UUID],
         commands: [CommandPaletteCommand],
         actions: CommandPaletteActions
     ) -> [OmniboxSection] {
-        let openTabs = tabs.map { tab in
+        let tabsByID = Dictionary(uniqueKeysWithValues: tabs.map { ($0.id, $0) })
+        let recentlyUsedTabs = recentTabIDs.compactMap { tabsByID[$0] }
+        let recentlyUsedIDs = Set(recentlyUsedTabs.map(\.id))
+        let orderedTabs = recentlyUsedTabs + tabs.filter { !recentlyUsedIDs.contains($0.id) }
+        let openTabs = orderedTabs.prefix(5).map { tab in
             let host = URL(string: tab.urlString)?.displayHost
             return OmniboxItem(
                 id: "tab-\(tab.id)",
@@ -281,7 +316,8 @@ enum CommandPaletteProjection {
                     title: entry.title,
                     detail: url.displayAddress ?? entry.url,
                     iconHost: url.displayHost,
-                    completionText: url.absoluteString
+                    completionText: url.absoluteString,
+                    alternate: { actions.openCurrent(url) }
                 ) {
                     actions.openNew(url)
                 }
@@ -338,7 +374,11 @@ final class CommandPaletteModel {
         suggestionPreview.query ?? interaction.query
     }
 
-    init(browser: BrowserModel, coordinator: AppCoordinator, dismiss: @escaping () -> Void) {
+    init(
+        browser: BrowserModel,
+        coordinator: AppCoordinator,
+        dismiss: @escaping () -> Void
+    ) {
         self.browser = browser
         self.coordinator = coordinator
         self.dismiss = dismiss
@@ -353,7 +393,16 @@ final class CommandPaletteModel {
     }
 
     func suggestionsDidChange() {
+        guard suggestionPreview.sections == nil else { return }
+        let selectedID = sections.flattened.indices.contains(interaction.selection)
+            ? sections.flattened[interaction.selection].id
+            : nil
         refreshSections()
+        if let selectedID, let index = sections.flattened.firstIndex(where: { $0.id == selectedID }) {
+            interaction.selection = index
+        } else {
+            interaction.selection = 0
+        }
     }
 
     func moveSelection(by delta: Int) {
@@ -374,11 +423,16 @@ final class CommandPaletteModel {
         interaction.selection = index
     }
 
+    func hoverSuggestion(at index: Int) {
+        guard sections.flattened.indices.contains(index) else { return }
+        interaction.selection = index
+    }
+
     func submit() {
         run(at: interaction.selection)
     }
 
-    func submitInNewTab() {
+    func submitInCurrentTab() {
         runAlternate(at: interaction.selection)
     }
 
@@ -449,6 +503,7 @@ final class CommandPaletteModel {
             tabs: browser.tabs,
             mentions: mentionChips,
             activeTabID: browser.activeTab?.id,
+            recentTabIDs: browser.recentlyActive,
             phrases: suggestions.phrases,
             actions: projectionActions
         )
@@ -530,7 +585,11 @@ final class CommandPaletteModel {
         let page = coordinator.pageCommandTab
         switch action {
         case .newTab:
+            coordinator.requestNewTab()
+        case .openStartPage:
             coordinator.openNewTab()
+        case .openLocation:
+            coordinator.focusAddressBar()
         case .privateBrowsing:
             coordinator.enterPrivateBrowsing()
         case .leavePrivateBrowsing:
@@ -551,6 +610,28 @@ final class CommandPaletteModel {
             }
         case .organizeTabs:
             coordinator.organizeTabs()
+        case .nextTab:
+            browser.cycleTab(forward: true)
+        case .previousTab:
+            browser.cycleTab(forward: false)
+        case .lastTab:
+            browser.activateLastTab()
+        case .showTab1:
+            browser.activateTab(at: 0)
+        case .showTab2:
+            browser.activateTab(at: 1)
+        case .showTab3:
+            browser.activateTab(at: 2)
+        case .showTab4:
+            browser.activateTab(at: 3)
+        case .showTab5:
+            browser.activateTab(at: 4)
+        case .showTab6:
+            browser.activateTab(at: 5)
+        case .showTab7:
+            browser.activateTab(at: 6)
+        case .showTab8:
+            browser.activateTab(at: 7)
         case .reload:
             page?.webView.reload()
         case .hardReload:
@@ -563,6 +644,10 @@ final class CommandPaletteModel {
             page?.goForward()
         case .find:
             page?.find.open()
+        case .findNext:
+            page?.find.findNext(backwards: false)
+        case .findPrevious:
+            page?.find.findNext(backwards: true)
         case .copyLink:
             coordinator.copyCurrentURL()
         case .printPage:
@@ -595,6 +680,10 @@ final class CommandPaletteModel {
             coordinator.toggleLyrics()
         case .toggleFullScreen:
             coordinator.toggleFullScreen()
+        case .closeWindow:
+            (NSApp.keyWindow ?? NSApp.mainWindow)?.performClose(nil)
+        case .minimizeWindow:
+            (NSApp.keyWindow ?? NSApp.mainWindow)?.performMiniaturize(nil)
         case .toggleSpeech:
             coordinator.toggleSpeechMute()
         case .toggleListening:
@@ -613,6 +702,10 @@ final class CommandPaletteModel {
             coordinator.updates.checkNow()
         case .releaseNotes:
             coordinator.showReleaseNotes()
+        case .aboutLinen:
+            NSApp.orderFrontStandardAboutPanel(nil)
+        case .quitLinen:
+            NSApp.terminate(nil)
         }
     }
 }

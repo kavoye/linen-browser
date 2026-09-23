@@ -252,7 +252,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.openSettings(.downloads)
     }
     @objc private func newTab() {
-        coordinator.openNewTab()
+        coordinator.requestNewTab()
     }
     @objc private func newPrivateTab() {
         coordinator.enterPrivateBrowsing()

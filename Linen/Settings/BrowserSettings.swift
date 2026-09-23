@@ -20,11 +20,9 @@ final class BrowserSettings {
         static let loomStyle = "appearance.loomStyle"
         static let transparency = "appearance.transparency"
         static let pageZoom = "content.defaultZoom"
-        static let newTab = "startup.newTab"
         static let sleepsInactiveTabs = "tabs.sleep"
         static let linkPreview = "content.linkPreview"
         static let linkPeek = "content.linkPeek"
-        static let homepage = "startup.homepage"
         static let searchEngine = "search.engine"
         static let customSearchName = "search.custom.name"
         static let customSearchTemplate = "search.custom.template"
@@ -59,7 +57,6 @@ final class BrowserSettings {
     }
 
     static let sessionKeys: [String] = [
-        Key.newTab, Key.homepage,
         Key.searchEngine, Key.customSearchName, Key.customSearchTemplate,
         Key.suggestions, Key.agentOnlyInput,
         Key.historyRetention, Key.clearOnQuit, Key.certificateExceptions,
@@ -223,34 +220,6 @@ final class BrowserSettings {
                 automaticPictureInPicture = false
             }
             onVideoInPlayerChanged?(showsVideoInPlayer)
-        }
-    }
-
-    // MARK: - Startup
-
-    var newTab: NewTabBehavior {
-        didSet { write(newTab.rawValue, forKey: Key.newTab) }
-    }
-
-    var homepage: String {
-        didSet { write(homepage, forKey: Key.homepage) }
-    }
-
-    var homepageURL: URL? {
-        let trimmed = homepage.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        if trimmed.contains("://") {
-            return URL(string: trimmed)
-        }
-        return URL(string: "https://\(trimmed)")
-    }
-
-    var newTabURL: URL? {
-        switch newTab {
-        case .startPage, .blank:
-            nil
-        case .homepage:
-            homepageURL
         }
     }
 
@@ -559,10 +528,6 @@ final class BrowserSettings {
         let storedZoom = double(Key.pageZoom)
         pageZoom = storedZoom > 0 ? storedZoom : 1
 
-        self.newTab = string(Key.newTab)
-            .flatMap(NewTabBehavior.init(rawValue:)) ?? .startPage
-        homepage = string(Key.homepage) ?? ""
-
         searchEngineID = string(Key.searchEngine) ?? SearchEngine.duckDuckGo.id
         customSearchName = string(Key.customSearchName) ?? ""
         customSearchTemplate = string(Key.customSearchTemplate) ?? ""
@@ -611,9 +576,6 @@ final class BrowserSettings {
         passwordExtensionID = object(Key.passwordExtension) as? String ?? ""
         fillsContacts = object(Key.contactAutofill) as? Bool ?? true
         fillsPaymentCards = object(Key.paymentCardAutofill) as? Bool ?? true
-
-        newTab = string(Key.newTab).flatMap(NewTabBehavior.init(rawValue:)) ?? .startPage
-        homepage = string(Key.homepage) ?? ""
 
         searchEngineID = string(Key.searchEngine) ?? SearchEngine.duckDuckGo.id
         customSearchName = string(Key.customSearchName) ?? ""
@@ -686,8 +648,6 @@ final class BrowserSettings {
         transparency = 0.5
         refractsTabColor = true
         pageZoom = 1
-        newTab = .startPage
-        homepage = ""
         searchEngineID = SearchEngine.duckDuckGo.id
         customSearchName = ""
         customSearchTemplate = ""
@@ -765,38 +725,6 @@ enum StartPageSection: String, CaseIterable, Identifiable {
             "Recently visited pages"
         case .downloads:
             "Recent files"
-        }
-    }
-}
-
-enum NewTabBehavior: String, CaseIterable, Identifiable {
-    case startPage
-    case blank
-    case homepage
-
-    var id: String {
-        rawValue
-    }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .startPage:
-            "Start page"
-        case .blank:
-            "Blank"
-        case .homepage:
-            "Homepage"
-        }
-    }
-
-    var caption: LocalizedStringResource {
-        switch self {
-        case .startPage:
-            "The websites you visit most, your recent requests, and your downloads."
-        case .blank:
-            "A blank page, with the address bar ready."
-        case .homepage:
-            "A website you choose."
         }
     }
 }

@@ -29,23 +29,7 @@ struct GeneralSettings: View {
     var body: some View {
         SettingsPageHeader(title: "General")
 
-        SettingsSection(title: "New tabs", symbol: "rectangle.badge.plus") {
-            OptionList(
-                options: NewTabBehavior.allCases.map {
-                    .init(value: $0, label: $0.label, caption: $0.caption)
-                },
-                selection: settings.newTab,
-                onSelect: { settings.newTab = $0 }
-            )
-
-            if settings.newTab == .homepage {
-                RowSeparator()
-
-                HomepageRow(coordinator: coordinator, settings: settings)
-                    .settingsAnchor("general.homepage")
-            }
-            RowSeparator()
-
+        SettingsSection(title: "Tabs", symbol: "rectangle.on.rectangle") {
             DetailRow(
                 title: "Sleep inactive tabs",
                 caption: "Frees memory when the Mac runs low. Tabs reload on return."
@@ -54,7 +38,6 @@ struct GeneralSettings: View {
             }
             .settingsAnchor("general.sleepTabs")
         }
-        .settingsAnchor("general.newTab")
 
         SettingsSection(title: "Default browser", symbol: "arrow.up.forward.app") {
             DetailRow(
@@ -131,52 +114,6 @@ struct GeneralSettings: View {
         Task {
             handedOver = await DefaultBrowser.request() == .handedOverToSystemSettings
             isDefault = DefaultBrowser.isCurrent
-        }
-    }
-}
-
-private struct HomepageRow: View {
-    let coordinator: AppCoordinator
-
-    @Bindable var settings: BrowserSettings
-
-    @FocusState private var focused: Bool
-
-    private var currentPage: String? {
-        let url = coordinator.browser.activeTab?.urlString ?? ""
-        return url.isEmpty || url.hasPrefix("about:") ? nil : url
-    }
-
-    var body: some View {
-        DetailRow(
-            title: "Homepage",
-            caption: "New tabs open with this page.",
-            layout: .stacked
-        ) {
-            HStack(spacing: 8) {
-                FieldChrome(isFocused: focused) {
-                    TextField("", text: $settings.homepage)
-                        .textFieldStyle(.plain)
-                        .font(Theme.Font.body)
-                        .fieldPlaceholder(verbatim: "example.com", isShowing: settings.homepage.isEmpty)
-                        .focused($focused)
-                }
-
-                if let currentPage {
-                    SettingsButton(title: "Use This Page") {
-                        settings.homepage = currentPage
-                    }
-                }
-
-                if !settings.homepage.isEmpty {
-                    IconButton(symbol: "xmark", help: "Clear") {
-                        settings.homepage = ""
-                        if settings.newTab == .homepage {
-                            settings.newTab = .startPage
-                        }
-                    }
-                }
-            }
         }
     }
 }

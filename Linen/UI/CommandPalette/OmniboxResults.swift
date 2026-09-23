@@ -40,6 +40,7 @@ struct OmniboxList: View {
     let sections: [OmniboxSection]
     let query: String
     let selection: Int
+    var optionHeld = false
     var density: Density = .regular
     /// A scrolling container sets this false and uses `.contentMargins`.
     /// `scrollTo` cannot see padding inside the content, so it brings the row
@@ -49,12 +50,13 @@ struct OmniboxList: View {
     let onSelect: (Int) -> Void
     let onRun: (Int) -> Void
     var onRunAlternate: ((Int) -> Void)?
+    var alternateClickModifier: NSEvent.ModifierFlags = .command
 
     @State private var pointerAnchor: CGPoint?
 
     private func tapped(_ index: Int) {
         let modifiers = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if modifiers.contains(.command), let onRunAlternate {
+        if modifiers.contains(alternateClickModifier), let onRunAlternate {
             onRunAlternate(index)
         } else {
             onRun(index)
@@ -73,6 +75,7 @@ struct OmniboxList: View {
             ForEach(groups, id: \.section.id) { group in
                 ForEach(group.section.items.enumerated(), id: \.element.id) { offset, item in
                     let index = group.start + offset
+                    let presentation = OmniboxRowPresentation(item: item, optionHeld: optionHeld)
                     VStack(alignment: .leading, spacing: 0) {
                         if offset == 0 {
                             heading(group.section, isFirst: group.start == 0)
@@ -80,6 +83,7 @@ struct OmniboxList: View {
 
                         OmniboxRow(
                             item: item,
+                            presentation: presentation,
                             query: query,
                             isSelected: index == selection,
                             density: density,
@@ -90,7 +94,7 @@ struct OmniboxList: View {
                         .onHover { if $0 { hovered(index) } }
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(Text(verbatim: item.title))
-                        .accessibilityValue(Text(verbatim: [item.detail, item.shortcut]
+                        .accessibilityValue(Text(verbatim: [presentation.detail, item.shortcut]
                             .filter { !$0.isEmpty }
                             .joined(separator: ", ")))
                         .accessibilityAddTraits(index == selection ? [.isButton, .isSelected] : [.isButton])
@@ -152,6 +156,37 @@ struct OmniboxList: View {
     }
 }
 
+struct OmniboxRowPresentation {
+    let symbol: String
+    let detail: String
+    let replacesFavicon: Bool
+
+    init(item: OmniboxItem, optionHeld: Bool) {
+        guard optionHeld, item.alternate != nil else {
+            symbol = item.symbol
+            detail = item.detail
+            replacesFavicon = false
+            return
+        }
+
+        switch item.kind {
+        case .go:
+            detail = String(localized: "Open website in current tab")
+        case .search, .phrase:
+            detail = String(localized: "Search with \(Omnibox.engineName) in current tab")
+        case .history:
+            detail = "\(item.detail) · \(String(localized: "Open in current tab"))"
+        case .newTab, .tab, .ask, .action:
+            symbol = item.symbol
+            detail = item.detail
+            replacesFavicon = false
+            return
+        }
+        symbol = "arrow.up.right"
+        replacesFavicon = true
+    }
+}
+
 struct OmniboxFavicon: View {
     let host: String
     let fallback: String
@@ -183,6 +218,7 @@ struct OmniboxFavicon: View {
 
 private struct OmniboxRow: View {
     let item: OmniboxItem
+    let presentation: OmniboxRowPresentation
     let query: String
     let isSelected: Bool
     let density: OmniboxList.Density
@@ -203,7 +239,7 @@ private struct OmniboxRow: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
 
-                    Text(verbatim: item.detail)
+                    Text(verbatim: presentation.detail)
                         .font(.system(size: density.detailSize))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -215,8 +251,8 @@ private struct OmniboxRow: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                if !item.detail.isEmpty {
-                    Text(verbatim: item.detail)
+                if !presentation.detail.isEmpty {
+                    Text(verbatim: presentation.detail)
                         .font(.system(size: density.detailSize))
                         .foregroundStyle(.tertiary)
                         .lineLimit(1)
@@ -248,10 +284,10 @@ private struct OmniboxRow: View {
                 size: density == .compact ? 13 : 16
             )
             .frame(width: iconWidth)
-        } else if let host = item.iconHost {
+        } else if let host = item.iconHost, !presentation.replacesFavicon {
             OmniboxFavicon(
                 host: host,
-                fallback: item.symbol,
+                fallback: presentation.symbol,
                 size: density == .compact ? 15 : 18,
                 isSelected: isSelected
             )
@@ -262,7 +298,7 @@ private struct OmniboxRow: View {
     }
 
     private var symbolIcon: some View {
-        Image(systemName: item.symbol)
+        Image(systemName: presentation.symbol)
             .font(.system(size: density == .compact ? 11 : 13))
             .foregroundStyle(isSelected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
             .frame(width: iconWidth)

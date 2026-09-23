@@ -346,10 +346,6 @@ struct BrowserPagesTests {
             "/slow": .html("<title>Slow</title>", gate: response),
         ])
         let model = makeModel()
-        let previous = BrowserSettings.shared.newTab
-        BrowserSettings.shared.newTab = .startPage
-        defer { BrowserSettings.shared.newTab = previous }
-
         let tab = model.newTab()
         #expect(await waitUntil { tab.isShowingStartPage })
         model.activeTabID = tab.id

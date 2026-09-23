@@ -24,7 +24,7 @@ struct ProfileSettingsTests {
         ] {
             #expect(!session.contains(key))
         }
-        for key in ["search.engine", "startup.newTab", "content.javaScript",
+        for key in ["search.engine", "content.javaScript",
                     "privacy.clearOnQuit", "content.autoplay", "startPage.order",
         ] {
             #expect(session.contains(key))
@@ -57,15 +57,12 @@ struct ProfileSettingsTests {
 
         let settings = BrowserSettings(defaults: app, sessionDefaults: work)
         settings.javaScriptEnabled = false
-        settings.homepage = "example.com"
 
         settings.useSessionDefaults(personal)
         #expect(settings.javaScriptEnabled)
-        #expect(settings.homepage.isEmpty)
 
         settings.useSessionDefaults(work)
         #expect(!settings.javaScriptEnabled)
-        #expect(settings.homepage == "example.com")
     }
 
     @Test func theProviderAndModelAreWrittenWhereTheProfilePointsThem() throws {

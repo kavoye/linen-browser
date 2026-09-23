@@ -26,7 +26,7 @@ enum PageSecurity: Equatable {
 @MainActor
 @Observable
 final class BrowserTab: Identifiable {
-    static let placeholderTitle = String(localized: "New Tab")
+    static let placeholderTitle = String(localized: "Start Page")
 
     let id: UUID
     let autofillSave = AutofillSaveSession()
@@ -303,7 +303,7 @@ final class BrowserTab: Identifiable {
             adopt(liveView)
         }
         find.driver = .webKit { [weak self] in self?.webView }
-        if opensStartPage, BrowserSettings.shared.newTab != .blank {
+        if opensStartPage {
             permitSystemPage(SystemPages.start)
             webView.load(URLRequest(url: SystemPages.start))
         }

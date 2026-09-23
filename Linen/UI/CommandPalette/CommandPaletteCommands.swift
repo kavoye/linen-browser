@@ -32,6 +32,8 @@ struct CommandPaletteContext {
 
 enum CommandPaletteAction: String, CaseIterable {
     case newTab
+    case openStartPage
+    case openLocation
     case privateBrowsing
     case leavePrivateBrowsing
     case closeTab
@@ -40,6 +42,17 @@ enum CommandPaletteAction: String, CaseIterable {
     case togglePin
     case returnToPin
     case organizeTabs
+    case nextTab
+    case previousTab
+    case lastTab
+    case showTab1
+    case showTab2
+    case showTab3
+    case showTab4
+    case showTab5
+    case showTab6
+    case showTab7
+    case showTab8
 
     case reload
     case hardReload
@@ -47,6 +60,8 @@ enum CommandPaletteAction: String, CaseIterable {
     case goBack
     case goForward
     case find
+    case findNext
+    case findPrevious
     case copyLink
     case printPage
     case zoomIn
@@ -65,6 +80,8 @@ enum CommandPaletteAction: String, CaseIterable {
     case toggleActivity
     case toggleLyrics
     case toggleFullScreen
+    case closeWindow
+    case minimizeWindow
 
     case toggleSpeech
     case toggleListening
@@ -76,6 +93,8 @@ enum CommandPaletteAction: String, CaseIterable {
     case extensions
     case checkForUpdates
     case releaseNotes
+    case aboutLinen
+    case quitLinen
 }
 
 enum CommandPaletteGroup: String, CaseIterable {
@@ -229,6 +248,21 @@ enum CommandPaletteCatalog {
 
         var tabs: [CommandPaletteCommand] {
             let pinTitle: LocalizedStringResource = context.isShowingPin ? "Unpin Tab" : "Pin This Page"
+            let indexedActions: [CommandPaletteAction] = [
+                .showTab1, .showTab2, .showTab3, .showTab4,
+                .showTab5, .showTab6, .showTab7, .showTab8,
+            ]
+            let indexedTabs = indexedActions.enumerated().compactMap { index, action -> CommandPaletteCommand? in
+                let slot = index + 1
+                guard slot <= context.tabCount else { return nil }
+                return make(
+                    action,
+                    group: .tabs,
+                    title: "Show Tab \(slot)",
+                    symbol: "square.on.square",
+                    shortcut: "⌘\(slot)"
+                )
+            }
             return [
                 make(
                     .newTab,
@@ -236,7 +270,15 @@ enum CommandPaletteCatalog {
                     title: "New Tab",
                     symbol: "plus",
                     shortcut: "⌘T",
-                    aliases: ["open", "blank page", "window"],
+                    aliases: ["open tab", "new page"]
+                ),
+                make(
+                    .openStartPage,
+                    group: .tabs,
+                    title: "Open Start Page",
+                    symbol: "house",
+                    shortcut: "",
+                    aliases: ["start page", "new tab page", "home"],
                     isSuggested: true
                 ),
                 make(
@@ -312,11 +354,45 @@ enum CommandPaletteCatalog {
                     isAvailable: context.tabCount > 1,
                     isSuggested: true
                 ),
-            ]
+                make(
+                    .nextTab,
+                    group: .tabs,
+                    title: "Show Next Tab",
+                    symbol: "arrow.right.to.line",
+                    shortcut: "⇧⌘]",
+                    aliases: ["switch to next tab"],
+                    isAvailable: context.tabCount > 1
+                ),
+                make(
+                    .previousTab,
+                    group: .tabs,
+                    title: "Show Previous Tab",
+                    symbol: "arrow.left.to.line",
+                    shortcut: "⇧⌘[",
+                    aliases: ["switch to previous tab"],
+                    isAvailable: context.tabCount > 1
+                ),
+                make(
+                    .lastTab,
+                    group: .tabs,
+                    title: "Show Last Tab",
+                    symbol: "arrow.right.to.line",
+                    shortcut: "⌘9",
+                    isAvailable: context.tabCount > 1
+                ),
+            ] + indexedTabs
         }
 
         var page: [CommandPaletteCommand] {
             [
+                make(
+                    .openLocation,
+                    group: .page,
+                    title: "Open Location…",
+                    symbol: "link",
+                    shortcut: "⌘L",
+                    aliases: ["address bar", "enter url", "website address"]
+                ),
                 make(
                     .reload,
                     group: .page,
@@ -339,9 +415,10 @@ enum CommandPaletteCatalog {
                 make(
                     .stopLoading,
                     group: .page,
-                    title: "Stop Loading",
+                    title: "Stop",
                     symbol: "xmark.circle",
                     shortcut: "⌘.",
+                    aliases: ["stop loading"],
                     isAvailable: context.isLoading
                 ),
                 make(
@@ -365,10 +442,28 @@ enum CommandPaletteCatalog {
                 make(
                     .find,
                     group: .page,
-                    title: "Find on Page…",
+                    title: "Find…",
                     symbol: "magnifyingglass",
                     shortcut: "⌘F",
-                    aliases: ["search page", "look for text"],
+                    aliases: ["find on page", "search page", "look for text"],
+                    isAvailable: context.hasActiveTab
+                ),
+                make(
+                    .findNext,
+                    group: .page,
+                    title: "Find Next",
+                    symbol: "chevron.down",
+                    shortcut: "⌘G",
+                    aliases: ["next match", "next search result"],
+                    isAvailable: context.hasActiveTab
+                ),
+                make(
+                    .findPrevious,
+                    group: .page,
+                    title: "Find Previous",
+                    symbol: "chevron.up",
+                    shortcut: "⇧⌘G",
+                    aliases: ["previous match", "previous search result"],
                     isAvailable: context.hasActiveTab
                 ),
                 make(
@@ -529,6 +624,21 @@ enum CommandPaletteCatalog {
                     symbol: "arrow.up.left.and.arrow.down.right",
                     shortcut: "⌃⌘F"
                 ),
+                make(
+                    .minimizeWindow,
+                    group: .view,
+                    title: "Minimize",
+                    symbol: "minus.square",
+                    shortcut: "⌘M",
+                    aliases: ["minimize window"]
+                ),
+                make(
+                    .closeWindow,
+                    group: .view,
+                    title: "Close Window",
+                    symbol: "xmark.square",
+                    shortcut: "⇧⌘W"
+                ),
             ]
         }
 
@@ -592,7 +702,7 @@ enum CommandPaletteCatalog {
                 make(
                     .settings,
                     group: .library,
-                    title: "Settings",
+                    title: "Settings…",
                     detail: "model, voice, API key",
                     symbol: "gearshape",
                     shortcut: "⌘,",
@@ -610,9 +720,24 @@ enum CommandPaletteCatalog {
                 make(
                     .releaseNotes,
                     group: .library,
-                    title: "Release Notes",
+                    title: "Release Notes…",
                     symbol: "doc.text",
                     aliases: ["what's new", "whats new", "changelog", "notes", "version"]
+                ),
+                make(
+                    .aboutLinen,
+                    group: .library,
+                    title: "About Linen",
+                    symbol: "info.circle",
+                    aliases: ["app version", "credits"]
+                ),
+                make(
+                    .quitLinen,
+                    group: .library,
+                    title: "Quit Linen",
+                    symbol: "power",
+                    shortcut: "⌘Q",
+                    aliases: ["exit app", "quit browser"]
                 ),
             ]
         }

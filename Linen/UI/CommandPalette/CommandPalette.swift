@@ -10,6 +10,7 @@ struct CommandPalette: View {
     @State private var model: CommandPaletteModel
     @State private var shortcutMonitor: Any?
     @State private var focused = false
+    @State private var optionHeld = false
 
     init(
         browser: BrowserModel,
@@ -48,8 +49,9 @@ struct CommandPalette: View {
                 sections: model.sections,
                 query: model.resultQuery,
                 selection: model.interaction.selection,
+                optionHeld: optionHeld,
                 maxHeight: layout.maxListHeight,
-                onSelect: model.selectSuggestion,
+                onSelect: model.hoverSuggestion,
                 onRun: model.run,
                 onRunAlternate: model.runAlternate
             )
@@ -61,6 +63,7 @@ struct CommandPalette: View {
         .shadow(color: .black.opacity(0.4), radius: 44, y: 18)
         .padding(.top, layout.topInset)
         .onAppear {
+            optionHeld = CommandPaletteShortcutPolicy.showsCurrentTab(modifiers: NSEvent.modifierFlags)
             model.prepare()
             watchForShortcuts(model: model)
         }
@@ -87,10 +90,16 @@ struct CommandPalette: View {
 
     private func watchForShortcuts(model: CommandPaletteModel) {
         guard shortcutMonitor == nil else { return }
-        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
+            if event.type == .flagsChanged {
+                MainActor.assumeIsolated {
+                    optionHeld = CommandPaletteShortcutPolicy.showsCurrentTab(modifiers: event.modifierFlags)
+                }
+                return event
+            }
             let key = event.charactersIgnoringModifiers ?? ""
-            if CommandPaletteShortcutPolicy.opensInNewTab(modifiers: event.modifierFlags, key: key) {
-                MainActor.assumeIsolated { model.submitInNewTab() }
+            if CommandPaletteShortcutPolicy.opensInCurrentTab(modifiers: event.modifierFlags, key: key) {
+                MainActor.assumeIsolated { model.submitInCurrentTab() }
                 return nil
             }
             if CommandPaletteShortcutPolicy.shouldDismiss(modifiers: event.modifierFlags, key: key) {
