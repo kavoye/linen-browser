@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.7.1
+
+### New
+
+- New Tab opens the command palette. Enter an address or search, then choose
+  a result to create the tab. Choose Open Start Page to open the start page.
+- The assistant can drag and double-click on pages, interact with embedded
+  pages, upload files you select, and check downloads. Page permissions apply.
+
+### Improved
+
+- The assistant checks page and download results before marking a task complete
+  and reports outcomes it cannot verify.
+- Pages opened by the assistant appear in the active tab so you can follow
+  its work.
+- Conversation context limits now account for the selected provider and model.
+- Settings search opens the relevant page and highlights the matching control,
+  including controls within OpenAI settings.
+- Sleeping tabs release more memory. Reloading can recover pages whose browser
+  process has stopped responding.
+
+### Fixed
+
+- The assistant retries temporary provider failures without repeating browser
+  actions that already ran.
+- Voice configuration uses the provider you selected.
+- Moving the pointer over command palette suggestions no longer replaces
+  what you typed.
+- Autofill can reuse a recent authentication on the same page. It asks again
+  after you navigate or switch profiles.
+- Writing fields that mention an email address or name no longer trigger
+  contact autofill suggestions.
+- Repaired update sources for older Firefox extension installations and fixed
+  compatibility with extension icons and keyboard shortcuts.
+- Certificate checks no longer hang the browser.
+- The address bar loading indicator feels smoother when loading the page.
+
+### Removed
+
+- The OpenAI document-search library. You can still attach files to messages.
+- The blank-page and custom-homepage options for new tabs.
+
 ## 0.7.0
 
 ### New
