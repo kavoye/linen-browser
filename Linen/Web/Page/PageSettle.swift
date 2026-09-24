@@ -8,6 +8,7 @@ import WebKit
 enum PageSettle {
     static let loadCeiling: Duration = .seconds(12)
     static let navigationGrace: Duration = .milliseconds(400)
+    @TaskLocal static var interactionObserver: (@MainActor @Sendable () -> Void)?
 
     @discardableResult
     static func untilIdle(
@@ -24,6 +25,7 @@ enum PageSettle {
         quietCeiling: Duration = .milliseconds(1500),
         clock: some Clock<Duration> = ContinuousClock()
     ) async {
+        interactionObserver?()
         let navigated = await wait(on: webView, timeout: grace, clock: clock) { $0.isLoading }
         if navigated {
             await untilIdle(webView, clock: clock)

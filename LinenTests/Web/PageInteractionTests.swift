@@ -226,20 +226,25 @@ struct PageInteractionTests {
         }
     }
 
-    @Test func batchingAvoidsPerFieldSettlingAndReturnsOneObservation() async {
+    @Test func batchingWaitsForNavigationOnceAndReturnsOneObservation() async {
         let view = await page((1...8).map { "<input aria-label='Field \($0)'>" }.joined())
         _ = await PageDriver.snapshot(view)
-        let singleStart = ContinuousClock.now
-        for ref in 1...8 {
-            _ = await PageDriver.type(text: "individual", intoField: "", ref: ref, submit: false, in: view)
+        var interactionWaits = 0
+        await PageSettle.$interactionObserver.withValue({ interactionWaits += 1 }) {
+            for ref in 1...8 {
+                let result = await PageDriver.type(text: "individual", intoField: "", ref: ref, submit: false, in: view)
+                #expect(result.hasPrefix("Typed"), "\(result)")
+            }
         }
-        let individualDuration = singleStart.duration(to: .now)
-        let batchStart = ContinuousClock.now
-        let batch = await PageDriver.fillFields((1...8).map { .init(ref: $0, value: "batch", select: false) }, in: view)
-        let batchDuration = batchStart.duration(to: .now)
+        #expect(interactionWaits == 8)
+        interactionWaits = 0
+        let batch = await PageSettle.$interactionObserver.withValue({ interactionWaits += 1 }) {
+            await PageDriver.fillFields((1...8).map { .init(ref: $0, value: "batch", select: false) }, in: view)
+        }
         #expect(batch.hasPrefix("Filled 8 of 8"))
         #expect(batch.components(separatedBy: "observationID:").count == 2)
-        #expect(batchDuration < individualDuration)
+        #expect(interactionWaits == 1)
+        #expect(await js(view, "Array.from(document.querySelectorAll('input')).every(input => input.value === 'batch')") as? Bool == true)
     }
 
     @Test func checkedStateIsIdempotentAndDropdownInspectionContinues() async {
