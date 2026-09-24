@@ -80,7 +80,6 @@ jobs:
             -derivedDataPath "$DD" \
             -resultBundlePath build/TestResults.xcresult \
             -enableCodeCoverage YES \
-            -collect-test-diagnostics never \
             -parallel-testing-enabled NO \
             -skipMacroValidation -skipPackagePluginValidation \
             CODE_SIGN_STYLE=Manual \

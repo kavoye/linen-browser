@@ -289,8 +289,9 @@ struct PageComputerInputTests {
     @Test(arguments: [false, true])
     func nativePointerActionsAndModifiersReachPageHandlers(reorderWindow: Bool) async throws {
         let (view, window) = await page("""
+            <style>#target { -webkit-user-select:none; user-select:none; }</style>
             <div id='target' style='position:absolute;left:20px;top:20px;width:250px;height:150px'>Pointer target</div>
-            <script>window.stats={}; for(const type of ['click','dblclick','contextmenu','mousemove','mousedown','mouseup'])
+            <script>window.stats={dragstart:0}; for(const type of ['click','dblclick','contextmenu','mousemove','mousedown','mouseup','dragstart'])
               document.querySelector('#target').addEventListener(type,e=>{stats[type]=(stats[type]||0)+1;stats.shift=e.shiftKey;stats.trusted=e.isTrusted;});</script>
             """)
         defer { window.close() }
@@ -308,6 +309,9 @@ struct PageComputerInputTests {
         double["keys"] = ["SHIFT"]
         try await perform(double)
         #expect(try await view.evaluateJavaScript("stats.dblclick === 1 && stats.shift && stats.trusted") as? Bool == true)
+        // A selected word starts an AppKit text drag, which waits for a physical
+        // mouse release that these in-process synthetic events cannot supply.
+        #expect(try await view.evaluateJavaScript("window.getSelection().toString() === ''") as? Bool == true)
         var right = point(60, 60, frame: frame)
         right["button"] = "right"
         try await perform(right)
@@ -322,6 +326,7 @@ struct PageComputerInputTests {
             let ups = try #require(try await view.evaluateJavaScript("stats.mouseup") as? Int)
             try await perform(["type": "drag", "path": .array(path)])
             #expect(try await view.evaluateJavaScript("stats.mousedown === \(downs + 1) && stats.mouseup === \(ups + 1) && stats.trusted") as? Bool == true)
+            #expect(try await view.evaluateJavaScript("stats.dragstart === 0") as? Bool == true)
         }
     }
 
