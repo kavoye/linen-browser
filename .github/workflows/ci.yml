@@ -74,13 +74,13 @@ jobs:
       # run. Nothing under test reaches the keychain.
       - name: Test
         run: |
-          set -o pipefail
-          xcodebuild test \
+          python3 Tools/run-xcodebuild-with-watchdog.py -- xcodebuild test \
             -project "$PROJECT" -scheme "$SCHEME" \
             -destination 'platform=macOS,arch=arm64' \
             -derivedDataPath "$DD" \
             -resultBundlePath build/TestResults.xcresult \
             -enableCodeCoverage YES \
+            -collect-test-diagnostics never \
             -parallel-testing-enabled NO \
             -skipMacroValidation -skipPackagePluginValidation \
             CODE_SIGN_STYLE=Manual \
@@ -94,11 +94,20 @@ jobs:
       - name: Export performance metrics
         if: always()
         run: |
-          if [ -d build/TestResults.xcresult ]; then
+          if [ -f build/TestResults.xcresult/Info.plist ]; then
             xcrun xcresulttool get test-results metrics \
               --path build/TestResults.xcresult --compact \
               > build/performance-metrics.json
           fi
+
+      - name: Upload test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: TestDiagnostics
+          path: build/ci-diagnostics
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Check performance budgets
         run: Tools/check-performance.sh build/performance-metrics.json
@@ -117,7 +126,7 @@ jobs:
       - name: Package test results
         if: failure()
         run: |
-          if [ -d build/TestResults.xcresult ]; then
+          if [ -f build/TestResults.xcresult/Info.plist ]; then
             ditto -c -k --keepParent build/TestResults.xcresult build/TestResults.xcresult.zip
           fi
 

@@ -286,10 +286,11 @@ struct PageComputerInputTests {
         }
     }
 
-    @Test func nativePointerActionsAndModifiersReachPageHandlers() async throws {
+    @Test(arguments: [false, true])
+    func nativePointerActionsAndModifiersReachPageHandlers(reorderWindow: Bool) async throws {
         let (view, window) = await page("""
             <div id='target' style='position:absolute;left:20px;top:20px;width:250px;height:150px'>Pointer target</div>
-            <script>window.stats={}; for(const type of ['click','dblclick','contextmenu','mousemove','mouseup'])
+            <script>window.stats={}; for(const type of ['click','dblclick','contextmenu','mousemove','mousedown','mouseup'])
               document.querySelector('#target').addEventListener(type,e=>{stats[type]=(stats[type]||0)+1;stats.shift=e.shiftKey;stats.trusted=e.isTrusted;});</script>
             """)
         defer { window.close() }
@@ -311,9 +312,17 @@ struct PageComputerInputTests {
         right["button"] = "right"
         try await perform(right)
         #expect(try await view.evaluateJavaScript("stats.contextmenu === 1") as? Bool == true)
+        if reorderWindow {
+            window.orderOut(nil)
+            window.orderBack(nil)
+        }
         let path = [point(70, 70, frame: frame), point(90, 80, frame: frame), point(110, 90, frame: frame)]
-        try await perform(["type": "drag", "path": .array(path)])
-        #expect(try await view.evaluateJavaScript("stats.mouseup >= 4 && stats.trusted") as? Bool == true)
+        for _ in 0..<3 {
+            let downs = try #require(try await view.evaluateJavaScript("stats.mousedown") as? Int)
+            let ups = try #require(try await view.evaluateJavaScript("stats.mouseup") as? Int)
+            try await perform(["type": "drag", "path": .array(path)])
+            #expect(try await view.evaluateJavaScript("stats.mousedown === \(downs + 1) && stats.mouseup === \(ups + 1) && stats.trusted") as? Bool == true)
+        }
     }
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["LINEN_COMPUTER_FOREGROUND_TEST"] == "1"))

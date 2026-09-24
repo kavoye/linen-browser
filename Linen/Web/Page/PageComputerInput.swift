@@ -446,7 +446,30 @@ extension PageDriver {
             })?.owner as? NSObject else { throw PageComputerFailure.unavailable }
             owner.perform(selector, with: event)
         } else {
-            window.sendEvent(event)
+            try dispatchComputerMouse(event, to: hit)
+        }
+    }
+
+    private static func dispatchComputerMouse(_ event: NSEvent, to target: NSView) throws {
+        // Synthetic events have no WindowServer mouse-tracking state. Deliver the
+        // native events to the checked WebKit view so AppKit cannot drop the release.
+        switch event.type {
+        case .leftMouseDown:
+            target.mouseDown(with: event)
+        case .leftMouseDragged:
+            target.mouseDragged(with: event)
+        case .leftMouseUp:
+            target.mouseUp(with: event)
+        case .rightMouseDown:
+            target.rightMouseDown(with: event)
+        case .rightMouseUp:
+            target.rightMouseUp(with: event)
+        case .otherMouseDown:
+            target.otherMouseDown(with: event)
+        case .otherMouseUp:
+            target.otherMouseUp(with: event)
+        default:
+            throw PageComputerFailure.unavailable
         }
     }
 
