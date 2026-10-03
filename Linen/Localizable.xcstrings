@@ -780,9 +780,6 @@
     "Allow %@ to Access This Tab?" : {
 
     },
-    "Allow a hosted shell to run commands and create files." : {
-
-    },
     "Allow a hosted shell to run commands and create files. Extra charges may apply." : {
 
     },
@@ -890,7 +887,7 @@
     "Appearance" : {
       "comment" : "Name of the Appearance page in the Settings sidebar and the heading at the top of that page."
     },
-    "Appearance, search, privacy, websites, and downloads go back to their defaults. Tabs, history, shortcuts, and your provider aren’t affected." : {
+    "Appearance, search, privacy, websites, and downloads go back to their defaults. Tabs, history, shortcuts, and your provider aren't affected." : {
 
     },
     "Apple Intelligence" : {
@@ -1558,9 +1555,6 @@
     "Connect external assistants to tabs you choose. Private tabs are never shared." : {
       "comment" : "MCP settings: private browsing pauses access without changing the saved enabled preference."
     },
-    "Connect MCP services your assistant can use." : {
-
-    },
     "Connect services your assistant can use." : {
 
     },
@@ -1933,9 +1927,6 @@
 
     },
     "Edit additional parameters and hosted tool definitions." : {
-
-    },
-    "Edit additional response parameters and hosted tool definitions." : {
 
     },
     "Edit connection" : {
@@ -2969,9 +2960,6 @@
     "Move left for more transparency or right for more contrast." : {
 
     },
-    "Move left for more transparency or right for more contrast. Available with Transparent window style." : {
-
-    },
     "Move Linen to the Applications folder?" : {
       "comment" : "Title of the alert Linen shows at launch when it runs from anywhere other than an Applications folder. Sentence case, and the question mark is the only closing punctuation macOS dialog titles take."
     },
@@ -3466,9 +3454,6 @@
     },
     "Other websites" : {
       "comment" : "Label of the row that sets the answer for every website not listed individually below it, in the Websites permissions section. A noun phrase, not a heading."
-    },
-    "Override models used for dictation, read aloud, and conversation." : {
-
     },
     "Override the models used for listening and speech." : {
 
@@ -4162,9 +4147,6 @@
     "Save an extra copy for retrieval through the OpenAI API. You don’t need this for Linen’s chat history." : {
 
     },
-    "Save and fill cards at checkout." : {
-
-    },
     "Save and fill contact details." : {
 
     },
@@ -4381,9 +4363,6 @@
     "Set a checkbox or radio selection." : {
 
     },
-    "Set a model request limit for long assistant tasks." : {
-
-    },
     "Set as Default" : {
       "comment" : "Button that makes Linen the Mac’s default browser. Default is a noun here, meaning the default browser; the button reads simply Default once that is already the case. Title Case."
     },
@@ -4397,9 +4376,6 @@
 
     },
     "Set defaults for websites and review the settings you changed." : {
-
-    },
-    "Set how the assistant speaks in conversations." : {
 
     },
     "Set the default zoom for websites. You can also zoom individual tabs." : {
