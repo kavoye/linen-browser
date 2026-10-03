@@ -173,6 +173,8 @@ final class SitePermissions {
 
     private(set) var popupRecords: [String: PopupPolicy] = [:]
 
+    private(set) var externalAppRecords: [String: [ExternalAppPermission]] = [:]
+
     private let file: URL
     private var saveTask: Task<Void, Never>?
 
@@ -235,6 +237,36 @@ final class SitePermissions {
 
     var popupOrigins: [String] {
         popupRecords.keys.sorted()
+    }
+
+    func externalApps(for origin: String) -> [ExternalAppPermission] {
+        externalAppRecords[normalize(origin)] ?? []
+    }
+
+    func allowExternalApp(_ app: ExternalAppPermission, for origin: String) {
+        let origin = normalize(origin)
+        guard let url = URL(string: origin), ["http", "https"].contains(url.scheme),
+              !app.scheme.isEmpty, !app.bundleIdentifier.isEmpty
+        else { return }
+        var apps = externalAppRecords[origin] ?? []
+        apps.removeAll { $0.id == app.id }
+        apps.append(app)
+        externalAppRecords[origin] = apps.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        scheduleSave()
+    }
+
+    func removeExternalApp(_ app: ExternalAppPermission, for origin: String) {
+        let origin = normalize(origin)
+        externalAppRecords[origin]?.removeAll { $0.id == app.id }
+        if externalAppRecords[origin]?.isEmpty == true {
+            externalAppRecords[origin] = nil
+        }
+        scheduleSave()
+    }
+
+    func removeExternalApps(for origin: String) {
+        externalAppRecords[normalize(origin)] = nil
+        scheduleSave()
     }
 
     // MARK: - Writing
@@ -324,6 +356,7 @@ final class SitePermissions {
         assistantRecords = [:]
         autoplayRecords = [:]
         popupRecords = [:]
+        externalAppRecords = [:]
         keptActiveOriginSet = []
         keptActiveOrigins = []
         noAutomaticPictureOriginSet = []
@@ -402,6 +435,7 @@ final class SitePermissions {
         var noAutomaticPicture: Set<String> = []
         var autoplay: [String: AutoplayPolicy] = [:]
         var popups: [String: PopupPolicy] = [:]
+        var externalApps: [String: [ExternalAppPermission]] = [:]
 
         init(
             records: [String: [WebPermission: PermissionPolicy]],
@@ -411,7 +445,8 @@ final class SitePermissions {
             keptActive: Set<String>,
             noAutomaticPicture: Set<String>,
             autoplay: [String: AutoplayPolicy],
-            popups: [String: PopupPolicy]
+            popups: [String: PopupPolicy],
+            externalApps: [String: [ExternalAppPermission]]
         ) {
             self.records = records
             self.defaults = defaults
@@ -420,6 +455,7 @@ final class SitePermissions {
             self.noAutomaticPicture = noAutomaticPicture
             self.autoplay = autoplay
             self.popups = popups
+            self.externalApps = externalApps
         }
 
         init(from decoder: Decoder) throws {
@@ -452,6 +488,10 @@ final class SitePermissions {
                 [String: PopupPolicy].self,
                 forKey: .popups
             ) ?? [:]
+            externalApps = try values.decodeIfPresent(
+                [String: [ExternalAppPermission]].self,
+                forKey: .externalApps
+            ) ?? [:]
         }
     }
 
@@ -463,6 +503,7 @@ final class SitePermissions {
             .union(snapshot.assistantAccess.keys)
             .union(snapshot.autoplay.keys)
             .union(snapshot.popups.keys)
+            .union(snapshot.externalApps.keys)
             .count
     }
 
@@ -476,7 +517,8 @@ final class SitePermissions {
             keptActive: keptActiveOriginSet,
             noAutomaticPicture: noAutomaticPictureOriginSet,
             autoplay: autoplayRecords,
-            popups: popupRecords
+            popups: popupRecords,
+            externalApps: externalAppRecords
         )
         let url = file
         saveTask = Task {
@@ -524,6 +566,11 @@ final class SitePermissions {
             if !origin.isEmpty, popupRecords[origin] == nil {
                 popupRecords[origin] = policy
             }
+        }
+        for (key, apps) in snapshot.externalApps {
+            let origin = normalize(key)
+            guard let url = URL(string: origin), ["http", "https"].contains(url.scheme), !apps.isEmpty else { continue }
+            externalAppRecords[origin] = apps
         }
     }
 

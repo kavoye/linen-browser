@@ -230,6 +230,7 @@ final class BrowserTab: Identifiable {
 
     let extensionBaseURL: URL?
     let popups: TabPopupPolicy
+    let externalApps: TabExternalAppPolicy
 
     private var navigationDelegate: TabNavigationDelegate?
     let permissions: TabPermissionCenter
@@ -265,6 +266,7 @@ final class BrowserTab: Identifiable {
         self.id = id
         isPrivate = privately
         popups = TabPopupPolicy(store: sitePermissions)
+        externalApps = TabExternalAppPolicy(store: sitePermissions, isPrivate: privately)
         permissions = TabPermissionCenter(store: sitePermissions)
         assistantAccess = TabAssistantAccessCenter(store: sitePermissions)
         permissions.persistsAnswers = !privately

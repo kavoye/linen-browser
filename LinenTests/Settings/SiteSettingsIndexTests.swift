@@ -97,6 +97,19 @@ struct SiteSettingsIndexTests {
         #expect(entries(permissions).isEmpty)
     }
 
+    @Test func savedAppChoicesAppearInWebsiteSettingsAndLeaveAfterRevocation() {
+        let permissions = store()
+        let slack = ExternalAppPermission(scheme: "slack", bundleIdentifier: "com.tinyspeck.slackmacgap", name: "Slack")
+        permissions.allowExternalApp(slack, for: "https://slack.com")
+        let found = entries(permissions)
+        #expect(found.count == 1)
+        #expect(found.first?.externalApps == [slack])
+        #expect(found.first?.summary.contains("Slack") == true)
+        #expect(found.first?.isEmpty == false)
+        permissions.removeExternalApps(for: "https://slack.com")
+        #expect(entries(permissions).isEmpty)
+    }
+
     @Test func theSummaryNamesEveryRuleTheWebsiteCarries() {
         let permissions = store()
         permissions.set(.allow, for: "https://example.com", .camera)

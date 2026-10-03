@@ -455,6 +455,8 @@ private struct SiteDetailPage: View {
             }
         }
 
+        ExternalAppsSection(origin: origin, permissions: permissions)
+
         SettingsSection(title: "Permissions", symbol: "hand.raised") {
             ForEach(Array(WebPermission.allCases.enumerated()), id: \.element) { index, permission in
                 if index > 0 {
@@ -494,6 +496,34 @@ private struct SiteDetailPage: View {
         permissions.setAllowsAutomaticPicture(true, for: origin)
         permissions.setAutoplay(nil, for: origin)
         permissions.setPopups(nil, for: origin)
+        permissions.removeExternalApps(for: origin)
         blocker.setExempt(false, for: host)
+    }
+}
+
+private struct ExternalAppsSection: View {
+    let origin: String
+    let permissions: SitePermissions
+
+    var body: some View {
+        let apps = permissions.externalApps(for: origin)
+        if !apps.isEmpty {
+            SettingsSection(title: "Opening apps", symbol: "arrow.up.forward.app") {
+                ForEach(apps) { app in
+                    DetailRow(
+                        title: LocalizedStringResource("\(app.name)"),
+                        caption: "This website can open this app without asking."
+                    ) {
+                        SettingsButton(title: "Ask next time") {
+                            permissions.removeExternalApp(app, for: origin)
+                        }
+                        .accessibilityLabel("Ask before opening \(app.name)")
+                    }
+                    if app.id != apps.last?.id {
+                        RowSeparator()
+                    }
+                }
+            }
+        }
     }
 }

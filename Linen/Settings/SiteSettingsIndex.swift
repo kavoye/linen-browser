@@ -13,6 +13,7 @@ struct SiteSettingsEntry: Identifiable, Equatable {
     var allowsTrackers = false
     var autoplay: AutoplayPolicy?
     var popups: PopupPolicy?
+    var externalApps: [ExternalAppPermission] = []
     var assistantGrants: [SensitiveAction.Category] = []
 
     var id: String {
@@ -31,6 +32,7 @@ struct SiteSettingsEntry: Identifiable, Equatable {
             && !allowsTrackers
             && autoplay == nil
             && popups == nil
+            && externalApps.isEmpty
             && assistantGrants.isEmpty
     }
 
@@ -99,6 +101,11 @@ struct SiteSettingsEntry: Identifiable, Equatable {
             break
         }
 
+        if !externalApps.isEmpty {
+            let names = externalApps.map(\.name).formatted(.list(type: .and, width: .narrow))
+            phrases.append(String(localized: "opens \(names) without asking"))
+        }
+
         return phrases
     }
 
@@ -159,6 +166,12 @@ enum SiteSettingsIndex {
         for origin in permissions.popupOrigins {
             var found = entry(for: origin)
             found.popups = permissions.popups(for: origin)
+            byOrigin[origin] = found
+        }
+
+        for origin in permissions.externalAppRecords.keys {
+            var found = entry(for: origin)
+            found.externalApps = permissions.externalApps(for: origin)
             byOrigin[origin] = found
         }
 

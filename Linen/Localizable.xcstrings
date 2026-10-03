@@ -16,6 +16,9 @@
     "(%@ cached)" : {
       "comment" : "Trailing note on the input-token field of the agent activity column's usage footer, reading “12K in (38% cached)”. %@ is an already-formatted percentage (with its own per-cent sign) for the share of input the provider served from its cache. Keep the parentheses; very tight."
     },
+    "%@" : {
+
+    },
     "%@\n%@\n\nChoose access:\n• Read Only: read page content.\n• Allow Control: also click, type, and navigate." : {
       "localizations" : {
         "en" : {
@@ -88,6 +91,16 @@
     },
     "%@ unavailable, using Apple Intelligence" : {
       "comment" : "Status message shown when the chosen model provider cannot answer and Linen falls back to the on-device model. %@ is the provider's name, e.g. OpenAI or Ollama. “Apple Intelligence” is Apple's product name — leave as is."
+    },
+    "%@ wants to open %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ wants to open %2$@."
+          }
+        }
+      }
     },
     "%@ wants to open %@.\n\nIt will be able to read the page, click, type, and navigate." : {
       "localizations" : {
@@ -782,6 +795,9 @@
     "Allow Control lets the assistant read and use page controls on %@. Read Only blocks this action. Password and payment fields stay blocked." : {
 
     },
+    "Allow for this private tab" : {
+
+    },
     "Allow Linen to use the microphone under Privacy & Security > Microphone." : {
       "comment" : "Status message shown when the user holds the push-to-talk shortcut but has refused the microphone. “Privacy & Security” and “Microphone” are macOS names — use the system's own wording; the > separates the settings path. Linen is the application name and is never translated."
     },
@@ -811,6 +827,9 @@
     },
     "Always Allow" : {
       "comment" : "Grants a permission permanently: a button on the permission badge in the toolbar, and the saved policy shown in the pop-up menus for camera, microphone, location and notifications on the Websites settings page. Title Case."
+    },
+    "Always allow for this website" : {
+
     },
     "Always Allow on %@" : {
       "comment" : "Button in the alert asking whether the assistant may click a sensitive control; it grants that category for one website only. %@ is the website's hostname, e.g. example.com. Title Case."
@@ -911,6 +930,12 @@
       "comment" : "Tooltip on a recent-task card on the start page. %@ is the user's own earlier prompt, quoted back as they wrote or spoke it — never translated. Keep the colon."
     },
     "Ask anything" : {
+
+    },
+    "Ask before opening %@" : {
+
+    },
+    "Ask next time" : {
 
     },
     "Ask this again" : {
@@ -1823,9 +1848,6 @@
     },
     "Dismiss Error" : {
 
-    },
-    "Do you want to allow this page to open “%@”?" : {
-      "comment" : "Heading of the alert asking whether a web page may launch another app on the Mac. %@ is that app's name as macOS displays it, inside curly quotes."
     },
     "Don’t Allow" : {
       "comment" : "Button in the permission panel that refuses the website's request, beside “Allow Once” and “Always Allow”. Keep the curly apostrophe. Title Case, and the three buttons share one narrow row."
@@ -3061,6 +3083,9 @@
     "No app can open this link." : {
       "comment" : "Heading of the alert shown when nothing installed on the Mac handles the kind of link that was clicked."
     },
+    "No app installed on this Mac handles %@ links." : {
+
+    },
     "No audio is arriving from your microphone. Check the input in Sound settings, then try again." : {
 
     },
@@ -3217,9 +3242,6 @@
     "Not specified" : {
 
     },
-    "Nothing installed on this Mac handles “%@” links." : {
-      "comment" : "Explanatory text in the alert shown when no app can open a link. %@ is the link's scheme, e.g. mailto or tel, inside curly quotes — a technical token, never translated."
-    },
     "nothing is kept" : {
       "comment" : "Caption under the Private Browsing command in the command palette: no history, cookie or cache survives the session. Sentence fragment, lower case."
     },
@@ -3289,14 +3311,17 @@
     "Only images and video on this page." : {
 
     },
-    "Open" : {
-      "comment" : "Button beside a finished download in Settings that opens the downloaded file. Imperative verb, not the adjective, and space is tight next to a file name."
+    "Open %@" : {
+
     },
     "Open %@ in a new tab" : {
       "comment" : "Shown at the bottom of the page while the pointer rests on a link and Command is held: Command-clicking opens the link in a new tab. %@ is the link's address, which is shown in a lighter ink than the rest of the sentence. Sentence case, no full stop."
     },
     "Open %@ in Peek" : {
       "comment" : "Shown at the bottom of the page while the pointer rests on a link and Shift is held: Shift-clicking opens the link in a Peek. %@ is the link's address, which is shown in a lighter ink than the rest of the sentence. Sentence case, no full stop."
+    },
+    "Open %@?" : {
+
     },
     "Open a new tab when you ask for one." : {
       "comment" : "Caption for the Open Tabs tool in assistant settings."
@@ -3408,6 +3433,12 @@
     },
     "Opened Tab" : {
       "comment" : "Detail suffix on an address bar result row that stands for an already-open tab; it is joined after the host with “ • ”, giving “example.com • Opened Tab”. Adjective plus noun, Title Case, very tight."
+    },
+    "Opening apps" : {
+
+    },
+    "opens %@ without asking" : {
+
     },
     "Opens a new issue on Linen’s repository." : {
 
@@ -5102,6 +5133,9 @@
     "This page is still loading." : {
 
     },
+    "This page wants to open %@." : {
+
+    },
     "This PDF contains an unreadable page." : {
 
     },
@@ -5118,6 +5152,9 @@
 
     },
     "This server did not provide valid OAuth discovery information. Enter the connection details manually." : {
+
+    },
+    "This website can open this app without asking." : {
 
     },
     "This website is asking for a username and password for “%@”." : {

@@ -7,6 +7,7 @@ import WebKit
 
 final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
     weak var tab: BrowserTab?
+    private var pendingMainFrameURL: URL?
 
     init(tab: BrowserTab) {
         self.tab = tab
@@ -27,9 +28,12 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             return
         }
         if let url = navigationAction.request.url, !ExternalApp.staysInWebView(url) {
+            let origin = requestingOrigin(for: navigationAction)
             decisionHandler(.cancel)
             let window = webView.window
-            Task { await ExternalApp.offerToOpen(url, in: window) }
+            if let policy = tab?.externalApps {
+                Task { await ExternalApp.offerToOpen(url, from: origin, policy: policy, in: window) }
+            }
             return
         }
         if let tab, let onOpenInNewTab = tab.onOpenInNewTab,
@@ -52,6 +56,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             return
         }
         if let tab, navigationAction.targetFrame?.isMainFrame != false {
+            pendingMainFrameURL = navigationAction.request.url
             tab.rememberScrollOffset()
             if let mapped = Self.transition(for: navigationAction.navigationType) {
                 tab.noteTransition(mapped)
@@ -73,6 +78,43 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
 
     /// WebKit numbers the middle button 4, not NSEvent's 2.
     private static let middleButton = 4
+
+    private func requestingOrigin(for action: WKNavigationAction) -> String {
+        let frame: WKFrameInfo? = action.sourceFrame
+        guard let frame else { return "" }
+        let sourceOrigin = Self.frameOrigin(frame.securityOrigin)
+        if frame.isMainFrame {
+            // Server redirects retain the previous document's source frame.
+            // The guarded WebKit getter distinguishes them from scripts in that
+            // document, which may still run while a new page is loading.
+            let selector = NSSelectorFromString("_isRedirect")
+            let isRedirect = action.responds(to: selector) ? action.value(forKey: "_isRedirect") as? Bool : nil
+            let pendingOrigin = Self.webOrigin(for: pendingMainFrameURL)
+            if isRedirect == true {
+                return pendingOrigin
+            }
+            if isRedirect == nil, pendingMainFrameURL != nil, pendingOrigin != sourceOrigin {
+                return ""
+            }
+        }
+        return sourceOrigin
+    }
+
+    private static func frameOrigin(_ origin: WKSecurityOrigin) -> String {
+        guard ["http", "https"].contains(origin.protocol.lowercased()), !origin.host.isEmpty else { return "" }
+        var components = URLComponents()
+        components.scheme = origin.protocol
+        components.host = origin.host
+        if origin.port != 0 {
+            components.port = origin.port
+        }
+        return Self.webOrigin(for: components.url)
+    }
+
+    private static func webOrigin(for url: URL?) -> String {
+        guard let scheme = url?.scheme?.lowercased(), ["http", "https"].contains(scheme) else { return "" }
+        return SitePermissions.origin(for: url)
+    }
 
     private static func reaches(
         _ url: URL,
@@ -326,6 +368,10 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         }
     }
 
+    func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
+        pendingMainFrameURL = webView.url
+    }
+
     // MARK: - Authentication
 
     func webView(
@@ -366,6 +412,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        pendingMainFrameURL = nil
         tab?.committedNavigation = navigation
         tab?.autofillSave.resetDismissalsForNavigation()
         if tab?.provisionalNavigation === navigation {
@@ -423,6 +470,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             tab?.autofillSave.submissions.clear()
         }
         if let tab, tab.provisionalNavigation === navigation {
+            pendingMainFrameURL = nil
             tab.provisionalNavigation = nil
             tab.releasePageColorHold()
             tab.refreshPageColor(from: webView)
