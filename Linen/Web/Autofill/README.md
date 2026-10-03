@@ -24,8 +24,11 @@ to a native form can supply account metadata for saving a multipage login.
 ## Suggestion presentation
 
 Focus and click share a field token, so native code reuses pending lookups and
-visible panels. Empty or failed lookups remain silent. DOM mutations can dismiss
-a disconnected target but never open suggestions or trigger metadata lookups.
+visible panels. A focus/click interaction waits up to one second for its field
+to become eligible and hold a stable position for 100 ms. Leaving the field,
+typing, or dismissal cancels that wait. Empty or failed lookups remain silent.
+DOM mutations can dismiss a disconnected target but never start a suggestion
+interaction or trigger metadata lookups by themselves.
 Only a visible, populated panel runs the geometry watcher; ownership, policy and
 origin are still revalidated before presentation and around authenticated filling.
 Typing or dismissal requires another focus/click interaction to reopen the panel.

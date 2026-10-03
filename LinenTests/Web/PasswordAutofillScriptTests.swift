@@ -11,8 +11,12 @@ import WebKit
 struct PasswordAutofillScriptTests {
     private final class Sink: NSObject, WKScriptMessageHandler {
         var body: [String: Any]?
+        var selections: [[String: Any]] = []
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             body = message.body as? [String: Any]
+            if let body, body["action"] as? String == "select" {
+                selections.append(body)
+            }
         }
     }
 
@@ -159,6 +163,76 @@ struct PasswordAutofillScriptTests {
         #expect(try await fill(token, in: view) == 1)
         #expect(try await view.evaluateJavaScript("password.value") as? String == "ada@example.test")
         #expect(try await view.evaluateJavaScript("!!window.submitted") as? Bool == false)
+    }
+
+    @Test(.boundedWebViews, arguments: [false, true])
+    func offersPasswordOnFirstFocusAfterUsernameStep(moving: Bool) async throws {
+        let (view, sink) = try await load(#"""
+        <form id="login"><input id="password" autocomplete="username"><button id="next" type="button">Next</button></form>
+        <script>
+          next.onclick = () => {
+            login.innerHTML = '<input id="password" type="password" autocomplete="current-password">';
+            const field = document.getElementById('password');
+            if (!window.moving) field.style.opacity = '0';
+            field.focus();
+            for (let tick = 1; tick <= 8; tick++) {
+              setTimeout(() => {
+                if (window.moving) field.style.transform = `translateY(${tick * 10}px)`;
+                if (tick === 8) {
+                  field.style.opacity = '1';
+                  window.stepReady = true;
+                }
+              }, tick * 30);
+            }
+          };
+        </script>
+        """#)
+        _ = try await select(in: view, sink: sink)
+        sink.selections = []
+        _ = try await view.callAsyncJavaScript(
+            "window.moving = moving; document.getElementById('next').click();",
+            arguments: ["moving": moving], in: nil, contentWorld: .page
+        )
+        #expect(try await waitUntil(timeout: .seconds(3)) {
+            try await view.evaluateJavaScript("window.stepReady === true") as? Bool == true && !sink.selections.isEmpty
+        })
+        let selection = try #require(sink.selections.first)
+        let rect = try #require(selection["rect"] as? [String: Double])
+        let top = try #require(try await view.evaluateJavaScript("password.getBoundingClientRect().y") as? Double)
+        #expect(abs((rect["y"] ?? -1) - top) < 1)
+        #expect(sink.selections.count == 1)
+        let token = try #require(selection["token"] as? String)
+        #expect(try await fill(token, in: view) == 1)
+        #expect(try await view.evaluateJavaScript("password.value") as? String == "dummy-secret")
+    }
+
+    @Test(.boundedWebViews) func leavingThePasswordFieldCancelsItsPendingSuggestions() async throws {
+        let (view, sink) = try await load(#"""
+        <form><input id="password" type="password" style="opacity:0"><input id="other" autocomplete="one-time-code"></form>
+        """#)
+        _ = try await view.evaluateJavaScript("password.focus(); other.focus(); password.style.opacity = '1';")
+        _ = try await view.callAsyncJavaScript(
+            "await new Promise(resolve => setTimeout(resolve, 1200));", arguments: [:], in: nil, contentWorld: .page
+        )
+        #expect(sink.selections.isEmpty)
+        let token = try await select(in: view, sink: sink)
+        #expect(try await fill(token, in: view) == 1)
+    }
+
+    @Test(.boundedWebViews, arguments: [false, true])
+    func cancelledOrExpiredFocusDoesNotOpenSuggestionsWhenTheFieldAppears(disableAutofill: Bool) async throws {
+        let (view, sink) = try await load(#"<input id="password" type="password" style="opacity:0">"#)
+        _ = try await view.callAsyncJavaScript(
+            """
+            document.getElementById('password').focus();
+            if (disableAutofill) globalThis.__linenPasswords.setEnabled(false);
+            else await new Promise(resolve => setTimeout(resolve, 1200));
+            document.getElementById('password').style.opacity = '1';
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            """,
+            arguments: ["disableAutofill": disableAutofill], in: nil, contentWorld: PasswordAutofill.world
+        )
+        #expect(sink.selections.isEmpty)
     }
 
     @Test(.boundedWebViews) func recognizesAFormlessAccountStepWithWebAuthnMetadata() async throws {

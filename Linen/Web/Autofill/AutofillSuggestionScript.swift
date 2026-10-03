@@ -67,8 +67,17 @@ nonisolated enum AutofillSuggestionScript {
           width:frame.clientWidth*sx,height:frame.clientHeight*sy};
       };
       const track = (channel, state, accepts) => {
-        const hide = () => { if (state.token) channel?.postMessage({action:'hide',token:state.token}); };
+        let pending = null, timer = null;
+        const cancelPending = () => {
+          if (timer !== null) clearTimeout(timer);
+          pending = null; timer = null;
+        };
+        const hide = () => {
+          cancelPending();
+          if (state.token) channel?.postMessage({action:'hide',token:state.token});
+        };
         const clear = () => {
+          cancelPending();
           if (state.token) channel?.postMessage({action:'dismiss',token:state.token});
           state.token = null; state.target = null;
         };
@@ -87,13 +96,46 @@ nonisolated enum AutofillSuggestionScript {
           channel?.postMessage({action:'select',token:state.token,url:state.url,rect:geometry(target),
             documentID:forms.documentID,formID:state.formID,fieldID:state.fieldID});
         };
+        const selectTarget = target => {
+          if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) ||
+              target !== active()) { clear(); return; }
+          if (pending?.target === target && pending.url === location.href) return;
+          if (state.token && state.target === target && state.url === location.href && accepts(target)) {
+            rememberTarget(target); return;
+          }
+          clear();
+          // A login step can focus its next field before revealing it or finishing its layout transition.
+          // Retry only this focus/click interaction, and send one request after its geometry settles.
+          const selection = {target,url:location.href,deadline:performance.now()+1000,rect:null,stableSince:null};
+          pending = selection;
+          const settle = () => {
+            timer = null;
+            if (pending !== selection) return;
+            if (!target.isConnected || active() !== target || location.href !== selection.url) { clear(); return; }
+            const now = performance.now();
+            if (now >= selection.deadline) { cancelPending(); return; }
+            const rect = accepts(target) ? geometry(target) : null;
+            const stable = rect && selection.rect &&
+              ['x','y','width','height','viewportWidth','viewportHeight'].every(key => Math.abs(rect[key]-selection.rect[key]) < 1);
+            if (!stable) selection.stableSince = rect ? now : null;
+            selection.rect = rect;
+            if (rect && now-selection.stableSince >= 100) {
+              cancelPending(); rememberTarget(target); return;
+            }
+            timer = setTimeout(settle, 50);
+          };
+          settle();
+        };
         const remember = event => {
-          if (event.isTrusted) rememberTarget(event.composedPath()[0]);
+          if (event.isTrusted) selectTarget(event.composedPath()[0]);
         };
         document.addEventListener('focusin', remember, true);
         document.addEventListener('click', remember, true);
         document.addEventListener('focusout', () => {
-          queueMicrotask(() => { if (state.target && active() !== state.target) clear(); });
+          queueMicrotask(() => {
+            const target = pending?.target || state.target;
+            if (target && active() !== target) clear();
+          });
         }, true);
         document.addEventListener('input', event => { if (event.isTrusted) clear(); }, true);
         document.addEventListener('keydown', event => {
@@ -108,9 +150,10 @@ nonisolated enum AutofillSuggestionScript {
         window.visualViewport?.addEventListener('resize', clear);
         window.visualViewport?.addEventListener('scroll', clear);
         forms.subscribe(() => {
-          if (state.target && (!state.target.isConnected || active() !== state.target)) clear();
+          const target = pending?.target || state.target;
+          if (target && (!target.isConnected || active() !== target)) clear();
         });
-        return {clear,refresh:() => rememberTarget(active())};
+        return {clear,refresh:() => selectTarget(active())};
       };
       const valid = (state,token,url) => !!token && state.token === token && state.url === url &&
         location.href === url && active() === state.target && forms.id(state.target) === state.fieldID &&
