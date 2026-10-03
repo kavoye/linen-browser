@@ -188,7 +188,7 @@ enum SettingsIndex {
                       ["downloads", "history", "list", "clear", "remove", "keep", "retention", "quit"]),
         SettingsEntry("downloads.ask", .downloads, "Ask where to save each file", "Choose a location every time.",
                       ["ask", "prompt", "where", "save as"]),
-        SettingsEntry("downloads.list", .downloads, "Recent downloads", "View downloads and their saved locations.",
+        SettingsEntry("downloads.list", .downloads, "Open downloads", "View downloads and their saved locations.",
                       ["downloads", "files", "recent", "history"]),
 
         SettingsEntry("provider.model", .provider, "Model", "The model used by the assistant.",

@@ -1388,9 +1388,6 @@
     "Clear History…" : {
       "comment" : "Command that raises the confirmation for deleting all browsing history: an item in the History menu and an action in the command palette. Title Case; the real ellipsis (…) promises a dialog rather than an immediate wipe, so keep it."
     },
-    "Clear list" : {
-
-    },
     "Clear List" : {
       "comment" : "The destructive confirming button in the sheet that empties the list of finished downloads. Title Case; “Clear” is a verb and “List” is the downloads list, not the files."
     },
@@ -3347,6 +3344,9 @@
     "Open Beside Current Page" : {
       "comment" : "Context-menu command on a sidebar row that shows that tab next to the page already open, as two panes. Title Case. Current page means the one on screen now."
     },
+    "Open downloads" : {
+      "comment" : "Settings row that opens the Downloads page."
+    },
     "Open Frame in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Frame means an HTML frame within the page. Title Case."
     },
@@ -3799,12 +3799,6 @@
     },
     "Reasoning summary" : {
 
-    },
-    "Recent" : {
-      "comment" : "Title of the Downloads settings section listing recently downloaded files. A short heading beside an icon, so keep it brief."
-    },
-    "Recent downloads" : {
-      "comment" : "Sentence case title of the same downloads list as it is indexed for the Settings search. Downloads means downloaded files."
     },
     "Recent files" : {
       "comment" : "Description of the Downloads section in the start page editor. No final full stop."
