@@ -83,13 +83,16 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                     )
                 }
                 let tabs = (0..<100).map { index in
-                    let tab = BrowserTab()
+                    // Result projection only reads metadata; loading pages adds unrelated WebKit work.
+                    let tab = BrowserTab(restoring: true)
                     tab.title = "Project tab \(index)"
                     tab.urlString = "https://tabs.example/project/\(index)"
                     return tab
                 }
+                let phrases = (0..<10).map { "project suggestion \($0)" }
                 let actions = CommandPaletteActions()
                 var projected: [OmniboxSection] = []
+                XCTAssertTrue(tabs.allSatisfy { !$0.isMaterialised })
 
                 measure(metrics: [XCTClockMetric(), XCTMemoryMetric()]) {
                     projected = CommandPaletteProjection.sections(
@@ -97,13 +100,14 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                         agentName: "Assistant",
                         history: history,
                         tabs: tabs,
-                        phrases: (0..<10).map { "project suggestion \($0)" },
+                        phrases: phrases,
                         actions: actions
                     )
                 }
 
                 XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "tabs", "history"])
                 XCTAssertEqual(projected.flattened.count, CommandPaletteBudget.typing)
+                XCTAssertTrue(tabs.allSatisfy { !$0.isMaterialised })
             }
         }
     }
@@ -152,7 +156,7 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                         fromVisit: nil
                     )
                 }
-                let tab = BrowserTab()
+                let tab = BrowserTab(restoring: true)
                 tab.title = "Project documentation"
                 tab.urlString = "https://docs.example/project/open"
                 let phrases = (0..<12).map { "project documentation \($0)" }
@@ -178,6 +182,7 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
 
                 XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "history", "ask"])
                 XCTAssertLessThanOrEqual(projected.flattened.count, 10)
+                XCTAssertFalse(tab.isMaterialised)
             }
         }
     }
