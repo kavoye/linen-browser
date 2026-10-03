@@ -3,6 +3,7 @@
 
 import AppKit
 import Foundation
+import os
 import WebKit
 
 final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
@@ -311,6 +312,47 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     // MARK: - Downloads
+
+    // The PDF viewer saves its loaded bytes through these private UI delegate
+    // selectors, rather than creating a WKDownload. There is no public equivalent.
+    @objc(_webView:saveDataToFile:suggestedFilename:mimeType:originatingURL:)
+    func webView(
+        _ webView: WKWebView,
+        saveDataToFile data: Data,
+        suggestedFilename: String,
+        mimeType: String,
+        originatingURL: URL?
+    ) {
+        guard let save = tab?.onSaveDocument else { return }
+        Task { await save(data, suggestedFilename, originatingURL, false) }
+    }
+
+    @objc(_webView:shouldAllowPDFAtURL:toOpenFromFrame:completionHandler:)
+    func webView(
+        _ webView: WKWebView,
+        shouldAllowPDFAtURL fileURL: URL,
+        toOpenFromFrame frame: WKFrameInfo,
+        completionHandler: @escaping (Bool) -> Void
+    ) {
+        // WebKit's copy is read-only and has a temporary filename. Open the
+        // saved download so Preview can edit it at the user's chosen location.
+        completionHandler(false)
+        guard let save = tab?.onSaveDocument else { return }
+        let source = frame.request.url
+        let filename = tab?.documentFilename(for: source) ?? fileURL.lastPathComponent
+        let window = webView.window
+        Task {
+            do {
+                let data = try await Task.detached(priority: .userInitiated) {
+                    try Data(contentsOf: fileURL)
+                }.value
+                await save(data, filename, source, true)
+            } catch {
+                Pipeline.log.error("PDF: reading WebKit's temporary copy failed")
+                await PageDialogs.alert(error.localizedDescription, from: frame, in: window)
+            }
+        }
+    }
 
     private var downloadSource: URL?
 

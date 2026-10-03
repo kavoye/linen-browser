@@ -73,6 +73,7 @@ final class DownloadManager: NSObject {
 
     @ObservationIgnored private let destinationFolderOverride: URL?
     @ObservationIgnored private let asksWhereToSaveOverride: Bool?
+    @ObservationIgnored var selectSaveLocation: ((String, URL, NSWindow?) async -> URL?)?
     @ObservationIgnored private let file: URL?
     @ObservationIgnored private var writeTask: Task<Void, Never>?
 
@@ -181,6 +182,40 @@ final class DownloadManager: NSObject {
             privately: privately
         )
         attach(download, to: id)
+    }
+
+    /// The PDF viewer already has the document bytes, including any edits.
+    /// Use the same destination settings and history as a network download.
+    func save(
+        _ data: Data,
+        suggestedFilename: String,
+        source: URL?,
+        sourceTabID: UUID? = nil,
+        privately: Bool = false,
+        on window: NSWindow? = nil
+    ) async -> URL? {
+        let id = beginItem(source: source, sourceTabID: sourceTabID, privately: privately)
+        update(id) { $0.filename = Self.safeFilename(suggestedFilename) }
+        let options: Data.WritingOptions = asksWhereToSave ? .atomic : .withoutOverwriting
+        guard let destination = await destination(for: suggestedFilename, on: window) else {
+            noteCancelRequested(id)
+            finish(id)
+            return nil
+        }
+        guard items.contains(where: { $0.id == id && $0.isRunning }) else { return nil }
+        noteDestination(destination, expectedLength: Int64(data.count), for: id)
+        do {
+            try await Task.detached(priority: .userInitiated) {
+                try data.write(to: destination, options: options)
+            }.value
+        } catch {
+            noteFailure(id, reason: error.localizedDescription, resumeData: nil)
+            return nil
+        }
+        guard items.contains(where: { $0.id == id && $0.isRunning }) else { return nil }
+        noteProgress(received: Int64(data.count), expected: Int64(data.count), for: id)
+        noteFinished(id)
+        return destination
     }
 
     @ObservationIgnored var onBegin: (() -> Void)?
@@ -387,6 +422,19 @@ final class DownloadManager: NSObject {
 
     // MARK: - Where the file goes
 
+    private var asksWhereToSave: Bool {
+        asksWhereToSaveOverride ?? BrowserSettings.shared.asksWhereToSave
+    }
+
+    private func destination(for filename: String, on window: NSWindow?) async -> URL? {
+        let settings = BrowserSettings.shared
+        let folder = destinationFolderOverride ?? settings.downloadFolder
+        let name = Self.safeFilename(filename)
+        return asksWhereToSave
+            ? await askWhereToSave(name, in: folder, on: window)
+            : uniqueDestination(for: name, in: folder)
+    }
+
     nonisolated static func safeFilename(_ suggested: String) -> String {
         var name = suggested
             .replacingOccurrences(of: "/", with: "_")
@@ -407,23 +455,31 @@ final class DownloadManager: NSObject {
         try? manager.createDirectory(at: folder, withIntermediateDirectories: true)
 
         let candidate = folder.appending(path: Self.safeFilename(filename))
-        guard manager.fileExists(atPath: candidate.path(percentEncoded: false)) else { return candidate }
+        guard destinationIsTaken(candidate) else { return candidate }
 
         let stem = candidate.deletingPathExtension().lastPathComponent
         let ext = candidate.pathExtension
         for index in 2...999 {
             let name = ext.isEmpty ? "\(stem) \(index)" : "\(stem) \(index).\(ext)"
             let next = folder.appending(path: name)
-            if !manager.fileExists(atPath: next.path(percentEncoded: false)) {
+            if !destinationIsTaken(next) {
                 return next
             }
         }
         return candidate
     }
 
+    private func destinationIsTaken(_ destination: URL) -> Bool {
+        FileManager.default.fileExists(atPath: destination.path(percentEncoded: false))
+            || items.contains { $0.isRunning && $0.destination == destination }
+    }
+
     /// A sheet, not `runModal()`. A nested event loop re-enters main-actor work
     /// and wedges when a second download starts under the first panel.
     private func askWhereToSave(_ filename: String, in folder: URL, on window: NSWindow?) async -> URL? {
+        if let selectSaveLocation {
+            return await selectSaveLocation(filename, folder, window)
+        }
         let panel = NSSavePanel()
         panel.title = String(localized: "Save File")
         panel.nameFieldStringValue = Self.safeFilename(filename)
@@ -452,16 +508,7 @@ extension DownloadManager: WKDownloadDelegate {
             return existing
         }
 
-        let settings = BrowserSettings.shared
-        let name = suggestedFilename.isEmpty ? "Download" : suggestedFilename
-        let folder = destinationFolderOverride ?? settings.downloadFolder
-        let asksWhereToSave = asksWhereToSaveOverride ?? settings.asksWhereToSave
-
-        let destination = asksWhereToSave
-            ? await askWhereToSave(name, in: folder, on: download.webView?.window)
-            : uniqueDestination(for: name, in: folder)
-
-        guard let destination else {
+        guard let destination = await destination(for: suggestedFilename, on: download.webView?.window) else {
             if let id = id(for: download) {
                 update(id) { $0.state = .cancelled }
                 finish(id)
@@ -477,6 +524,10 @@ extension DownloadManager: WKDownloadDelegate {
 
     func downloadDidFinish(_ download: WKDownload) {
         guard let id = id(for: download) else { return }
+        noteFinished(id)
+    }
+
+    private func noteFinished(_ id: UUID) {
         var filename = ""
         var destination: URL?
         update(id) {

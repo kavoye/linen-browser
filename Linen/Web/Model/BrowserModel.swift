@@ -152,6 +152,20 @@ final class BrowserModel {
                 privately: tab?.isPrivate ?? false
             )
         }
+        tab.onSaveDocument = { [weak self, weak tab] data, filename, source, opensAfterSaving in
+            guard let self, let tab, !tab.isClosed else { return }
+            let destination = await downloads.save(
+                data,
+                suggestedFilename: filename,
+                source: source,
+                sourceTabID: tab.id,
+                privately: tab.isPrivate,
+                on: tab.webView.window
+            )
+            if opensAfterSaving, let destination {
+                NSWorkspace.shared.open(destination)
+            }
+        }
         if tab.isMaterialised {
             BrowserSettings.shared.apply(to: tab.webView)
         }

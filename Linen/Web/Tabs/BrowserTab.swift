@@ -226,6 +226,7 @@ final class BrowserTab: Identifiable {
     var onPictureInPictureChanged: ((Bool) -> Void)?
     var onPictureReturnExpected: (() -> Void)?
     var onDownload: ((WKDownload, URL?) -> Void)?
+    var onSaveDocument: ((Data, String, URL?, Bool) async -> Void)?
     var onLinkHovered: ((URL?, NSEvent.ModifierFlags, CGPoint) -> Void)?
 
     let extensionBaseURL: URL?
@@ -604,6 +605,7 @@ final class BrowserTab: Identifiable {
         onPictureInPictureChanged = nil
         onPictureReturnExpected = nil
         onDownload = nil
+        onSaveDocument = nil
         onLinkHovered = nil
         onSameDocumentNavigation = nil
         onContentProcessTerminated = nil
