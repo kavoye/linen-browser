@@ -244,7 +244,8 @@ struct MCPTransportTests {
                 process.terminate()
             }
         }
-        let request = #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"Stdio integration","version":"1"}}}"#
+        let request = #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"elicitation":{"form":{},"url":{}}},"#
+            + #""clientInfo":{"name":"Stdio integration","title":"Codex","version":"1"}}}"#
         try input.fileHandleForWriting.write(contentsOf: Data((request + "\n").utf8))
         let (lines, continuation) = AsyncThrowingStream<Data, any Error>.makeStream()
         let read = Task.detached {

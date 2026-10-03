@@ -42,6 +42,20 @@ struct MCPClientInstallerTests {
         #expect(MCPClientKind.cursor.configurationURL(home: home, environment: [:]).path == "/Users/test/.cursor/mcp.json")
     }
 
+    @Test(arguments: ["Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex", "Contents/Resources/codex"])
+    func bundledCodexCLIIsDetectedWithoutShellPath(relativePath: String) throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let application = directory.appending(path: "ChatGPT.app")
+        let executable = application.appending(path: relativePath)
+        try FileManager.default.createDirectory(at: executable.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("#!/bin/sh\nexit 0\n".utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: executable.path)
+        #expect(MCPClientDiscovery.codexExecutable(home: directory, environment: [:], applications: [application]) == nil)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
+        #expect(MCPClientDiscovery.codexExecutable(home: directory, environment: [:], applications: [application]) == executable)
+    }
+
     @Test(arguments: [MCPClientKind.claudeDesktop, .claudeCode, .cursor])
     func JSONMergePreservesOtherServersAndPrivateClientState(kind: MCPClientKind) throws {
         let source = Data(#"""
@@ -182,7 +196,15 @@ struct MCPClientInstallerTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path) == ["config.toml"])
     }
 
-    @Test(.enabled(if: FileManager.default.isExecutableFile(atPath: "/Applications/ChatGPT.app/Contents/Resources/codex")))
+    private nonisolated static var installedCodex: URL? {
+        MCPClientDiscovery.codexExecutable(
+            home: FileManager.default.homeDirectoryForCurrentUser,
+            environment: ProcessInfo.processInfo.environment,
+            applications: [URL(fileURLWithPath: "/Applications/ChatGPT.app"), URL(fileURLWithPath: "/Applications/Codex.app")]
+        )
+    }
+
+    @Test(.enabled(if: installedCodex != nil))
     func installedCodexCLIPreservesTOMLCommentsOtherServersAndPermissions() async throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -190,7 +212,7 @@ struct MCPClientInstallerTests {
         let original = Data("# Keep this comment\nmodel = \"test\"\n[mcp_servers.\"other.server\"]\ncommand = \"/bin/true\"\nenabled = false\n".utf8)
         try original.write(to: url)
         let destination = MCPClientTarget(kind: .codex, configurationURL: url,
-                                          codexExecutable: URL(fileURLWithPath: "/Applications/ChatGPT.app/Contents/Resources/codex"), isDetected: true)
+                                          codexExecutable: try #require(Self.installedCodex), isDetected: true)
         let installer = MCPClientInstaller()
         #expect(try await !installer.isInstalled(destination, command: command))
         let result = try await installer.install(destination, command: command)
