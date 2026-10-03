@@ -16,7 +16,9 @@ enum MediaScript {
       let video = null;
       let gestureAttempts = 0;
       let muteAll = false;
-      const attached = new WeakSet();
+      let scanTimer = null;
+      let pendingScan = null;
+      let pageHidden = false;
       function media() {
         return Array.prototype.slice.call(document.querySelectorAll('video, audio'));
       }
@@ -194,6 +196,7 @@ enum MediaScript {
           sendState();
           reportAudio();
           reportVideo();
+          updatePolling();
           return;
         }
         const video = primary();
@@ -340,8 +343,8 @@ enum MediaScript {
         if (!found.__linenBound) {
           found.__linenBound = true;
           if (muteAll) { found.muted = true; }
-          ['play', 'pause', 'timeupdate', 'volumechange', 'durationchange', 'seeked', 'ended']
-            .forEach(function (name) { found.addEventListener(name, sendState); });
+          ['play', 'pause', 'timeupdate', 'volumechange', 'durationchange', 'seeked', 'ended', 'loadedmetadata', 'emptied', 'resize']
+            .forEach(function (name) { found.addEventListener(name, mediaChanged); });
           ['play', 'pause', 'ended', 'emptied', 'volumechange']
             .forEach(function (name) { found.addEventListener(name, reportAudio); });
           found.addEventListener('volumechange', function () {
@@ -357,6 +360,12 @@ enum MediaScript {
         }
         sendState();
         reportAudio();
+      }
+      function mediaChanged(event) {
+        sendState();
+        sendMeta();
+        if (['loadedmetadata', 'emptied', 'resize'].includes(event.type)) { reportVideo(); }
+        if (['play', 'pause', 'ended', 'emptied'].includes(event.type)) { updatePolling(); }
       }
       function allowPiP(v) {
         if (v.disablePictureInPicture) { v.disablePictureInPicture = false; }
@@ -389,10 +398,67 @@ enum MediaScript {
         reportAudio();
         reportVideo();
         reportRect();
+        updatePolling();
       }
+      // Only a visible, playing page needs periodic metadata and geometry checks.
+      // Paused players and pages without media must not wake up to scan the DOM.
+      function updatePolling() {
+        const needsPolling = !pageHidden && !document.hidden && media().some(function (m) {
+          return !m.paused && !m.ended;
+        });
+        if (needsPolling && scanTimer === null) { scanTimer = setInterval(scan, 500); }
+        else if (!needsPolling && scanTimer !== null) {
+          clearInterval(scanTimer);
+          scanTimer = null;
+        }
+      }
+      function scheduleScan() {
+        if (pageHidden || pendingScan !== null) { return; }
+        pendingScan = setTimeout(function () {
+          pendingScan = null;
+          scan();
+        }, 80);
+      }
+      const relevant = 'video,audio,iframe,meta,link,title';
+      function containsRelevant(node) {
+        return node.nodeType === 1 && (node.matches(relevant) || node.querySelector(relevant) !== null);
+      }
+      const changes = new MutationObserver(function (records) {
+        const needsScan = records.some(function (record) {
+          if (record.type === 'attributes') { return record.target.matches(relevant); }
+          if (record.target.nodeType === 1 && record.target.matches('title')) { return true; }
+          if (record.type === 'characterData') { return record.target.parentElement?.matches('title'); }
+          return Array.from(record.addedNodes).some(containsRelevant) || Array.from(record.removedNodes).some(containsRelevant);
+        });
+        if (needsScan) { scheduleScan(); }
+      });
+      function observeChanges() {
+        changes.observe(document.documentElement, {
+          childList: true, subtree: true, characterData: true, attributes: true,
+          attributeFilter: ['src', 'poster', 'content', 'href', 'rel', 'style', 'class', 'disablepictureinpicture']
+        });
+      }
+      document.addEventListener('scroll', scheduleScan, { capture: true, passive: true });
+      window.addEventListener('resize', scheduleScan);
+      document.addEventListener('visibilitychange', function () {
+        updatePolling();
+        if (!document.hidden) { scheduleScan(); }
+      });
+      window.addEventListener('pagehide', function () {
+        pageHidden = true;
+        changes.disconnect();
+        updatePolling();
+        if (pendingScan !== null) { clearTimeout(pendingScan); pendingScan = null; }
+      });
+      window.addEventListener('pageshow', function () {
+        if (!pageHidden) { return; }
+        pageHidden = false;
+        observeChanges();
+        scheduleScan();
+      });
       if (window === window.top) { post('hello'); }
       scan();
-      setInterval(scan, 500);
+      observeChanges();
     })();
     """
 }

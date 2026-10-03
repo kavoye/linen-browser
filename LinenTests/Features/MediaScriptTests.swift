@@ -57,7 +57,7 @@ struct MediaScriptTests {
     })()
     """
 
-    private func player() async -> (WKWebView, Collector) {
+    private func player(hasVideo: Bool = true) async -> (WKWebView, Collector) {
         let collector = Collector()
         let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = .nonPersistent()
@@ -79,15 +79,125 @@ struct MediaScriptTests {
         webView.loadHTMLString(
             """
             <!doctype html><html><body style="margin:0">
-            <video style="width:640px;height:360px"></video>
+            \(hasVideo ? "<video style=\"width:640px;height:360px\"></video>" : "<p>Idle page</p>")
             </body></html>
             """,
             baseURL: nil
         )
         #expect(await PageSettle.untilIdle(webView, timeout: .seconds(30)))
         #expect(await waitUntil { collector.messages.contains("hello") })
-        _ = try? await webView.evaluateJavaScript(Self.stand)
+        if hasVideo {
+            _ = try? await webView.evaluateJavaScript(Self.stand)
+        }
         return (webView, collector)
+    }
+
+    private func countDOMReads(in webView: WKWebView) async {
+        _ = try? await webView.evaluateJavaScript("""
+        window.__mediaDOMReads = 0;
+        for (const name of ['querySelector', 'querySelectorAll']) {
+          const original = document[name].bind(document);
+          document[name] = function (...args) {
+            window.__mediaDOMReads++;
+            return original(...args);
+          };
+        }
+        true
+        """)
+    }
+
+    @Test func aPageWithoutMediaDoesNoRepeatedDOMWork() async {
+        let (webView, _) = await player(hasVideo: false)
+        await countDOMReads(in: webView)
+        _ = try? await webView.evaluateJavaScript("""
+        document.body.className = 'changed';
+        document.body.firstElementChild.textContent = 'Updated page';
+        document.body.append(document.createElement('p'));
+        true
+        """)
+
+        try? await Task.sleep(for: .milliseconds(700))
+
+        let reads = try? await webView.evaluateJavaScript("window.__mediaDOMReads") as? Int
+        #expect(reads == 0)
+    }
+
+    @Test func aPausedPlayerDoesNoRepeatedDOMWork() async {
+        let (webView, _) = await player()
+        await countDOMReads(in: webView)
+
+        try? await Task.sleep(for: .milliseconds(700))
+
+        let reads = try? await webView.evaluateJavaScript("window.__mediaDOMReads") as? Int
+        #expect(reads == 0)
+    }
+
+    @Test func pollingStopsOnPauseAndWhileHiddenThenResumesWhenVisible() async {
+        let (webView, collector) = await player()
+        await countDOMReads(in: webView)
+        _ = try? await webView.evaluateJavaScript("""
+        window.__pageHidden = false;
+        Object.defineProperty(document, 'hidden', { get() { return window.__pageHidden; } });
+        window.__box.paused = false;
+        document.querySelector('video').dispatchEvent(new Event('play'));
+        window.__mediaDOMReads = 0;
+        true
+        """)
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            (try? await webView.evaluateJavaScript("window.__mediaDOMReads") as? Int) ?? 0 > 0
+        })
+
+        _ = try? await webView.evaluateJavaScript("""
+        window.__box.paused = true;
+        document.querySelector('video').dispatchEvent(new Event('pause'));
+        window.__mediaDOMReads = 0;
+        true
+        """)
+        try? await Task.sleep(for: .milliseconds(700))
+        let pausedReads = try? await webView.evaluateJavaScript("window.__mediaDOMReads") as? Int
+        #expect(pausedReads == 0)
+
+        _ = try? await webView.evaluateJavaScript("""
+        window.__box.paused = false;
+        document.querySelector('video').dispatchEvent(new Event('play'));
+        window.__pageHidden = true;
+        document.dispatchEvent(new Event('visibilitychange'));
+        window.__mediaDOMReads = 0;
+        true
+        """)
+        try? await Task.sleep(for: .milliseconds(700))
+        let hiddenReads = try? await webView.evaluateJavaScript("window.__mediaDOMReads") as? Int
+        #expect(hiddenReads == 0)
+        let hiddenState = await state(webView, collector, after: """
+        window.__box.currentTime = 17;
+        document.querySelector('video').dispatchEvent(new Event('timeupdate'))
+        """, resending: false)
+        #expect(hiddenState["t"] == 17)
+
+        _ = try? await webView.evaluateJavaScript("""
+        window.__pageHidden = false;
+        document.dispatchEvent(new Event('visibilitychange'));
+        true
+        """)
+        #expect(await waitUntil(timeout: .seconds(3)) {
+            (try? await webView.evaluateJavaScript("window.__mediaDOMReads") as? Int) ?? 0 > 0
+        })
+    }
+
+    @Test func mediaAddedAfterLoadIsDiscoveredAndRemovalClearsItsAudio() async {
+        let (webView, collector) = await player(hasVideo: false)
+        collector.messages.removeAll()
+        _ = try? await webView.evaluateJavaScript("""
+        const audio = document.createElement('audio');
+        Object.defineProperty(audio, 'paused', { get() { return false; } });
+        document.body.append(audio);
+        true
+        """)
+        #expect(await waitUntil { collector.messages.contains("audio:1") })
+
+        collector.messages.removeAll()
+        _ = try? await webView.evaluateJavaScript("document.querySelector('audio').remove(); true")
+        #expect(await waitUntil { collector.messages.contains("audio:0") })
     }
 
     /// Runs `script`, asks the page to report, and reads the line it sends.
