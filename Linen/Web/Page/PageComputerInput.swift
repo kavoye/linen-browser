@@ -244,7 +244,9 @@ extension PageDriver {
         case "move":
             return "mousemove"
         case "keypress":
-            return "keyup"
+            // Keydown proves delivery. A page can consume keyup, and inactive
+            // windows may omit it after an editing command has already run.
+            return "keydown"
         case "type":
             return action["text"] == "" ? nil : "input"
         default:
@@ -258,14 +260,16 @@ extension PageDriver {
             window.__linenComputerAck?.dispose();
             const type = \(encoded), docs = new Set([document, ...Array.from(R.walk(document.body)).map(el => el.ownerDocument)]);
             const state = { received: false };
-            const handler = event => { if (event.isTrusted) state.received = true; };
-            const keyHandler = event => { if (event.isTrusted) state.keyDown = event; };
+            const handler = event => {
+              if (!event.isTrusted) return;
+              state.received = true;
+              if (type === 'keydown') state.keyDown = event;
+            };
             for (const doc of docs) {
               doc.addEventListener(type, handler, true);
-              if (type === 'keyup') doc.addEventListener('keydown', keyHandler, true);
             }
             state.dispose = () => {
-              for (const doc of docs) { doc.removeEventListener(type, handler, true); doc.removeEventListener('keydown', keyHandler, true); }
+              for (const doc of docs) doc.removeEventListener(type, handler, true);
               state.keyDown = null;
             };
             window.__linenComputerAck = state;

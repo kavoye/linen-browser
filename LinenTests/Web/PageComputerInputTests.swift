@@ -220,6 +220,10 @@ struct PageComputerInputTests {
                            frame: PageComputerFrame, in view: WKWebView) async throws {
         _ = try await view.evaluateJavaScript("window.keys=[]")
         try await PageDriver.computerAction(["type": "keypress", "keys": .array(keys.map(OpenAIJSON.string))], frame: frame, in: view)
+        try #require(await waitUntil {
+            let count = try? await view.evaluateJavaScript("window.keys.length") as? Int
+            return (count ?? 0) >= 2
+        })
         let events = try #require(try await view.evaluateJavaScript("window.keys") as? [[String: Any]])
         #expect(events.compactMap { $0["type"] as? String } == ["keydown", "keyup"])
         for event in events {
@@ -249,6 +253,21 @@ struct PageComputerInputTests {
         }
         try await performInput(["type": "keypress", "keys": ["BACKSPACE"]], frame: frame, in: view)
         #expect(try await view.evaluateJavaScript("document.querySelector('input').value") as? String == "Replacemen")
+    }
+
+    @Test func keypressAcknowledgesKeyDownWhenPageConsumesKeyUp() async throws {
+        let (view, window) = await page("""
+            <input aria-label='Query' value='abc'><script>
+              const input = document.querySelector('input');
+              input.focus();
+              input.setSelectionRange(3, 3);
+              window.addEventListener('keyup', event => event.stopImmediatePropagation(), true);
+            </script>
+            """)
+        defer { window.close() }
+        let (frame, _) = try await PageDriver.computerFrame(in: view)
+        try await performInput(["type": "keypress", "keys": ["BACKSPACE"]], frame: frame, in: view)
+        #expect(try await view.evaluateJavaScript("document.querySelector('input').value") as? String == "ab")
     }
 
     @Test func unsupportedKeysAndSystemChordsEmitNoKeyboardEvents() async throws {
@@ -287,6 +306,10 @@ struct PageComputerInputTests {
         for modifier: OpenAIJSON in ["CMD", "CTRL"] {
             _ = try await view.evaluateJavaScript("window.keys=[]")
             try await PageDriver.computerAction(["type": "keypress", "keys": [modifier, "A"]], frame: frame, in: view)
+            try #require(await waitUntil {
+                let count = try? await view.evaluateJavaScript("window.keys.length") as? Int
+                return (count ?? 0) >= 2
+            })
             #expect(try await view.evaluateJavaScript("JSON.stringify(window.keys)") as? String
                     == "[[\"keydown\",\"a\",\"KeyA\",true,false,true],[\"keyup\",\"a\",\"KeyA\",true,false,true]]")
             #expect(try await view.evaluateJavaScript("input.selectionStart===2&&input.selectionEnd===2&&input.value==='Original'") as? Bool == true)
