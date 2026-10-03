@@ -11,7 +11,7 @@ import WebKit
 @Suite(.serialized, .boundedWebViews)
 struct PageActivityMonitorTests {
     private func loadedTab() async -> BrowserTab {
-        let configuration = WebViewPool.makeConfiguration()
+        let configuration = interactiveWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let webView = TabWebView(
             frame: NSRect(x: 0, y: 0, width: 500, height: 400),

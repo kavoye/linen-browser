@@ -12,7 +12,7 @@ import WebKit
 @Suite(.serialized, .boundedWebViews)
 struct PageComputerInputTests {
     private func page(_ html: String) async -> (WKWebView, NSWindow) {
-        let config = WebViewPool.makeConfiguration()
+        let config = interactiveWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         let view = WKWebView(frame: NSRect(x: 0, y: 0, width: 500, height: 400), configuration: config)
         let foreground = ProcessInfo.processInfo.environment["LINEN_COMPUTER_FOREGROUND_TEST"] == "1"
@@ -32,6 +32,27 @@ struct PageComputerInputTests {
 
     private func point(_ x: Double, _ y: Double, frame: PageComputerFrame, type: String = "click") -> OpenAIJSON {
         ["type": .string(type), "button": "left", "x": .number(x * frame.pixels.width / frame.geometry.width), "y": .number(y * frame.pixels.height / frame.geometry.height)]
+    }
+
+    private struct InputFailure: Error, CustomStringConvertible {
+        let description: String
+    }
+
+    private func performInput(_ action: OpenAIJSON, frame: PageComputerFrame, in view: WKWebView) async throws {
+        do {
+            try await PageDriver.computerAction(action, frame: frame, in: view)
+        } catch {
+            let state = try? await view.evaluateJavaScript("""
+                JSON.stringify({ active: document.activeElement?.tagName, focused: document.hasFocus(),
+                  value: document.querySelector('input')?.value,
+                  start: document.querySelector('input')?.selectionStart,
+                  end: document.querySelector('input')?.selectionEnd })
+                """)
+            throw InputFailure(description: """
+                Action \((try? action.text()) ?? "unknown") failed: \(error); \
+                page: \(state as? String ?? "unavailable"); key window: \(view.window?.isKeyWindow == true)
+                """)
+        }
     }
 
     @Test func nativeClickTypeKeyAndScrollReachThePage() async throws {
@@ -217,16 +238,16 @@ struct PageComputerInputTests {
         defer { window.close() }
         let (frame, _) = try await PageDriver.computerFrame(in: view)
         for keys: [OpenAIJSON] in [["B"], ["SHIFT", "Z"], ["SHIFT", "1"], ["?"], ["SPACE"]] {
-            try await PageDriver.computerAction(["type": "keypress", "keys": .array(keys)], frame: frame, in: view)
+            try await performInput(["type": "keypress", "keys": .array(keys)], frame: frame, in: view)
         }
         #expect(try await view.evaluateJavaScript("document.querySelector('input').value") as? String == "bZ!? ")
         for modifier: OpenAIJSON in ["CMD", "CTRL"] {
-            try await PageDriver.computerAction(["type": "keypress", "keys": [modifier, "A"]], frame: frame, in: view)
+            try await performInput(["type": "keypress", "keys": [modifier, "A"]], frame: frame, in: view)
             #expect(try await view.evaluateJavaScript("(()=>{const e=document.querySelector('input');return e.selectionStart===0&&e.selectionEnd===e.value.length;})()") as? Bool == true)
-            try await PageDriver.computerAction(["type": "type", "text": "Replacement"], frame: frame, in: view)
+            try await performInput(["type": "type", "text": "Replacement"], frame: frame, in: view)
             #expect(try await view.evaluateJavaScript("document.querySelector('input').value") as? String == "Replacement")
         }
-        try await PageDriver.computerAction(["type": "keypress", "keys": ["BACKSPACE"]], frame: frame, in: view)
+        try await performInput(["type": "keypress", "keys": ["BACKSPACE"]], frame: frame, in: view)
         #expect(try await view.evaluateJavaScript("document.querySelector('input').value") as? String == "Replacemen")
     }
 

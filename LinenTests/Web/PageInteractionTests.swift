@@ -12,7 +12,7 @@ import WebKit
 @Suite(.serialized, .boundedWebViews)
 struct PageInteractionTests {
     private func page(_ body: String) async -> WKWebView {
-        let configuration = WebViewPool.makeConfiguration()
+        let configuration = interactiveWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let view = WKWebView(frame: NSRect(x: 0, y: 0, width: 500, height: 400), configuration: configuration)
         view.loadHTMLString("<!doctype html><body>\(body)</body>", baseURL: nil)

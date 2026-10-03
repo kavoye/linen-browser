@@ -43,7 +43,7 @@ final class ComputerWorkflowFixture {
         let store = WKWebsiteDataStore.nonPersistent()
         browser = BrowserModel(database: database, sitePermissions: permissions,
                                downloads: DownloadManager(destinationFolder: folder, asksWhereToSave: false), webViewFactory: {
-            let config = WebViewPool.makeConfiguration()
+            let config = interactiveWebViewConfiguration()
             config.websiteDataStore = store
             return WKWebView(frame: NSRect(x: 0, y: 0, width: 500, height: 400), configuration: config)
         })
