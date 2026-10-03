@@ -70,11 +70,26 @@ enum CommandPaletteShortcutPolicy {
         showsCurrentTab(modifiers: modifiers) && returnKeys.contains(key)
     }
 
-    static func shouldDismiss(modifiers: NSEvent.ModifierFlags, key: String) -> Bool {
-        let modifiers = modifiers.intersection(.deviceIndependentFlagsMask)
+    static func shouldDismiss(_ event: NSEvent) -> Bool {
+        let commandKey = event.modifierFlags.contains(.command)
+            ? event.characters(byApplyingModifiers: .command)
+            : nil
+        return shouldDismiss(
+            modifiers: event.modifierFlags,
+            key: event.charactersIgnoringModifiers ?? "",
+            commandKey: commandKey
+        )
+    }
+
+    static func shouldDismiss(modifiers: NSEvent.ModifierFlags, key: String, commandKey: String? = nil) -> Bool {
+        // Caps Lock and key-type flags do not change an editing shortcut.
+        let modifiers = modifiers.intersection([.command, .control, .option, .shift])
         let editingKeys: Set<String> = ["a", "c", "v", "x", "z"]
-        let normalizedKey = key.lowercased()
+        // Some layouts use different letters while Command is held.
+        let normalizedKey = (modifiers.contains(.command) ? commandKey ?? key : key).lowercased()
         let isTextEditing = modifiers == .command && editingKeys.contains(normalizedKey)
+            || modifiers == [.command, .shift] && normalizedKey == "z"
+            || modifiers == [.command, .option, .shift] && normalizedKey == "v"
         let isPaletteShortcut = modifiers == .command && (normalizedKey == "k" || normalizedKey == "t")
         let isListNavigation = arrowKeys.contains(key)
         let isRun = returnKeys.contains(key)

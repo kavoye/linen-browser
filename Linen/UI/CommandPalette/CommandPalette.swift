@@ -102,7 +102,7 @@ struct CommandPalette: View {
                 MainActor.assumeIsolated { model.submitInCurrentTab() }
                 return nil
             }
-            if CommandPaletteShortcutPolicy.shouldDismiss(modifiers: event.modifierFlags, key: key) {
+            if CommandPaletteShortcutPolicy.shouldDismiss(event) {
                 MainActor.assumeIsolated { model.dismiss() }
             }
             return event

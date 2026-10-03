@@ -243,6 +243,56 @@ struct CommandPaletteModelTests {
         #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .option, key: "p"))
     }
 
+    @Test(arguments: [
+        NSEvent.ModifierFlags.capsLock,
+        .numericPad,
+        .function,
+        [.capsLock, .numericPad, .function],
+    ])
+    func shortcutPolicyIgnoresFlagsThatDoNotChangeTheCommand(incidentalFlags: NSEvent.ModifierFlags) {
+        for key in ["a", "c", "v", "x", "z", "V", "k", "t"] {
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [.command, incidentalFlags], key: key))
+        }
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [.command, incidentalFlags], key: "l"))
+    }
+
+    @Test func pasteAndMatchStyleAndRedoKeepThePaletteOpen() {
+        for incidentalFlags: NSEvent.ModifierFlags in [[], .capsLock] {
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(
+                modifiers: [.command, .option, .shift, incidentalFlags], key: "V"
+            ))
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(
+                modifiers: [.command, .shift, incidentalFlags], key: "Z"
+            ))
+            #expect(CommandPaletteShortcutPolicy.shouldDismiss(
+                modifiers: [.command, .shift, incidentalFlags], key: "C"
+            ))
+        }
+    }
+
+    @Test func commandShortcutsUseTheCommandLayoutInsteadOfTheTypingLayout() {
+        let keys = [
+            (typing: "м", command: "v"),
+            (typing: "с", command: "c"),
+            (typing: "ч", command: "x"),
+            (typing: "ф", command: "a"),
+            (typing: "я", command: "z"),
+            (typing: "л", command: "k"),
+            (typing: "е", command: "t"),
+            (typing: "k", command: "v"),
+        ]
+        for key in keys {
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(
+                modifiers: .command, key: key.typing, commandKey: key.command
+            ))
+        }
+        #expect(!CommandPaletteShortcutPolicy.shouldDismiss(
+            modifiers: [.command, .option, .shift, .capsLock], key: "М", commandKey: "v"
+        ))
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: "в", commandKey: "l"))
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .control, key: "f", commandKey: "v"))
+    }
+
     @Test func paletteShortcutsToggleAndNewTabSelectionTracksThePalette() {
         let coordinator = AppCoordinator()
         let tab = coordinator.browser.newTab()
