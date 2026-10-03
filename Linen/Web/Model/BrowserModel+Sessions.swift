@@ -344,8 +344,8 @@ extension BrowserModel {
                 restoring: !onScreen.contains(record.id)
             )
             tab.pageTitle = restoredURL == nil || SystemPages.isStart(restoredURL)
-                ? BrowserTab.placeholderTitle
-                : record.title
+                ? SystemPages.startTitle
+                : (record.title.isEmpty ? BrowserTab.placeholderTitle : record.title)
             tab.customTitle = record.customTitle ?? ""
             tab.urlString = restoredURL.map(\.absoluteString) ?? record.url
             tab.pinnedURL = record.pinnedURL

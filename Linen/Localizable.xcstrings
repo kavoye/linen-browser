@@ -3034,6 +3034,9 @@
     "New Folder…" : {
       "comment" : "Last item of that “Move to Folder” submenu; it makes a new folder with the rows the menu acts on — the one tab, or every selected row — in it. The real ellipsis character marks that a name is asked for — keep it. Title Case."
     },
+    "New Page" : {
+      "comment" : "Fallback title for a browser tab whose website has no title, including while a new website is loading. Title Case."
+    },
     "New Profile" : {
 
     },

@@ -530,7 +530,7 @@ struct BrowserPagesTests {
         #expect(model.tabs.count == 1)
         #expect(model.tabs.first === blank)
         #expect(blank.internalPage == nil)
-        #expect(blank.title == BrowserTab.placeholderTitle)
+        #expect(blank.title == "Start Page")
     }
 
     @Test func leavingAPageNobodyOpenedDoesNothing() {

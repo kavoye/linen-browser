@@ -31,6 +31,22 @@ struct SessionRestoreTests {
         #expect(SystemPages.showsStartFace(restored))
     }
 
+    @Test(arguments: ["", "New Page"])
+    func aSavedUntitledWebsiteKeepsTheNewPageTitle(savedTitle: String) throws {
+        let database = AppDatabase.temporary()
+        let model = BrowserModel(database: database)
+        let url = URL(string: "https://example.test/untitled")!
+        let tab = model.newTab(url: url)
+        tab.urlString = url.absoluteString
+        tab.pageTitle = savedTitle
+        model.saveBlocking()
+
+        let restored = try #require(reopen(database).activeTab)
+        #expect(restored.id == tab.id)
+        #expect(restored.title == "New Page")
+        #expect(!SystemPages.showsStartFace(restored))
+    }
+
     // MARK: - The schema the session needs
 
     /// A table the migrator forgets is neither a compile error nor a crash:

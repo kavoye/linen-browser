@@ -69,7 +69,7 @@ enum NavigationHoldMenu {
             return "\(page.title) — \(String(localized: category.title))"
         }
         if SystemPages.isStart(item.url) {
-            return BrowserTab.placeholderTitle
+            return SystemPages.startTitle
         }
         var title = item.title ?? ""
         if title.isEmpty {

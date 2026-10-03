@@ -29,7 +29,7 @@ enum FolderNamer {
         guard let model = UtilityModelSource.make() else { return nil }
         let usable = titles
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty && $0 != BrowserTab.placeholderTitle }
+            .filter { !$0.isEmpty && $0 != BrowserTab.placeholderTitle && $0 != SystemPages.startTitle }
             .prefix(6)
         guard !usable.isEmpty else { return nil }
 

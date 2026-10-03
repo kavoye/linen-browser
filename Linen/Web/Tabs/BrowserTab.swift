@@ -26,12 +26,13 @@ enum PageSecurity: Equatable {
 @MainActor
 @Observable
 final class BrowserTab: Identifiable {
-    static let placeholderTitle = String(localized: "Start Page")
+    static let placeholderTitle = String(localized: "New Page")
 
     let id: UUID
     let autofillSave = AutofillSaveSession()
     var pageTitle = BrowserTab.placeholderTitle
     var customTitle = ""
+    private var documentTitles: [URL: String] = [:]
 
     var title: String {
         get { customTitle.isEmpty ? pageTitle : customTitle }
@@ -39,6 +40,7 @@ final class BrowserTab: Identifiable {
     }
     var urlString = ""
     var isLoading = false
+    var isShowingError = false
     var favicon: NSImage?
     private var faviconHost = ""
     var progress: Double = 0
@@ -268,6 +270,9 @@ final class BrowserTab: Identifiable {
         permissions.persistsAnswers = !privately
         assistantAccess.persistsAnswers = !privately
         let opensStartPage = opensBlank && adopting == nil && extensionHost == nil && !restoring
+        if opensStartPage {
+            pageTitle = SystemPages.startTitle
+        }
         if let adopting {
             // WebKit requires this exact view, with the opener's configuration attached.
             liveView = adopting
@@ -868,6 +873,28 @@ final class BrowserTab: Identifiable {
             inDark: webView.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
         )
     }
+}
+
+extension BrowserTab {
+    func documentFilename(for url: URL?) -> String? {
+        url.flatMap { documentTitles[Self.documentURL($0)] }
+    }
+
+    func noteMainFrameResponse(_ response: URLResponse) {
+        guard let url = response.url.map(Self.documentURL) else { return }
+        if response.mimeType?.lowercased() == "application/pdf",
+           let filename = response.suggestedFilename, !filename.isEmpty {
+            documentTitles[url] = filename
+        } else {
+            documentTitles[url] = nil
+        }
+    }
+
+    private static func documentURL(_ url: URL) -> URL {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
+        components.fragment = nil
+        return components.url ?? url
+    }
 
     func refreshChrome() {
         isLoading = webView.isLoading && isShowingRealPage && !stoppedNavigation
@@ -881,11 +908,11 @@ final class BrowserTab: Identifiable {
             title = page.title
             favicon = nil
         } else if SystemPages.isStart(url) {
-            // The start page takes the row's name back only over a page that had one.
+            // Do not replace the title of a failed navigation still covering the start page.
             let leftOwnPage = InternalPage(url: URL(string: urlString)) != nil
-            if leftOwnPage || (displaced != nil && displaced != committedURL) {
+            if urlString.isEmpty || leftOwnPage || (displaced != nil && displaced != committedURL) {
                 urlString = ""
-                title = Self.placeholderTitle
+                title = SystemPages.startTitle
                 favicon = nil
             }
         } else {
@@ -894,6 +921,8 @@ final class BrowserTab: Identifiable {
             }
             if let pageTitle = webView.title, !pageTitle.isEmpty {
                 title = pageTitle
+            } else if isShowingRealPage, extensionBaseURL == nil, !isRestoring {
+                title = documentFilename(for: url) ?? Self.placeholderTitle
             }
         }
         refreshSecurity()
@@ -918,8 +947,6 @@ final class BrowserTab: Identifiable {
             security = .none
         }
     }
-
-    var isShowingError = false
 
     func declaredFaviconChanged() {
         guard extensionBaseURL == nil, !isPrivate, !isShowingSystemPage else { return }

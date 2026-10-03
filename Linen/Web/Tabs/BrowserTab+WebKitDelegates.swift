@@ -282,6 +282,9 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             tab?.autofillSave.submissions.clear()
         }
         guard !navigationResponse.canShowMIMEType else {
+            if navigationResponse.isForMainFrame {
+                tab?.noteMainFrameResponse(navigationResponse.response)
+            }
             decisionHandler(.allow)
             return
         }

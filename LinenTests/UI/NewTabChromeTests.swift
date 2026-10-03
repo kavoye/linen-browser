@@ -186,7 +186,7 @@ struct NewTabChromeTests {
 
         tab.goBack()
         #expect(await settled(tab, at: SystemPages.start))
-        #expect(tab.title == BrowserTab.placeholderTitle)
+        #expect(tab.title == "Start Page")
         #expect(tab.favicon == nil)
     }
 
@@ -228,9 +228,59 @@ struct NewTabChromeTests {
     @Test func aTabOpenedStraightOntoALinkHasNoStartPageBehindIt() async {
         let tab = BrowserTab(opensBlank: false)
 
+        #expect(tab.title == "New Page")
         #expect(!tab.canGoBack)
         tab.goBack()
         #expect(await waitUntil { !tab.isShowingStartPage })
+    }
+
+    @Test(arguments: ["", "<title></title>"])
+    func anUntitledWebsiteUsesTheNewPageTitle(titleMarkup: String) async {
+        let tab = BrowserTab(opensBlank: false)
+        let url = URL(string: "https://example.test/untitled")!
+        tab.loadHTML("<!doctype html>\(titleMarkup)<p>Page</p>", baseURL: url)
+
+        #expect(await settled(tab, at: url))
+        #expect(tab.title == "New Page")
+        #expect(!tab.isShowingStartPage)
+    }
+
+    @Test func anUntitledWebsiteDoesNotKeepTheStartPagesTitle() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/": .html("<!doctype html><p>Page</p>"),
+        ])
+        defer { withExtendedLifetime(server) {} }
+        let url = try server.url()
+        let tab = BrowserTab()
+        #expect(tab.title == "Start Page")
+        #expect(await settled(tab, at: SystemPages.start))
+
+        tab.load(url)
+        #expect(await settled(tab, at: url))
+        #expect(tab.title == "New Page")
+
+        tab.goBack()
+        #expect(await settled(tab, at: SystemPages.start))
+        #expect(tab.title == "Start Page")
+
+        tab.goForward()
+        #expect(await settled(tab, at: url))
+        #expect(tab.title == "New Page")
+    }
+
+    @Test func removingAWebsiteTitleUsesNewPageAndPreservesACustomTitle() async throws {
+        let tab = BrowserTab(opensBlank: false)
+        let url = URL(string: "https://example.test/titled")!
+        tab.loadHTML("<!doctype html><title>Website</title><p>Page</p>", baseURL: url)
+        #expect(await settled(tab, at: url))
+        #expect(tab.title == "Website")
+        tab.customTitle = "My Page"
+
+        _ = try await tab.webView.evaluateJavaScript("document.title = ''")
+        #expect(await waitUntil { tab.pageTitle == "New Page" })
+        #expect(tab.title == "My Page")
+        tab.customTitle = ""
+        #expect(tab.title == "New Page")
     }
 
     // MARK: - The address field's rhythm
