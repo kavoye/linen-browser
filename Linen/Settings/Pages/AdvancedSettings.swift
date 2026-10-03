@@ -122,7 +122,7 @@ struct AdvancedSettings: View {
                 } message: {
                     Text("""
                         Appearance, search, privacy, websites, and downloads go back to their \
-                        defaults. Tabs, history, shortcuts, and your provider aren't affected.
+                        defaults. Tabs, history, shortcuts, and your provider are not affected.
                         """)
                 }
             }
