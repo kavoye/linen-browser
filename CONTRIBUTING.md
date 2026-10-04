@@ -12,6 +12,7 @@ reproduce CI locally. Package resolution uses the committed `Package.resolved`.
 ```bash
 git clone https://github.com/kavoye/linen-browser.git
 cd linen-browser
+xcodebuild -downloadComponent MetalToolchain
 xcodebuild test \
   -project Linen.xcodeproj \
   -scheme Linen \
