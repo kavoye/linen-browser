@@ -80,6 +80,9 @@ jobs:
       # No entitlements: `keychain-access-groups` needs a provisioning profile,
       # and demanding one here would mean a signing certificate for every test
       # run. Nothing under test reaches the keychain.
+      # Xcode 27 runner VMs cannot load Vision's OCR backend, even with CPU selection.
+      # Exclude only these four integration tests in CI; they remain enabled locally.
+      # Remove these exclusions when the runner image supports Vision OCR.
       - name: Test
         run: |
           python3 Tools/run-xcodebuild-with-watchdog.py -- xcodebuild test \
@@ -91,6 +94,10 @@ jobs:
             -parallel-testing-enabled NO \
             -disableAutomaticPackageResolution \
             -skipMacroValidation -skipPackagePluginValidation \
+            '-skip-testing:LinenTests/AttachmentTests/normalizesImagesAndRecognizesText()' \
+            '-skip-testing:LinenTests/AttachmentTests/recognizesTextWithoutANeuralEngine()' \
+            '-skip-testing:LinenTests/AttachmentTests/recognizesScannedPDFPages()' \
+            '-skip-testing:LinenTests/AttachmentTests/pastingAnImageCreatesARemovableAttachment()' \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
