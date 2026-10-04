@@ -7,11 +7,11 @@
 
 # Linen
 
-**A browser with a built-in assistant for macOS.**
+A macOS browser with a built-in assistant.
 
 Ask the assistant to search, read websites, and use the tabs you have open.
-It can click, type, and scroll. Click the page at any time to stop the assistant
-and use it yourself.
+It can click, type, and scroll. Click the page to stop the assistant and
+continue browsing yourself.
 
 <a href="#install">Install</a> ·
 <a href="#what-it-does">Features</a> ·
@@ -40,17 +40,20 @@ for changes in published versions.
 
 ## What it does
 
-- **Browse:** tabs, folders, pins, split view, history, resumable downloads, and
-  bookmark import. Play media in Picture in Picture and view synced lyrics.
-- **Ask the assistant:** type in the address field or hold ⌥Space to speak.
-  Use `@` to include a tab, attach files, and review actions in Agent Activity.
-- **Preview links:** hold Shift over a link for a summary, or Shift-click to
-  open a preview.
-- **Fill forms:** save passwords, payment cards, and contact details in Settings ›
-  Autofill. Passwords and cards require system authentication. Passkeys use macOS.
-- **Add extensions:** install from the Chrome Web Store or Firefox Add-ons.
-- **Separate browsing:** profiles keep cookies, history, tabs, permissions, and
-  extensions separate. Press ⇧⌘N for private browsing.
+- Browse with tabs, folders, pins, and split view. Search your history, resume
+  downloads, and import bookmarks. Play media in Picture in Picture and view
+  synced lyrics.
+- Type a request to the assistant in the address field or hold ⌥Space to speak.
+  Use `@` to include a tab. You can also attach files and review the assistant's
+  actions in Agent Activity.
+- Hold Shift while hovering over a link to read a summary, or Shift-click to
+  preview the page.
+- Save passwords, payment cards, and contact details in Settings › Autofill.
+  Unlock saved passwords and cards with Touch ID or your Mac password.
+  To sign in with a passkey, follow the macOS sign-in prompt.
+- Install extensions from the Chrome Web Store or Firefox Add-ons.
+- Use profiles to keep cookies, history, tabs, permissions, and extensions
+  separate. Press ⇧⌘N to enter private browsing.
 
 ### Choose a model
 
@@ -58,28 +61,29 @@ Use Apple Intelligence on your Mac, add a provider API key, or connect to a loca
 server such as Ollama or LM Studio. Supported providers include OpenAI,
 Anthropic, Gemini, DeepSeek, Groq, Mistral, OpenRouter, and xAI.
 
-External assistants can use explicitly shared tabs through Linen’s
+External assistants can access only the tabs you share through Linen's
 [MCP server](MCP.md).
 
 ## Privacy and control
 
-- Choose assistant access per website and enable tools in Settings › Assistant.
-  The assistant asks before purchases, sending, or signing in. It cannot fill
-  passwords or card numbers; browser autofill is separate.
+- Set the assistant's access for each website and enable its tools in
+  Settings › Assistant. The assistant asks before making purchases, sending
+  information, or signing in. It cannot fill passwords or card numbers.
+  You can fill these with browser autofill.
 - API keys stay in Keychain and are sent only to their provider. Submitted
   messages, shared page content, and attachments go to the selected model.
-- On-device voice transcribes audio on your Mac. OpenAI dictation and voice
+- On-device voice converts speech to text on your Mac. OpenAI dictation and voice
   conversations send microphone audio to OpenAI.
 - Private browsing does not save history, tabs, or assistant transcripts.
-- Known third-party trackers are blocked by default. This is basic protection;
-  extensions can provide more comprehensive blocking.
+- Linen blocks known third-party trackers by default. Extensions can block
+  additional trackers.
 
 The assistant uses AI and can make mistakes. Check important information.
 Report vulnerabilities privately through [Security](SECURITY.md).
 
 ## Known limitations
 
-- One window. Links requesting another window open in tabs.
+- Linen supports one window. Links that open new windows open in tabs instead.
 - Pins and folders replace a separate bookmarks manager. Import bookmarks from
   an HTML export in Settings › General; history is not imported.
 - Website notifications require Linen to be running. There is no background web push.
@@ -111,7 +115,7 @@ code structure, and [Releasing](RELEASING.md) for distribution.
 
 ## License and acknowledgements
 
-[Apache 2.0](LICENSE). Provider logos belong to their owners.
+Linen is licensed under [Apache 2.0](LICENSE). Provider logos belong to their owners.
 
 Linen uses [Sparkle](https://github.com/sparkle-project/Sparkle),
 [AnyLanguageModel](https://github.com/huggingface/AnyLanguageModel), and other
