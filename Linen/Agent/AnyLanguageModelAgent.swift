@@ -653,14 +653,7 @@ final class AnyLanguageModelAgent: AgentRunner {
     }
 
     static func isContextWindowError(_ error: any Error) -> Bool {
-        if let error = error as? LanguageModelSession.GenerationError,
-           case .exceededContextWindowSize = error {
-            return true
-        }
-        if let error = error as? OpenAIFailure {
-            return error.kind == .contextLimit
-        }
-        return SystemModelFailure.isContextOverflow(error)
+        AgentContextCompactor.isContextWindowError(error)
     }
 }
 

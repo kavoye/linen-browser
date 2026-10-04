@@ -147,10 +147,12 @@ struct OpenAICompatibilityTests {
         #expect(restored.useWebSocket == false)
     }
 
-    @Test func utilityStringsAndStructuredResultsUseNativeResponses() async throws {
+    @Test(arguments: [["One", "Two"], ["Café", "東京", "A \"quoted\" name"], []])
+    func utilityStringsAndStructuredResultsUseNativeResponses(names: [String]) async throws {
+        let payload: OpenAIJSON = ["value": .array(names.map { .string($0) })]
         let wire = OpenAITransportFixture([
             OpenAITransportFixture.response([OpenAITransportFixture.message("A title")]),
-            OpenAITransportFixture.response([OpenAITransportFixture.message("{\"value\":[\"One\",\"Two\"]}")]),
+            OpenAITransportFixture.response([OpenAITransportFixture.message(try payload.text())]),
         ])
         let client = OpenAIResponsesClient(
             endpoint: URL(string: "https://api.openai.com/v1")!, apiKey: "fixture", model: "gpt-6-astra", transport: wire)
@@ -158,7 +160,7 @@ struct OpenAICompatibilityTests {
         let session = LanguageModelSession(model: model, instructions: "Name this page")
         #expect(try await session.respond(to: "Page").content == "A title")
         let structured = LanguageModelSession(model: model)
-        #expect(try await structured.respond(to: "Two names", generating: [String].self).content == ["One", "Two"])
+        #expect(try await structured.respond(to: "Names", generating: [String].self).content == names)
         let first = try OpenAIJSON.decode(wire.requests[0].body!)
         #expect(first["input"].array?.count == 1)
         let second = try OpenAIJSON.decode(wire.requests[1].body!)

@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/huggingface/AnyLanguageModel.git",
       "state" : {
-        "revision" : "4e3622476bb2f368c0cf741e7b55c2affe010082",
-        "version" : "0.13.0"
+        "revision" : "c4a1acdbc8a2a9f967fada82208798b3a719a458",
+        "version" : "0.15.1"
       }
     },
     {
@@ -38,15 +38,6 @@
       }
     },
     {
-      "identity" : "partialjsondecoder",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mattt/PartialJSONDecoder",
-      "state" : {
-        "revision" : "8737b4cb362041da644400eea5504a6a27e586b5",
-        "version" : "1.0.1"
-      }
-    },
-    {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
@@ -69,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
-        "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
-        "version" : "1.6.0"
+        "revision" : "98ef3c98609a1e31b7e157b5b619579001a789d6",
+        "version" : "1.7.1"
       }
     },
     {

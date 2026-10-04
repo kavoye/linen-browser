@@ -535,7 +535,7 @@
 			repositoryURL = "https://github.com/huggingface/AnyLanguageModel.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.13.0;
+				minimumVersion = 0.15.1;
 			};
 		};
 		EEAC00023027B875008F6668 /* XCRemoteSwiftPackageReference "GRDB" */ = {

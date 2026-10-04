@@ -9,6 +9,21 @@ import Testing
 
 @MainActor
 struct AgentContextCompactionTests {
+    enum OverflowSource: CaseIterable, Sendable {
+        case session, openAI, openResponses
+
+        var error: any Error {
+            switch self {
+            case .session:
+                LanguageModelSession.GenerationError.exceededContextWindowSize(.init(debugDescription: "fixture"))
+            case .openAI:
+                OpenAILanguageModelError.streamFailed(code: "context_length_exceeded", message: "fixture")
+            case .openResponses:
+                OpenResponsesLanguageModelError.streamFailed(code: "context_length_exceeded", message: "fixture")
+            }
+        }
+    }
+
     @Test func continuationGuidanceIsSystemOnlyAndHiddenAfterReload() async throws {
         let fixture = HarnessFixture([.text("Saved progress."), .text("Continued.")])
         await fixture.run("Finish the form")
@@ -67,15 +82,29 @@ struct AgentContextCompactionTests {
         #expect(text.contains("Observed state 2"))
     }
 
-    @Test func overflowAfterAnActionCompactsWithoutRestartingTheTask() async throws {
+    @Test(arguments: OverflowSource.allCases)
+    func overflowAfterAnActionCompactsWithoutRestartingTheTask(source: OverflowSource) async throws {
         let state = HarnessToolState()
         state.output = { _ in String(repeating: "long tool output ", count: 600) }
-        let overflow = LanguageModelSession.GenerationError.exceededContextWindowSize(.init(debugDescription: "fixture"))
+        let overflow = source.error
         let fixture = HarnessFixture([.calls(["typeOnPage"]), .failure(overflow), .text("Recovered.")], state: state)
         await fixture.run()
         #expect(fixture.state.calls == 1)
         #expect(fixture.reply.text == "Recovered.")
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.diagnostics.events.contains { $0.kind == "overflow_recovery" } == true)
+    }
+
+    @Test(arguments: ["server_error", "insufficient_quota"], [false, true])
+    func unrelatedProviderErrorsPreserveActionsWithoutCompacting(code: String, openResponses: Bool) async throws {
+        let failure: any Error = openResponses
+            ? OpenResponsesLanguageModelError.streamFailed(code: code, message: "fixture")
+            : OpenAILanguageModelError.streamFailed(code: code, message: "fixture")
+        let fixture = HarnessFixture([.calls(["typeOnPage"]), .failure(failure)])
+        await fixture.run()
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(fixture.state.calls == 1)
+        #expect(trace.stopReason == .providerError)
+        #expect(trace.diagnostics.compactions == 0)
     }
 
     @Test func failedCompactionPausesWithTheOriginalCheckpointIntact() async throws {

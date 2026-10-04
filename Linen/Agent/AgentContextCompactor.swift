@@ -137,6 +137,17 @@ struct AgentContextCompactor {
     static func isContextWindowError(_ error: any Error) -> Bool {
         if let error = error as? LanguageModelSession.GenerationError,
            case .exceededContextWindowSize = error { return true }
+        if let error = error as? OpenAIFailure {
+            return error.kind == .contextLimit
+        }
+        if let error = error as? OpenAILanguageModelError,
+           case .streamFailed(let code, _) = error {
+            return code == "context_length_exceeded"
+        }
+        if let error = error as? OpenResponsesLanguageModelError,
+           case .streamFailed(let code, _) = error {
+            return code == "context_length_exceeded"
+        }
         return SystemModelFailure.isContextOverflow(error)
     }
 }

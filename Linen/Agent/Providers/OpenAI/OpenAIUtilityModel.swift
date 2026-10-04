@@ -33,7 +33,7 @@ nonisolated struct OpenAIUtilityModel: LanguageModel {
         let raw =
             type == String.self
             ? GeneratedContent(output.text)
-            : try GeneratedContent(json: OpenAIJSON.decode(Data(output.text.utf8))["value"].text())
+            : try GeneratedContent(json: OpenAIJSON.decode(Data(output.text.utf8))["value"].data())
         let content = try type.init(raw)
         let entry = Transcript.Entry.response(.init(assetIDs: [], segments: [.text(.init(content: output.text))]))
         return .init(content: content, rawContent: raw, transcriptEntries: [entry][...])

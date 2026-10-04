@@ -6,6 +6,9 @@ Keep changes focused, explain the user benefit, and keep the code testable.
 
 You need macOS 26 or later, Apple silicon, and Xcode 26.5 or later.
 
+CI uses macOS 27, Xcode 27.0, and SwiftLint 0.65.1. Use these versions to
+reproduce CI locally. Package resolution uses the committed `Package.resolved`.
+
 ```bash
 git clone https://github.com/kavoye/linen-browser.git
 cd linen-browser
