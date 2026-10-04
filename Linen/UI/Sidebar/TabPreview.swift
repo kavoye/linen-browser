@@ -163,7 +163,7 @@ private struct TabPreviewCard: View {
             case .folder(let folder, let tabs):
                 GroupFace(
                     symbol: "folder",
-                    tint: folder.color.tint,
+                    tint: folder.color == .gray ? .secondary : folder.color.tint,
                     title: folder.name,
                     detail: tabs.count == 1
                         ? String(localized: "1 tab")
