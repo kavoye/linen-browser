@@ -55,6 +55,16 @@ struct AttachmentTests {
         #expect(file.text.contains("Page 1"))
     }
 
+    @Test func recognizesTextWithoutANeuralEngine() async throws {
+        let data = try image()
+        let text = try await Task.detached {
+            let bitmap = try #require(NSBitmapImageRep(data: data))
+            return try AttachmentImporter.recognize(try #require(bitmap.cgImage), availableComputeDevices: [])
+        }.value
+        #expect(text.contains("INVOICE"))
+        #expect(text.contains("42"))
+    }
+
     @Test func recognizesScannedPDFPages() async throws {
         let data = try pdf(scanned: true)
         let file = try await Task.detached {

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import AppKit
+import CoreML
 import ImageIO
 import PDFKit
 import UniformTypeIdentifiers
@@ -112,12 +113,34 @@ nonisolated enum AttachmentImporter {
         return data as Data
     }
 
-    private static func recognize(_ image: CGImage) throws -> String {
+    static func recognize(
+        _ image: CGImage,
+        availableComputeDevices: [MLComputeDevice] = MLComputeDevice.allComputeDevices
+    ) throws -> String {
         try Task.checkCancellation()
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
         request.automaticallyDetectsLanguage = true
+        let hasNeuralEngine = availableComputeDevices.contains {
+            if case .neuralEngine = $0 {
+                return true
+            }
+            return false
+        }
+        if !hasNeuralEngine {
+            // Virtual machines lack a Neural Engine even when Vision defaults to its backend.
+            for (stage, devices) in try request.supportedComputeStageDevices {
+                if let cpu = devices.first(where: {
+                    if case .cpu = $0 {
+                        return true
+                    }
+                    return false
+                }) {
+                    request.setComputeDevice(cpu, for: stage)
+                }
+            }
+        }
         try VNImageRequestHandler(cgImage: image).perform([request])
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
     }

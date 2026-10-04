@@ -18,7 +18,7 @@ struct PaymentCardScriptTests {
     }
 
     private func load(_ html: String) async throws -> (WKWebView, Sink) {
-        let configuration = WebViewPool.makeConfiguration()
+        let configuration = interactiveWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let sink = Sink()
         configuration.userContentController.add(sink, contentWorld: PaymentCardAutofill.world, name: "linenCardAutofill")
