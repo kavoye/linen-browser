@@ -51,24 +51,43 @@ final class AppCoordinator {
 
     var selectedProvider = ProviderCatalog.openAI
     var selectedModel = ""
-    var selectedEffort = LLMSettings.reasoningEffort
+    var selectedEffort: LLMSettings.ReasoningEffort = .low
     var supportsReasoningEffort = false
 
-    let browser = BrowserModel()
-    let extensions: ExtensionManager
+    let browser: BrowserModel
+    var extensions: ExtensionManager {
+        browser.context.extensions
+    }
+    weak var application: BrowserApplication?
+    var windowID: UUID {
+        browser.windowID
+    }
+    var nativeWindow: NSWindow? {
+        host?.nativeWindow
+    }
+    var isKeyWindow: Bool {
+        nativeWindow?.isKeyWindow == true
+    }
+    var isBootstrapped = false
+    private(set) var isClosed = false
     let media: MediaCenter
     #if DEBUG
     let lyrics = LyricsModel(defaults: StageMode.defaults)
     #else
     let lyrics = LyricsModel()
     #endif
-    let conversationLog = ConversationLog()
+    var conversationLog: ConversationLog {
+        browser.context.conversationLog
+    }
     let downloadFlights = DownloadFlights()
     let agentQuestions = AgentQuestionModel()
     var agentReply: AgentReplyModel {
         agentTurns.reply
     }
-    let updates = UpdateController()
+    private let standaloneUpdates = UpdateController()
+    var updates: UpdateController {
+        application?.updates ?? standaloneUpdates
+    }
     let releaseNotes = ReleaseNotesModel()
     #if DEBUG
     let onboarding = OnboardingModel(defaults: StageMode.defaults)
@@ -85,9 +104,17 @@ final class AppCoordinator {
     let linkPeek = LinkPeek()
     let peek = PeekPanel()
     let sidebarDrag = SidebarDragModel()
-    let settings = BrowserSettings.shared
+    var settings: BrowserSettings {
+        browser.context.settings
+    }
+    var modelSettings: LLMSettings {
+        browser.context.modelSettings
+    }
 
-    @ObservationIgnored lazy var mcpServer = BrowserMCPServer(
+    var mcpServer: BrowserMCPServer {
+        application?.mcpServer ?? standaloneMCPServer
+    }
+    @ObservationIgnored private lazy var standaloneMCPServer = BrowserMCPServer(
         browser: browser, defaults: BrowserMCPServer.appDefaults,
         canListen: { [weak self] in
             guard let self else { return false }
@@ -147,28 +174,31 @@ final class AppCoordinator {
     private static let speechMutedKey = "speech.muted"
     private(set) var isAgentSpeaking = false
 
-    init(modelProviders: any ModelProviderResolving = ModelProviderRegistry()) {
+    init(
+        browser: BrowserModel = BrowserModel(),
+        profiles: ProfileStore? = nil,
+        modelProviders: any ModelProviderResolving = ModelProviderRegistry()
+    ) {
+        self.browser = browser
+        self.profiles = profiles ?? ProfileStore.selection(profile: browser.context.profile)
         self.modelProviders = modelProviders
-        let extensions = ExtensionManager(browser: browser)
-        self.extensions = extensions
-        PasswordAutofill.shared.extensions = { [weak extensions] in
-            guard let extensions else { return [] }
-            return extensions.installed + extensions.systemExtensions
-        }
+        let extensions = browser.context.extensions
+        extensions.register(browser: browser)
         media = MediaCenter()
 
         voiceInput = VoiceInputModel()
         speech = ProviderSpeechOutput()
         agentTurns = AgentTurnModel(
             browser: browser,
-            log: conversationLog,
-            speech: speech
+            log: browser.context.conversationLog,
+            speech: speech,
+            modelSettings: browser.context.modelSettings,
+            actionPolicy: browser.context.actionPolicy
         )
         isSpeechMuted = Self.initialSpeechMuted(
             stored: UserDefaults.standard.object(forKey: Self.speechMutedKey)
         )
         speech.isMuted = isSpeechMuted
-        AutofillSuggestions.shared.openSettings = { [weak self] in self?.openSettings(.autofill) }
         speech.onSpeakingChange = { [weak self] speaking in
             self?.isAgentSpeaking = speaking
         }
@@ -193,13 +223,9 @@ final class AppCoordinator {
             self?.voiceInput.clearTranscript()
             self?.statusMessage = nil
         }
-        browser.downloads.webViewProvider = { [weak self] in self?.browser.activeTab?.webView }
 
-        let extensionTabClosed = browser.onTabClosed
-        browser.onTabClosed = { [weak self] tab in
-            extensionTabClosed?(tab)
-            self?.tabDidClose(tab)
-        }
+        configureWindowCallbacks()
+        configureWindowAgentTransfer()
 
         sidebarDrag.planSource = { [weak self] in
             guard let self else { return SplitDropPlan() }
@@ -221,7 +247,6 @@ final class AppCoordinator {
 
         sidebar.onShowingChange = { [weak self] in self?.applyHoverShield() }
         sidePanel.onFootprintChange = { [weak self] in self?.applyHoverShield() }
-        TabWebView.refreshHoverShield = { [weak self] in self?.applyHoverShield() }
         observeAppearance()
     }
 
@@ -232,7 +257,7 @@ final class AppCoordinator {
     }
 
     func reloadFaviconsIfSchemeChanged() {
-        let scheme = FaviconLoader.shared.scheme
+        let scheme = browser.context.favicons.scheme
         guard scheme != iconScheme else { return }
         iconScheme = scheme
         for tab in browser.tabs {
@@ -261,6 +286,7 @@ final class AppCoordinator {
         )
         let peeked = shownPeek?.webView
         for view in TabWebView.liveInstances.allObjects {
+            guard view.window === nativeWindow else { continue }
             guard view.window != nil else {
                 view.setHoverParked(false)
                 continue
@@ -282,25 +308,6 @@ final class AppCoordinator {
                 )
                     || shell.panelCoversPage
             )
-        }
-    }
-
-    private func tabDidClose(_ tab: BrowserTab) {
-        if conversationSpaceID == tab.id {
-            endVoiceConversation()
-        }
-        playedPages[tab.id] = nil
-        FaviconTint.forget(tab.id)
-        if peek.belongs(to: tab.id) {
-            closePeek()
-        }
-        if media.controlledTabID == tab.id {
-            media.releaseControl()
-            dockSuccessor(to: tab.id)
-        }
-        if agentTurns.closeTab(tab.id) {
-            voiceInput.clearTranscript()
-            statusMessage = nil
         }
     }
 
@@ -348,15 +355,6 @@ final class AppCoordinator {
         speech.isMuted = muted
     }
 
-    func clearDataOnQuitIfNeeded() async {
-        guard settings.clearsDataOnQuit else { return }
-        await BrowsingData.clearEverything(
-            history: browser.history,
-            agent: conversationLog,
-            tabs: browser.tabs
-        )
-    }
-
     func reloadActivation() {
         activation.reload()
     }
@@ -372,6 +370,7 @@ final class AppCoordinator {
     // MARK: - Tab switching
 
     var tabSwitchMonitor: Any?
+    var resignActiveObserver: NSObjectProtocol?
 
     var controlDownAt: TimeInterval?
 
@@ -382,7 +381,7 @@ final class AppCoordinator {
 
     // MARK: - Profiles
 
-    let profiles = ProfileStore.shared
+    let profiles: ProfileStore
 
     var switchingTo: Profile?
 
@@ -392,20 +391,18 @@ final class AppCoordinator {
 
     var privateSession: PrivateBrowsingSession?
 
-    var hasPrivateSession: Bool {
-        privateSession != nil
-    }
-
     let profileSwitches = SerialTasks()
 
     // MARK: - Presentation
 
     var browserIsFrontmost: Bool {
-        browserVisible && NSApp.isActive
+        isKeyWindow && NSApp.isActive
     }
 
-    func showBrowser() {
-        ensureHost().show()
+    func showBrowser(activate: Bool = true) {
+        guard !isClosed else { return }
+        ensureHost().show(activate: activate)
+        updateWindowAppearance()
     }
 
     func openFromAnotherApp(_ urls: [URL]) {
@@ -499,18 +496,16 @@ final class AppCoordinator {
         applyHoverShield()
     }
 
-    /// The panel is still on screen while it shrinks back into its link.
-    private static let peekDeparture: Duration = .milliseconds(260)
-
     @discardableResult
     func closePeek() -> Bool {
-        guard let held = peek.take() else { return false }
+        guard peek.dismiss(using: browser) else { return false }
         applyHoverShield()
-        Task { [browser] in
-            try? await Task.sleep(for: Self.peekDeparture)
-            browser.dismissPeekTab(held)
-        }
         return true
+    }
+
+    func closePeekImmediately() {
+        peek.dismissImmediately(using: browser)
+        applyHoverShield()
     }
 
     func keepPeek() {
@@ -542,7 +537,7 @@ final class AppCoordinator {
     }
 
     func toggleFullScreen() {
-        (NSApp.keyWindow ?? NSApp.mainWindow)?.toggleFullScreen(nil)
+        nativeWindow?.toggleFullScreen(nil)
     }
 
     func copyCurrentURL() {
@@ -645,7 +640,7 @@ final class AppCoordinator {
         guard browser.history.count > 0 else { return }
         Task {
             guard let choice = await ConfirmAlert.clear(.history()) else { return }
-            await BrowsingData.clear(choice.kinds, range: choice.range, history: browser.history)
+            await BrowsingData.clear(choice.kinds, range: choice.range, history: browser.history, context: browser.context)
         }
     }
 
@@ -747,8 +742,8 @@ final class AppCoordinator {
 
     func useProvider(_ provider: Provider) {
         guard provider.id != selectedProvider.id else { return }
-        ProviderCatalog.shared.select(provider)
-        configureEngines()
+        modelSettings.providerID = provider.id
+        reloadAssistantConfiguration()
     }
 
     func stopAgent() {
@@ -785,6 +780,16 @@ final class AppCoordinator {
         let created = BrowserHost(coordinator: self)
         host = created
         return created
+    }
+
+    func releaseWindowHost() {
+        host = nil
+    }
+
+    func beginClosingWindow() -> Bool {
+        guard !isClosed else { return false }
+        isClosed = true
+        return true
     }
 
     // MARK: - Voice input
@@ -860,7 +865,7 @@ final class AppCoordinator {
             showsInChrome: showsInChrome
         )
         guard started else {
-            statusMessage = "Add an API key for \(ProviderCatalog.shared.selected.name) in Settings, or enable Apple Intelligence."
+            statusMessage = "Add an API key for \(selectedProvider.name) in Settings, or enable Apple Intelligence."
             voiceInput.clearTranscript()
             return false
         }

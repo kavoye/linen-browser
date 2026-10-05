@@ -17,6 +17,42 @@ struct ProfileSettingsTests {
         suite.removePersistentDomain(forName: suite.description)
     }
 
+    @Test func openProfilesShareAppPreferencesAndKeepSessionPreferencesSeparate() throws {
+        let app = try suite()
+        let work = try suite()
+        let personal = try suite()
+        defer { [app, work, personal].forEach(forget) }
+        let first = BrowserSettings(defaults: app, sessionDefaults: work)
+        let second = BrowserSettings(defaults: app, sessionDefaults: personal)
+        var appearanceChanges = 0
+        second.onAppearanceChanged = { appearanceChanges += 1 }
+
+        first.appearance = .dark
+        first.downloadFolder = URL(filePath: "/tmp/linen-downloads")
+        first.searchEngineID = "kagi"
+        first.javaScriptEnabled = false
+
+        #expect(second.appearance == .dark)
+        #expect(appearanceChanges == 1)
+        #expect(second.downloadFolder == first.downloadFolder)
+        #expect(second.searchEngineID == SearchEngine.duckDuckGo.id)
+        #expect(second.javaScriptEnabled)
+        second.pageZoom = 1.25
+        #expect(first.pageZoom == 1.25)
+    }
+
+    @Test func independentAppDefaultsDoNotReceiveBroadcasts() throws {
+        let firstDefaults = try suite()
+        let secondDefaults = try suite()
+        defer { [firstDefaults, secondDefaults].forEach(forget) }
+        let first = BrowserSettings(defaults: firstDefaults)
+        let second = BrowserSettings(defaults: secondDefaults)
+
+        first.appearance = .dark
+
+        #expect(second.appearance == .system)
+    }
+
     @Test func theSessionAndAppHalvesAreDisjoint() {
         let session = Set(BrowserSettings.sessionKeys)
         for key in ["appearance.mode", "content.defaultZoom", "downloads.folder",

@@ -12,17 +12,30 @@ final class SettingsWorkspace {
     var query = ""
     var highlight: String?
 
-    let intelligence: IntelligenceViewModel
+    private(set) var intelligence: IntelligenceViewModel
 
     @ObservationIgnored private var highlightTask: Task<Void, Never>?
 
     init(coordinator: AppCoordinator) {
-        intelligence = IntelligenceViewModel(
+        intelligence = Self.makeIntelligence(coordinator: coordinator)
+    }
+
+    func adoptProfile(coordinator: AppCoordinator) {
+        intelligence = Self.makeIntelligence(coordinator: coordinator)
+    }
+
+    private static func makeIntelligence(coordinator: AppCoordinator) -> IntelligenceViewModel {
+        let context = coordinator.browser.context
+        return IntelligenceViewModel(
+            settings: context.modelSettings,
             onVoiceConfigurationChanged: { [weak coordinator] in
                 guard let coordinator else { return }
                 coordinator.configureVoice()
             },
-            onConfigurationChanged: coordinator.configureEngines
+            onConfigurationChanged: { [weak coordinator, weak context] in
+                guard let coordinator, coordinator.browser.context === context else { return }
+                coordinator.reloadAssistantConfiguration()
+            }
         )
     }
 
@@ -166,7 +179,9 @@ private struct SettingsDetail: View {
                     case .websites:
                         WebsiteSettings(
                             settings: coordinator.settings,
-                            permissions: coordinator.browser.sitePermissions
+                            permissions: coordinator.browser.sitePermissions,
+                            blocker: coordinator.browser.context.contentBlocker,
+                            grants: coordinator.browser.context.actionPolicy
                         )
                     case .downloads:
                         DownloadsSettings(coordinator: coordinator, settings: coordinator.settings)

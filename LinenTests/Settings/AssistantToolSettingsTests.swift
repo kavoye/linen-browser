@@ -9,6 +9,47 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct AssistantToolSettingsTests {
+    @Test func profileModelChoicesAndToolSettingsRemainIndependent() throws {
+        let firstName = "model-profile-first-\(UUID())"
+        let secondName = "model-profile-second-\(UUID())"
+        let firstDefaults = try #require(UserDefaults(suiteName: firstName))
+        let secondDefaults = try #require(UserDefaults(suiteName: secondName))
+        defer {
+            firstDefaults.removePersistentDomain(forName: firstName)
+            secondDefaults.removePersistentDomain(forName: secondName)
+        }
+        let first = LLMSettings(defaults: firstDefaults)
+        let second = LLMSettings(defaults: secondDefaults)
+        let provider = ProviderCatalog.openAI
+        let otherProvider = try #require(ProviderCatalog.shared.provider(id: "anthropic"))
+        first.providerID = provider.id
+        second.providerID = otherProvider.id
+        first.setModel("saved-first", for: provider)
+        first.setReasoningEffort(.high, for: provider)
+        let firstModel = IntelligenceViewModel(settings: first, credentials: TestCredentialStore(),
+            contextProbe: SilentContextProbe(), onConfigurationChanged: {})
+        let secondModel = IntelligenceViewModel(settings: second, credentials: TestCredentialStore(),
+            contextProbe: SilentContextProbe(), onConfigurationChanged: {})
+
+        #expect(firstModel.selected.id == provider.id)
+        #expect(firstModel.selectedModel == "saved-first")
+        #expect(firstModel.reasoningEffort == .high)
+        #expect(secondModel.selected.id == otherProvider.id)
+        firstModel.selectModel("updated-first")
+        firstModel.selectReasoningEffort(.low)
+        firstModel.setTool("readPage", enabled: false)
+
+        #expect(first.model(for: provider) == "updated-first")
+        #expect(first.reasoningEffort(for: provider) == .low)
+        #expect(second.model(for: provider) == provider.defaultModel)
+        #expect(second.enabledAgentTools(for: provider) == nil)
+        #expect(secondModel.selected.id == otherProvider.id)
+        let reopened = IntelligenceViewModel(settings: LLMSettings(defaults: firstDefaults),
+            credentials: TestCredentialStore(), contextProbe: SilentContextProbe(), onConfigurationChanged: {})
+        #expect(reopened.selectedModel == "updated-first")
+        #expect(reopened.reasoningEffort == .low)
+    }
+
     private static let inUse = Provider(
         id: "in-use",
         name: "In Use",

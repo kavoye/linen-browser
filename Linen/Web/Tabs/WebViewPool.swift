@@ -12,6 +12,8 @@ final class TabWebView: WKWebView {
         "WKMenuItemIdentifierOpenMediaInNewWindow": "Open Video in New Tab",
     ]
 
+    weak var profileContext: BrowserProfileContext?
+
     static let liveInstances = NSHashTable<TabWebView>.weakObjects()
 
     static var refreshHoverShield: (() -> Void)?
@@ -56,6 +58,7 @@ final class TabWebView: WKWebView {
     }
 
     var onContextDownload: ((WKDownload, URL?) -> Void)?
+    var onOpenLinkInNewWindow: ((URL, Bool) -> Void)?
     var onPeekLink: ((URL) -> Void)?
     var onSummarizeLink: ((URL, CGPoint?) -> Void)?
     var onPageActivity: ((PageActivitySignal) -> Void)?
@@ -215,7 +218,15 @@ final class TabWebView: WKWebView {
         )
         summary.target = self
         summary.image = NSImage(systemSymbolName: "text.line.first.and.arrowtriangle.forward", accessibilityDescription: nil)
-        return [peek, summary]
+        return TabContextMenu.linkWindowItems(
+            opensPrivately: profileContext?.profile.isPrivate == true,
+            target: self, action: #selector(openContextLinkInNewWindow(_:))
+        ) + [peek, summary]
+    }
+
+    @objc private func openContextLinkInNewWindow(_ sender: NSMenuItem) {
+        guard let url = contextLinkURL else { return }
+        onOpenLinkInNewWindow?(url, sender.tag == 1)
     }
 
     @objc private func peekAtContextLink() {
@@ -325,7 +336,16 @@ final class WebViewPool {
 
     private var extensionController: WKWebExtensionController?
 
-    private(set) var dataStore: WKWebsiteDataStore = .default()
+    private(set) var dataStore: WKWebsiteDataStore
+    private let settings: BrowserSettings
+    private let contentBlocker: ContentBlocker
+
+    init(dataStore: WKWebsiteDataStore = .default(), settings: BrowserSettings = .shared,
+         contentBlocker: ContentBlocker = .shared) {
+        self.dataStore = dataStore
+        self.settings = settings
+        self.contentBlocker = contentBlocker
+    }
 
     private static let configurationTemplate = WKWebViewConfiguration()
 
@@ -363,6 +383,8 @@ final class WebViewPool {
         handlerName: String,
         handler: any WKScriptMessageHandler & AnyObject
     ) {
+        guard !scripts.contains(where: { $0.handlerName == handlerName && $0.handler != nil }) else { return }
+        scripts.removeAll { $0.handlerName == handlerName }
         scripts.append(PooledScript(
             source: source,
             injectionTime: injectionTime,
@@ -373,6 +395,7 @@ final class WebViewPool {
     }
 
     func installExtensionController(_ controller: WKWebExtensionController) {
+        guard extensionController !== controller else { return }
         extensionController = controller
         idle.removeAll()
     }
@@ -433,7 +456,7 @@ final class WebViewPool {
         defer { scheduleRefill() }
         while let view = idle.popLast() {
             if view.configuration.websiteDataStore === dataStore {
-                BrowserSettings.shared.apply(to: view)
+                settings.apply(to: view)
                 return view
             }
         }
@@ -461,7 +484,7 @@ final class WebViewPool {
         let configuration = Self.makeConfiguration()
         configuration.websiteDataStore = dataStore ?? self.dataStore
         configuration.webExtensionController = extensionController
-        BrowserSettings.shared.apply(to: configuration)
+        settings.apply(to: configuration)
         MediaCenter.enablePictureInPicture(on: configuration.preferences)
 
         let contentController = WKUserContentController()
@@ -475,7 +498,7 @@ final class WebViewPool {
             contentController.add(handler, name: script.handlerName)
         }
 
-        ContentBlocker.shared.apply(to: contentController)
+        contentBlocker.apply(to: contentController)
         if extensionController != nil {
             for source in [ExtensionPageAssets.script, ExtensionExternalConnect.pageScript] {
                 contentController.addUserScript(WKUserScript(
@@ -494,7 +517,7 @@ final class WebViewPool {
             frame: NSRect(x: 0, y: 0, width: 800, height: 600),
             configuration: configuration
         )
-        BrowserSettings.shared.apply(to: view)
+        settings.apply(to: view)
         view.allowsBackForwardNavigationGestures = true
         view.allowsMagnification = true
         return view

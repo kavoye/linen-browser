@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AppKit
 import Foundation
 import MCP
 import Network
@@ -21,8 +22,8 @@ final class BrowserMCPServer {
     private(set) var isPaused = false
     private(set) var status: String?
     private(set) var sessions: [MCPBrowserSession] = []
-    @ObservationIgnored private let browser: BrowserModel
-    @ObservationIgnored private let available: () -> Bool
+    @ObservationIgnored private let target: () -> BrowserModel?
+    @ObservationIgnored private let available: (BrowserModel) -> Bool
     @ObservationIgnored private let canListen: () -> Bool
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let endpoint: String
@@ -44,12 +45,32 @@ final class BrowserMCPServer {
         defaults: UserDefaults? = nil, canListen: (() -> Bool)? = nil,
         available: @escaping () -> Bool
     ) {
-        self.browser = browser
+        target = { browser }
         self.endpoint = endpoint
-        self.available = available
+        self.available = { _ in available() }
         self.canListen = canListen ?? available
         self.defaults = defaults
         isEnabled = defaults?.bool(forKey: "mcp.enabled") ?? false
+    }
+
+    init(
+        endpoint: String = LocalMCPEndpoint.path,
+        defaults: UserDefaults? = nil,
+        target: @escaping () -> BrowserModel?,
+        available: @escaping (BrowserModel) -> Bool
+    ) {
+        self.endpoint = endpoint
+        self.defaults = defaults
+        self.target = target
+        self.available = available
+        canListen = { true }
+        isEnabled = defaults?.bool(forKey: "mcp.enabled") ?? false
+    }
+
+    func disconnect(browser: BrowserModel) {
+        for session in sessions where session.isBound(to: browser) {
+            disconnect(session.id)
+        }
     }
 
     var configuration: String {
@@ -128,12 +149,40 @@ final class BrowserMCPServer {
         activeCall?.task.cancel()
     }
 
+    /// Bind to the selected window once. Later focus changes cannot retarget this connection.
+    func makeSessionForConnection(
+        consent: @escaping (String, [MCPAccessConsent.Page], NSWindow?) async -> MCPAccessConsent.Access? = MCPAccessConsent.share,
+        openConsent: @escaping (String, URL, NSWindow?) async -> Bool = MCPAccessConsent.open
+    ) -> MCPBrowserSession? {
+        guard let browser = target(), !browser.opensPrivately, !browser.context.profile.isPrivate,
+              available(browser) else { return nil }
+        let context = browser.context
+        return MCPBrowserSession(
+            browser: browser,
+            available: { [weak self, weak browser, weak context] in
+                guard let self, let browser, let context, browser.context === context else { return false }
+                return available(browser)
+            },
+            consent: { [weak browser] client, pages in
+                guard let browser,
+                      let window = browser.context.extensions.adapter(for: browser)?.nativeWindow
+                else { return nil }
+                return await consent(client, pages, window)
+            },
+            openConsent: { [weak browser] client, url in
+                guard let browser,
+                      let window = browser.context.extensions.adapter(for: browser)?.nativeWindow
+                else { return false }
+                return await openConsent(client, url, window)
+            }
+        )
+    }
+
     private func accept(_ connection: NWConnection) {
-        guard isEnabled, available(), connections.count < 8 else {
+        guard isEnabled, connections.count < 8, let session = makeSessionForConnection() else {
             connection.cancel()
             return
         }
-        let session = MCPBrowserSession(browser: browser, available: available)
         let transport = LocalMCPTransport(connection: connection)
         let server = MCP.Server(
             name: "Linen", version: "1.0.0",

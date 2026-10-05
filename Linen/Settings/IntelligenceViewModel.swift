@@ -17,6 +17,7 @@ final class IntelligenceViewModel {
     }
 
     private let catalog: any ProviderCatalogProtocol
+    private let settings: LLMSettings
     private let credentials: any ProviderCredentialStore
     private let modelProviders: any ModelProviderResolving
     private let contextProbe: any ContextWindowProbing
@@ -29,7 +30,7 @@ final class IntelligenceViewModel {
     private(set) var inspectedID: String?
 
     var selectedModel = ""
-    var reasoningEffort = LLMSettings.reasoningEffort
+    var reasoningEffort: LLMSettings.ReasoningEffort = .low
 
     var keyDraft = ""
     private(set) var keySource = CredentialStore.Source.none
@@ -52,14 +53,17 @@ final class IntelligenceViewModel {
     private(set) var customError: String?
 
     init(
-        catalog: any ProviderCatalogProtocol = ProviderCatalog.shared,
+        catalog: (any ProviderCatalogProtocol)? = nil,
+        settings: LLMSettings = .current,
         credentials: any ProviderCredentialStore = KeychainProviderCredentialStore(),
         modelProviders: (any ModelProviderResolving)? = nil,
         contextProbe: any ContextWindowProbing = ProviderContextProbe(),
         onVoiceConfigurationChanged: (() -> Void)? = nil,
         onConfigurationChanged: @escaping () -> Void
     ) {
+        let catalog = catalog ?? ProfileProviderCatalog(settings: settings)
         self.catalog = catalog
+        self.settings = settings
         self.credentials = credentials
         self.modelProviders = modelProviders ?? ModelProviderRegistry(credentials: credentials)
         self.contextProbe = contextProbe
@@ -108,6 +112,7 @@ final class IntelligenceViewModel {
     }
 
     func onAppear() async {
+        selectedID = catalog.selected.id
         adoptSubject()
         probeLocalProviders()
         await loadCatalog()
@@ -165,7 +170,7 @@ final class IntelligenceViewModel {
                 parts.append(provider.endpointLabel)
             }
 
-            let model = LLMSettings.model(for: provider)
+            let model = settings.model(for: provider)
             if !model.isEmpty {
                 parts.append(model)
             }
@@ -241,7 +246,7 @@ final class IntelligenceViewModel {
 
     var isUsingRecommendedTools: Bool {
         let current = enabledTools
-        return LLMSettings.enabledAgentTools(for: subject) == nil
+        return settings.enabledAgentTools(for: subject) == nil
             || current == recommendedToolIDs
     }
 
@@ -267,14 +272,14 @@ final class IntelligenceViewModel {
         } else {
             enabledTools.remove(id)
         }
-        LLMSettings.setEnabledAgentTools(enabledTools, for: subject)
+        settings.setEnabledAgentTools(enabledTools, for: subject)
         if isSubjectInUse {
             onConfigurationChanged()
         }
     }
 
     func resetToolsToRecommended() {
-        LLMSettings.setEnabledAgentTools(nil, for: subject)
+        settings.setEnabledAgentTools(nil, for: subject)
         refreshTools()
         if isSubjectInUse {
             onConfigurationChanged()
@@ -284,7 +289,7 @@ final class IntelligenceViewModel {
     func refreshTools() {
         enabledTools = AgentToolCatalog.resolvedIDs(
             for: subject,
-            tier: ContextBudget.toolTier(forWindow: subjectWindowTokens)
+            tier: ContextBudget.toolTier(forWindow: subjectWindowTokens), settings: settings
         )
     }
 
@@ -294,14 +299,15 @@ final class IntelligenceViewModel {
             tier: ContextBudget.toolTier(
                 forWindow: ContextWindow.tokens(
                     for: provider,
-                    model: LLMSettings.model(for: provider)
+                    model: settings.model(for: provider), settings: settings
                 )
-            )
+            ),
+            settings: settings
         ).intersection(AgentToolCatalog.configurableIDs).count
     }
 
     private var subjectWindowTokens: Int {
-        ContextWindow.tokens(for: subject, model: LLMSettings.model(for: subject))
+        ContextWindow.tokens(for: subject, model: settings.model(for: subject), settings: settings)
     }
 
     // MARK: - Context window
@@ -309,25 +315,25 @@ final class IntelligenceViewModel {
     private(set) var discoveredWindows: [String: Int] = [:]
 
     func detectedContextWindow(for provider: Provider) -> Int? {
-        let model = LLMSettings.model(for: provider)
+        let model = settings.model(for: provider)
         let key = "\(provider.id)\0\(provider.baseURL?.absoluteString ?? "")\0\(model)"
-        guard let stored = LLMSettings.discoveredContextWindow(for: provider, model: model) else { return nil }
+        guard let stored = settings.discoveredContextWindow(for: provider, model: model) else { return nil }
         return discoveredWindows[key] ?? stored
     }
 
     func discoverContextWindow(for provider: Provider) async {
-        let modelID = LLMSettings.model(for: provider)
+        let modelID = settings.model(for: provider)
         guard !provider.isOnDevice,
               !modelID.isEmpty,
-              LLMSettings.discoveredContextWindow(for: provider, model: modelID) == nil,
+              settings.discoveredContextWindow(for: provider, model: modelID) == nil,
               !provider.needsKey || credentials.isConfigured(provider),
               let window = await contextProbe.effectiveWindow(
                 for: provider, model: modelID, apiKey: credentials.key(for: provider)
               )
         else { return }
         discoveredWindows["\(provider.id)\0\(provider.baseURL?.absoluteString ?? "")\0\(modelID)"] = window
-        guard LLMSettings.discoveredContextWindow(for: provider, model: modelID) != window else { return }
-        LLMSettings.setDiscoveredContextWindow(window, for: provider, model: modelID)
+        guard settings.discoveredContextWindow(for: provider, model: modelID) != window else { return }
+        settings.setDiscoveredContextWindow(window, for: provider, model: modelID)
         if provider.id == selectedID {
             onConfigurationChanged()
         }
@@ -353,8 +359,8 @@ final class IntelligenceViewModel {
     private func adoptSubject() {
         credentialRevision += 1
         let provider = subject
-        selectedModel = LLMSettings.model(for: provider)
-        reasoningEffort = LLMSettings.reasoningEffort(for: provider)
+        selectedModel = settings.model(for: provider)
+        reasoningEffort = settings.reasoningEffort(for: provider)
         customModelDraft = selectedModel
         isEditingCustomModel = false
         keyDraft = ""
@@ -398,7 +404,7 @@ final class IntelligenceViewModel {
         customModelDraft = trimmed
         isEditingCustomModel = false
         selectedModel = trimmed
-        LLMSettings.setModel(trimmed, for: subject)
+        settings.setModel(trimmed, for: subject)
         if isSubjectInUse {
             onConfigurationChanged()
         }
@@ -417,7 +423,7 @@ final class IntelligenceViewModel {
     func selectReasoningEffort(_ effort: LLMSettings.ReasoningEffort) {
         guard effort != reasoningEffort else { return }
         reasoningEffort = effort
-        LLMSettings.setReasoningEffort(effort, for: subject)
+        settings.setReasoningEffort(effort, for: subject)
         if isSubjectInUse {
             onConfigurationChanged()
         }
@@ -449,7 +455,9 @@ final class IntelligenceViewModel {
         isLoadingCatalog = true
         catalogError = nil
         do {
-            let models = try await modelProvider.availableModels()
+            let models = try await LLMSettings.$scoped.withValue(settings) {
+                try await modelProvider.availableModels()
+            }
             guard provider.id == subject.id else { return }
             availableModels = models
             if provider.isLocal {
@@ -527,7 +535,9 @@ final class IntelligenceViewModel {
         guard provider.isLocal, !provider.isOnDevice else { return }
         probes[provider.id] = .checking
         do {
-            let models = try await modelProviders.resolve(provider).availableModels()
+            let models = try await LLMSettings.$scoped.withValue(settings) {
+                try await modelProviders.resolve(provider).availableModels()
+            }
             if models.isEmpty {
                 probes[provider.id] = .notRunning(
                     String(localized: "Running, but no models are loaded yet.")

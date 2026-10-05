@@ -160,7 +160,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         guard let tab, let onNewWindow = tab.onNewWindow else { return nil }
 
         let view = TabWebView(frame: webView.frame, configuration: configuration)
-        BrowserSettings.shared.apply(to: view)
+        tab.context.settings.apply(to: view)
         view.allowsBackForwardNavigationGestures = true
         view.allowsMagnification = true
 
@@ -428,7 +428,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         case .evaluateServerTrust:
             switch await CertificateTrust.decide(
                 for: challenge,
-                allowsExceptions: BrowserSettings.shared.allowsCertificateExceptions,
+                allowsExceptions: tab?.context.settings.allowsCertificateExceptions ?? false,
                 in: webView.window
             ) {
             case .useDefaultHandling:

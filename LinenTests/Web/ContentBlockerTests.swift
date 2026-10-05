@@ -144,3 +144,75 @@ struct ContentBlockerRuleTests {
         try? await store.removeContentRuleList(forIdentifier: "Linen.trackers.test")
     }
 }
+
+@MainActor
+@Suite(.serialized)
+struct PrivateContentBlockerTests {
+    @Test func privateCompiledRulesAreRemovedWhileTheLiveRuleObjectIsRetained() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("private-rules-\(UUID())")
+        let suiteName = "PrivateContentBlockerTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let store = try #require(WKContentRuleListStore(url: directory))
+        let blocker = ContentBlocker(defaults: defaults, settings: BrowserSettings(defaults: defaults),
+                                     persists: false, ruleStore: store)
+        blocker.setExempt(true, for: "private.example")
+        await blocker.waitForPendingCompilation()
+
+        #expect(blocker.ruleList != nil)
+        #expect(blocker.isExempt("private.example"))
+        let identifiers: [String]? = await store.availableIdentifiers()
+        #expect(identifiers == [])
+        #expect(defaults.stringArray(forKey: "content.blockerExceptions") == nil)
+        await blocker.endPrivateSession()
+    }
+
+    @Test func closingDuringCompilationWaitsForPrivateCacheCleanup() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("private-rules-\(UUID())")
+        let suiteName = "PrivateContentBlockerTests.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let store = try #require(WKContentRuleListStore(url: directory))
+        let blocker = ContentBlocker(defaults: defaults, settings: BrowserSettings(defaults: defaults),
+                                     persists: false, ruleStore: store)
+        blocker.setExempt(true, for: "private.example")
+        #expect(await waitUntil(timeout: .seconds(5), tick: .milliseconds(1)) { blocker.isCompiling })
+        await blocker.endPrivateSession()
+
+        let identifiers: [String]? = await store.availableIdentifiers()
+        #expect(identifiers == [])
+        #expect(blocker.ruleList == nil)
+        #expect(!blocker.isCompiling)
+        #expect(blocker.exemptHosts.isEmpty)
+    }
+
+    @Test func quitAwaitsPrivateCleanupAfterTheLastWindowCloses() async {
+        let app = BrowserApplication()
+        let context = BrowserProfileContext.shared(for: .privateBrowsing())
+        let wasBlocking = context.settings.blocksTrackers
+        context.settings.blocksTrackers = true
+        defer { context.settings.blocksTrackers = wasBlocking }
+        let coordinator = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
+        app.register(coordinator)
+        context.contentBlocker.setExempt(true, for: "private.example")
+        #expect(await waitUntil(timeout: .seconds(5), tick: .milliseconds(1)) { context.contentBlocker.isCompiling })
+
+        coordinator.closeWindow()
+        #expect(app.windows.isEmpty)
+        #expect(app.hasDataToClearOnQuit)
+        app.prepareToTerminate()
+        await app.clearDataOnQuitIfNeeded()
+
+        #expect(!app.hasDataToClearOnQuit)
+        #expect(context.contentBlocker.ruleList == nil)
+        #expect(!context.contentBlocker.isCompiling)
+    }
+}

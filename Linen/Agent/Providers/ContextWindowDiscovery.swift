@@ -196,16 +196,16 @@ nonisolated extension LLMSettings {
         "llm.discoveredContextWindow.\(provider.id).\(provider.baseURL?.absoluteString ?? "").\(model)"
     }
 
-    static func discoveredContextWindow(for provider: Provider, model: String) -> Int? {
-        let key = discoveredWindowKey(for: provider, model: model)
+    func discoveredContextWindow(for provider: Provider, model: String) -> Int? {
+        let key = Self.discoveredWindowKey(for: provider, model: model)
         let checkedAt = defaults.double(forKey: "\(key).checkedAt")
         guard checkedAt > 0, Date().timeIntervalSince1970 - checkedAt < 86_400 else { return nil }
         let stored = defaults.integer(forKey: key)
         return stored > 0 ? stored : nil
     }
 
-    static func setDiscoveredContextWindow(_ tokens: Int?, for provider: Provider, model: String) {
-        let key = discoveredWindowKey(for: provider, model: model)
+    func setDiscoveredContextWindow(_ tokens: Int?, for provider: Provider, model: String) {
+        let key = Self.discoveredWindowKey(for: provider, model: model)
         if let tokens, tokens > 0 {
             defaults.set(tokens, forKey: key)
             defaults.set(Date().timeIntervalSince1970, forKey: "\(key).checkedAt")

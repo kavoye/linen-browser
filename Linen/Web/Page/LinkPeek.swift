@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import AnyLanguageModel
 import AppKit
 import Foundation
 import Observation
@@ -64,8 +65,20 @@ final class LinkPeek {
     @ObservationIgnored private var isSuppressed = false
     private(set) var isHeld = false
 
+    private var settings: BrowserSettings = .shared
+    @ObservationIgnored var makeModel: () -> (any LanguageModel)? = { UtilityModelSource.make() }
+
+    func use(settings: BrowserSettings) {
+        guard self.settings !== settings else { return }
+        forget()
+        remembered.removeAll()
+        order.removeAll()
+        loader.release()
+        self.settings = settings
+    }
+
     var isEnabled: Bool {
-        BrowserSettings.shared.peeksAtLinks && LinkSummarizer.isAvailable
+        settings.peeksAtLinks && makeModel() != nil
     }
 
     // MARK: - Lifecycle
@@ -100,12 +113,14 @@ final class LinkPeek {
         monitor = nil
         forget()
         loader.release()
+        remembered.removeAll()
+        order.removeAll()
     }
 
     // MARK: - Pointing
 
     func hovered(_ url: URL?, flags: NSEvent.ModifierFlags, tabID: UUID, anchor: CGPoint) {
-        guard BrowserSettings.shared.peeksAtLinks, !isSuppressed else { return }
+        guard settings.peeksAtLinks, !isSuppressed else { return }
         guard let url, LinkPeekLoader.canPeek(url) else {
             candidate = nil
             release()
@@ -121,7 +136,7 @@ final class LinkPeek {
     }
 
     func show(_ url: URL, tabID: UUID, anchor: CGPoint) {
-        guard BrowserSettings.shared.peeksAtLinks, !isSuppressed else { return }
+        guard settings.peeksAtLinks, !isSuppressed else { return }
         guard LinkPeekLoader.canPeek(url), isEnabled else { return }
         candidate = Candidate(url: url, tabID: tabID, anchor: anchor)
         isHeld = true
@@ -210,7 +225,7 @@ final class LinkPeek {
                 settle(target.url, to: Self.emptyPhase(for: page))
                 return
             }
-            let streamed = await LinkSummarizer.summarize(page, url: target.url) { [weak self] partial in
+            let streamed = await LinkSummarizer.summarize(page, url: target.url, model: makeModel()) { [weak self] partial in
                 self?.stream(partial, for: target.url)
             }
             guard let summary = streamed else {

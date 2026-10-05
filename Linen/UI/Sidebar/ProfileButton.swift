@@ -38,39 +38,28 @@ struct ProfileSwitcher: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(profiles.profiles) { profile in
-                ProfileSwitcherRow(
-                    profile: profile,
-                    isCurrent: profile.id == profiles.current.id,
-                    caption: caption(for: profile)
-                ) {
-                    dismiss()
-                    Task { await coordinator.switchProfile(to: profile) }
+            if !profiles.isPrivate {
+                ForEach(profiles.profiles) { profile in
+                    ProfileSwitcherRow(
+                        profile: profile,
+                        isCurrent: profile.id == profiles.current.id
+                    ) {
+                        dismiss()
+                        Task { await coordinator.switchProfile(to: profile) }
+                    }
+                    .disabled(coordinator.isSwitchingProfile)
                 }
-                .disabled(coordinator.isSwitchingProfile)
+
+                Divider()
+                    .opacity(0.4)
+                    .padding(.vertical, 5)
             }
 
-            Divider()
-                .opacity(0.4)
-                .padding(.vertical, 5)
-
-            ProfileSwitcherRow(
-                profile: profiles.privateBrowsing,
-                isCurrent: profiles.isPrivate,
-                caption: privateCaption
-            ) {
+            ProfileActionRow(title: "New Private Window", symbol: "eyeglasses") {
                 dismiss()
                 coordinator.enterPrivateBrowsing()
             }
             .disabled(coordinator.isSwitchingProfile)
-
-            if profiles.isPrivate || coordinator.hasPrivateSession {
-                ProfileActionRow(title: "Leave Private Browsing", symbol: "xmark.circle") {
-                    dismiss()
-                    coordinator.leavePrivateBrowsing()
-                }
-                .disabled(coordinator.isSwitchingProfile)
-            }
 
             ProfileActionRow(title: "Manage Profiles…", symbol: "person.2") {
                 dismiss()
@@ -78,28 +67,15 @@ struct ProfileSwitcher: View {
             }
         }
         .padding(Self.inset)
-        .frame(width: 244)
+        .frame(width: 208)
         .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.panel, style: .continuous))
         .shadow(color: .black.opacity(0.3), radius: 22, y: 8)
-    }
-
-    private func caption(for profile: Profile) -> LocalizedStringResource? {
-        guard profile.id == profiles.current.id else { return nil }
-        return "Browsing now"
-    }
-
-    private var privateCaption: LocalizedStringResource? {
-        if profiles.isPrivate {
-            return "Browsing now"
-        }
-        return coordinator.hasPrivateSession ? "Session waiting" : nil
     }
 }
 
 private struct ProfileSwitcherRow: View {
     let profile: Profile
     let isCurrent: Bool
-    var caption: LocalizedStringResource?
     let action: () -> Void
 
     @Environment(\.isEnabled) private var isEnabled
@@ -111,19 +87,11 @@ private struct ProfileSwitcherRow: View {
             HStack(spacing: 9) {
                 ProfileGlyph(profile: profile, size: 26)
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(verbatim: profile.name)
-                        .font(Theme.Font.rowTitle)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    if let caption {
-                        Text(caption)
-                            .font(Theme.Font.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
+                Text(verbatim: profile.name)
+                    .font(Theme.Font.rowTitle)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
                 Spacer(minLength: 6)
 
@@ -142,6 +110,7 @@ private struct ProfileSwitcherRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isCurrent ? .isSelected : [])
         .opacity(isEnabled ? 1 : 0.45)
         .onHover { hovering = isEnabled && $0 }
         .animation(Theme.Motion.quick, value: hovering)

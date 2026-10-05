@@ -64,9 +64,10 @@ extension AppCoordinator {
     }
 
     func retainAgentMemory() {
-        let live = Set(browser.tabs.map(\.id))
-        conversationLog.retainTabs(live)
-        attention.retainSpaces(live)
+        let live = Set(browser.context.extensions.windowAdapters.flatMap { adapter in
+            adapter.browser?.tabs.map(\.id) ?? []
+        }).union(browser.tabs.map(\.id))
+        conversationLog.retainSessionTabs(including: live)
     }
 }
 

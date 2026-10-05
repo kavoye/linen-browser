@@ -5,12 +5,16 @@ import Foundation
 
 enum SearchURLBuilder {
     static var engine: SearchEngine {
-        let chosen = BrowserSettings.shared.searchEngine
+        engine(settings: .shared)
+    }
+
+    static func engine(settings: BrowserSettings) -> SearchEngine {
+        let chosen = settings.searchEngine
         return chosen.searchURL(for: "test") == nil ? SearchEngine.duckDuckGo : chosen
     }
 
-    static func searchURL(for query: String) -> URL {
-        engine.searchURL(for: query) ?? SearchEngine.duckDuckGo.searchURL(for: query)!
+    static func searchURL(for query: String, settings: BrowserSettings = .shared) -> URL {
+        engine(settings: settings).searchURL(for: query) ?? SearchEngine.duckDuckGo.searchURL(for: query)!
     }
 
 }

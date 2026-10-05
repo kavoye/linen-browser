@@ -9,6 +9,54 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct AgentTurnModelTests {
+    @Test func simultaneousTurnsKeepTheirModelSettingsAndActionApprovals() async throws {
+        let firstName = "agent-profile-first-\(UUID())"
+        let secondName = "agent-profile-second-\(UUID())"
+        let firstDefaults = try #require(UserDefaults(suiteName: firstName))
+        let secondDefaults = try #require(UserDefaults(suiteName: secondName))
+        defer {
+            firstDefaults.removePersistentDomain(forName: firstName)
+            secondDefaults.removePersistentDomain(forName: secondName)
+        }
+        let firstSettings = LLMSettings(defaults: firstDefaults)
+        let secondSettings = LLMSettings(defaults: secondDefaults)
+        firstSettings.providerID = "first"
+        secondSettings.providerID = "second"
+        let firstPolicy = AgentActionPolicy(storage: SessionAgentGrantStorage())
+        let secondPolicy = AgentActionPolicy(storage: SessionAgentGrantStorage())
+        firstPolicy.allowAlways(.publication, host: "example.com")
+        let first = Fixture(modelSettings: firstSettings, actionPolicy: firstPolicy)
+        let second = Fixture(modelSettings: secondSettings, actionPolicy: secondPolicy)
+        var allowed: [String: Bool] = [:]
+        for (name, fixture) in [("first", first), ("second", second)] {
+            fixture.runner.waitsForRelease = true
+            fixture.runner.afterRelease = {
+                #expect(LLMSettings.providerID == name)
+                allowed[name] = await AgentActionConsent.permit(
+                    label: "Publish", category: .publication, host: "example.com"
+                )
+                LLMSettings.setModel(name, for: ProviderCatalog.openAI)
+            }
+            fixture.model.use(fixture.runner)
+        }
+        await AgentActionConsent.$decisionForTesting.withValue(.init { _, _, _ in .decline }) {
+            first.model.run(utterance: "First window")
+            second.model.run(utterance: "Second window")
+            #expect(await waitUntil { first.runner.runs.count == 1 && second.runner.runs.count == 1 })
+            if let id = second.runner.runs.first?.task.id {
+                second.runner.release(id)
+            }
+            #expect(await waitUntil { !second.model.isRunning })
+            if let id = first.runner.runs.first?.task.id {
+                first.runner.release(id)
+            }
+            #expect(await waitUntil { !first.model.isRunning })
+        }
+        #expect(allowed == ["first": true, "second": false])
+        #expect(firstSettings.model(for: ProviderCatalog.openAI) == "first")
+        #expect(secondSettings.model(for: ProviderCatalog.openAI) == "second")
+    }
+
     @Test func awaitedTurnReturnsItsLoggedResult() async throws {
         let fixture = Fixture()
         fixture.model.use(fixture.runner)
@@ -236,6 +284,47 @@ struct AgentTurnModelTests {
         #expect(fixture.log.completed.isEmpty)
     }
 
+    @Test func movingATabCancelsWorkWithoutDeletingItsConversation() async throws {
+        let fixture = Fixture()
+        fixture.runner.waitsForRelease = true
+        fixture.model.use(fixture.runner)
+        fixture.model.run(utterance: "research")
+        try #require(await waitUntil { fixture.runner.runs.count == 1 })
+        let task = try #require(fixture.model.activeTask)
+
+        fixture.model.detachTab(task.tabID, inSpace: task.spaceID)
+        #expect(!fixture.model.isRunning)
+        #expect(fixture.log.cancelled == [task.id])
+        #expect(fixture.log.removedTabs.isEmpty)
+        #expect(fixture.runner.discardedTabs == [task.tabID])
+        fixture.runner.release(task.id)
+        #expect(await waitUntil { fixture.runner.released.contains(task.id) })
+        #expect(fixture.log.completed.isEmpty)
+    }
+
+    @Test func switchingLogsCancelsTheOldTurnBeforeAdoptingTheNewProfile() async throws {
+        let fixture = Fixture()
+        fixture.runner.waitsForRelease = true
+        fixture.model.use(fixture.runner)
+        fixture.model.run(utterance: "old profile")
+        try #require(await waitUntil { fixture.runner.runs.count == 1 })
+        let oldTask = try #require(fixture.model.activeTask)
+        let newLog = FakeAgentTurnLog()
+
+        fixture.model.adopt(log: newLog)
+        #expect(fixture.log.cancelled == [oldTask.id])
+        #expect(newLog.cancelled.isEmpty)
+        #expect(fixture.runner.discardedEverything)
+        fixture.runner.release(oldTask.id)
+        #expect(await waitUntil { fixture.runner.released.contains(oldTask.id) })
+        fixture.runner.waitsForRelease = false
+        fixture.model.run(utterance: "new profile")
+        #expect(await waitUntil { !fixture.model.isRunning })
+        #expect(fixture.log.begun.count == 1)
+        #expect(newLog.begun.first?.prompt == "new profile")
+        #expect(newLog.completed.count == 1)
+    }
+
     @Test func closingAnotherTabLeavesTheCurrentTurnRunning() async throws {
         let fixture = Fixture()
         fixture.runner.waitsForRelease = true
@@ -265,9 +354,10 @@ private struct Fixture {
     let runner = FakeAgentRunner()
     let model: AgentTurnModel
 
-    init(context: String? = nil) {
+    init(context: String? = nil, modelSettings: LLMSettings = .current, actionPolicy: AgentActionPolicy = .shared) {
         browser = FakeAgentTurnBrowser(context: context)
-        model = AgentTurnModel(browser: browser, log: log, speech: speech)
+        model = AgentTurnModel(browser: browser, log: log, speech: speech,
+                               modelSettings: modelSettings, actionPolicy: actionPolicy)
     }
 }
 
@@ -381,6 +471,7 @@ private final class FakeAgentRunner: AgentRunner {
     let name = "Test runner"
     var speechWasMuted: [Bool] = []
     var waitsForRelease = false
+    var afterRelease: (() async -> Void)?
     private(set) var runs: [Run] = []
     private(set) var released: Set<UUID> = []
     private(set) var discardedTabs: [UUID] = []
@@ -416,6 +507,7 @@ private final class FakeAgentRunner: AgentRunner {
         if waitsForRelease {
             await withCheckedContinuation { continuations[task.id] = $0 }
         }
+        await afterRelease?()
         reply.update(text: "Run \(runNumber) finished")
         released.insert(task.id)
         reply.endStream(retainFor: 60)

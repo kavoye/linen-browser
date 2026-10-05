@@ -165,7 +165,7 @@ final class ExtensionLibrary {
         baseDirectory.appendingPathComponent(id, isDirectory: true)
     }
 
-    func load() {
+    func refresh() {
         if let data = try? Data(contentsOf: catalogueURL),
            let decoded = try? JSONDecoder().decode(Catalogue.self, from: data) {
             catalogue = decoded
@@ -174,6 +174,10 @@ final class ExtensionLibrary {
            let decoded = try? JSONDecoder().decode(Placements.self, from: data) {
             placements = decoded
         }
+    }
+
+    func load() {
+        refresh()
         adoptLegacyIndexIfPresent()
         let repairedSources = repairMissingSources()
         let reordered = renumberEveryProfile()
@@ -280,6 +284,7 @@ final class ExtensionLibrary {
     }
 
     func recordInstall(id: String, source: ExtensionStore = .chrome) {
+        refresh()
         if !catalogue.entries.contains(where: { $0.id == id }) {
             catalogue.entries.append(CatalogueEntry(
                 id: id,
@@ -317,6 +322,7 @@ final class ExtensionLibrary {
     }
 
     func updateMetadata(id: String, name: String?, version: String?) {
+        refresh()
         guard let at = catalogue.entries.firstIndex(where: { $0.id == id }) else { return }
         if let name, !name.isEmpty {
             catalogue.entries[at].displayName = name
@@ -341,6 +347,7 @@ final class ExtensionLibrary {
     }
 
     func move(_ id: String, before anchor: String?) {
+        refresh()
         var ordered = records
         guard let from = ordered.firstIndex(where: { $0.id == id }) else { return }
         let record = ordered.remove(at: from)
@@ -360,6 +367,7 @@ final class ExtensionLibrary {
     }
 
     func uninstall(id: String) {
+        refresh()
         catalogue.entries.removeAll { $0.id == id }
         for key in placements.profiles.keys {
             placements.profiles[key]?.removeValue(forKey: id)
@@ -386,6 +394,7 @@ final class ExtensionLibrary {
     }
 
     private func updatePlacement(id: String, _ change: (inout Placement) -> Void) {
+        refresh()
         let known = placement(for: id)
         var mine = placements.profiles[profileKey] ?? [:]
         var placement = mine[id] ?? Placement(
@@ -400,6 +409,7 @@ final class ExtensionLibrary {
     }
 
     func forgetThisProfile() {
+        refresh()
         guard placements.profiles.removeValue(forKey: profileKey) != nil else { return }
         savePlacements()
     }

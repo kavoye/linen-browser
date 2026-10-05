@@ -33,12 +33,19 @@ final class DownloadFlights {
     func watchClicks(in window: @escaping () -> NSWindow?) {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            if let window = window(), let view = window.contentView {
+            if let window = window(), event.window === window, let view = window.contentView {
                 let inWindow = event.locationInWindow
                 self?.noteClick(at: CGPoint(x: inWindow.x, y: view.bounds.height - inWindow.y))
             }
             return event
         }
+    }
+
+    func stopWatching() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
     }
 
     func noteClick(at point: CGPoint, on date: Date = Date()) {

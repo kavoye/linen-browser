@@ -184,9 +184,9 @@ nonisolated enum AgentToolCatalog {
         }
     }
 
-    static func resolvedIDs(for provider: Provider, tier: AgentToolTier) -> Set<String> {
+    static func resolvedIDs(for provider: Provider, tier: AgentToolTier, settings: LLMSettings = .current) -> Set<String> {
         let known = Set(all.map(\.id))
-        guard let chosen = LLMSettings.enabledAgentTools(for: provider) else {
+        guard let chosen = settings.enabledAgentTools(for: provider) else {
             return defaultIDs(for: tier)
         }
         let valid = chosen.intersection(known).subtracting(visualToolIDs)
@@ -200,18 +200,18 @@ nonisolated extension LLMSettings {
         "llm.tools.\(provider.id)"
     }
 
-    static func enabledAgentTools(for provider: Provider) -> Set<String>? {
-        guard let stored = defaults.stringArray(forKey: agentToolsKey(for: provider)) else {
+    func enabledAgentTools(for provider: Provider) -> Set<String>? {
+        guard let stored = defaults.stringArray(forKey: Self.agentToolsKey(for: provider)) else {
             return nil
         }
         return Set(stored)
     }
 
-    static func setEnabledAgentTools(_ ids: Set<String>?, for provider: Provider) {
+    func setEnabledAgentTools(_ ids: Set<String>?, for provider: Provider) {
         if let ids {
-            defaults.set(ids.sorted(), forKey: agentToolsKey(for: provider))
+            defaults.set(ids.sorted(), forKey: Self.agentToolsKey(for: provider))
         } else {
-            defaults.removeObject(forKey: agentToolsKey(for: provider))
+            defaults.removeObject(forKey: Self.agentToolsKey(for: provider))
         }
     }
 }

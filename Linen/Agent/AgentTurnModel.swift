@@ -61,8 +61,10 @@ final class AgentTurnModel {
     private(set) var compactionMessageSpaceID: UUID?
 
     @ObservationIgnored private let browser: any AgentTurnBrowsing
-    @ObservationIgnored private let log: any AgentTurnLogging
+    @ObservationIgnored private var log: any AgentTurnLogging
     @ObservationIgnored private let speech: any SpeechOutput
+    @ObservationIgnored private var modelSettings: LLMSettings
+    @ObservationIgnored private var actionPolicy: AgentActionPolicy
     @ObservationIgnored private var runner: (any AgentRunner)?
     @ObservationIgnored private var runTask: Task<Void, Never>?
     @ObservationIgnored private var completion: ((Result<AgentTurnResult, any Error>) -> Void)?
@@ -76,11 +78,15 @@ final class AgentTurnModel {
         browser: any AgentTurnBrowsing,
         log: any AgentTurnLogging,
         speech: any SpeechOutput,
+        modelSettings: LLMSettings = .current,
+        actionPolicy: AgentActionPolicy = .shared,
         reply: AgentReplyModel = AgentReplyModel()
     ) {
         self.browser = browser
         self.log = log
         self.speech = speech
+        self.modelSettings = modelSettings
+        self.actionPolicy = actionPolicy
         self.reply = reply
     }
 
@@ -92,6 +98,32 @@ final class AgentTurnModel {
     }
     var activeSpaceID: UUID? {
         activeTask?.spaceID
+    }
+
+    func adopt(log: any AgentTurnLogging) {
+        guard self.log !== log else { return }
+        cancel()
+        forgetEveryConversation()
+        self.log = log
+        reply = AgentReplyModel()
+    }
+
+    func adopt(context: BrowserProfileContext) {
+        adopt(log: context.conversationLog)
+        modelSettings = context.modelSettings
+        actionPolicy = context.actionPolicy
+    }
+
+    /// Stop this window's work before a page changes owner, keeping its saved conversation.
+    func detachTab(_ tabID: UUID, inSpace spaceID: UUID) {
+        cancel()
+        runner?.discardSession(forTab: tabID)
+        if spaceID != tabID {
+            runner?.discardSession(forTab: spaceID)
+        }
+        if reply.spaceID == tabID || reply.spaceID == spaceID {
+            reply = AgentReplyModel()
+        }
     }
 
     func use(_ runner: (any AgentRunner)?) {
@@ -106,10 +138,13 @@ final class AgentTurnModel {
         compactingSpaceID = spaceID
         compactionMessage = nil
         compactionMessageSpaceID = spaceID
+        let modelSettings = modelSettings
         compactionTask = Task { [weak self] in
             let message: LocalizedStringResource
             do {
-                let changed = try await runner.compactContext(forTab: spaceID)
+                let changed = try await LLMSettings.$scoped.withValue(modelSettings) {
+                    try await runner.compactContext(forTab: spaceID)
+                }
                 message = changed ? "Context compacted" : "No context to compact"
             } catch {
                 message = "Couldn’t compact. Context unchanged."
@@ -156,8 +191,11 @@ final class AgentTurnModel {
         } else {
             contextualized = utterance
         }
+        let traceID = LLMSettings.$scoped.withValue(modelSettings) {
+            log.beginTask(isContinuation ? "" : utterance, tabID: spaceID)
+        }
         let task = AgentTaskContext(
-            id: log.beginTask(isContinuation ? "" : utterance, tabID: spaceID),
+            id: traceID,
             tabID: tabID,
             spaceID: spaceID,
             mentionedTabIDs: mentionedTabIDs,
@@ -172,13 +210,19 @@ final class AgentTurnModel {
 
         let reply = reply
         let speech = speechOverride ?? speech
+        let modelSettings = modelSettings
+        let actionPolicy = actionPolicy
         runTask = Task { [weak self] in
-            await runner.run(
-                utterance: contextualized,
-                task: task,
-                into: reply,
-                speech: speech
-            )
+            await LLMSettings.$scoped.withValue(modelSettings) {
+                await AgentActionConsent.$scopedPolicy.withValue(actionPolicy) {
+                    await runner.run(
+                        utterance: contextualized,
+                        task: task,
+                        into: reply,
+                        speech: speech
+                    )
+                }
+            }
             trace?.mark("turnComplete")
             trace?.end()
 

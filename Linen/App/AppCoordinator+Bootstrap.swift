@@ -10,65 +10,39 @@ extension AppCoordinator {
     // MARK: - Launch
 
     func bootstrap() async {
+        prepareBrowser(restoring: true)
+    }
+
+    func prepareBrowser(restoring: Bool, show: Bool = true, urls: [URL] = []) {
+        guard !isBootstrapped else { return }
+        isBootstrapped = true
         var timing = BootstrapTiming()
         Pipeline.log.notice("bootstrap: begin")
         OutputDucker.restoreAfterUncleanExit()
-        settings.applyAppearance()
-        followSettings()
         applyProfileStores(profiles.current)
+        followSettings()
         timing.mark("profile and assistant")
-        extensions.useLibrary(for: profiles.current)
         memoryPressure.onPressure = { [weak self] level in
             self?.browser.relieveMemoryPressure(level)
         }
         memoryPressure.start()
-        browser.downloads.onFinished = { [weak self] filename in
-            self?.show(notice: String(localized: "Downloaded \(filename)"))
+        if application == nil {
+            let menu = MainMenu(coordinator: self)
+            menu.install()
+            mainMenu = menu
         }
-        let menu = MainMenu(coordinator: self)
-        menu.install()
-        mainMenu = menu
-        ContentBlocker.shared.refresh()
-        WebViewPool.shared.prepare(
-            scriptSource: MediaCenter.frameScriptSource,
-            handlerName: MediaCenter.frameScriptHandlerName,
-            handler: media.frameScriptHandler
-        )
-        WebViewPool.shared.addScript(
-            GeolocationBridge.scriptSource,
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true,
-            handlerName: GeolocationBridge.handlerName,
-            handler: GeolocationBridge.shared
-        )
-        WebViewPool.shared.addScript(
-            NotificationBridge.scriptSource,
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true,
-            handlerName: NotificationBridge.handlerName,
-            handler: NotificationBridge.shared
-        )
-        GeolocationBridge.shared.tabResolver = { [weak self] webView in
-            self?.browser.tabs.first { $0.isMaterialised && $0.webView === webView }
-        }
-        NotificationBridge.shared.tabResolver = { [weak self] webView in
-            self?.browser.tabs.first { $0.isMaterialised && $0.webView === webView }
-        }
-        WebViewPool.shared.installExtensionController(extensions.controller)
+        prepareWindowWebServices()
         timing.mark("web setup")
-        browser.restoreSession()
+        if restoring {
+            browser.restoreSession()
+        }
+        for url in urls.reversed() {
+            browser.newTab(url: url, transition: .link)
+        }
+        browser.ensureActiveTab()
         retainAgentMemory()
         timing.mark("session")
         wireMedia()
-        let notifyExtensions = browser.onActiveTabChanged
-        browser.onActiveTabChanged = { [weak self] newTab, previousTab in
-            notifyExtensions?(newTab, previousTab)
-            if let self, conversationSpaceID != browser.activeSpaceID {
-                conversationVoice?.stop()
-            }
-            self?.followMedia(to: newTab, from: previousTab)
-            self?.applyHoverShield()
-        }
         browser.onSpaceAnchorChanged = { [weak self] from, to in
             if self?.conversationSpaceID == from {
                 self?.conversationVoice?.stop()
@@ -83,52 +57,61 @@ extension AppCoordinator {
         browser.onOpenInPeek = { [weak self] tab, url, origin in
             self?.openPeek(url: url, from: tab, at: origin)
         }
+        browser.onOpenInNewWindow = { [weak self] _, url, isPrivate in
+            self?.openLinkInNewWindow(url, isPrivate: isPrivate)
+        }
         browser.onSummarizeLink = { [weak self] tab, url, anchor in
             guard let self, let tab else { return }
             linkPeek.show(url, tabID: tab.id, anchor: anchor)
         }
         linkPeek.begin()
-        onboarding.beginIfNeeded()
+        if application == nil || application?.windows.count == 1 {
+            onboarding.beginIfNeeded()
+        }
         if onboarding.isPresented {
             prepareWindowBloom()
         }
         timing.mark("window preparation")
-        showBrowser()
+        showBrowser(activate: show)
         timing.mark("show window")
-        mcpServer.resume()
+        if application == nil {
+            mcpServer.resume()
+        }
         if onboarding.isPresented {
             bloomWindowOpen()
         }
         if !AppDatabase.ownsSession {
-            show(notice: String(localized: "Another copy of Linen is running. Changes in this window won’t be saved."))
+            self.show(notice: String(localized: "Another copy of Linen is running. Changes in this window won’t be saved."))
         }
         drainQueuedExternalURLs()
         timing.mark("post-window setup")
 
-        startUpdates()
+        if application == nil || application?.windows.count == 1 {
+            startUpdates()
+        }
         MoveToApplications.reregisterDefaultBrowserIfNeeded()
         timing.mark("updates")
         Task { [weak self] in
-            guard let self, await releaseNotes.shouldOpenForNewVersion() else { return }
+            guard let self, application == nil || application?.windows.count == 1,
+                  await releaseNotes.shouldOpenForNewVersion() else { return }
+            guard !isClosed else { return }
             showReleaseNotes()
         }
 
-        extensions.onOpenTab = { [weak self] url in
-            self?.openNewTab(url: url)
-        }
         Task { [extensions] in
             await extensions.start()
             await extensions.updateInstalledIfDue()
         }
 
         activation.onPress = { [weak self] in
-            guard let self, !onboarding.isPresented, microphoneIsReady() else { return }
+            guard let self, isKeyWindow, !onboarding.isPresented, microphoneIsReady() else { return }
             voiceInput.begin()
         }
         activation.onRelease = { [weak self] in
             guard let self, !onboarding.isPresented else { return }
             voiceInput.scheduleFinish()
         }
+        activation.setSuspended(!isKeyWindow)
         activation.start()
         installKeyMonitors()
 
@@ -136,16 +119,61 @@ extension AppCoordinator {
         timing.log()
     }
 
+    func prepareWindowWebServices() {
+        browser.context.contentBlocker.refresh()
+        if let application {
+            application.prepareWebScripts(for: self)
+        } else {
+            browser.context.webViewPool.prepare(
+                scriptSource: MediaCenter.frameScriptSource,
+                handlerName: MediaCenter.frameScriptHandlerName,
+                handler: media.frameScriptHandler
+            )
+        }
+        browser.context.webViewPool.addScript(
+            GeolocationBridge.scriptSource,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true,
+            handlerName: GeolocationBridge.handlerName,
+            handler: GeolocationBridge.shared
+        )
+        browser.context.webViewPool.addScript(
+            NotificationBridge.scriptSource,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true,
+            handlerName: NotificationBridge.handlerName,
+            handler: NotificationBridge.shared
+        )
+        if application == nil {
+            GeolocationBridge.shared.tabResolver = { [weak self] webView in
+                self?.browser.tabs.first { $0.isMaterialised && $0.webView === webView }
+            }
+            NotificationBridge.shared.tabResolver = GeolocationBridge.shared.tabResolver
+        }
+        browser.context.webViewPool.installExtensionController(extensions.controller)
+    }
+
     func engine(for configuration: Provider) -> any ModelProvider {
         modelProviders.resolve(configuration)
     }
 
     func configureEngines() {
-        UtilityModelSource.make = { [weak self] in
+        LLMSettings.$scoped.withValue(modelSettings) {
+            configureWindowEngines()
+        }
+    }
+
+    func reloadAssistantConfiguration() {
+        let targets = application?.windows.filter { $0.browser.context === browser.context } ?? [self]
+        targets.forEach { $0.configureEngines() }
+    }
+
+    private func configureWindowEngines() {
+        linkPeek.makeModel = { [weak self] in
             guard let self else { return UtilityModelSource.onDevice() }
-            let selected = modelProviders.resolve(ProviderCatalog.shared.selected)
+            let selected = modelProviders.resolve(selectedProvider)
             if let model = selected.makeUtilityModel(
-                model: LLMSettings.model(for: selected.configuration)
+                model: modelSettings.model(for: selected.configuration)
             ) {
                 return model
             }
@@ -220,24 +248,46 @@ extension AppCoordinator {
         discoverContextWindow()
     }
 
-    private func followSettings() {
-        settings.onWebPreferencesChanged = { [weak self] in
-            self?.browser.applyWebSettings()
+    func followSettings() {
+        let context = browser.context
+        let targets: () -> [AppCoordinator] = { [weak context, weak application, weak self] in
+            guard let context else { return [] }
+            return application?.windows.filter { $0.browser.context === context }
+                ?? self.map { [$0] } ?? []
+        }
+        settings.onWebPreferencesChanged = {
+            targets().forEach { $0.browser.applyWebSettings() }
+        }
+        settings.onAppearanceChanged = {
+            targets().forEach { $0.updateWindowAppearance() }
+        }
+        settings.onMediaPlayerChanged = { isOn in
+            targets().forEach { $0.media.isEnabled = isOn }
+        }
+        settings.onAutomaticPictureInPictureChanged = { _ in
+            targets().forEach { $0.applyPictureLending() }
+        }
+        settings.onVideoInPlayerChanged = { _ in
+            targets().forEach { $0.applyPictureLending() }
+        }
+        settings.onLyricsChanged = { isOn in
+            targets().forEach { $0.sidePanel.setAvailable(isOn, for: .lyrics) }
         }
         media.isEnabled = settings.showsMediaPlayer
-        settings.onMediaPlayerChanged = { [weak self] isOn in
-            self?.media.isEnabled = isOn
-        }
         applyPictureLending()
-        settings.onAutomaticPictureInPictureChanged = { [weak self] _ in
-            self?.applyPictureLending()
-        }
-        settings.onVideoInPlayerChanged = { [weak self] _ in
-            self?.applyPictureLending()
-        }
         sidePanel.setAvailable(settings.showsLyrics, for: .lyrics)
-        settings.onLyricsChanged = { [weak self] isOn in
-            self?.sidePanel.setAvailable(isOn, for: .lyrics)
+        updateWindowAppearance()
+        browser.downloads.webViewProvider = {
+            let windows = targets()
+            return (windows.first { $0.isKeyWindow } ?? windows.last)?.browser.activeTab?.webView
+        }
+        browser.downloads.onFinished = { filename in
+            let windows = targets()
+            (windows.first { $0.isKeyWindow } ?? windows.last)?
+                .show(notice: String(localized: "Downloaded \(filename)"))
+        }
+        browser.downloads.onBegin = {
+            targets().first { $0.isKeyWindow }?.downloadFlights.launch()
         }
     }
 
@@ -251,19 +301,22 @@ extension AppCoordinator {
 
     private func discoverContextWindow() {
         guard let provider = activeProvider, !provider.isOnDevice else { return }
-        let model = LLMSettings.model(for: provider)
+        let context = browser.context
+        let modelSettings = context.modelSettings
+        let model = modelSettings.model(for: provider)
         guard !model.isEmpty,
-              LLMSettings.discoveredContextWindow(for: provider, model: model) == nil
+              modelSettings.discoveredContextWindow(for: provider, model: model) == nil
         else { return }
         Task { [weak self] in
             guard let window = await ProviderContextProbe().effectiveWindow(
                     for: provider, model: model, apiKey: CredentialStore.key(for: provider)
                   ),
-                  window != LLMSettings.discoveredContextWindow(for: provider, model: model)
+                  window != modelSettings.discoveredContextWindow(for: provider, model: model)
             else { return }
-            LLMSettings.setDiscoveredContextWindow(window, for: provider, model: model)
+            modelSettings.setDiscoveredContextWindow(window, for: provider, model: model)
             Pipeline.log.notice("Model context window discovered")
-            self?.configureEngines()
+            guard let self, browser.context === context, !isClosed else { return }
+            reloadAssistantConfiguration()
         }
     }
 
@@ -276,26 +329,21 @@ extension AppCoordinator {
     }
 
     private func installDownloadFlights() {
-        downloadFlights.watchClicks { NSApp.keyWindow ?? NSApp.mainWindow }
-        PageClickWatcher.shared.onClick = { [weak self] point in
-            self?.downloadFlights.noteClick(at: point)
-        }
+        downloadFlights.watchClicks { [weak self] in self?.nativeWindow }
         browser.downloads.apply(settings.downloadRetention)
-        browser.downloads.onBegin = { [weak self] in
-            self?.downloadFlights.launch()
-        }
     }
 
     private func installTabSwitchHandler() {
         guard tabSwitchMonitor == nil else { return }
         tabSwitchMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             MainActor.assumeIsolated {
-                self?.controlChanged(isDown: event.modifierFlags.contains(.control), at: event.timestamp)
-                self?.noteLinkModifiers(event.modifierFlags)
+                guard let self, self.isKeyWindow else { return }
+                self.controlChanged(isDown: event.modifierFlags.contains(.control), at: event.timestamp)
+                self.noteLinkModifiers(event.modifierFlags)
             }
             return event
         }
-        NotificationCenter.default.addObserver(
+        resignActiveObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification,
             object: nil,
             queue: .main
@@ -335,7 +383,8 @@ extension AppCoordinator {
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
-        if let responder = NSApp.keyWindow?.firstResponder, responder is NSText {
+        guard isKeyWindow else { return false }
+        if let responder = nativeWindow?.firstResponder, responder is NSText {
             return false
         }
         if peek.isOpen,
@@ -349,7 +398,8 @@ extension AppCoordinator {
     }
 
     private func handleEscape() -> Bool {
-        if let responder = NSApp.keyWindow?.firstResponder, responder is NSText {
+        guard isKeyWindow else { return false }
+        if let responder = nativeWindow?.firstResponder, responder is NSText {
             return false
         }
         if onboarding.isPresented {

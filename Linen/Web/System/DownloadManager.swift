@@ -77,10 +77,10 @@ final class DownloadManager: NSObject {
     @ObservationIgnored private let file: URL?
     @ObservationIgnored private var writeTask: Task<Void, Never>?
 
-    init(destinationFolder: URL? = nil, asksWhereToSave: Bool? = nil, file: URL? = nil) {
+    init(destinationFolder: URL? = nil, asksWhereToSave: Bool? = nil, file: URL? = nil, persists: Bool = true) {
         destinationFolderOverride = destinationFolder
         asksWhereToSaveOverride = asksWhereToSave
-        self.file = file ?? Self.defaultFile
+        self.file = persists ? (file ?? Self.defaultFile) : nil
         super.init()
         items = Self.read(from: self.file)
         writeTask?.cancel()
@@ -321,6 +321,10 @@ final class DownloadManager: NSObject {
     }
 
     func noteCancellation(_ id: UUID, resumeData: Data?) {
+        guard items.contains(where: { $0.id == id }) else {
+            finish(id)
+            return
+        }
         if let resumeData {
             self.resumeData[id] = resumeData
         }

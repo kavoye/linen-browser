@@ -244,6 +244,7 @@ extension BrowserModel {
     }
 
     func close(_ tab: BrowserTab, recordForReopening: Bool = true) {
+        guard !tab.isClosed, tabs.contains(where: { $0 === tab }) else { return }
         if tab.isMaterialised {
             AutofillSuggestions.shared.dismiss(in: tab.webView)
         }

@@ -553,6 +553,14 @@ final class ConversationLog {
         }
     }
 
+    /// Saved windows include closed windows that the user may reopen.
+    func retainSessionTabs(including liveTabIDs: Set<UUID>) {
+        guard let stored = try? database.writer.read({ db in
+            try UUID.fetchAll(db, sql: "SELECT id FROM sessionTab")
+        }) else { return }
+        retainTabs(Set(stored).union(liveTabIDs))
+    }
+
     func retainTabs(_ tabIDs: Set<UUID>) {
         let removed = Set(traces.map(\.tabID)).union(usageByTab.keys).subtracting(tabIDs)
         guard !removed.isEmpty else { return }

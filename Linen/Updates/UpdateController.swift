@@ -61,6 +61,7 @@ final class UpdateController: NSObject {
     // MARK: - Lifecycle
 
     func start() {
+        guard updater == nil else { return }
         let updater = SPUUpdater(
             hostBundle: .main,
             applicationBundle: .main,

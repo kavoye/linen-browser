@@ -71,6 +71,10 @@ struct AskPageChip: View {
 }
 
 struct AskPageChipView: View {
+    @Environment(\.profileFavicons) private var profileFavicons
+    private var favicons: FaviconLoader {
+        profileFavicons ?? .shared
+    }
     let title: String
     let host: String?
     var isAttached = false
@@ -82,11 +86,11 @@ struct AskPageChipView: View {
         AskPageChip(title: title, icon: icon, isAttached: isAttached, fontSize: fontSize)
             .task(id: host) {
                 guard let host else { return }
-                if let hit = FaviconLoader.shared.cached(for: host) {
+                if let hit = favicons.cached(for: host) {
                     icon = hit
                     return
                 }
-                icon = await FaviconLoader.shared.load(forHost: host)
+                icon = await favicons.load(forHost: host)
             }
     }
 }

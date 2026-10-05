@@ -88,6 +88,10 @@ protocol AgentGrantStorage: AnyObject {
     var grantData: Data? { get set }
 }
 
+final class SessionAgentGrantStorage: AgentGrantStorage {
+    var grantData: Data?
+}
+
 extension UserDefaults: AgentGrantStorage {
     var grantData: Data? {
         get { data(forKey: AgentActionPolicy.storageKey) }

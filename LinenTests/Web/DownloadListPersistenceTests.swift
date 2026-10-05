@@ -15,6 +15,49 @@ struct DownloadListPersistenceTests {
             .appendingPathComponent("linen-downloads-\(UUID().uuidString).json")
     }
 
+    @Test func profileDownloadListsStayIndependent() {
+        let firstProfile = Profile(id: UUID(), name: "Work", symbol: "person", color: .gray)
+        let secondProfile = Profile(id: UUID(), name: "Personal", symbol: "person", color: .gray)
+        #expect(firstProfile.downloadsFile != secondProfile.downloadsFile)
+        #expect(Profile.original().downloadsFile == AppDatabase.supportDirectory.appendingPathComponent("Downloads.json"))
+        let firstFile = scratchFile()
+        let secondFile = scratchFile()
+        defer {
+            try? FileManager.default.removeItem(at: firstFile)
+            try? FileManager.default.removeItem(at: secondFile)
+        }
+        let first = DownloadManager(file: firstFile)
+        let second = DownloadManager(file: secondFile)
+        _ = first.beginItem(source: URL(string: "https://work.example/report.pdf"))
+        _ = second.beginItem(source: URL(string: "https://personal.example/photo.jpg"))
+        first.writeNow()
+        second.writeNow()
+
+        #expect(DownloadManager(file: firstFile).items.map(\.filename) == ["report.pdf"])
+        #expect(DownloadManager(file: secondFile).items.map(\.filename) == ["photo.jpg"])
+    }
+
+    @Test func privateDownloadsNeitherReadNorChangePersistentHistory() throws {
+        let file = scratchFile()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let regular = DownloadManager(file: file)
+        _ = regular.beginItem(source: URL(string: "https://regular.example/report.pdf"))
+        regular.writeNow()
+        let saved = try Data(contentsOf: file)
+        let privateDownloads = DownloadManager(file: file, persists: false)
+        #expect(privateDownloads.items.isEmpty)
+        let id = privateDownloads.beginItem(source: URL(string: "https://private.example/file.pdf"), privately: true)
+        privateDownloads.writeNow()
+        privateDownloads.forgetPrivateDownloads()
+        // A cancellation callback can arrive after the window releases its downloads.
+        privateDownloads.noteCancellation(id, resumeData: Data([1, 2, 3]))
+
+        #expect(privateDownloads.items.isEmpty)
+        #expect(!privateDownloads.holdsResumeState(for: id))
+        #expect(try Data(contentsOf: file) == saved)
+        #expect(DownloadManager(file: file).items.map(\.filename) == ["report.pdf"])
+    }
+
     @Test func aFinishedListComesBackAfterARelaunch() {
         let file = scratchFile()
         defer { try? FileManager.default.removeItem(at: file) }

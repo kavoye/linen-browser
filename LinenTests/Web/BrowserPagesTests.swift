@@ -603,12 +603,12 @@ struct BrowserPagesTests {
     /// An answer that matches the setting is not a website's own answer: it is
     /// the setting, and it must follow the setting when that changes.
     @Test func aWebsiteToldWhatEveryWebsiteIsToldRecordsNothing() {
-        let previous = BrowserSettings.shared.autoplay
-        BrowserSettings.shared.autoplay = .allow
-        defer { BrowserSettings.shared.autoplay = previous }
-
         let permissions = permissionsFixture()
         let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let settings = model.context.settings
+        let previous = settings.autoplay
+        settings.autoplay = .allow
+        defer { settings.autoplay = previous }
         let tab = model.newTab()
         tab.urlString = "https://example.com/page"
 
@@ -629,16 +629,17 @@ struct BrowserPagesTests {
         let tab = model.newTab()
         tab.urlString = "https://example.com/page"
 
-        let previous = BrowserSettings.shared.blocksPopups
-        defer { BrowserSettings.shared.blocksPopups = previous }
+        let settings = model.context.settings
+        let previous = settings.blocksPopups
+        defer { settings.blocksPopups = previous }
 
-        BrowserSettings.shared.blocksPopups = true
+        settings.blocksPopups = true
         model.setPopups(.allow, for: tab)
         #expect(permissions.popups(for: "https://example.com") == .allow)
         model.setPopups(.blockAndNotify, for: tab)
         #expect(permissions.popups(for: "https://example.com") == nil)
 
-        BrowserSettings.shared.blocksPopups = false
+        settings.blocksPopups = false
         model.setPopups(.blockAndNotify, for: tab)
         #expect(permissions.popups(for: "https://example.com") == .blockAndNotify)
         model.setPopups(.allow, for: tab)
@@ -646,12 +647,12 @@ struct BrowserPagesTests {
     }
 
     @Test func aTabWithNoWebsiteRecordsNoMediaAnswer() {
-        let previous = BrowserSettings.shared.autoplay
-        BrowserSettings.shared.autoplay = .allow
-        defer { BrowserSettings.shared.autoplay = previous }
-
         let permissions = permissionsFixture()
         let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let settings = model.context.settings
+        let previous = settings.autoplay
+        settings.autoplay = .allow
+        defer { settings.autoplay = previous }
         let tab = model.newTab()
         tab.urlString = "about:blank"
 

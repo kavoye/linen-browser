@@ -29,8 +29,21 @@
         }
       }
     },
+    "%@ — %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ — %2$@"
+          }
+        }
+      }
+    },
     "%@ — answering" : {
       "comment" : "Tooltip on the permission badge in the address bar while a permission request is on screen waiting for an answer. %@ is the localized permission name (Camera, Microphone, Location, Notifications); the em dash and the word after it are a status fragment, not a sentence."
+    },
+    "%@ — Private Browsing" : {
+
     },
     "%@ · from %@" : {
       "comment" : "Second line of a row in the Downloads list. The first %@ is the size summary (“2.4 MB”, or “1.2 MB of 5 MB” while running); the second %@ is the host the file came from, e.g. example.com. The · is a separator between two facts, not a word."
@@ -1139,9 +1152,6 @@
     "Browsing history" : {
       "comment" : "Name of one of the three kinds of data listed with tick boxes on the Privacy settings page. A noun phrase at the head of a row; a separate lowercase variant exists for use inside sentences, so this one may take the language's normal capitalization."
     },
-    "Browsing now" : {
-      "comment" : "Caption under the profile you are currently in, in the profile switcher — also under Private Browsing while it is the active session. A status, not a command."
-    },
     "By default, the assistant works until it finishes. Set a limit to pause and resume with Continue. The final summary may use one more request." : {
 
     },
@@ -1805,6 +1815,9 @@
 
     },
     "Details unavailable for this step." : {
+
+    },
+    "Developer" : {
 
     },
     "Developer settings" : {
@@ -2625,9 +2638,6 @@
     "Leave empty to use the system default." : {
       "comment" : "Caption under the custom user agent field on the Advanced settings page."
     },
-    "Leave Private Browsing" : {
-
-    },
     "left ⇧" : {
       "comment" : "Name of one physical modifier key in the shortcut recorder in Settings, where the two sides of the keyboard have to be told apart because the assistant is activated by holding one of them. Only the side word is translated — the symbol is the glyph macOS prints on the key, so keep it exactly and keep it beside the word. Very tight: this is a key cap. The glyph is Shift."
     },
@@ -2969,6 +2979,9 @@
     "Move Pointer" : {
 
     },
+    "Move Tab to Window" : {
+
+    },
     "Move the video into Picture in Picture and back." : {
       "comment" : "Caption for the Picture in Picture tool in assistant settings."
     },
@@ -3044,6 +3057,9 @@
     "New Page" : {
       "comment" : "Fallback title for a browser tab whose website has no title, including while a new website is loading. Title Case."
     },
+    "New Private Window" : {
+
+    },
     "New Profile" : {
 
     },
@@ -3052,6 +3068,9 @@
     },
     "New Tab (⌘T)" : {
       "comment" : "Tooltip on the New Tab row, shown only when the sidebar is collapsed to icons and the row has no words of its own. ⌘T is the keyboard shortcut — keyboard symbols, keep exactly. Title Case."
+    },
+    "New Window" : {
+
     },
     "Next (⌘G)" : {
       "comment" : "Tooltip on the down-chevron in the find bar, which moves to the next match on the page. ⌘G is the keyboard shortcut — keyboard symbols, keep exactly, including the parentheses."
@@ -3227,9 +3246,6 @@
     "Not specified" : {
 
     },
-    "nothing is kept" : {
-      "comment" : "Caption under the Private Browsing command in the command palette: no history, cookie or cache survives the session. Sentence fragment, lower case."
-    },
     "Nothing is playing" : {
       "comment" : "Title of the empty state in the lyrics view when the media player holds no track. Sentence case with no final full stop."
     },
@@ -3350,8 +3366,14 @@
     "Open in New Tab" : {
       "comment" : "Context-menu command on a history row, on the history page and the start page; it opens that entry in a new tab and leaves the list on screen. Title Case."
     },
+    "Open Link in New Private Window" : {
+
+    },
     "Open Link in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
+    },
+    "Open Link in New Window" : {
+
     },
     "Open Link in Peek" : {
       "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It opens the link in a Peek, the panel a Shift-click opens over the page — the same thing, without the keyboard. Title Case."
@@ -3956,6 +3978,9 @@
     "Reopen Last Closed Tab" : {
       "comment" : "Menu bar command under File, shortcut ⇧⌘T. Title Case and established browser terminology."
     },
+    "Reopen Last Closed Window" : {
+
+    },
     "Repeat a recent task" : {
       "comment" : "Description of the Recent Tasks section in the start page editor. No final full stop."
     },
@@ -4018,6 +4043,9 @@
     },
     "responses" : {
       "comment" : "Small tag beside a user-added endpoint in Settings, naming which API dialect it speaks — here OpenAI’s Responses API. A technical API name rather than an ordinary word, so leave it as is. Very tight space."
+    },
+    "Restart Page" : {
+
     },
     "Restore %lld removed websites" : {
       "comment" : "Button at the foot of the start page's Edit popover that brings back website tiles the user dismissed. %lld is how many are currently hidden. Sentence case; the catalogue carries the plural forms, so do not hand-roll a singular.",
@@ -4258,6 +4286,9 @@
     "Search history" : {
       "comment" : "Placeholder in the search field of the History view. “Search” is the verb and “history” its object. Sentence case, narrow field."
     },
+    "Search in current tab" : {
+
+    },
     "Search or ask" : {
       "comment" : "Accessibility label for the combined search and assistant field on the start page. Keep it short and name both functions."
     },
@@ -4296,9 +4327,6 @@
     },
     "Search with %@ in a new tab" : {
       "comment" : "Detail line under the second row of the ⌘K palette results when what was typed is a query; ⇧Return, or a Command-click, runs the search beside the current page instead of in it. %@ is the chosen search engine's name (DuckDuckGo, Google…) — never translated."
-    },
-    "Search with %@ in current tab" : {
-      "comment" : "Command palette result while Option is held. %@ is the selected search engine."
     },
     "Search, “@” to ask, or enter website name" : {
       "comment" : "Placeholder in the address/ask field at the top of the window and on the start page. The “@” is literal: typing it at the start of the line addresses the assistant instead of searching, so the character must stay, stay leading, and stay in quotes. “enter website name” follows Safari’s own placeholder — use the system’s wording for it. Sentence case."
@@ -4356,9 +4384,6 @@
     },
     "Services" : {
       "comment" : "Standard macOS submenu inside the application menu. Use Apple’s own translation of the system Services menu."
-    },
-    "Session waiting" : {
-      "comment" : "Caption under Private Browsing in the profile switcher when a private session is still running while the browser is in another profile. Two short words; the space is tight."
     },
     "Set a checkbox or radio selection." : {
 
@@ -4781,6 +4806,9 @@
     "Tabs and folders" : {
       "comment" : "Something a profile keeps separately from every other profile."
     },
+    "Tabs cannot move between profiles or private sessions." : {
+
+    },
     "Tabs that don’t fit a group stay where they are." : {
 
     },
@@ -4847,6 +4875,12 @@
     },
     "The bookmarks go into a new folder in the sidebar." : {
       "comment" : "Second sentence of the confirmation dialog shown before bookmarks are imported. It says where they land."
+    },
+    "The browser could not create the requested window." : {
+
+    },
+    "The browser window is no longer available." : {
+
     },
     "The Chrome Web Store returned HTTP %lld" : {
       "comment" : "Error shown when downloading an extension fails. %lld is the HTTP status code the store’s server replied with, for example 404. Chrome Web Store is Google’s product name — leave as is, and HTTP is a protocol name."

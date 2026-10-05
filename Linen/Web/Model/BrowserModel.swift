@@ -12,26 +12,41 @@ import WebKit
 @MainActor
 @Observable
 final class BrowserModel {
+    let windowID: UUID
+    var context: BrowserProfileContext = .shared(for: .original())
     var tabs: [BrowserTab] = []
     var folders: [TabFolder] = []
     var storedTree = SidebarTree()
     var history: HistoryStore
     var sitePermissions: SitePermissions
-    let downloads: DownloadManager
+    var downloads: DownloadManager
     private let webViewFactory: (@MainActor () -> WKWebView)?
 
     init(
-        database: AppDatabase = .shared,
+        context: BrowserProfileContext? = nil,
+        windowID: UUID = BrowserModel.legacyWindowID,
+        database: AppDatabase? = nil,
         history: HistoryStore? = nil,
-        sitePermissions: SitePermissions = .shared,
-        downloads: DownloadManager = DownloadManager(),
+        sitePermissions: SitePermissions? = nil,
+        downloads: DownloadManager? = nil,
         webViewFactory: (@MainActor () -> WKWebView)? = nil
     ) {
-        self.database = database
+        let selectedDatabase = database ?? context?.database ?? .shared
+        self.windowID = windowID
+        self.context = context ?? .shared(for: .original())
+        self.database = selectedDatabase
         self.webViewFactory = webViewFactory
-        self.history = history ?? HistoryStore(database: database)
-        self.sitePermissions = sitePermissions
-        self.downloads = downloads
+        if let history {
+            self.history = history
+        } else if let context, (context.database.writer as AnyObject) === (selectedDatabase.writer as AnyObject) {
+            self.history = context.history
+        } else {
+            self.history = HistoryStore(database: selectedDatabase)
+        }
+        self.sitePermissions = sitePermissions ?? context?.sitePermissions ?? .shared
+        self.downloads = downloads ?? context?.downloads ?? DownloadManager()
+        self.opensPrivately = context?.profile.isPrivate ?? false
+        sessionRevision = Self.savedRevision(in: selectedDatabase, windowID: windowID)
     }
     let sidebarSelection = SidebarSelection()
 
@@ -60,12 +75,16 @@ final class BrowserModel {
     var onTabOpened: ((BrowserTab) -> Void)?
     var onNavigationStarted: ((BrowserTab, URL) -> Void)?
     var onTabClosed: ((BrowserTab) -> Void)?
+    var onTabWillTransferOut: ((BrowserTab) -> Void)?
+    var onTabTransferredOut: ((BrowserTab, Int) -> Void)?
+    var onTabTransferredIn: ((BrowserTab, BrowserModel, Int) -> Void)?
     var onActiveTabChanged: ((BrowserTab?, BrowserTab?) -> Void)?
     var onSpaceAnchorChanged: ((UUID, UUID) -> Void)?
     var onContentProcessTerminated: ((BrowserTab) -> Void)?
     var onPictureInPictureChanged: ((BrowserTab, Bool) -> Void)?
     var onLinkHovered: ((BrowserTab, URL?, NSEvent.ModifierFlags, CGPoint) -> Void)?
     var onOpenInPeek: ((BrowserTab?, URL, CGPoint) -> Void)?
+    var onOpenInNewWindow: ((BrowserTab, URL, Bool) -> Void)?
     var onSummarizeLink: ((BrowserTab?, URL, CGPoint) -> Void)?
     var onPictureReturnExpected: ((BrowserTab) -> Void)?
 
@@ -90,8 +109,17 @@ final class BrowserModel {
             restoring: restoring,
             opensBlank: url == nil,
             privately: privately,
-            sitePermissions: sitePermissions
+            sitePermissions: sitePermissions,
+            context: context
         )
+        bindCallbacks(to: tab)
+        if tab.isMaterialised {
+            context.settings.apply(to: tab.webView)
+        }
+        return tab
+    }
+
+    func bindCallbacks(to tab: BrowserTab) {
         tab.onNavigationStarted = { [weak self, weak tab] url in
             guard let tab else { return }
             self?.onNavigationStarted?(tab, url)
@@ -121,6 +149,10 @@ final class BrowserModel {
             let opened = newTab(url: url, activate: activate, after: tab, transition: .link)
             guard let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
+        }
+        tab.onOpenInNewWindow = { [weak self, weak tab] url, isPrivate in
+            guard let tab, !tab.isClosed else { return }
+            self?.onOpenInNewWindow?(tab, url, isPrivate)
         }
         tab.onOpenInPeek = { [weak self, weak tab] url, origin in
             self?.onOpenInPeek?(tab, url, origin)
@@ -166,10 +198,6 @@ final class BrowserModel {
                 NSWorkspace.shared.open(destination)
             }
         }
-        if tab.isMaterialised {
-            BrowserSettings.shared.apply(to: tab.webView)
-        }
-        return tab
     }
 
     var lastVisitID: [UUID: Int64] = [:]
@@ -219,7 +247,7 @@ final class BrowserModel {
         return tab
     }
 
-    private func insert(_ tab: BrowserTab, after opener: BrowserTab?) {
+    func insert(_ tab: BrowserTab, after opener: BrowserTab?) {
         let keptRun = keptRunAtTop()
         if let anchor = opener.flatMap(insertionAnchor(after:)),
            !keptRun.contains(.tab(anchor.id)),
@@ -351,6 +379,9 @@ final class BrowserModel {
     @ObservationIgnored var saveTask: Task<Void, Never>?
 
     @ObservationIgnored var saveChain: Task<Void, Never>?
+
+    @ObservationIgnored var sessionRevision: Int64 = 0
+    @ObservationIgnored var sessionClosedAt: Date?
 
     @ObservationIgnored var saveWaitingSince: ContinuousClock.Instant?
 

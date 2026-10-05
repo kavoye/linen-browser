@@ -10,6 +10,38 @@ import WebKit
 
 @MainActor
 struct TabContextMenuTests {
+    @Test func optionReplacesTheRegularLinkWindowActionWithAPrivateWindow() throws {
+        let target = NSObject()
+        let action = NSSelectorFromString("openWindow:")
+        let items = TabContextMenu.linkWindowItems(opensPrivately: false, target: target, action: action)
+        #expect(items.count == 2)
+        let regular = try #require(items.first)
+        let privately = try #require(items.last)
+        #expect(regular.title == "Open Link in New Window")
+        #expect(regular.keyEquivalent.isEmpty)
+        #expect(regular.keyEquivalentModifierMask.isEmpty)
+        #expect(!regular.isAlternate)
+        #expect(regular.tag == 0)
+        #expect(privately.title == "Open Link in New Private Window")
+        #expect(privately.isAlternate)
+        #expect(privately.keyEquivalent == regular.keyEquivalent)
+        #expect(privately.keyEquivalentModifierMask == .option)
+        #expect(privately.tag == 1)
+        #expect(items.allSatisfy { $0.target === target && $0.action == action })
+    }
+
+    @Test func privateLinkMenusOnlyOfferPrivateWindows() throws {
+        let items = TabContextMenu.linkWindowItems(
+            opensPrivately: true, target: NSObject(), action: NSSelectorFromString("openWindow:")
+        )
+        #expect(items.count == 1)
+        let item = try #require(items.first)
+        #expect(item.title == "Open Link in New Private Window")
+        #expect(!item.isAlternate)
+        #expect(item.keyEquivalentModifierMask.isEmpty)
+        #expect(item.tag == 1)
+    }
+
     private func menu(_ entries: [String?]) -> NSMenu {
         let menu = NSMenu()
         for entry in entries {
@@ -149,6 +181,8 @@ struct TabContextMenuTests {
         #expect(menu.items.first?.title == "Open Link in New Tab")
         #expect(marks(menu) == [
             "WKMenuItemIdentifierOpenLinkInNewWindow",
+            "LinenOpenLinkInNewWindow",
+            "LinenOpenLinkInNewPrivateWindow",
             "peekAtContextLink",
             "summarizeContextLink",
             "—",

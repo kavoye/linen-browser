@@ -102,6 +102,7 @@ final class MentionTextField: NSTextField {
 }
 
 struct MentionField: NSViewRepresentable {
+    @Environment(\.profileFavicons) private var profileFavicons
     @Binding var text: String
     var chips: [MentionChip] = []
     let placeholder: String
@@ -141,6 +142,7 @@ struct MentionField: NSViewRepresentable {
     func updateNSView(_ field: MentionTextField, context: Context) {
         let coordinator = context.coordinator
         field.onCommandReturn = onCommandSubmit
+        coordinator.favicons = profileFavicons ?? .shared
         coordinator.text = $text
         coordinator.onFocusChange = onFocusChange
         coordinator.onChipsChange = onChipsChange
@@ -181,6 +183,7 @@ struct MentionField: NSViewRepresentable {
     }
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
+        var favicons: FaviconLoader = .shared
         var text: Binding<String>
         var onFocusChange: (Bool) -> Void = { _ in }
         var onChipsChange: ([UUID]) -> Void = { _ in }
@@ -231,7 +234,8 @@ struct MentionField: NSViewRepresentable {
                 text: value,
                 chips: chips,
                 fontSize: field.font?.pointSize ?? 13,
-                isDark: isDark
+                isDark: isDark,
+                favicons: favicons
             )
             renderedText = value
             renderedChips = ids
@@ -246,13 +250,14 @@ struct MentionField: NSViewRepresentable {
 
         private func loadMissingIcons(for chips: [MentionChip], in field: NSTextField) {
             let hosts = chips.compactMap(\.host).filter {
-                FaviconLoader.shared.cached(for: $0) == nil && !requestedHosts.contains($0)
+                favicons.cached(for: $0) == nil && !requestedHosts.contains($0)
             }
             guard !hosts.isEmpty else { return }
             requestedHosts.formUnion(hosts)
+            let favicons = favicons
             Task { [weak self, weak field] in
                 for host in hosts {
-                    _ = await FaviconLoader.shared.load(forHost: host)
+                    _ = await favicons.load(forHost: host)
                 }
                 guard let self, let field else { return }
                 needsRefresh = true
@@ -424,7 +429,8 @@ enum MentionFieldRendering {
         text: String,
         chips: [MentionChip],
         fontSize: CGFloat,
-        isDark: Bool
+        isDark: Bool,
+        favicons: FaviconLoader = .shared
     ) -> NSAttributedString {
         let font = NSFont.systemFont(ofSize: fontSize)
         let result = NSMutableAttributedString()
@@ -439,13 +445,13 @@ enum MentionFieldRendering {
             }
             defer { index += 1 }
             guard chips.indices.contains(index) else { continue }
-            result.append(chip(chips[index], font: font, isDark: isDark))
+            result.append(chip(chips[index], font: font, isDark: isDark, favicons: favicons))
         }
         return result
     }
 
-    private static func chip(_ chip: MentionChip, font: NSFont, isDark: Bool) -> NSAttributedString {
-        let image = chipImage(chip, fontSize: font.pointSize, isDark: isDark)
+    private static func chip(_ chip: MentionChip, font: NSFont, isDark: Bool, favicons: FaviconLoader) -> NSAttributedString {
+        let image = chipImage(chip, fontSize: font.pointSize, isDark: isDark, favicons: favicons)
         let attachment = NSTextAttachment()
         attachment.image = image
         attachment.bounds = CGRect(
@@ -462,10 +468,10 @@ enum MentionFieldRendering {
         return piece
     }
 
-    private static func chipImage(_ chip: MentionChip, fontSize: CGFloat, isDark: Bool) -> NSImage {
-        let icon = chip.host.flatMap { FaviconLoader.shared.cached(for: $0) }
-        let key = "\(chip.title)|\(chip.host ?? "")|\(icon == nil ? 0 : 1)|\(fontSize)|\(isDark)"
-        if let cached = cache[key] {
+    private static func chipImage(_ chip: MentionChip, fontSize: CGFloat, isDark: Bool, favicons: FaviconLoader) -> NSImage {
+        let icon = chip.host.flatMap { favicons.cached(for: $0) }
+        let key = "\(ObjectIdentifier(favicons))|\(chip.title)|\(chip.host ?? "")|\(icon == nil ? 0 : 1)|\(fontSize)|\(isDark)"
+        if favicons.persistsToDisk, let cached = cache[key] {
             return cached
         }
         let renderer = ImageRenderer(
@@ -480,7 +486,9 @@ enum MentionFieldRendering {
         renderer.scale = 2
         let image = renderer.nsImage ?? NSImage(size: CGSize(width: 1, height: 1))
         image.accessibilityDescription = chip.title
-        cache[key] = image
+        if favicons.persistsToDisk {
+            cache[key] = image
+        }
         return image
     }
 

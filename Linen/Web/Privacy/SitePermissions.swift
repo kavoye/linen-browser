@@ -176,11 +176,15 @@ final class SitePermissions {
     private(set) var externalAppRecords: [String: [ExternalAppPermission]] = [:]
 
     private let file: URL
+    private let persists: Bool
     private var saveTask: Task<Void, Never>?
 
-    init(storageURL: URL? = nil) {
+    init(storageURL: URL? = nil, persists: Bool = true) {
         file = storageURL ?? Self.defaultFile
-        load()
+        self.persists = persists
+        if persists {
+            load()
+        }
     }
 
     // MARK: - Reading
@@ -508,6 +512,7 @@ final class SitePermissions {
     }
 
     private func scheduleSave() {
+        guard persists else { return }
         saveTask?.cancel()
         let snapshot = Snapshot(
             records: records,

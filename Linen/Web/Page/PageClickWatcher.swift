@@ -8,6 +8,7 @@ final class PageClickWatcher: NSObject, WKScriptMessageHandler {
     static let shared = PageClickWatcher()
 
     @MainActor var onClick: ((CGPoint) -> Void)?
+    @MainActor var onWebViewClick: ((WKWebView, CGPoint) -> Void)?
 
     private static let handlerName = "linenClick"
     private let installedControllers = NSHashTable<WKUserContentController>.weakObjects()
@@ -49,6 +50,7 @@ final class PageClickWatcher: NSObject, WKScriptMessageHandler {
         let inContent = CGPoint(x: inWindow.x, y: content.bounds.height - inWindow.y)
         MainActor.assumeIsolated {
             onClick?(inContent)
+            onWebViewClick?(webView, inContent)
         }
     }
 

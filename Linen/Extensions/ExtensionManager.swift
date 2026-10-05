@@ -26,25 +26,35 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
     private(set) var contexts: [String: WKWebExtensionContext] = [:]
     private var wakingBackgrounds: Set<String> = []
+    @ObservationIgnored private var loading: [String: UUID] = [:]
     private(set) var actionRevision = 0
     var installState: StoreInstallState = .idle
     var updateChecks: [String: UpdateCheck] = [:]
 
     @ObservationIgnored private static var systemCatalogue: [SafariExtension]?
+    @ObservationIgnored private static let liveManagers = NSHashTable<ExtensionManager>.weakObjects()
 
-    var onOpenTab: ((URL?) -> BrowserTab?)?
+    /// The application owns window creation; the complete configuration includes all URLs and moved tabs.
+    var onOpenWindow: ((WKWebExtension.WindowConfiguration) -> ExtensionWindowAdapter?)?
 
     private var library: ExtensionLibrary
-    private let browser: BrowserModel
+    private(set) var profile: Profile?
 
-    @ObservationIgnored private var tabAdapters: [UUID: ExtensionTabAdapter] = [:]
-    @ObservationIgnored private(set) var windowAdapter: ExtensionWindowAdapter?
+    @ObservationIgnored var windows: [ObjectIdentifier: ExtensionWindowAdapter] = [:]
+    @ObservationIgnored var windowOrder: [ObjectIdentifier] = []
+    @ObservationIgnored weak var lastFocusedWindow: ExtensionWindowAdapter?
+    @ObservationIgnored private var startupTask: Task<Void, Never>?
+    @ObservationIgnored var hasStarted = false
+    @ObservationIgnored private var isStopped = false
+
+    @ObservationIgnored var tabAdapters: [UUID: ExtensionTabAdapter] = [:]
     @ObservationIgnored private var iconCache: [String: NSImage] = [:]
-    @ObservationIgnored private var anchors: [String: NSView] = [:]
-    @ObservationIgnored private weak var overflowAnchor: NSView?
+    @ObservationIgnored private var anchors: [ObjectIdentifier: [String: NSView]] = [:]
+    @ObservationIgnored private var overflowAnchors: [ObjectIdentifier: NSView] = [:]
 
     @ObservationIgnored private var presentedPopup: NSPopover?
     @ObservationIgnored private var presentedPopupID: String?
+    @ObservationIgnored private weak var presentedPopupWindow: ExtensionWindowAdapter?
     @ObservationIgnored private var popupCloseObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var lastDismissedPopupID: String?
     @ObservationIgnored private var lastPopupDismissal = Date.distantPast
@@ -53,46 +63,46 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     @ObservationIgnored private let nativeMessaging = NativeMessagingService()
     private(set) var appsOutOfReach: Set<String> = []
 
-    init(browser: BrowserModel, library: ExtensionLibrary = ExtensionLibrary()) {
-        self.browser = browser
-        self.library = library
-        controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: nil))
+    init(profile: Profile? = nil, dataStore: WKWebsiteDataStore? = nil, library: ExtensionLibrary? = nil) {
+        self.profile = profile
+        self.library = library ?? profile.map { ExtensionLibrary(profile: $0) } ?? ExtensionLibrary()
+        controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: profile, dataStore: dataStore))
         super.init()
+        Self.liveManagers.add(self)
         controller.delegate = self
         nativeMessaging.geckoID = { [weak self] id in
             guard let self else { return nil }
             return NativeMessagingManifest.geckoID(inPackage: self.library.packageURL(for: id))
         }
+    }
 
-        let window = ExtensionWindowAdapter(browser: browser, manager: self)
-        windowAdapter = window
+    convenience init(browser: BrowserModel, library: ExtensionLibrary = ExtensionLibrary()) {
+        self.init(library: library)
+        register(browser: browser)
+    }
 
-        browser.extensionPageHost = { [weak self] url in
-            guard let context = self?.controller.extensionContext(for: url),
-                  let configuration = context.webViewConfiguration else { return nil }
-            let webExtension = context.webExtension
-            return ExtensionPageHost(
-                configuration: configuration,
-                baseURL: context.baseURL,
-                name: webExtension.displayName ?? String(localized: "Extension"),
-                icon: webExtension.icon(for: CGSize(width: 32, height: 32))
-            )
+    func didUnregister(browser: BrowserModel, window: ExtensionWindowAdapter) {
+        let identifier = ObjectIdentifier(browser)
+        anchors[identifier] = nil
+        overflowAnchors[identifier] = nil
+        if presentedPopupWindow === window {
+            presentedPopup?.performClose(nil)
+            presentedPopup = nil
+            presentedPopupID = nil
+            presentedPopupWindow = nil
         }
-        browser.onTabOpened = { [weak self] tab in
-            guard let self else { return }
-            controller.didOpenTab(adapter(for: tab))
-        }
-        browser.onTabClosed = { [weak self] tab in
-            guard let self, let adapter = tabAdapters.removeValue(forKey: tab.id) else { return }
-            controller.didCloseTab(adapter, windowIsClosing: false)
-        }
-        browser.onActiveTabChanged = { [weak self] newTab, previousTab in
-            guard let self, let newTab else { return }
-            let previous = previousTab.flatMap { tabAdapters[$0.id] }
-            controller.didActivateTab(adapter(for: newTab), previousActiveTab: previous)
-        }
-        browser.onNavigationStarted = { [weak self] _, url in
-            self?.wakeBackgrounds(for: url)
+        if windows.isEmpty, profile?.isPrivate == true {
+            isStopped = true
+            startupTask?.cancel()
+            for task in backgroundStarts.values {
+                task.cancel()
+            }
+            backgroundStarts.removeAll()
+            for id in Array(contexts.keys) {
+                unload(id: id)
+            }
+            presentedPopup?.performClose(nil)
+            onOpenWindow = nil
         }
     }
 
@@ -111,22 +121,10 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
     }
 
-    func adapter(for tab: BrowserTab) -> ExtensionTabAdapter {
-        if let existing = tabAdapters[tab.id] {
-            return existing
-        }
-        let adapter = ExtensionTabAdapter(
-            tab: tab,
-            browser: browser,
-            windowAdapter: windowAdapter ?? ExtensionWindowAdapter(browser: browser, manager: self)
-        )
-        tabAdapters[tab.id] = adapter
-        return adapter
-    }
-
     // MARK: - Lifecycle
 
     func useLibrary(for profile: Profile) {
+        self.profile = profile
         library = ExtensionLibrary(profile: profile)
         controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: profile))
         controller.delegate = self
@@ -171,7 +169,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     private static func controllerConfiguration(
-        for profile: Profile?
+        for profile: Profile?, dataStore: WKWebsiteDataStore? = nil
     ) -> WKWebExtensionController.Configuration {
         let configuration: WKWebExtensionController.Configuration
         switch storageIdentifier(for: profile) {
@@ -182,17 +180,27 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         case .ephemeral:
             configuration = .nonPersistent()
         }
+        if let dataStore {
+            configuration.webViewConfiguration.websiteDataStore = dataStore
+        }
         configuration.webViewConfiguration.applicationNameForUserAgent = WebViewPool.safariApplicationName
         return configuration
     }
 
     func beginAdopting(profile: Profile?) {
+        self.profile = profile
+        startupTask?.cancel()
+        startupTask = nil
+        hasStarted = false
+        isStopped = false
+        loading.removeAll()
         for (_, context) in contexts {
             try? controller.unload(context)
         }
         contexts = [:]
         appsOutOfReach = []
         anchors = [:]
+        overflowAnchors = [:]
         reloadedForEmptyPopup = []
         presentedPopup?.performClose(nil)
         presentedPopup = nil
@@ -205,18 +213,28 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     func start() async {
-        library.load()
-        installed = library.records
-        await discoverSystemExtensions()
-
-        if let windowAdapter {
-            controller.didOpenWindow(windowAdapter)
-            controller.didFocusWindow(windowAdapter)
+        if let startupTask {
+            await startupTask.value
+            return
         }
-
-        for record in installed + systemExtensions where record.enabled {
-            await load(record)
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            library.load()
+            installed = library.records
+            await discoverSystemExtensions()
+            guard !Task.isCancelled else { return }
+            hasStarted = true
+            for window in windowAdapters {
+                controller.didOpenWindow(window)
+            }
+            controller.didFocusWindow(focusedWindowAdapter)
+            for record in installed + systemExtensions where record.enabled {
+                guard !Task.isCancelled else { return }
+                await load(record)
+            }
         }
+        startupTask = task
+        await task.value
     }
 
     func discoverSystemExtensions() async {
@@ -250,8 +268,16 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     private func load(_ record: InstalledExtension) async {
-        guard contexts[record.id] == nil else { return }
+        guard !isStopped, contexts[record.id] == nil, loading[record.id] == nil else { return }
+        let generation = UUID()
+        loading[record.id] = generation
+        defer {
+            if loading[record.id] == generation {
+                loading[record.id] = nil
+            }
+        }
         let state = Pipeline.signposter.beginInterval("ext.load")
+        defer { Pipeline.signposter.endInterval("ext.load", state) }
         let started = ContinuousClock.now
         do {
             let webExtension: WKWebExtension
@@ -267,7 +293,10 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             if let icon = webExtension.icon(for: CGSize(width: 32, height: 32)) {
                 iconCache[record.id] = icon
             }
+            guard !isStopped, !Task.isCancelled, loading[record.id] == generation,
+                  contexts[record.id] == nil else { return }
             let context = WKWebExtensionContext(for: webExtension)
+            context.hasAccessToPrivateData = profile?.isPrivate == true
             // Set the identifier before the load. WebKit keys the extension's
             // persistent storage on it.
             context.uniqueIdentifier = record.id
@@ -307,7 +336,6 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         } catch {
             Self.logFailure(error, id: record.id, name: record.displayName, operation: "loading")
         }
-        Pipeline.signposter.endInterval("ext.load", state)
     }
 
     private func startBackgroundContent(of context: WKWebExtensionContext, id: String, name: String) {
@@ -376,6 +404,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     private func unload(id: String) {
+        loading[id] = nil
         backgroundStarts.removeValue(forKey: id)?.cancel()
         guard let context = contexts.removeValue(forKey: id) else { return }
         do {
@@ -470,6 +499,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
                 return
             }
             library.recordInstall(id: id, source: store)
+            refreshSharedLibraries(for: id)
             installed = library.records
             guard let record = installed.first(where: { $0.id == id }) else {
                 installState = .failed(
@@ -500,6 +530,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         unload(id: id)
         try await library.unpack(package, id: id)
         library.updateMetadata(id: id, name: name, version: version)
+        refreshSharedLibraries(for: id, reloadContexts: true)
         installed = library.records
         guard let refreshed = record(for: id), refreshed.enabled else { return }
         await load(refreshed)
@@ -564,10 +595,29 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         guard record(for: id)?.isSystem != true else { return }
         unload(id: id)
         library.uninstall(id: id)
+        refreshSharedLibraries(for: id, unloadContexts: true)
         installed = library.records
-        anchors[id] = nil
+        for key in anchors.keys {
+            anchors[key]?[id] = nil
+        }
         iconCache[id] = nil
         Pipeline.log.notice("Extension uninstalled")
+    }
+
+    /// Packages and the catalogue are shared, while enablement and runtime contexts belong to profiles.
+    private func refreshSharedLibraries(for id: String, unloadContexts: Bool = false, reloadContexts: Bool = false) {
+        let package = library.packageURL(for: id)
+        for manager in Self.liveManagers.allObjects where manager !== self && manager.library.packageURL(for: id) == package {
+            if unloadContexts || reloadContexts {
+                manager.unload(id: id)
+            }
+            manager.library.refresh()
+            manager.installed = manager.library.records
+            manager.iconCache[id] = nil
+            if reloadContexts, let record = manager.record(for: id), record.enabled {
+                Task { await manager.load(record) }
+            }
+        }
     }
 
     func isInstalled(_ id: String) -> Bool {
@@ -597,7 +647,9 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         installed = library.records
         applyPlacementsToSystemExtensions()
         if !pinned {
-            anchors[id] = nil
+            for key in anchors.keys {
+                anchors[key]?[id] = nil
+            }
         }
     }
 
@@ -606,33 +658,31 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         installed = library.records
     }
 
-    func action(for id: String) -> WKWebExtension.Action? {
-        guard let context = contexts[id] else { return nil }
-        let tab = browser.activeTab.map { adapter(for: $0) }
-        return context.action(for: tab)
+    func registerAnchor(_ view: NSView?, for id: String, in browser: BrowserModel) {
+        guard adapter(for: browser) != nil else { return }
+        anchors[ObjectIdentifier(browser), default: [:]][id] = view
     }
 
-    func registerAnchor(_ view: NSView?, for id: String) {
-        anchors[id] = view
+    func registerOverflowAnchor(_ view: NSView?, in browser: BrowserModel) {
+        guard adapter(for: browser) != nil else { return }
+        overflowAnchors[ObjectIdentifier(browser)] = view
     }
 
-    func registerOverflowAnchor(_ view: NSView?) {
-        overflowAnchor = view
-    }
-
-    private func anchorView(for id: String) -> NSView? {
-        if let own = anchors[id], own.window != nil {
+    private func anchorView(for id: String, in browser: BrowserModel? = nil) -> NSView? {
+        guard let browser = registeredWindow(in: browser)?.browser else { return nil }
+        let key = ObjectIdentifier(browser)
+        if let own = anchors[key]?[id], own.window != nil {
             return own
         }
-        if let overflowAnchor, overflowAnchor.window != nil {
-            return overflowAnchor
+        if let overflow = overflowAnchors[key], overflow.window != nil {
+            return overflow
         }
         return nil
     }
 
-    func performAction(for id: String) {
-        guard let context = contexts[id] else { return }
-        let tab = browser.activeTab.map { adapter(for: $0) }
+    func performAction(for id: String, in browser: BrowserModel? = nil) {
+        guard let window = registeredWindow(in: browser), let context = contexts[id] else { return }
+        let tab = window.browser?.activeTab.map { adapter(for: $0) }
         guard let action = context.action(for: tab) else { return }
 
         if let popover = presentedPopup, presentedPopupID == id, popover.isShown {
@@ -644,15 +694,16 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
 
         if action.presentsPopup {
-            present(action, for: id)
+            present(action, for: id, in: browser)
         } else {
             context.performAction(for: tab)
         }
     }
 
     @discardableResult
-    func present(_ action: WKWebExtension.Action, for id: String) -> Bool {
-        guard let popover = action.popupPopover, let anchor = anchorView(for: id) else {
+    func present(_ action: WKWebExtension.Action, for id: String, in browser: BrowserModel? = nil) -> Bool {
+        guard let window = registeredWindow(in: browser), let popover = action.popupPopover,
+              let anchor = anchorView(for: id, in: window.browser) else {
             return false
         }
         popover.behavior = .transient
@@ -668,24 +719,28 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
                 guard let self else { return }
                 self.presentedPopup = nil
                 self.presentedPopupID = nil
+                self.presentedPopupWindow = nil
                 self.lastDismissedPopupID = id
                 self.lastPopupDismissal = Date()
             }
         }
         popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY)
-        reopenIfPageIsMissing(action, for: id)
+        reopenIfPageIsMissing(action, for: id, in: window)
         clipPopup(popover)
         presentedPopup = popover
         presentedPopupID = id
+        presentedPopupWindow = window
         action.hasUnreadBadgeText = false
         return true
     }
 
-    private func reopenIfPageIsMissing(_ action: WKWebExtension.Action, for id: String) {
-        Task {
+    private func reopenIfPageIsMissing(_ action: WKWebExtension.Action, for id: String, in window: ExtensionWindowAdapter) {
+        Task { [weak window] in
+            guard let window, owns(window) else { return }
             for _ in 0..<2 {
                 try? await Task.sleep(for: .milliseconds(900))
-                guard presentedPopupID == id, presentedPopup?.isShown == true,
+                guard owns(window), presentedPopupWindow === window,
+                      presentedPopupID == id, presentedPopup?.isShown == true,
                       action.popupWebView?.url == nil
                 else { return }
             }
@@ -705,17 +760,19 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             unload(id: id)
             await load(record)
 
-            guard presentedPopupID == nil, let context = contexts[id] else { return }
+            guard owns(window), presentedPopupID == nil, let context = contexts[id] else { return }
 
             var waited = 0
-            while anchors[id]?.window == nil, waited < 10 {
+            while anchorView(for: id, in: window.browser) == nil, waited < 10 {
                 try? await Task.sleep(for: .milliseconds(30))
+                guard owns(window) else { return }
                 waited += 1
             }
 
-            let tab = browser.activeTab.map { adapter(for: $0) }
+            guard owns(window) else { return }
+            let tab = window.browser?.activeTab.map { adapter(for: $0) }
             guard let fresh = context.action(for: tab), fresh.presentsPopup else { return }
-            present(fresh, for: id)
+            present(fresh, for: id, in: window.browser)
         }
     }
 
@@ -759,9 +816,9 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         return nil
     }
 
-    func contextMenu(for id: String) -> NSMenu? {
-        guard let context = contexts[id] else { return nil }
-        let tab = browser.activeTab.map { adapter(for: $0) }
+    func contextMenu(for id: String, in browser: BrowserModel? = nil) -> NSMenu? {
+        guard let window = registeredWindow(in: browser), let context = contexts[id] else { return nil }
+        let tab = window.browser?.activeTab.map { adapter(for: $0) }
         let menu = NSMenu()
 
         for item in context.action(for: tab)?.menuItems ?? [] {
@@ -778,13 +835,13 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         menu.addItem(appMenuItem(
             title: String(localized: pinTitle),
             action: #selector(togglePinnedFromMenu(_:)),
-            id: id
+            id: id, browser: browser
         ))
         if context.optionsPageURL != nil {
             menu.addItem(appMenuItem(
                 title: String(localized: "Extension Options"),
                 action: #selector(openOptionsFromMenu(_:)),
-                id: id
+                id: id, browser: browser
             ))
         }
 
@@ -793,53 +850,54 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             menu.addItem(appMenuItem(
                 title: String(localized: "Disable Extension"),
                 action: #selector(disableFromMenu(_:)),
-                id: id
+                id: id, browser: browser
             ))
         } else {
             menu.addItem(appMenuItem(
                 title: String(localized: "Remove Extension"),
                 action: #selector(removeFromMenu(_:)),
-                id: id
+                id: id, browser: browser
             ))
         }
         return menu
     }
 
-    private func appMenuItem(title: String, action: Selector, id: String) -> NSMenuItem {
+    private final class MenuTarget {
+        let id: String
+        weak var browser: BrowserModel?
+
+        init(id: String, browser: BrowserModel?) {
+            self.id = id
+            self.browser = browser
+        }
+    }
+
+    private func appMenuItem(title: String, action: Selector, id: String, browser: BrowserModel?) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
-        item.representedObject = id
+        item.representedObject = MenuTarget(id: id, browser: browser ?? preferredWindowAdapter?.browser)
         return item
     }
 
     @objc private func togglePinnedFromMenu(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String,
-              let record = record(for: id) else { return }
-        setPinned(!record.isPinned, id: id)
+        guard let target = sender.representedObject as? MenuTarget,
+              let record = record(for: target.id) else { return }
+        setPinned(!record.isPinned, id: target.id)
     }
 
     @objc private func disableFromMenu(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        setEnabled(false, id: id)
+        guard let target = sender.representedObject as? MenuTarget else { return }
+        setEnabled(false, id: target.id)
     }
 
     @objc private func openOptionsFromMenu(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String, let context = contexts[id] else { return }
-        _ = onOpenTab?(context.optionsPageURL)
+        guard let target = sender.representedObject as? MenuTarget, let context = contexts[target.id] else { return }
+        _ = openTab(context.optionsPageURL, in: target.browser)
     }
 
     @objc private func removeFromMenu(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        confirmUninstall(id: id)
-    }
-
-    func hasOptionsPage(id: String) -> Bool {
-        contexts[id]?.optionsPageURL != nil
-    }
-
-    func openOptionsPage(id: String) {
-        guard let url = contexts[id]?.optionsPageURL else { return }
-        _ = onOpenTab?(url)
+        guard let target = sender.representedObject as? MenuTarget else { return }
+        confirmUninstall(id: target.id)
     }
 
     func confirmUninstall(id: String) {

@@ -6,6 +6,7 @@ import SwiftUI
 
 struct HistoryView: View {
     let browser: BrowserModel
+    let coordinator: AppCoordinator
 
     @State private var query = ""
     @State private var hoveredURL: String?
@@ -30,6 +31,11 @@ struct HistoryView: View {
                                     action: { open(row.entry.url) },
                                     onRemove: { remove(row) },
                                     onOpenInNewTab: { openInNewTab(row.entry.url, activate: $0) },
+                                    onOpenInNewWindow: { isPrivate in
+                                        guard let url = URL(string: row.entry.url) else { return }
+                                        coordinator.openLinkInNewWindow(url, isPrivate: isPrivate)
+                                    },
+                                    isPrivate: browser.opensPrivately,
                                     onHoverChanged: { noteHover(of: row.entry.url, $0) }
                                 )
                             }
@@ -86,7 +92,7 @@ struct HistoryView: View {
 
     private func clear() async {
         guard let choice = await ConfirmAlert.clear(.history()) else { return }
-        await BrowsingData.clear(choice.kinds, range: choice.range, history: browser.history)
+        await BrowsingData.clear(choice.kinds, range: choice.range, history: browser.history, context: browser.context)
         query = ""
     }
 

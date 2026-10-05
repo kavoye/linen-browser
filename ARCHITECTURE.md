@@ -7,7 +7,9 @@ Main Actor default isolation are enabled for the app target.
 
 ```mermaid
 flowchart LR
-    App["AppDelegate"] --> Coordinator["AppCoordinator"]
+    App["AppDelegate"] --> Application["BrowserApplication"]
+    Application --> Coordinator["AppCoordinator per window"]
+    Coordinator --> Profile["Shared BrowserProfileContext"]
     Coordinator --> Browser["BrowserModel"]
     Coordinator --> Turns["AgentTurnModel"]
     Turns --> Agent["AgentRunner"]
@@ -28,8 +30,10 @@ flowchart LR
     Coordinator --> Views["SwiftUI views"]
 ```
 
-`AppCoordinator` owns and connects the runtime models and services. Views observe
-the coordinator and its focused models; they should not contain persistence, networking or
+`BrowserApplication` owns the native window registry, active-window routing, updates,
+and one MCP server. Each window has an `AppCoordinator` with its own tabs, sidebar,
+selection, voice input, and assistant task. Views observe
+their coordinator and its focused models; they should not contain persistence, networking or
 WebKit policy. New work should prefer a narrow model or protocol over another
 coordinator responsibility.
 
@@ -54,18 +58,37 @@ In both cases the title, address, favicon and WebKit interaction state remain, s
 activation loads the page again. Code that adds a new kind of in-progress page work must decide whether
 that work prevents discarding.
 
-Profiles are isolated from one another. Each profile has its own WebKit data store,
-database, permission records and extension directory. Private browsing uses an
-ephemeral profile and an in-memory database. Never add profile identity as a
-column to a shared persistent store.
+`BrowserProfileContext` owns a profile's database, website data store, settings,
+permissions, history, downloads, conversation log, web view pool, and extension
+manager. Persistent windows using the same profile share this context. Tabs keep
+an explicit context even before their web view is materialized. Changing focus
+or another window's profile cannot retarget their data stores.
 
-`BrowserModel` owns the active profile’s permission store and gives that exact
-store to every new `BrowserTab`. A profile switch writes the outgoing session,
-drops its tabs without the bookkeeping a single close needs, replaces the
-database and permission store together, swaps the extension controller, and
-restores the next session. The extensions themselves load afterwards, so the
-window is usable first. Each phase logs its own duration under `profile:
-switched`.
+Each private window gets a distinct context with an in-memory database and a
+nonpersistent website data store. Closing it cancels its tasks, unloads its
+extensions, clears its conversations, and removes its website data and temporary
+compiled content rules. Shutdown awaits pending private cleanup, including cleanup
+started by an already closed window. Private
+windows never enter persistent session restoration or window-frame autosave.
+
+Session rows include a stable window ID. Saves, close records, folders, and split
+layouts are scoped to that ID. The migration assigns the old session to one
+window, and the application gives migrated windows unique IDs across profiles.
+Revisions reject stale queued saves after a close or synchronous final save.
+Remapped IDs keep a hidden revision cutoff so delayed saves cannot recreate the
+old window record; a later profile switch may reuse the ID with a newer revision.
+A tab transfer moves the existing tab and web view, rebinds callbacks, cancels
+source-window assistant work, and commits both windows together. A live tab may
+move only between windows sharing the same context.
+
+A profile switch closes the outgoing saved session, detaches its tabs, registers
+with the next context's extension manager, and restores that window's session
+from the new profile. Other windows keep their existing contexts and tasks.
+Visible and dismissing Peek pages detach immediately during a profile switch or
+window teardown, so their callbacks cannot reach the next profile.
+Extension window and tab adapters expire when their window unregisters. Toolbar
+actions and delayed popup work must check the current registration before reading
+the browser, since the same browser model can now belong to another profile.
 
 ## Agent trust boundaries
 
@@ -91,15 +114,16 @@ authorize access, protect credentials or confirm an irreversible action.
 External MCP clients use a separate `MCPBrowserSession`, with explicit tab-and-
 origin grants and connection-local consequential-action approvals. The session
 uses `PageDriver` through a revocable `PageAutomationGuard`; it does not enter
-`AgentTurnModel` or write assistant conversation history. Private browsing and
-profile switches stop the server synchronously before replacing stores. The
+`AgentTurnModel` or write assistant conversation history. Each connection binds to one regular window when it connects. Focus changes do
+not retarget it. Closing or switching that window revokes its connections before
+replacing stores; other windows keep their connections. The
 bundled `--mcp` process relays stdio to a user-only Unix socket without opening a
 second browser session. See [MCP.md](MCP.md) for the tool contract and boundaries.
 
 MCP enablement is an app-level preference. Runtime shutdown clears connections
-and grants without changing that preference. Bootstrap and profile-switch
-completion resume the listener in normal profiles; private browsing keeps it
-paused and presents the toggle as unavailable.
+and grants without changing that preference. The listener belongs to the application. New connections are refused when the
+focused window is private; existing connections to regular windows remain bound
+to their original window. Consent sheets attach to that window.
 
 `MCPClientInstaller` handles optional client setup on its own actor. It merges
 standard JSON configs and uses the installed Codex CLI on a staged TOML copy.

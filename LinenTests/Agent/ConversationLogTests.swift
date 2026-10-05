@@ -225,6 +225,33 @@ struct ConversationLogTests {
         #expect(log.traces(forTab: alive).count == 1)
     }
 
+    @Test func retainingOneWindowKeepsConversationsFromOtherSavedWindows() throws {
+        let (log, database) = makeLog()
+        let currentTab = UUID()
+        let otherTab = UUID()
+        let closedWindowTab = UUID()
+        let orphan = UUID()
+        try database.writer.write { db in
+            for id in [otherTab, closedWindowTab] {
+                try db.execute(
+                    sql: "INSERT INTO sessionTab (id, windowID, title, url, isActive) VALUES (?, ?, '', '', 1)",
+                    arguments: [id, UUID()]
+                )
+            }
+        }
+        for tabID in [currentTab, otherTab, closedWindowTab, orphan] {
+            log.completeTask(log.beginTask("saved conversation", tabID: tabID), response: "finished")
+        }
+        log.saveBlocking()
+        log.retainSessionTabs(including: [currentTab])
+
+        #expect(log.traces(forTab: currentTab).count == 1)
+        #expect(log.traces(forTab: otherTab).count == 1)
+        #expect(log.traces(forTab: closedWindowTab).count == 1)
+        #expect(log.traces(forTab: orphan).isEmpty)
+        #expect(ConversationLog(database: database).traces(forTab: otherTab).count == 1)
+    }
+
     @Test func seedsWhatTheAgentActuallySaid() {
         let (log, _) = makeLog()
 

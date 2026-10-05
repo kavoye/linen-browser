@@ -5,6 +5,10 @@ import AppKit
 import SwiftUI
 
 struct AssistantTextEditor: NSViewRepresentable {
+    @Environment(\.profileFavicons) private var profileFavicons
+    private var favicons: FaviconLoader {
+        profileFavicons ?? .shared
+    }
     @Binding var text: String
     let chips: [MentionChip]
     let placeholder: String
@@ -74,7 +78,7 @@ struct AssistantTextEditor: NSViewRepresentable {
             guard changed || renderedChips != parent.chips || renderedDark != isDark || refresh else { return }
             let selection = editor.selectedRange()
             editor.textStorage?.setAttributedString(MentionFieldRendering.attributed(
-                text: parent.text, chips: parent.chips, fontSize: parent.fontSize, isDark: isDark
+                text: parent.text, chips: parent.chips, fontSize: parent.fontSize, isDark: isDark, favicons: parent.favicons
             ))
             renderedChips = parent.chips
             renderedDark = isDark
@@ -92,13 +96,14 @@ struct AssistantTextEditor: NSViewRepresentable {
 
         private func loadIcons(in editor: AssistantInputTextView) {
             let hosts = Set(parent.chips.compactMap(\.host)).filter {
-                FaviconLoader.shared.cached(for: $0) == nil && !requestedHosts.contains($0)
+                parent.favicons.cached(for: $0) == nil && !requestedHosts.contains($0)
             }
             guard !hosts.isEmpty else { return }
             requestedHosts.formUnion(hosts)
+            let favicons = parent.favicons
             Task { [weak self, weak editor] in
                 for host in hosts {
-                    _ = await FaviconLoader.shared.load(forHost: host)
+                    _ = await favicons.load(forHost: host)
                 }
                 guard let self, let editor else { return }
                 apply(to: editor, isDark: parent.colorScheme == .dark, refresh: true)

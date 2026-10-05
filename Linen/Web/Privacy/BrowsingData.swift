@@ -185,8 +185,10 @@ enum BrowsingData {
         range: Range,
         history: HistoryStore,
         agent: ConversationLog? = nil,
-        tabs: [BrowserTab] = []
+        tabs: [BrowserTab] = [],
+        context: BrowserProfileContext? = nil
     ) async {
+        let context = context ?? tabs.first?.context ?? .shared(for: .original())
         if kinds.contains(.history) {
             if range == .everything {
                 history.clear()
@@ -197,7 +199,7 @@ enum BrowsingData {
         }
 
         if kinds.contains(.cookies) {
-            SitePermissions.shared.removeEverything()
+            context.sitePermissions.removeEverything()
             for tab in tabs {
                 tab.permissions.siteDataCleared()
                 tab.assistantAccess.siteDataCleared()
@@ -205,12 +207,12 @@ enum BrowsingData {
         }
 
         if kinds.contains(.cache) {
-            FaviconLoader.shared.clear(modifiedSince: range.since)
+            context.favicons.clear(modifiedSince: range.since)
         }
 
         let types = kinds.reduce(into: Set<String>()) { $0.formUnion($1.dataTypes) }
         guard !types.isEmpty else { return }
-        await store.removeData(ofTypes: types, modifiedSince: range.since)
+        await context.dataStore.removeData(ofTypes: types, modifiedSince: range.since)
     }
 
     @MainActor
@@ -218,17 +220,19 @@ enum BrowsingData {
         WebViewPool.shared.dataStore
     }
 
-    static func siteCount() async -> Int {
-        let records = await store.dataRecords(ofTypes: WebsiteData.allTypes)
+    static func siteCount(context: BrowserProfileContext? = nil) async -> Int {
+        let dataStore = context?.dataStore ?? store
+        let records = await dataStore.dataRecords(ofTypes: WebsiteData.allTypes)
         return records.count
     }
 
     static func clearEverything(
         history: HistoryStore,
         agent: ConversationLog? = nil,
-        tabs: [BrowserTab] = []
+        tabs: [BrowserTab] = [],
+        context: BrowserProfileContext? = nil
     ) async {
-        await clear([.cookies, .cache], range: .everything, history: history, agent: agent, tabs: tabs)
+        await clear([.cookies, .cache], range: .everything, history: history, agent: agent, tabs: tabs, context: context)
         agent?.clearAll()
     }
 }

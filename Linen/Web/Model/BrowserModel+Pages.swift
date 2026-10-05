@@ -70,8 +70,8 @@ extension BrowserModel {
     }
 
     func relieveMemoryPressure(_ level: MemoryPressureMonitor.Level) {
-        WebViewPool.shared.discardIdleForMemoryPressure()
-        guard BrowserSettings.shared.sleepsInactiveTabs else { return }
+        context.webViewPool.discardIdleForMemoryPressure()
+        guard context.settings.sleepsInactiveTabs else { return }
         let keep = level == .critical ? 0 : Self.warningKeepsRecent
         let discarded = discardBackgroundTabs(keepingRecent: keep)
         guard discarded > 0 else { return }
@@ -79,24 +79,24 @@ extension BrowserModel {
     }
 
     func applyWebSettings() {
-        let settings = BrowserSettings.shared
+        let settings = context.settings
         for tab in tabs where tab.isMaterialised {
             settings.apply(to: tab.webView)
             tab.refreshPopupPolicy()
         }
-        WebViewPool.shared.discardIdle()
+        context.webViewPool.discardIdle()
     }
 
     func autoplay(for tab: BrowserTab) -> AutoplayPolicy {
         let origin = siteOrigin(for: tab)
-        guard !origin.isEmpty else { return BrowserSettings.shared.autoplay }
-        return sitePermissions.autoplay(for: origin) ?? BrowserSettings.shared.autoplay
+        guard !origin.isEmpty else { return context.settings.autoplay }
+        return sitePermissions.autoplay(for: origin) ?? context.settings.autoplay
     }
 
     func setAutoplay(_ policy: AutoplayPolicy, for tab: BrowserTab) {
         let origin = siteOrigin(for: tab)
         guard !origin.isEmpty else { return }
-        sitePermissions.setAutoplay(policy == BrowserSettings.shared.autoplay ? nil : policy, for: origin)
+        sitePermissions.setAutoplay(policy == context.settings.autoplay ? nil : policy, for: origin)
     }
 
     func popups(for tab: BrowserTab) -> PopupPolicy {
@@ -106,7 +106,7 @@ extension BrowserModel {
     func setPopups(_ policy: PopupPolicy, for tab: BrowserTab) {
         let origin = siteOrigin(for: tab)
         guard !origin.isEmpty else { return }
-        let fallback: PopupPolicy = BrowserSettings.shared.blocksPopups ? .blockAndNotify : .allow
+        let fallback: PopupPolicy = context.settings.blocksPopups ? .blockAndNotify : .allow
         sitePermissions.setPopups(policy == fallback ? nil : policy, for: origin)
         tab.refreshPopupPolicy()
     }
@@ -260,7 +260,7 @@ extension BrowserModel {
         } else if Self.looksLikeLocation(text), let url = URL(string: "https://\(text)") {
             tab.load(url)
         } else {
-            tab.load(SearchURLBuilder.searchURL(for: text))
+            tab.load(SearchURLBuilder.searchURL(for: text, settings: context.settings))
         }
     }
 }

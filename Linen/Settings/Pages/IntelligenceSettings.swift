@@ -24,7 +24,7 @@ struct AssistantSettings: View {
             case .tools:
                 AgentToolsPage(model: model)
             case .grants:
-                AssistantGrantsPage(onBack: { model.showOverview() })
+                AssistantGrantsPage(policy: coordinator.browser.context.actionPolicy, onBack: { model.showOverview() })
             }
         }
         .task { await model.onAppear() }
@@ -76,14 +76,14 @@ private struct AssistantOverview: View {
         .settingsAnchor("provider.connected")
         .padding(.top, 6)
 
-        BehaviourSection(coordinator: coordinator)
+        BehaviourSection(coordinator: coordinator, settings: coordinator.settings)
 
         AssistantExecutionSettings()
 
         SettingsSection(title: "Acting on websites", symbol: "hand.raised") {
             DrillInRow(
                 title: "Allowed without asking",
-                detail: AssistantGrantsPage.summary
+                detail: AssistantGrantsPage.summary(for: coordinator.browser.context.actionPolicy)
             ) {
                 model.showGrants()
             }
@@ -144,7 +144,7 @@ private struct AnsweringNotice: View {
 private struct BehaviourSection: View {
     let coordinator: AppCoordinator
 
-    @Bindable private var settings = BrowserSettings.shared
+    @Bindable var settings: BrowserSettings
 
     @State private var talk = ActivationSettings.talk
     @State private var recording: String?

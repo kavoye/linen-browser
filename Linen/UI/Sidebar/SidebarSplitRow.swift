@@ -203,6 +203,7 @@ struct SidebarSplitRow: View {
         Divider()
 
         SidebarFolderMenuItems(items: carried, browser: browser)
+        Divider()
 
         Button(role: .destructive) {
             for tab in panes.reversed() {

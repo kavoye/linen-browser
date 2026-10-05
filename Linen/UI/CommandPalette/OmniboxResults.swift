@@ -173,7 +173,7 @@ struct OmniboxRowPresentation {
         case .go:
             detail = String(localized: "Open website in current tab")
         case .search, .phrase:
-            detail = String(localized: "Search with \(Omnibox.engineName) in current tab")
+            detail = String(localized: "Search in current tab")
         case .history:
             detail = "\(item.detail) · \(String(localized: "Open in current tab"))"
         case .newTab, .tab, .ask, .action:
@@ -188,6 +188,10 @@ struct OmniboxRowPresentation {
 }
 
 struct OmniboxFavicon: View {
+    @Environment(\.profileFavicons) private var profileFavicons
+    private var favicons: FaviconLoader {
+        profileFavicons ?? .shared
+    }
     let host: String
     let fallback: String
     let size: CGFloat
@@ -207,16 +211,17 @@ struct OmniboxFavicon: View {
         }
         .frame(width: size, height: size)
         .task(id: host) {
-            if let hit = FaviconLoader.shared.cached(for: host) {
+            if let hit = favicons.cached(for: host) {
                 image = hit
                 return
             }
-            image = await FaviconLoader.shared.load(forHost: host)
+            image = await favicons.load(forHost: host)
         }
     }
 }
 
 private struct OmniboxRow: View {
+    @Environment(\.assistantProviderID) private var assistantProviderID
     let item: OmniboxItem
     let presentation: OmniboxRowPresentation
     let query: String
@@ -280,7 +285,7 @@ private struct OmniboxRow: View {
     private var icon: some View {
         if item.kind == .ask {
             ProviderBrandIcon(
-                providerID: ProviderCatalog.shared.selected.id,
+                providerID: assistantProviderID ?? ProviderCatalog.openAI.id,
                 size: density == .compact ? 13 : 16
             )
             .frame(width: iconWidth)

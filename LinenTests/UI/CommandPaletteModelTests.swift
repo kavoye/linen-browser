@@ -9,6 +9,32 @@ import Testing
 
 @MainActor
 struct CommandPaletteModelTests {
+    @Test func closeWindowCommandKeepsItsOwningWindowAfterFocusChanges() throws {
+        let app = BrowserApplication()
+        let context = BrowserProfileContext.shared(for: .original())
+        let first = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
+        let second = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
+        app.register(first)
+        app.register(second)
+        defer {
+            first.closeWindow()
+            second.closeWindow()
+        }
+        app.focus(first)
+        let model = CommandPaletteModel(browser: first.browser, coordinator: first) {}
+        model.prepare()
+        model.interaction.query = "> close window"
+        let command = try #require(model.sections.flattened.first { $0.id == "action-closeWindow" })
+
+        app.focus(second)
+        command.run()
+
+        #expect(first.isClosed)
+        #expect(!second.isClosed)
+        #expect(app.windows.count == 1)
+        #expect(app.windows.first === second)
+    }
+
     @Test func openStartPageCommandCreatesAStartPageTab() throws {
         let coordinator = AppCoordinator()
         let previous = coordinator.browser.newTab()
@@ -609,9 +635,13 @@ struct CommandPaletteModelTests {
     @Test func menuNavigationAndFindCommandsAreInTheCatalog() {
         var context = fixtureContext()
         context.canGoBack = true
+        context.canReopenClosedWindow = true
         let commands = CommandPaletteCatalog.commands(context: context) { _ in }
         let byID = Dictionary(uniqueKeysWithValues: commands.map { ($0.id, $0) })
         let expected: [(CommandPaletteAction, String, String)] = [
+            (.newWindow, "New Window", "⌘N"),
+            (.privateBrowsing, "New Private Window", "⇧⌘N"),
+            (.reopenWindow, "Reopen Last Closed Window", ""),
             (.openLocation, "Open Location…", "⌘L"),
             (.nextTab, "Show Next Tab", "⇧⌘]"),
             (.previousTab, "Show Previous Tab", "⇧⌘["),

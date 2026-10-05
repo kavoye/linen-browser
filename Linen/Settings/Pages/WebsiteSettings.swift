@@ -8,11 +8,8 @@ struct WebsiteSettings: View {
     @Bindable var settings: BrowserSettings
 
     let permissions: SitePermissions
-
-    init(settings: BrowserSettings, permissions: SitePermissions = .shared) {
-        self.settings = settings
-        self.permissions = permissions
-    }
+    let blocker: ContentBlocker
+    let grants: AgentActionPolicy
 
     @State private var destination: Destination?
 
@@ -21,14 +18,6 @@ struct WebsiteSettings: View {
     private enum Destination: Equatable {
         case permission(WebPermission)
         case site(String)
-    }
-
-    private var blocker: ContentBlocker {
-        .shared
-    }
-
-    private var grants: AgentActionPolicy {
-        .shared
     }
 
     private var entries: [SiteSettingsEntry] {
@@ -59,6 +48,8 @@ struct WebsiteSettings: View {
                 origin: origin,
                 settings: settings,
                 permissions: permissions,
+                blocker: blocker,
+                grants: grants,
                 onBack: { destination = nil }
             )
         case nil:
@@ -254,17 +245,11 @@ private struct SiteDetailPage: View {
     let origin: String
     let settings: BrowserSettings
     let permissions: SitePermissions
+    let blocker: ContentBlocker
+    let grants: AgentActionPolicy
     let onBack: () -> Void
 
     @State private var confirmingReset = false
-
-    private var blocker: ContentBlocker {
-        .shared
-    }
-
-    private var grants: AgentActionPolicy {
-        .shared
-    }
 
     private var host: String {
         SiteSettingsIndex.host(of: origin)

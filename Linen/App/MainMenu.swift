@@ -36,10 +36,24 @@ enum ShortcutPriority {
 
 @MainActor
 final class MainMenu: NSObject, NSMenuItemValidation {
-    private let coordinator: AppCoordinator
+    private let fallbackCoordinator: AppCoordinator?
+    private weak var application: BrowserApplication?
+    private var coordinator: AppCoordinator {
+        if let application {
+            return application.ensureActiveWindow()
+        }
+        guard let fallbackCoordinator else { preconditionFailure("Menu has no application") }
+        return fallbackCoordinator
+    }
 
     init(coordinator: AppCoordinator) {
-        self.coordinator = coordinator
+        fallbackCoordinator = coordinator
+        super.init()
+    }
+
+    init(application: BrowserApplication) {
+        fallbackCoordinator = nil
+        self.application = application
         super.init()
     }
 
@@ -60,6 +74,14 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         NSApp.mainMenu = root
         NSApp.windowsMenu = window
         NSApp.helpMenu = help
+
+        // A rebuilt menu must also include browser windows that are already open.
+        let coordinators = application?.windows ?? fallbackCoordinator.map { [$0] } ?? []
+        for coordinator in coordinators {
+            guard let nativeWindow = coordinator.nativeWindow,
+                  !nativeWindow.isExcludedFromWindowsMenu else { continue }
+            NSApp.addWindowsItem(nativeWindow, title: nativeWindow.title, filename: false)
+        }
     }
 
     // MARK: - Menus
@@ -95,10 +117,19 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     private func fileMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(command("New Tab", #selector(newTab), key: "t"))
-        menu.addItem(command("Private Browsing", #selector(newPrivateTab), key: "n", modifiers: [.command, .shift]))
-        menu.addItem(command("Leave Private Browsing", #selector(leavePrivateBrowsing)))
+        menu.addItem(command("New Window", #selector(newWindow), key: "n"))
+        menu.addItem(command("New Private Window", #selector(newPrivateWindow), key: "n", modifiers: [.command, .shift]))
+        menu.addItem(.separator())
         menu.addItem(command("Reopen Last Closed Tab", #selector(reopenClosedTab), key: "t", modifiers: [.command, .shift]))
+        menu.addItem(command("Reopen Last Closed Window", #selector(reopenClosedWindow)))
+        menu.addItem(.separator())
         menu.addItem(command("Close Tab", #selector(closeTab), key: "w"))
+        menu.addItem(chain(
+            "Close Window",
+            #selector(NSWindow.performClose(_:)),
+            key: "w",
+            modifiers: [.command, .shift]
+        ))
         menu.addItem(.separator())
         menu.addItem(command("Pin This Page", #selector(pinPage), key: "d"))
         menu.addItem(command(
@@ -113,12 +144,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(.separator())
         menu.addItem(command("Downloads", #selector(openDownloads), key: "l", modifiers: [.command, .option]))
         menu.addItem(.separator())
-        menu.addItem(chain(
-            "Close Window",
-            #selector(NSWindow.performClose(_:)),
-            key: "w",
-            modifiers: [.command, .shift]
-        ))
         menu.addItem(command("Print…", #selector(printPage), key: "p"))
         return menu
     }
@@ -179,6 +204,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             modifiers: [.command, .option]
         ))
         menu.addItem(command("Show Lyrics", #selector(toggleLyrics), key: "y", modifiers: [.command, .option]))
+        menu.addItem(.separator())
+        let developer = NSMenu()
+        developer.addItem(command("Restart Page", #selector(restartPage)))
+        menu.addItem(submenu(developer, titled: "Developer"))
         return menu
     }
 
@@ -238,11 +267,11 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     // MARK: - Commands
 
     @objc private func openSettings() {
-        coordinator.openSettings()
+        (application?.ensureActiveWindow() ?? coordinator).openSettings()
     }
 
     @objc private func checkForUpdates() {
-        coordinator.updates.checkNow()
+        (application?.updates ?? coordinator.updates).checkNow()
     }
     @objc private func showReleaseNotes() {
         coordinator.showReleaseNotes()
@@ -252,19 +281,37 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.openSettings(.downloads)
     }
     @objc private func newTab() {
-        coordinator.requestNewTab()
+        (application?.ensureActiveWindow() ?? coordinator).requestNewTab()
     }
-    @objc private func newPrivateTab() {
-        coordinator.enterPrivateBrowsing()
+    @objc private func newWindow() {
+        if let coordinator = application?.activeCoordinator ?? fallbackCoordinator {
+            coordinator.requestNewWindow()
+        } else {
+            application?.newWindow(profile: ProfileStore.shared.current)
+        }
     }
-    @objc private func leavePrivateBrowsing() {
-        coordinator.leavePrivateBrowsing()
+    @objc private func reopenClosedWindow() {
+        application?.reopenLastClosedWindow()
+    }
+    @objc private func newPrivateWindow() {
+        if let coordinator = application?.activeCoordinator ?? fallbackCoordinator {
+            coordinator.requestNewWindow(isPrivate: true)
+        } else {
+            application?.newWindow(
+                profile: .privateBrowsing(),
+                settingsOwner: ProfileStore.shared.current
+            )
+        }
     }
     @objc private func closeTab() {
         coordinator.closeActiveTabAskingIfPinned()
     }
     @objc private func reopenClosedTab() {
-        coordinator.browser.reopenLastClosedTab()
+        if application?.activeCoordinator == nil {
+            application?.reopenLastClosedWindow()
+        } else {
+            coordinator.browser.reopenLastClosedTab()
+        }
     }
     @objc private func openLocation() {
         coordinator.focusAddressBar()
@@ -292,6 +339,9 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     }
     @objc private func hardReload() {
         activeWebView?.reloadFromOrigin()
+    }
+    @objc private func restartPage() {
+        coordinator.pageCommandTab?.restartPage()
     }
     @objc private func stopLoading() {
         coordinator.pageCommandTab?.stopLoading()
@@ -388,6 +438,15 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     // MARK: - Validation
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {  // swiftlint:disable:this cyclomatic_complexity
+        if menuItem.action == #selector(reopenClosedWindow) {
+            return application?.canReopenWindow == true
+        }
+        if let application, application.activeCoordinator == nil {
+            return [#selector(newWindow), #selector(newTab), #selector(newPrivateWindow),
+                    #selector(openSettings), #selector(checkForUpdates), #selector(reopenClosedTab),
+            ]
+                .contains(menuItem.action)
+        }
         switch menuItem.action {
         case #selector(goBack):
             return coordinator.pageCommandTab?.canGoBack ?? false
@@ -398,6 +457,9 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         case #selector(copyPageURL):
             guard let tab = coordinator.pageCommandTab else { return false }
             return coordinator.linkURL(for: tab) != nil
+        case #selector(restartPage):
+            guard let tab = coordinator.pageCommandTab else { return false }
+            return tab.extensionBaseURL == nil
         case #selector(reload), #selector(hardReload),
              #selector(zoomIn), #selector(zoomOut), #selector(openFind), #selector(findNext),
              #selector(findPrevious), #selector(printPage):
@@ -424,8 +486,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             return coordinator.browser.activeSplit?.axis != nil
         case #selector(reopenClosedTab):
             return coordinator.browser.canReopenClosedTab
-        case #selector(leavePrivateBrowsing):
-            return coordinator.profiles.isPrivate
         case #selector(nextTab), #selector(previousTab), #selector(showLastTab),
              #selector(switchToNextTab), #selector(switchToPreviousTab):
             return coordinator.browser.tabs.count > 1

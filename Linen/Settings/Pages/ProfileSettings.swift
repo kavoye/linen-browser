@@ -394,7 +394,8 @@ private struct ProfileDetailPage: View {
                 [.history],
                 range: .everything,
                 history: coordinator.browser.history,
-                agent: coordinator.conversationLog
+                agent: coordinator.conversationLog,
+                context: coordinator.browser.context
             )
         } else {
             ProfileMaintenance.clearHistory(of: profile)
@@ -405,7 +406,9 @@ private struct ProfileDetailPage: View {
     private func delete(_ profile: Profile) async {
         deleting = false
         onBack()
-        if isCurrent, let fallback = store.profiles.first(where: { $0.id != profile.id }) {
+        if let application = coordinator.application {
+            await application.prepareToRemove(profile: profile)
+        } else if isCurrent, let fallback = store.profiles.first(where: { $0.id != profile.id }) {
             await coordinator.switchProfile(to: fallback)
         }
         await store.remove(profile)

@@ -13,6 +13,9 @@ final class BrowserSettings {
     static let shared = BrowserSettings()
     #endif
 
+    private static let liveSettings = NSHashTable<BrowserSettings>.weakObjects()
+    @ObservationIgnored private var isReceivingAppSetting = false
+
     private enum Key {
         static let appearance = "appearance.mode"
         static let websiteTint = "appearance.websiteTint"
@@ -70,6 +73,7 @@ final class BrowserSettings {
     @ObservationIgnored private let appDefaults: UserDefaults
     @ObservationIgnored private var sessionDefaults: UserDefaults
 
+    @ObservationIgnored var onContentBlockingChanged: (() -> Void)?
     @ObservationIgnored var onWebPreferencesChanged: (() -> Void)?
     @ObservationIgnored var onUpdateChannelChanged: ((UpdateChannel) -> Void)?
     @ObservationIgnored var onLyricsChanged: ((Bool) -> Void)?
@@ -82,7 +86,68 @@ final class BrowserSettings {
     }
 
     private func write(_ value: Any?, forKey key: String) {
+        guard !isReceivingAppSetting else { return }
         store(for: key).set(value, forKey: key)
+        guard !Self.sessionKeySet.contains(key) else { return }
+        for other in Self.liveSettings.allObjects where other !== self && other.appDefaults === appDefaults {
+            other.receiveAppSetting(key, from: self)
+        }
+    }
+
+    private func receiveAppSetting(_ key: String, from source: BrowserSettings) {
+        isReceivingAppSetting = true
+        defer { isReceivingAppSetting = false }
+        switch key {
+        case Key.appearance:
+            appearance = source.appearance
+        case Key.loomStyle:
+            loomStyle = source.loomStyle
+        case Key.websiteTint:
+            matchesWebsiteColor = source.matchesWebsiteColor
+        case Key.transparency:
+            transparency = source.transparency
+        case Key.linkPreview:
+            showsLinkPreview = source.showsLinkPreview
+        case Key.linkPeek:
+            peeksAtLinks = source.peeksAtLinks
+        case Key.mediaPlayer:
+            showsMediaPlayer = source.showsMediaPlayer
+        case Key.lyrics:
+            showsLyrics = source.showsLyrics
+        case Key.tabColorRefraction:
+            refractsTabColor = source.refractsTabColor
+        case Key.automaticPiP:
+            automaticPictureInPicture = source.automaticPictureInPicture
+        case Key.videoInPlayer:
+            showsVideoInPlayer = source.showsVideoInPlayer
+        default:
+            receiveWebAppSetting(key, from: source)
+        }
+    }
+
+    private func receiveWebAppSetting(_ key: String, from source: BrowserSettings) {
+        switch key {
+        case Key.pageZoom:
+            pageZoom = source.pageZoom
+        case Key.sleepsInactiveTabs:
+            sleepsInactiveTabs = source.sleepsInactiveTabs
+        case Key.downloadFolder:
+            downloadFolder = source.downloadFolder
+        case Key.askWhereToSave:
+            asksWhereToSave = source.asksWhereToSave
+        case Key.downloadRetention:
+            downloadRetention = source.downloadRetention
+        case Key.userAgent:
+            userAgentMode = source.userAgentMode
+        case Key.customUserAgent:
+            customUserAgent = source.customUserAgent
+        case Key.webInspector:
+            webInspectorEnabled = source.webInspectorEnabled
+        case Key.updateChannel:
+            updateChannel = source.updateChannel
+        default:
+            break
+        }
     }
 
     private func remove(_ key: String) {
@@ -294,7 +359,7 @@ final class BrowserSettings {
         didSet {
             guard blocksTrackers != oldValue else { return }
             write(blocksTrackers, forKey: Key.blockTrackers)
-            ContentBlocker.shared.refresh()
+            onContentBlockingChanged?()
         }
     }
 
@@ -567,6 +632,7 @@ final class BrowserSettings {
         if object(Key.websiteTint) == nil {
             write(matchesWebsiteColor, forKey: Key.websiteTint)
         }
+        Self.liveSettings.add(self)
     }
 
     func useSessionDefaults(_ defaults: UserDefaults) {
@@ -610,10 +676,10 @@ final class BrowserSettings {
         }
     }
 
+    @ObservationIgnored var onAppearanceChanged: (() -> Void)?
+
     func applyAppearance() {
-        NSApp.appearance = forcesDarkAppearance
-            ? NSAppearance(named: .darkAqua)
-            : appearance.nsAppearance
+        onAppearanceChanged?()
     }
 
     func apply(to configuration: WKWebViewConfiguration) {

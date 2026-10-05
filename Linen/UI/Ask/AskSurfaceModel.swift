@@ -16,7 +16,7 @@ final class AskSurfaceModel {
         didSet {
             if oldValue.text != interaction.text, !isPreviewingSelection {
                 suggestionPreview.clear()
-                suggestions.update(for: MentionText.stripped(interaction.text))
+                suggestions.update(for: MentionText.stripped(interaction.text), settings: browser.context.settings)
             }
         }
     }
@@ -49,7 +49,7 @@ final class AskSurfaceModel {
         coordinator.state == .listening
     }
     var agentOnly: Bool {
-        Omnibox.isAgentOnly
+        Omnibox.isAgentOnly(settings: browser.context.settings)
     }
     var placeholder: String {
         agentOnly ? Omnibox.agentOnlyPlaceholder : placement.placeholder
@@ -132,6 +132,7 @@ final class AskSurfaceModel {
             mentions: mentionChips,
             activeTabID: activeTabID,
             phrases: suggestions.phrases,
+            settings: browser.context.settings,
             open: { [weak self] in self?.open($0) },
             switchTo: { [weak self] in self?.switchTo($0) },
             mention: { [weak self] in self?.mention($0) },

@@ -19,7 +19,13 @@ final class ContentBlocker {
 
     @ObservationIgnored private var compileTask: Task<Void, Never>?
 
-    private static let identifier = "Linen.trackers"
+    private let identifier = "Linen.trackers." + UUID().uuidString
+    private let settings: BrowserSettings
+    private let persists: Bool
+    private let ruleStore: WKContentRuleListStore?
+    private let temporaryDirectory: URL?
+    private var sessionEnded = false
+    private(set) var isCompiling = false
     private static let exemptDefaultsKey = "content.blockerExceptions"
 
     @ObservationIgnored private var defaults: UserDefaults = .standard
@@ -33,31 +39,95 @@ final class ContentBlocker {
         refresh()
     }
 
-    private init() {
+    init(
+        defaults: UserDefaults = .standard,
+        settings: BrowserSettings = .shared,
+        persists: Bool = true,
+        ruleStore: WKContentRuleListStore? = nil
+    ) {
+        self.defaults = defaults
+        self.settings = settings
+        self.persists = persists
+        if let ruleStore {
+            self.ruleStore = ruleStore
+            temporaryDirectory = nil
+        } else if persists {
+            self.ruleStore = .default()
+            temporaryDirectory = nil
+        } else {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("Linen-private-rules-" + UUID().uuidString, isDirectory: true)
+            temporaryDirectory = directory
+            do {
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                self.ruleStore = WKContentRuleListStore(url: directory)
+            } catch {
+                self.ruleStore = nil
+            }
+        }
         exemptHosts = Set(
             defaults.stringArray(forKey: Self.exemptDefaultsKey) ?? []
         )
     }
 
+    deinit {
+        if let temporaryDirectory {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+    }
+
     // MARK: - Compiling
 
     func refresh() {
-        compileTask?.cancel()
-        guard BrowserSettings.shared.blocksTrackers else {
+        guard !sessionEnded else { return }
+        let previous = compileTask
+        previous?.cancel()
+        guard settings.blocksTrackers else {
             removeFromAll()
             return
         }
         compileTask = Task { [weak self] in
+            await previous?.value
+            guard !Task.isCancelled else { return }
             await self?.compile()
         }
     }
 
+    func waitForPendingCompilation() async {
+        await compileTask?.value
+    }
+
+    func endPrivateSession() async {
+        guard !persists else { return }
+        sessionEnded = true
+        compileTask?.cancel()
+        await compileTask?.value
+        compileTask = nil
+        removeFromAll()
+        ruleList = nil
+        exemptHosts = []
+        if let ruleStore {
+            try? await ruleStore.removeContentRuleList(forIdentifier: identifier)
+        }
+        if let temporaryDirectory {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+    }
+
     private func compile() async {
-        guard let json = Self.rulesJSON(exemptHosts: exemptHosts) else { return }
+        guard let ruleStore, !sessionEnded,
+              let json = Self.rulesJSON(exemptHosts: exemptHosts) else { return }
+        isCompiling = true
+        defer { isCompiling = false }
         do {
-            let compiled = try await WKContentRuleListStore.default()?
-                .compileContentRuleList(forIdentifier: Self.identifier, encodedContentRuleList: json)
-            guard !Task.isCancelled, let compiled else { return }
+            let compiled: WKContentRuleList? = try await ruleStore
+                .compileContentRuleList(forIdentifier: identifier, encodedContentRuleList: json)
+            // WebKit retains the live rule object; the private compiled cache is unnecessary.
+            // Remove it before checking cancellation, which does not cancel WebKit's compilation.
+            if !persists {
+                try await ruleStore.removeContentRuleList(forIdentifier: identifier)
+            }
+            guard !Task.isCancelled, !sessionEnded, let compiled else { return }
             ruleList = compiled
             for controller in controllers.allObjects {
                 controller.remove(compiled)
@@ -65,13 +135,16 @@ final class ContentBlocker {
             }
             Pipeline.log.notice("content blocking: \(TrackerList.domains.count, privacy: .public) rules compiled")
         } catch {
+            if !persists {
+                try? await ruleStore.removeContentRuleList(forIdentifier: identifier)
+            }
             Pipeline.log.error("content blocking: compile failed")
         }
     }
 
     func apply(to controller: WKUserContentController) {
         controllers.add(controller)
-        guard BrowserSettings.shared.blocksTrackers, let ruleList else { return }
+        guard settings.blocksTrackers, let ruleList else { return }
         controller.add(ruleList)
     }
 
@@ -93,14 +166,18 @@ final class ContentBlocker {
         guard !host.isEmpty else { return }
         let changed = exempt ? exemptHosts.insert(host).inserted : exemptHosts.remove(host) != nil
         guard changed else { return }
-        defaults.set(Array(exemptHosts).sorted(), forKey: Self.exemptDefaultsKey)
+        if persists {
+            defaults.set(Array(exemptHosts).sorted(), forKey: Self.exemptDefaultsKey)
+        }
         refresh()
     }
 
     func forgetExceptions() {
         guard !exemptHosts.isEmpty else { return }
         exemptHosts = []
-        defaults.removeObject(forKey: Self.exemptDefaultsKey)
+        if persists {
+            defaults.removeObject(forKey: Self.exemptDefaultsKey)
+        }
         refresh()
     }
 

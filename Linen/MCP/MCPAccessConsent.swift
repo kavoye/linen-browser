@@ -18,6 +18,10 @@ enum MCPAccessConsent {
     }
 
     static func share(client: String, pages: [Page]) async -> Access? {
+        await share(client: client, pages: pages, in: NSApp.keyWindow ?? NSApp.mainWindow)
+    }
+
+    static func share(client: String, pages: [Page], in window: NSWindow?) async -> Access? {
         guard !AppDatabase.isRunningTests else { return nil }
         let alert = NSAlert()
         let name = displayName(for: client)
@@ -28,7 +32,7 @@ enum MCPAccessConsent {
             alert.messageText = String(localized: "No Tab Available to Share")
             alert.informativeText = String(localized: "Open a webpage in Linen, then ask \(name) to try again.")
             alert.addButton(withTitle: String(localized: "OK"))
-            _ = await present(alert)
+            _ = await present(alert, in: window)
             return nil
         }
         let names = pages.map { page in
@@ -50,7 +54,7 @@ enum MCPAccessConsent {
         alert.addButton(withTitle: String(localized: "Allow Control"))
         alert.addButton(withTitle: String(localized: "Don’t Allow"))
         alert.buttons.last?.keyEquivalent = "\u{1b}"
-        switch await present(alert) {
+        switch await present(alert, in: window) {
         case .alertFirstButtonReturn:
             return .readOnly
         case .alertSecondButtonReturn:
@@ -61,6 +65,10 @@ enum MCPAccessConsent {
     }
 
     static func open(client: String, url: URL) async -> Bool {
+        await open(client: client, url: url, in: NSApp.keyWindow ?? NSApp.mainWindow)
+    }
+
+    static func open(client: String, url: URL, in window: NSWindow?) async -> Bool {
         guard !AppDatabase.isRunningTests else { return false }
         let alert = NSAlert()
         let name = displayName(for: client)
@@ -73,17 +81,15 @@ enum MCPAccessConsent {
         alert.addButton(withTitle: String(localized: "Open and Share"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.buttons.last?.keyEquivalent = "\u{1b}"
-        return await present(alert) == .alertFirstButtonReturn
+        return await present(alert, in: window) == .alertFirstButtonReturn
     }
 
     private static func displayName(for client: String) -> String {
         client == "codex-mcp-client" ? "Codex" : client
     }
 
-    private static func present(_ alert: NSAlert) async -> NSApplication.ModalResponse {
+    private static func present(_ alert: NSAlert, in window: NSWindow?) async -> NSApplication.ModalResponse {
         guard !Task.isCancelled else { return .abort }
-        let window = NSApp.keyWindow ?? NSApp.mainWindow
-            ?? NSApp.windows.first { $0.canBecomeMain && !($0 is NSPanel) }
         window?.deminiaturize(nil)
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

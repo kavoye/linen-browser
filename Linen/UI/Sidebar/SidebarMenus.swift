@@ -138,7 +138,6 @@ struct SidebarFolderMenuItems: View {
                 Label("Remove from Folder", systemImage: "folder.badge.minus")
             }
         }
-        Divider()
     }
 }
 
@@ -154,6 +153,7 @@ struct SidebarSelectionMenuItems: View {
     var body: some View {
         SidebarLinkMenuItems(tabs: tabs, coordinator: coordinator)
         SidebarFolderMenuItems(items: items, browser: browser)
+        Divider()
         SidebarCloseTabsButton(items: items, browser: browser)
     }
 }

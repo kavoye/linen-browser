@@ -17,7 +17,7 @@ struct AssistantComposerToolbar: View {
 
     private var contextModel: String {
         contextProvider.id == coordinator.selectedProvider.id
-            ? coordinator.selectedModel : LLMSettings.model(for: contextProvider)
+            ? coordinator.selectedModel : coordinator.modelSettings.model(for: contextProvider)
     }
 
     private var modelLabel: String {
@@ -68,7 +68,7 @@ struct AssistantComposerToolbar: View {
                 tokens: coordinator.browser.activeSpaceID.map {
                     coordinator.conversationLog.usage(forTab: $0).estimatedContextTokens
                 } ?? 0,
-                window: ContextWindow.resolve(for: contextProvider, model: contextModel),
+                window: ContextWindow.resolve(for: contextProvider, model: contextModel, settings: coordinator.modelSettings),
                 providerNotice: coordinator.isUsingSelectedProvider ? nil : String(localized: "Using \(contextProvider.name)"),
                 canCompact: coordinator.agentTurns.supportsCompaction
                     && !coordinator.agentTurns.isRunning

@@ -13,16 +13,18 @@ final class SearchSuggestions {
     private var cache: [String: [String]] = [:]
     private var cacheOrder: [String] = []
 
+    nonisolated private static let network = URLSession(configuration: .ephemeral)
+
     private static let limit = 6
     private static let cacheCapacity = 80
 
-    func update(for raw: String) {
+    func update(for raw: String, settings: BrowserSettings = .shared) {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         fetchTask?.cancel()
 
-        let engine = SearchURLBuilder.engine
-        guard BrowserSettings.shared.showsSearchSuggestions,
-              !Omnibox.isAgentOnly,
+        let engine = SearchURLBuilder.engine(settings: settings)
+        guard settings.showsSearchSuggestions,
+              !Omnibox.isAgentOnly(settings: settings),
               engine.suggestTemplate != nil
         else {
             phrases = []
@@ -91,7 +93,7 @@ final class SearchSuggestions {
         request.timeoutInterval = 4
         request.cachePolicy = .returnCacheDataElseLoad
 
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await network.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200
         else { return [] }
 

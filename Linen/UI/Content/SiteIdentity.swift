@@ -48,6 +48,10 @@ enum SiteName {
 }
 
 struct RemoteSiteBadge: View {
+    @Environment(\.profileFavicons) private var profileFavicons
+    private var favicons: FaviconLoader {
+        profileFavicons ?? .shared
+    }
     let host: String
     let size: CGFloat
 
@@ -66,10 +70,10 @@ struct RemoteSiteBadge: View {
         }
         .frame(width: size, height: size)
         .task(id: host) {
-            if let cached = FaviconLoader.shared.cached(for: host) {
+            if let cached = favicons.cached(for: host) {
                 icon = cached
             } else {
-                icon = await FaviconLoader.shared.load(forHost: host)
+                icon = await favicons.load(forHost: host)
             }
         }
     }

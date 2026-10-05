@@ -39,29 +39,22 @@ struct MainMenuKeyTests {
         #expect(pressed("=", modifiers: .command, in: root), "⌘= is the hidden alias for Zoom In")
     }
 
-    /// ⌘N is New Window on macOS. Linen has one window, so the key is left
-    /// alone rather than aliased to New Tab, which ⌘T already opens.
-    @Test func commandNIsLeftToTheSystem() throws {
+    @Test func commandNIsBoundToNewWindow() throws {
         let coordinator = AppCoordinator()
         let menu = MainMenu(coordinator: coordinator)
         menu.install()
         defer { NSApp.mainMenu = nil }
         let root = try #require(NSApp.mainMenu)
+        let item = try #require(root.items.compactMap(\.submenu).flatMap(\.items)
+            .first { $0.title == String(localized: "New Window") })
 
-        let before = coordinator.browser.tabs.count
-        #expect(!pressed("n", modifiers: .command, in: root))
-        #expect(coordinator.browser.tabs.count == before)
+        #expect(item.keyEquivalent == "n")
+        #expect(item.keyEquivalentModifierMask == [.command])
+        #expect(menu.validateMenuItem(item))
     }
 
-    /// ⇧⌘N is checked by what it is bound to rather than by pressing it.
-    /// Private browsing is a profile now, and entering one repoints the shared
-    /// web view pool, zoom store and permission store - a test that actually
-    /// pressed the key would leave every test after it in private browsing.
-    ///
-    /// A real ⇧N keystroke carries "N", not "n": a lowercase character
-    /// alongside a shift flag is an event no keyboard produces, and AppKit
-    /// matches it to the wrong item. That is what the character below pins.
-    @Test func shiftCommandNIsBoundToPrivateBrowsing() throws {
+    // Shift-letter shortcuts use the uppercase character in AppKit's menu matching.
+    @Test func shiftCommandNIsBoundToNewPrivateWindow() throws {
         let coordinator = AppCoordinator()
         let menu = MainMenu(coordinator: coordinator)
         menu.install()
@@ -72,7 +65,7 @@ struct MainMenuKeyTests {
             root.items
                 .compactMap(\.submenu)
                 .flatMap(\.items)
-                .first { $0.title == String(localized: "Private Browsing") }
+                .first { $0.title == String(localized: "New Private Window") }
         )
         // The shift belongs in the character, not the mask. A lowercase "n"
         // with `.shift` in the mask displays correctly and never matches a
@@ -130,21 +123,55 @@ struct MainMenuKeyTests {
         #expect(!ShortcutPriority.menuAnswersFirst(try event("A", modifiers: .shift)))
     }
 
-    /// Leaving has no key of its own, and is unavailable until there is a
-    /// private session to leave.
-    @Test func leavingPrivateBrowsingIsGreyUntilThereIsSomethingToLeave() throws {
+    @Test func privateWindowsUseTheNormalCloseWindowCommand() throws {
         let coordinator = AppCoordinator()
         let menu = MainMenu(coordinator: coordinator)
         menu.install()
         defer { NSApp.mainMenu = nil }
         let root = try #require(NSApp.mainMenu)
+        let items = root.items.compactMap(\.submenu).flatMap(\.items)
+        #expect(!items.contains { $0.title == String(localized: "Leave Private Browsing") })
+        #expect(items.contains { $0.title == String(localized: "Close Window") })
+    }
 
-        let item = try #require(
-            root.items
-                .compactMap(\.submenu)
-                .flatMap(\.items)
-                .first { $0.title == String(localized: "Leave Private Browsing") }
-        )
-        #expect(!menu.validateMenuItem(item))
+    @Test func windowCommandsStayAvailableWithoutAnOpenBrowserWindow() throws {
+        let app = BrowserApplication()
+        let menu = MainMenu(application: app)
+        menu.install()
+        defer { NSApp.mainMenu = nil }
+        let root = try #require(NSApp.mainMenu)
+        let items = root.items.compactMap(\.submenu).flatMap(\.items)
+
+        for title in [String(localized: "New Window"), String(localized: "New Private Window")] {
+            let item = try #require(items.first { $0.title == title })
+            #expect(menu.validateMenuItem(item))
+        }
+        let reopen = try #require(items.first { $0.title == String(localized: "Reopen Last Closed Window") })
+        #expect(menu.validateMenuItem(reopen) == app.canReopenWindow)
+        #expect(app.windows.isEmpty, "Validating a menu must not create a browser window")
+    }
+
+    @Test(.boundedWebViews) func commandsActOnTheFocusedWindow() throws {
+        let app = BrowserApplication()
+        let context = BrowserProfileContext.shared(for: .original())
+        let first = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
+        let second = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
+        app.register(first)
+        app.register(second)
+        let firstTab = first.browser.newTab()
+        let secondTab = second.browser.newTab()
+        let menu = MainMenu(application: app)
+        menu.install()
+        defer {
+            NSApp.mainMenu = nil
+            first.closeWindow()
+            second.closeWindow()
+        }
+        let root = try #require(NSApp.mainMenu)
+        app.focus(second)
+        #expect(pressed("w", modifiers: .command, in: root))
+        #expect(secondTab.isClosed)
+        #expect(!firstTab.isClosed)
+        #expect(first.browser.activeTab === firstTab)
     }
 }

@@ -48,9 +48,10 @@ enum LinkSummarizer {
     static func summarize(
         _ page: LinkPeekPage,
         url: URL,
+        model: (any LanguageModel)? = UtilityModelSource.make(),
         onPartial: @escaping @Sendable @MainActor (LinkPeekSummary) -> Void = { _ in }
     ) async -> LinkPeekSummary? {
-        guard let model = UtilityModelSource.make() else { return nil }
+        guard let model else { return nil }
 
         var prompt = "ADDRESS: \(url.absoluteString)\n"
         if !page.title.isEmpty {

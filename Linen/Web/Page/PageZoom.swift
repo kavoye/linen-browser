@@ -13,10 +13,12 @@ final class PageZoomStore {
 
     private var levels: [String: Double]
     private let file: URL
+    private let persists: Bool
 
-    init(file: URL = PageZoomStore.defaultFile) {
+    init(file: URL = PageZoomStore.defaultFile, persists: Bool = true) {
         self.file = file
-        levels = (try? Data(contentsOf: file))
+        self.persists = persists
+        levels = (persists ? try? Data(contentsOf: file) : nil)
             .flatMap { try? JSONDecoder().decode([String: Double].self, from: $0) } ?? [:]
     }
 
@@ -33,6 +35,7 @@ final class PageZoomStore {
             guard levels[host] != value else { return }
             levels[host] = value
         }
+        guard persists else { return }
         let snapshot = levels
         Task { await JSONFileStore.shared.write(snapshot, to: file) }
     }

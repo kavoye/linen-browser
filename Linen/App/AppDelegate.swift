@@ -7,7 +7,7 @@ import AppKit
 /// during launch and discards the shortcuts set before it.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let coordinator = AppCoordinator()
+    let application = BrowserApplication.shared
 
     private var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
@@ -17,22 +17,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isRunningTests else { return }
         NSApp.setActivationPolicy(.regular)
         guard MoveToApplications.offerIfNeeded() != .relaunching else { return }
-        Task { await coordinator.bootstrap() }
-        #if DEBUG
-        AnimationProbe.runIfRequested(coordinator: coordinator)
-        AnimationProbe.runSplitProbeIfRequested(coordinator: coordinator)
-        StageRun.startIfRequested(coordinator: coordinator)
-        #endif
+        Task {
+            await application.bootstrap()
+            #if DEBUG
+            if let coordinator = application.activeCoordinator {
+                AnimationProbe.runIfRequested(coordinator: coordinator)
+                AnimationProbe.runSplitProbeIfRequested(coordinator: coordinator)
+                StageRun.startIfRequested(coordinator: coordinator)
+            }
+            #endif
+        }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
         guard !isRunningTests else { return }
-        coordinator.openFromAnotherApp(urls)
+        self.application.openFromAnotherApp(urls)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
         guard !isRunningTests else { return true }
-        coordinator.showBrowser()
+        application.showBrowser()
         return true
     }
 
@@ -45,10 +49,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        coordinator.mcpServer.stop()
-        guard coordinator.settings.clearsDataOnQuit else { return .terminateNow }
+        application.prepareToTerminate()
+        guard application.hasDataToClearOnQuit else { return .terminateNow }
         Task {
-            await coordinator.clearDataOnQuitIfNeeded()
+            await application.clearDataOnQuitIfNeeded()
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
@@ -56,8 +60,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         guard !isRunningTests else { return }
-        coordinator.browser.saveBlocking()
-        coordinator.conversationLog.saveBlocking()
-        coordinator.browser.downloads.clearOnQuitIfNeeded(coordinator.settings.downloadRetention)
+        for coordinator in application.windows {
+            coordinator.browser.saveBlocking()
+            coordinator.conversationLog.saveBlocking()
+        }
+        application.finishTermination()
     }
 }

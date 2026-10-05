@@ -150,6 +150,7 @@ enum CommandPaletteProjection {
         activeTabID: UUID? = nil,
         recentTabIDs: [UUID] = [],
         phrases: [String],
+        settings: BrowserSettings = .shared,
         actions: CommandPaletteActions
     ) -> [OmniboxSection] {
         let commands = CommandPaletteCatalog.commands(context: context, perform: actions.perform)
@@ -184,6 +185,7 @@ enum CommandPaletteProjection {
                 mentions: mentions,
                 activeTabID: activeTabID,
                 phrases: [],
+                settings: settings,
                 open: { _ in },
                 switchTo: { _ in },
                 mention: actions.mention,
@@ -206,6 +208,7 @@ enum CommandPaletteProjection {
             query: needle,
             symbol: OmniboxItem.Kind.newTab.defaultSymbol,
             openInCurrentTab: actions.openCurrent,
+            settings: settings,
             open: actions.openNew
         )?.items ?? []
         var slots = [
@@ -228,6 +231,7 @@ enum CommandPaletteProjection {
                 phrases: phrases,
                 limit: 3,
                 openInCurrentTab: actions.openCurrent,
+                settings: settings,
                 open: actions.openNew
             ),
             floor: 2,
@@ -376,7 +380,7 @@ final class CommandPaletteModel {
             suggestionPreview.clear()
             suggestions.update(for: MentionText.stripped(
                 CommandPaletteProjection.suggestionQuery(for: interaction.query)
-            ))
+            ), settings: browser.context.settings)
             refreshSections()
         }
     }
@@ -400,7 +404,7 @@ final class CommandPaletteModel {
     }
 
     var placeholder: String {
-        CommandPaletteProjection.placeholder(agentOnly: Omnibox.isAgentOnly)
+        CommandPaletteProjection.placeholder(agentOnly: Omnibox.isAgentOnly(settings: browser.context.settings))
     }
 
     func prepare() {
@@ -490,7 +494,7 @@ final class CommandPaletteModel {
         guard CommandPaletteProjection.isAssistantQuery(
             interaction.query,
             hasMentions: !mentionedTabIDs.isEmpty,
-            agentOnly: Omnibox.isAgentOnly
+            agentOnly: Omnibox.isAgentOnly(settings: browser.context.settings)
         ) else { return [] }
         return AskContext.pages(browser: browser, mentionedTabIDs: mentionedTabIDs)
     }
@@ -520,6 +524,7 @@ final class CommandPaletteModel {
             activeTabID: browser.activeTab?.id,
             recentTabIDs: browser.recentlyActive,
             phrases: suggestions.phrases,
+            settings: browser.context.settings,
             actions: projectionActions
         )
         interaction.clampSelection(to: sections.flattened.count)
@@ -529,11 +534,10 @@ final class CommandPaletteModel {
         let tab = browser.activeTab
         let page = coordinator.pageCommandTab
         let split = browser.activeSplit
-        let window = NSApp.keyWindow ?? NSApp.mainWindow
+        let window = coordinator.nativeWindow
         return CommandPaletteContext(
             isSpeechMuted: coordinator.isSpeechMuted,
             isListening: coordinator.voiceInput.phase == .listening,
-            isPrivate: coordinator.profiles.isPrivate,
             historyCount: browser.history.count,
             tabCount: browser.tabs.count,
             hasActiveTab: tab != nil,
@@ -544,6 +548,7 @@ final class CommandPaletteModel {
             isShowingPin: tab?.isShowingPin ?? false,
             isAwayFromPin: tab?.isAwayFromPin ?? false,
             canReopenClosedTab: browser.canReopenClosedTab,
+            canReopenClosedWindow: coordinator.application?.canReopenWindow == true,
             canSplit: tab != nil && !(split?.isFull ?? false),
             isSplit: coordinator.isSplit,
             canSwapPanes: browser.activeTabID.flatMap { split?.sibling(of: $0) } != nil,
@@ -601,18 +606,20 @@ final class CommandPaletteModel {
         switch action {
         case .newTab:
             coordinator.requestNewTab()
+        case .newWindow:
+            coordinator.requestNewWindow()
         case .openStartPage:
             coordinator.openNewTab()
         case .openLocation:
             coordinator.focusAddressBar()
         case .privateBrowsing:
-            coordinator.enterPrivateBrowsing()
-        case .leavePrivateBrowsing:
-            coordinator.leavePrivateBrowsing()
+            coordinator.requestNewWindow(isPrivate: true)
         case .closeTab:
             coordinator.closeActiveTabAskingIfPinned()
         case .reopenTab:
             browser.reopenLastClosedTab()
+        case .reopenWindow:
+            coordinator.application?.reopenLastClosedWindow()
         case .duplicateTab:
             if let tab {
                 browser.duplicate(tab)
@@ -684,9 +691,9 @@ final class CommandPaletteModel {
         case .toggleFullScreen:
             coordinator.toggleFullScreen()
         case .closeWindow:
-            (NSApp.keyWindow ?? NSApp.mainWindow)?.performClose(nil)
+            coordinator.closeWindow()
         case .minimizeWindow:
-            (NSApp.keyWindow ?? NSApp.mainWindow)?.performMiniaturize(nil)
+            coordinator.nativeWindow?.performMiniaturize(nil)
         case .toggleSpeech:
             coordinator.toggleSpeechMute()
         case .toggleListening:

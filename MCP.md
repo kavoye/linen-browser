@@ -83,15 +83,16 @@ Configuration formats follow the official documentation for
 Clients with a different settings format need the same command and argument.
 Restart the client's connection after moving the app or enabling the server.
 The server is off until you enable it, then remembers your choice across
-launches and profile changes. Switching profiles or quitting disconnects clients
-and clears their tab-sharing grants. The listener resumes automatically in a
-normal profile; the relay reconnects on the next tool call and the client must
-request fresh sharing approval. Restarting the MCP client is not needed after
-a browser restart. Calls made while Linen is unavailable return a tool error;
-interrupted calls are never replayed because an action may already have happened.
-Private browsing pauses the listener and grays out the toggle without changing
-its saved setting. Leaving private browsing resumes it automatically. Use **Disconnect**
-beside a connection in Advanced settings to revoke that connection immediately.
+launches and profile changes. Each connection uses the regular window focused
+when it connects. Switching focus does not change its tabs or sharing grants.
+Closing that window, switching its profile, or quitting disconnects affected
+clients and clears their grants. The relay reconnects on the next tool call,
+and the client must request fresh sharing approval. Interrupted calls are never
+replayed because an action may already have happened.
+
+A private window does not accept new MCP connections. Connections already bound
+to regular windows continue working. Use **Disconnect** beside a connection in
+Advanced settings to revoke that connection immediately.
 
 ## Tools in this version
 

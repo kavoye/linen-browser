@@ -210,7 +210,7 @@ final class BrowserTab: Identifiable {
         if let liveView {
             return liveView
         }
-        let view = WebViewPool.shared.makeColdView()
+        let view = self.context.webViewPool.makeColdView()
         liveView = view
         adopt(view)
         return view
@@ -220,6 +220,7 @@ final class BrowserTab: Identifiable {
     var onNavigationOutsideExtension: ((URL) -> Void)?
     var onNewWindow: ((WKWebView, Bool) -> Void)?
     var onOpenInNewTab: ((URL, Bool) -> Void)?
+    var onOpenInNewWindow: ((URL, Bool) -> Void)?
     var onOpenInPeek: ((URL, CGPoint) -> Void)?
     var onSummarizeLink: ((URL, CGPoint) -> Void)?
     var onCloseRequested: (() -> Void)?
@@ -239,6 +240,7 @@ final class BrowserTab: Identifiable {
     let find = FindSession()
 
     let isPrivate: Bool
+    let context: BrowserProfileContext
 
     private var progressObservation: NSKeyValueObservation?
     private var loadingObservation: NSKeyValueObservation?
@@ -262,11 +264,13 @@ final class BrowserTab: Identifiable {
         restoring: Bool = false,
         opensBlank: Bool = true,
         privately: Bool = false,
-        sitePermissions: SitePermissions = .shared
+        sitePermissions: SitePermissions = .shared,
+        context: BrowserProfileContext? = nil
     ) {
         self.id = id
+        self.context = context ?? .shared(for: privately ? .privateBrowsing() : .original())
         isPrivate = privately
-        popups = TabPopupPolicy(store: sitePermissions)
+        popups = TabPopupPolicy(store: sitePermissions, settings: self.context.settings)
         externalApps = TabExternalAppPolicy(store: sitePermissions, isPrivate: privately)
         permissions = TabPermissionCenter(store: sitePermissions)
         assistantAccess = TabAssistantAccessCenter(store: sitePermissions)
@@ -281,12 +285,12 @@ final class BrowserTab: Identifiable {
             liveView = adopting
             extensionBaseURL = nil
         } else if let extensionHost {
-            liveView = WebViewPool.shared.makeView(configuration: extensionHost.configuration)
+            liveView = self.context.webViewPool.makeView(configuration: extensionHost.configuration)
             extensionBaseURL = extensionHost.baseURL
             pageTitle = extensionHost.name
             favicon = extensionHost.icon
         } else {
-            liveView = restoring ? nil : WebViewPool.shared.acquire()
+            liveView = restoring ? nil : self.context.webViewPool.acquire()
             extensionBaseURL = nil
         }
         if let liveView {
@@ -300,6 +304,7 @@ final class BrowserTab: Identifiable {
     }
 
     private func adopt(_ view: WKWebView) {
+        (view as? TabWebView)?.profileContext = context
         liveView = view
         Self.applyObscuredInsets(to: webView, isUnderTopBar: isUnderTopBar)
         fullscreenObservation = webView.observe(\.fullscreenState, options: [.new]) { [weak self] view, _ in
@@ -314,6 +319,9 @@ final class BrowserTab: Identifiable {
         webView.uiDelegate = delegate
         (webView as? TabWebView)?.onContextDownload = { [weak self] download, source in
             self?.onDownload?(download, source)
+        }
+        (webView as? TabWebView)?.onOpenLinkInNewWindow = { [weak self] url, isPrivate in
+            self?.onOpenInNewWindow?(url, isPrivate)
         }
         (webView as? TabWebView)?.onPeekLink = { [weak self] url in
             guard let self else { return }
@@ -342,10 +350,10 @@ final class BrowserTab: Identifiable {
                 self?.popups.note(url)
             }
             SiteContentGuard.shared.install(in: tabView)
-            PaymentCardAutofill.shared.install(in: tabView)
-            ContactAutofill.shared.install(in: tabView)
-            PasswordAutofill.shared.install(in: tabView)
-            AutofillSaveCoordinator.shared.install(in: tabView, session: autofillSave)
+            PaymentCardAutofill.shared.install(in: tabView, profileID: context.profile.id)
+            ContactAutofill.shared.install(in: tabView, profileID: context.profile.id)
+            PasswordAutofill.shared.install(in: tabView, profileID: context.profile.id)
+            AutofillSaveCoordinator.shared.install(in: tabView, session: autofillSave, profileID: context.profile.id)
         }
         progressObservation = webView.observe(\.estimatedProgress, options: [.new]) { [weak self] _, change in
             let value = change.newValue ?? 1
@@ -477,6 +485,7 @@ final class BrowserTab: Identifiable {
         outgoing.uiDelegate = nil
         (outgoing as? TabWebView)?.onZoomChanged = nil
         (outgoing as? TabWebView)?.onContextDownload = nil
+        (outgoing as? TabWebView)?.onOpenLinkInNewWindow = nil
         (outgoing as? TabWebView)?.onPeekLink = nil
         (outgoing as? TabWebView)?.onSummarizeLink = nil
         (outgoing as? TabWebView)?.onPageActivity = nil
@@ -552,7 +561,7 @@ final class BrowserTab: Identifiable {
         processState.finishReload()
         releasePageColorHold()
 
-        let replacement = WebViewPool.shared.makeColdView(
+        let replacement = self.context.webViewPool.makeColdView(
             dataStore: outgoing.configuration.websiteDataStore
         )
         adopt(replacement)
@@ -599,6 +608,7 @@ final class BrowserTab: Identifiable {
         onNavigationOutsideExtension = nil
         onNewWindow = nil
         onOpenInNewTab = nil
+        onOpenInNewWindow = nil
         onOpenInPeek = nil
         onSummarizeLink = nil
         onCloseRequested = nil
@@ -615,6 +625,7 @@ final class BrowserTab: Identifiable {
         view.navigationDelegate = nil
         view.uiDelegate = nil
         (view as? TabWebView)?.onContextDownload = nil
+        (view as? TabWebView)?.onOpenLinkInNewWindow = nil
         (view as? TabWebView)?.onPeekLink = nil
         (view as? TabWebView)?.onSummarizeLink = nil
         (view as? TabWebView)?.onZoomChanged = nil
@@ -659,14 +670,14 @@ final class BrowserTab: Identifiable {
             : webView.url?.host()?.lowercased() ?? ""
         guard host != zoomHost else { return }
         zoomHost = host
-        let remembered = host.isEmpty ? nil : PageZoomStore.shared.level(for: host)
-        webView.pageZoom = remembered ?? BrowserSettings.shared.pageZoom
+        let remembered = host.isEmpty ? nil : context.pageZoom.level(for: host)
+        webView.pageZoom = remembered ?? context.settings.pageZoom
         zoomChanges &+= 1
     }
 
     fileprivate func recordSiteZoom() {
         guard !isPrivate, !zoomHost.isEmpty else { return }
-        PageZoomStore.shared.set(webView.pageZoom, for: zoomHost)
+        context.pageZoom.set(webView.pageZoom, for: zoomHost, defaultZoom: context.settings.pageZoom)
     }
 
     // MARK: - Scroll return
@@ -955,7 +966,7 @@ extension BrowserTab {
     func declaredFaviconChanged() {
         guard extensionBaseURL == nil, !isPrivate, !isShowingSystemPage else { return }
         guard let host = webView.url?.host()?.lowercased() else { return }
-        FaviconLoader.shared.forget(host: host)
+        context.favicons.forget(host: host)
         refreshFavicon()
     }
 
@@ -967,13 +978,13 @@ extension BrowserTab {
             faviconHost = host
             favicon = nil
         }
-        if let cached = FaviconLoader.shared.cached(for: host) {
+        if let cached = context.favicons.cached(for: host) {
             favicon = cached
-            guard FaviconLoader.shared.isGuessedIcon(for: host) else { return }
+            guard context.favicons.isGuessedIcon(for: host) else { return }
         }
         Task { [weak self] in
             guard let self else { return }
-            let icon = await FaviconLoader.shared.load(for: webView)
+            let icon = await context.favicons.load(for: webView)
             guard let icon, webView.url?.host()?.lowercased() == host else { return }
             favicon = icon
         }

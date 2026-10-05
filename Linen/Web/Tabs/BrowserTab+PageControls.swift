@@ -32,7 +32,7 @@ extension BrowserTab {
 
     var isZoomed: Bool {
         _ = zoomChanges
-        return abs(webView.pageZoom - BrowserSettings.shared.pageZoom) > 0.005
+        return abs(webView.pageZoom - context.settings.pageZoom) > 0.005
             || abs(webView.magnification - 1) > 0.005
     }
 
@@ -46,7 +46,7 @@ extension BrowserTab {
 
     func resetZoom() {
         webView.magnification = 1
-        webView.pageZoom = BrowserSettings.shared.pageZoom
+        webView.pageZoom = context.settings.pageZoom
         zoomDidChange()
     }
 

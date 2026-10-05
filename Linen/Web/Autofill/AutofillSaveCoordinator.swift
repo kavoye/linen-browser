@@ -255,18 +255,20 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
     }
 
     func isEnabled(_ kind: AutofillSaveKind, profileID: UUID) -> Bool {
-        guard sessionIsActive, !screenIsLocked, profileID == self.profileID, profileID != Profile.privateID else { return false }
+        guard sessionIsActive, !screenIsLocked, profileID != Profile.privateID else { return false }
+        let settings = BrowserProfileContext.existing(for: profileID)?.settings ?? BrowserSettings.shared
         switch kind {
         case .password:
-            return PasswordAutofill.shared.isEnabled
+            return PasswordAutofill.shared.isEnabled(profileID: profileID)
         case .card:
-            return BrowserSettings.shared.fillsPaymentCards
+            return settings.fillsPaymentCards
         case .contact:
-            return BrowserSettings.shared.fillsContacts
+            return settings.fillsContacts
         }
     }
 
-    func install(in webView: WKWebView, session: AutofillSaveSession) {
+    func install(in webView: WKWebView, session: AutofillSaveSession, profileID: UUID? = nil) {
+        let profileID = profileID ?? self.profileID
         session.attach(to: webView, profileID: profileID)
         sessions.setObject(session, forKey: webView)
         let controller = webView.configuration.userContentController
@@ -327,7 +329,7 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let webView = message.webView, let session = sessions.object(forKey: webView), session.webView === webView, session.profileID == profileID,
+        guard let webView = message.webView, let session = sessions.object(forKey: webView), session.webView === webView,
               let body = message.body as? [String: Any], let action = body["action"] as? String else { return }
         if action == "ready" {
             AutofillDiagnostics.note(.saveScriptReady, kind: .password)

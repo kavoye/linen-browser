@@ -22,7 +22,8 @@ final class ContactAutofill: NSObject, WKScriptMessageHandler {
         AutofillSuggestions.shared.reset()
     }
 
-    func install(in webView: WKWebView) {
+    func install(in webView: WKWebView, profileID: UUID? = nil) {
+        let profileID = profileID ?? self.profileID
         owners.setObject(profileID as NSUUID, forKey: webView)
         let controller = webView.configuration.userContentController
         guard !controllers.contains(controller) else { return }
@@ -36,7 +37,7 @@ final class ContactAutofill: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let webView = message.webView, owners.object(forKey: webView) as UUID? == profileID else { return }
+        guard let webView = message.webView, let profileID = owners.object(forKey: webView) as UUID? else { return }
         AutofillSuggestions.shared.receive(message, kind: .contact, profileID: profileID,
                                             world: Self.world, bridge: "__linenContactAutofill")
     }

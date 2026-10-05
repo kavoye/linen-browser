@@ -16,7 +16,8 @@ enum PageSaving {
         panel.title = String(localized: "Save Page As")
         panel.allowedContentTypes = [archiveType]
         panel.nameFieldStringValue = filename(for: webView)
-        panel.directoryURL = BrowserSettings.shared.downloadFolder
+        panel.directoryURL = (webView as? TabWebView)?.profileContext?.settings.downloadFolder
+            ?? BrowserSettings.shared.downloadFolder
         panel.canCreateDirectories = true
 
         panel.beginSheetModal(for: window) { response in

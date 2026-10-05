@@ -198,6 +198,41 @@ struct ExtensionProfileScopeTests {
         #expect(!manager.controller.configuration.isPersistent)
     }
 
+    @Test func concurrentlyOpenProfilesDoNotOverwriteEachOthersSettings() {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let work = makeProfile("Work")
+        let personal = library(directory, .original())
+        personal.recordInstall(id: "example")
+        let other = library(directory, work)
+
+        other.setEnabled(true, id: "example")
+        personal.setPinned(false, id: "example")
+        other.setPinned(false, id: "example")
+        personal.setEnabled(false, id: "example")
+
+        let savedPersonal = library(directory, .original()).placement(for: "example")
+        let savedWork = library(directory, work).placement(for: "example")
+        #expect(!savedPersonal.enabled)
+        #expect(!savedPersonal.isPinned)
+        #expect(savedWork.enabled)
+        #expect(!savedWork.isPinned)
+    }
+
+    @Test func anotherOpenProfileCannotRestoreAnUninstalledCatalogueEntry() {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let personal = library(directory, .original())
+        personal.recordInstall(id: "removed")
+        personal.recordInstall(id: "kept")
+        let work = library(directory, makeProfile("Work"))
+
+        personal.uninstall(id: "removed")
+        work.setEnabled(true, id: "kept")
+
+        #expect(library(directory, .original()).records.map(\.id) == ["kept"])
+    }
+
     @Test func eachProfileStoresItsExtensionDataSomewhereElse() {
         let personal = Profile.original()
         let work = makeProfile("Work")

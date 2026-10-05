@@ -29,7 +29,9 @@ extension AppCoordinator {
         guard let previousTab, previousTab.id != newTab?.id else { return }
         Task { [weak self] in
             guard let self,
+                  !isClosed, !previousTab.isClosed,
                   await BrowserModel.isPlayingMedia(previousTab.webView),
+                  !isClosed, browser.tabs.contains(where: { $0 === previousTab }),
                   claim == mediaClaim,
                   browser.activeTabID != previousTab.id,
                   !browser.isVisibleInSplit(previousTab),

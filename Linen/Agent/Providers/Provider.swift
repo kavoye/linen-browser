@@ -433,11 +433,28 @@ extension ProviderCatalog {
 
 // MARK: - Settings
 
-nonisolated enum LLMSettings {
+/// UserDefaults synchronizes access; the store reference never changes within a profile.
+nonisolated final class LLMSettings: @unchecked Sendable {
+    @TaskLocal static var scoped: LLMSettings?
+    nonisolated(unsafe) private static var fallback = LLMSettings(defaults: .standard)
+
+    static var current: LLMSettings {
+        scoped ?? fallback
+    }
+
+    static var defaults: UserDefaults {
+        get { current.defaults }
+        set { fallback = LLMSettings(defaults: newValue) }
+    }
+
+    let defaults: UserDefaults
+
+    init(defaults: UserDefaults) {
+        self.defaults = defaults
+    }
+
     private static let providerKey = "llm.provider"
     private static let reasoningKey = "llm.reasoningEffort"
-
-    nonisolated(unsafe) static var defaults: UserDefaults = .standard
 
     private static func modelKey(for provider: Provider) -> String {
         "llm.model.\(provider.id)"
@@ -447,22 +464,22 @@ nonisolated enum LLMSettings {
         "llm.reasoningEffort.\(provider.id)"
     }
 
-    static var providerID: String {
-        get { defaults.string(forKey: providerKey) ?? ProviderCatalog.openAI.id }
-        set { defaults.set(newValue, forKey: providerKey) }
+    var providerID: String {
+        get { defaults.string(forKey: Self.providerKey) ?? ProviderCatalog.openAI.id }
+        set { defaults.set(newValue, forKey: Self.providerKey) }
     }
 
-    static func model(for provider: Provider) -> String {
-        let stored = defaults.string(forKey: modelKey(for: provider))
+    func model(for provider: Provider) -> String {
+        let stored = defaults.string(forKey: Self.modelKey(for: provider))
         if let stored, !stored.isEmpty {
             return stored
         }
         return provider.defaultModel
     }
 
-    static func setModel(_ model: String, for provider: Provider) {
+    func setModel(_ model: String, for provider: Provider) {
         let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        defaults.set(trimmed, forKey: modelKey(for: provider))
+        defaults.set(trimmed, forKey: Self.modelKey(for: provider))
     }
 
     enum ReasoningEffort: String, CaseIterable, Identifiable {
@@ -517,22 +534,22 @@ nonisolated enum LLMSettings {
         }
     }
 
-    static var reasoningEffort: ReasoningEffort {
+    var reasoningEffort: ReasoningEffort {
         get {
-            ReasoningEffort(rawValue: defaults.string(forKey: reasoningKey) ?? "") ?? .low
+            ReasoningEffort(rawValue: defaults.string(forKey: Self.reasoningKey) ?? "") ?? .low
         }
-        set { defaults.set(newValue.rawValue, forKey: reasoningKey) }
+        set { defaults.set(newValue.rawValue, forKey: Self.reasoningKey) }
     }
 
-    static func reasoningEffort(for provider: Provider) -> ReasoningEffort {
-        let stored = defaults.string(forKey: reasoningKey(for: provider))
+    func reasoningEffort(for provider: Provider) -> ReasoningEffort {
+        let stored = defaults.string(forKey: Self.reasoningKey(for: provider))
         guard let stored, let effort = ReasoningEffort(rawValue: stored) else {
             return reasoningEffort
         }
         return effort
     }
 
-    static func setReasoningEffort(_ effort: ReasoningEffort, for provider: Provider) {
-        defaults.set(effort.rawValue, forKey: reasoningKey(for: provider))
+    func setReasoningEffort(_ effort: ReasoningEffort, for provider: Provider) {
+        defaults.set(effort.rawValue, forKey: Self.reasoningKey(for: provider))
     }
 }

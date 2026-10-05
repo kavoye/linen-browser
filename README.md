@@ -40,9 +40,13 @@ for changes in published versions.
 
 ## What it does
 
-- Browse with tabs, folders, pins, and split view. Search your history, resume
-  downloads, and import bookmarks. Play media in Picture in Picture and view
-  synced lyrics.
+- Browse in separate windows with tabs, folders, pins, and split view. Move tabs
+  between windows and restore your windows after relaunch. Search your history
+  and resume downloads. Play media in Picture in Picture and view synced lyrics.
+- Import bookmarks from another browser's HTML export in Settings › General.
+- Choose Open Link in New Window from a link's context menu. Hold Option to open
+  it in a new private window. These actions are also available for history and
+  frequent sites.
 - Type a request to the assistant in the address field or hold ⌥Space to speak.
   Use `@` to include a tab. You can also attach files and review the assistant's
   actions in Agent Activity.
@@ -53,7 +57,7 @@ for changes in published versions.
   To sign in with a passkey, follow the macOS sign-in prompt.
 - Install extensions from the Chrome Web Store or Firefox Add-ons.
 - Use profiles to keep cookies, history, tabs, permissions, and extensions
-  separate. Press ⇧⌘N to enter private browsing.
+  separate. Press ⇧⌘N to open a private window. Closing it ends that private session.
 
 ### Choose a model
 
@@ -80,13 +84,6 @@ External assistants can access only the tabs you share through Linen's
 
 The assistant uses AI and can make mistakes. Check important information.
 Report vulnerabilities privately through [Security](SECURITY.md).
-
-## Known limitations
-
-- Linen supports one window. Links that open new windows open in tabs instead.
-- Pins and folders replace a separate bookmarks manager. Import bookmarks from
-  an HTML export in Settings › General; history is not imported.
-- Website notifications require Linen to be running. There is no background web push.
 
 ## Building
 

@@ -18,8 +18,16 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
 
     @ObservationIgnored var extensions: () -> [InstalledExtension] = { [] }
     var isEnabled: Bool {
-        !isPrivate && BrowserSettings.shared.fillsPasswords
-            && PasswordExtensionPolicy.provider(in: extensions(), selectedID: BrowserSettings.shared.passwordExtensionID) == nil
+        isEnabled(profileID: profileID)
+    }
+
+    func isEnabled(profileID: UUID) -> Bool {
+        guard profileID != Profile.privateID else { return false }
+        let context = BrowserProfileContext.existing(for: profileID)
+        let settings = context?.settings ?? BrowserSettings.shared
+        let available = context.map { $0.extensions.installed + $0.extensions.systemExtensions } ?? extensions()
+        return settings.fillsPasswords
+            && PasswordExtensionPolicy.provider(in: available, selectedID: settings.passwordExtensionID) == nil
     }
     @ObservationIgnored private let controllers = NSHashTable<WKUserContentController>.weakObjects()
     @ObservationIgnored private let owners = NSMapTable<WKWebView, NSUUID>.weakToStrongObjects()
@@ -40,7 +48,8 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
     }
 
     private func applyPolicy(in view: WKWebView, frame: WKFrameInfo) {
-        let enabled = isEnabled && owners.object(forKey: view) as UUID? == profileID
+        let owner = owners.object(forKey: view) as UUID?
+        let enabled = owner.map { isEnabled(profileID: $0) } ?? false
         Task {
             _ = try? await view.callAsyncJavaScript(
                 "globalThis.__linenPasswords?.setEnabled(enabled);", arguments: ["enabled": enabled],
@@ -54,7 +63,8 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
         refreshPolicy()
     }
 
-    func install(in webView: WKWebView) {
+    func install(in webView: WKWebView, profileID: UUID? = nil) {
+        let profileID = profileID ?? self.profileID
         owners.setObject(profileID as NSUUID, forKey: webView)
         let controller = webView.configuration.userContentController
         guard !controllers.contains(controller) else { return }
@@ -70,7 +80,7 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let webView = message.webView, owners.object(forKey: webView) as UUID? == profileID else { return }
+        guard let webView = message.webView, let profileID = owners.object(forKey: webView) as UUID? else { return }
         if let body = message.body as? [String: Any], body["action"] as? String == "ready" {
             AutofillDiagnostics.note(.scriptReady, kind: .password)
             guard let documentID = body["documentID"] as? String, UUID(uuidString: documentID) != nil else { return }

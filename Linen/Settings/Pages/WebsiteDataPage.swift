@@ -5,6 +5,7 @@ import SwiftUI
 import WebKit
 
 struct WebsiteDataPage: View {
+    let dataStore: WKWebsiteDataStore
     let onBack: () -> Void
 
     @State private var entries: [WebsiteData.Entry] = []
@@ -118,12 +119,12 @@ struct WebsiteDataPage: View {
     }
 
     private func reload() async {
-        entries = await WebsiteData.entries(in: BrowsingData.store)
+        entries = await WebsiteData.entries(in: dataStore)
         isLoading = false
     }
 
     private func remove(_ names: Set<String>) async {
-        await WebsiteData.remove(names, from: BrowsingData.store)
+        await WebsiteData.remove(names, from: dataStore)
         await reload()
     }
 }

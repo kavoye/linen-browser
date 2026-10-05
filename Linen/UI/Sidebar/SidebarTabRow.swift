@@ -321,6 +321,8 @@ struct SidebarTabRow: View {
         SidebarPinMenuItems(tab: tab, browser: browser)
         SidebarAudioMenuItems(tab: tab, coordinator: coordinator)
         SidebarFolderMenuItems(items: [item], browser: browser)
+        SidebarWindowMenuItems(tab: tab, coordinator: coordinator)
+        Divider()
 
         if tab.pinnedURL != nil {
             SidebarUnpinButton(tab: tab, browser: browser)
@@ -397,10 +399,10 @@ private struct PinReturnSegment: View {
         .task(id: tab.pinnedURL) {
             pinnedFavicon = nil
             guard let host = tab.pinnedURL?.host() else { return }
-            if let cached = FaviconLoader.shared.cached(for: host) {
+            if let cached = tab.context.favicons.cached(for: host) {
                 pinnedFavicon = cached
             } else {
-                pinnedFavicon = await FaviconLoader.shared.load(forHost: host)
+                pinnedFavicon = await tab.context.favicons.load(forHost: host)
             }
         }
     }
@@ -520,5 +522,32 @@ struct TabIcon: View {
                     .offset(x: size * 0.12, y: size * 0.12)
             }
         }
+    }
+}
+
+struct SidebarWindowMenuItems: View {
+    let tab: BrowserTab
+    let coordinator: AppCoordinator
+
+    var body: some View {
+        Menu {
+            Button("New Window") {
+                coordinator.moveTabToNewWindow(tab)
+            }
+            let destinations = coordinator.otherWindows
+            if !destinations.isEmpty {
+                Divider()
+                ForEach(destinations, id: \.browser.windowID) { destination in
+                    Button {
+                        coordinator.moveTab(tab, to: destination)
+                    } label: {
+                        Text(verbatim: destination.windowTitle)
+                    }
+                }
+            }
+        } label: {
+            Label("Move Tab to Window", systemImage: "macwindow.on.rectangle")
+        }
+        .disabled(coordinator.browser.opensPrivately)
     }
 }

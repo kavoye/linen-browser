@@ -211,6 +211,7 @@ enum AskSurfaceResults {
         mentions: [MentionChip] = [],
         activeTabID: UUID? = nil,
         phrases: [String],
+        settings: BrowserSettings = .shared,
         open: @escaping (URL) -> Void,
         switchTo: @escaping (BrowserTab) -> Void,
         mention: @escaping (BrowserTab) -> Void = { _ in },
@@ -251,7 +252,7 @@ enum AskSurfaceResults {
 
         if agentOnly {
             return [
-                Omnibox.topSection(query: input, open: open),
+                Omnibox.topSection(query: input, settings: settings, open: open),
                 askSection(input, agentName: agentName, ask: ask),
                 Omnibox.historySection(query: input, store: history, limit: historyLimit, open: open),
                 Omnibox.tabsSection(query: input, tabs: tabs, limit: tabLimit, switchTo: switchTo),
@@ -259,8 +260,8 @@ enum AskSurfaceResults {
         }
 
         var result = [
-            Omnibox.topSection(query: input, open: open),
-            Omnibox.phrasesSection(query: input, phrases: phrases, limit: 3, open: open),
+            Omnibox.topSection(query: input, settings: settings, open: open),
+            Omnibox.phrasesSection(query: input, phrases: phrases, limit: 3, settings: settings, open: open),
             Omnibox.historySection(query: input, store: history, limit: historyLimit, open: open),
             Omnibox.tabsSection(query: input, tabs: tabs, limit: tabLimit, switchTo: switchTo),
         ].compactMap { $0 }

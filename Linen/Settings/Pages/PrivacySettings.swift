@@ -19,7 +19,7 @@ struct PrivacySettings: View {
 
     var body: some View {
         if showingWebsiteData {
-            WebsiteDataPage { showingWebsiteData = false }
+            WebsiteDataPage(dataStore: coordinator.browser.context.dataStore) { showingWebsiteData = false }
         } else {
             page
         }
@@ -100,7 +100,7 @@ struct PrivacySettings: View {
             .settingsAnchor("privacy.storage")
         }
         .task {
-            siteCount = await BrowsingData.siteCount()
+            siteCount = await BrowsingData.siteCount(context: coordinator.browser.context)
         }
     }
 
@@ -130,9 +130,10 @@ struct PrivacySettings: View {
             range: choice.range,
             history: coordinator.browser.history,
             agent: coordinator.conversationLog,
-            tabs: coordinator.browser.tabs
+            tabs: coordinator.browser.tabs,
+            context: coordinator.browser.context
         )
-        siteCount = await BrowsingData.siteCount()
+        siteCount = await BrowsingData.siteCount(context: coordinator.browser.context)
         isClearing = false
         cleared = true
     }

@@ -275,6 +275,11 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             model.clearDrop()
         }
         guard let drag, !drag.landing else { return }
+        if coordinator.finishWindowDrag(drag.items, at: NSEvent.mouseLocation) {
+            model.drag = nil
+            selection.clear()
+            return
+        }
         let lead = drag.lead
         var settled = false
 

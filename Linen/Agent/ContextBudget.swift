@@ -81,15 +81,15 @@ nonisolated enum ContextWindow {
         let source: Source
     }
 
-    static func tokens(for provider: Provider, model: String) -> Int {
-        resolve(for: provider, model: model).tokens
+    static func tokens(for provider: Provider, model: String, settings: LLMSettings = .current) -> Int {
+        resolve(for: provider, model: model, settings: settings).tokens
     }
 
-    static func resolve(for provider: Provider, model: String) -> Resolution {
-        if let override = LLMSettings.contextWindow(for: provider) {
+    static func resolve(for provider: Provider, model: String, settings: LLMSettings = .current) -> Resolution {
+        if let override = settings.contextWindow(for: provider) {
             return Resolution(tokens: override, source: .configured)
         }
-        if let discovered = LLMSettings.discoveredContextWindow(for: provider, model: model) {
+        if let discovered = settings.discoveredContextWindow(for: provider, model: model) {
             return Resolution(tokens: discovered, source: .discovered)
         }
         let fallback = switch provider.adapter {
@@ -113,16 +113,16 @@ nonisolated extension LLMSettings {
         "llm.contextWindow.\(provider.id)"
     }
 
-    static func contextWindow(for provider: Provider) -> Int? {
-        let stored = defaults.integer(forKey: contextWindowKey(for: provider))
+    func contextWindow(for provider: Provider) -> Int? {
+        let stored = defaults.integer(forKey: Self.contextWindowKey(for: provider))
         return stored > 0 ? stored : nil
     }
 
-    static func setContextWindow(_ tokens: Int?, for provider: Provider) {
+    func setContextWindow(_ tokens: Int?, for provider: Provider) {
         if let tokens, tokens > 0 {
-            defaults.set(tokens, forKey: contextWindowKey(for: provider))
+            defaults.set(tokens, forKey: Self.contextWindowKey(for: provider))
         } else {
-            defaults.removeObject(forKey: contextWindowKey(for: provider))
+            defaults.removeObject(forKey: Self.contextWindowKey(for: provider))
         }
     }
 }

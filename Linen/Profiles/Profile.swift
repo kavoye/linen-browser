@@ -75,6 +75,10 @@ extension Profile {
         supportDirectory.appendingPathComponent("page-zoom.json")
     }
 
+    var downloadsFile: URL {
+        supportDirectory.appendingPathComponent("Downloads.json")
+    }
+
     var permissionsFile: URL {
         supportDirectory.appendingPathComponent("SitePermissions.json")
     }

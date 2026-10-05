@@ -10,8 +10,76 @@ import WebKit
 extension BrowserModel {
     // MARK: - Session persistence
 
+    nonisolated static let legacyWindowID = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+    nonisolated struct SavedBrowserWindow: Codable, FetchableRecord, TableRecord, Sendable, Identifiable {
+        static let databaseTableName = "sessionWindow"
+        var id: UUID
+        var lastActiveAt: Date
+        var closedAt: Date?
+    }
+
+    static func savedWindows(in database: AppDatabase, includeClosed: Bool = false) -> [SavedBrowserWindow] {
+        (try? database.writer.read { db in
+            var request = SavedBrowserWindow.all()
+            if !includeClosed {
+                request = request.filter(Column("closedAt") == nil)
+            }
+            return try request.order(Column("lastActiveAt").desc).fetchAll(db)
+        }) ?? []
+    }
+
+    /// Legacy profiles each used the same placeholder ID; the app assigns a unique ID once.
+    @discardableResult
+    static func remapSavedWindow(in database: AppDatabase, from oldID: UUID, to newID: UUID) -> Bool {
+        do {
+            return try database.writer.write { db in
+                guard let revision = try Int64.fetchOne(
+                    db, sql: "SELECT revision FROM sessionWindow WHERE id = ?", arguments: [oldID]
+                ) else { return false }
+                guard oldID != newID else { return true }
+                guard try Int.fetchOne(db, sql: """
+                    SELECT COUNT(*) FROM (
+                        SELECT id FROM sessionWindow WHERE id = ?
+                        UNION ALL SELECT id FROM sessionWindowRetirement WHERE id = ?
+                    )
+                    """, arguments: [newID, newID]) == 0 else { return false }
+                try db.execute(sql: """
+                    INSERT INTO sessionWindowRetirement (id, revision) VALUES (?, ?)
+                    ON CONFLICT(id) DO UPDATE SET revision = MAX(revision, excluded.revision)
+                    """, arguments: [oldID, revision])
+                for table in ["sessionTab", "sessionFolder", "sessionItem", "sessionSplitTree", "sessionSplitPane"] {
+                    try db.execute(sql: "UPDATE \(table) SET windowID = ? WHERE windowID = ?", arguments: [newID, oldID])
+                }
+                try db.execute(sql: "UPDATE sessionWindow SET id = ? WHERE id = ?", arguments: [newID, oldID])
+                return true
+            }
+        } catch {
+            Pipeline.log.error("session: window ID migration failed")
+            return false
+        }
+    }
+
+    static func savedRevision(in database: AppDatabase, windowID: UUID) -> Int64 {
+        (try? database.writer.read { db in
+            try Int64.fetchOne(db, sql: """
+                SELECT MAX(revision) FROM (
+                    SELECT revision FROM sessionWindow WHERE id = ?
+                    UNION ALL SELECT revision FROM sessionWindowRetirement WHERE id = ?
+                )
+                """, arguments: [windowID, windowID])
+        }) ?? 0
+    }
+
+    func markSessionClosed() {
+        sessionClosedAt = Date()
+        saveBlocking()
+    }
+
     private nonisolated struct TabRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let databaseTableName = "sessionTab"
+
+        var windowID: UUID
 
         var id: UUID
         var title: String
@@ -27,6 +95,8 @@ extension BrowserModel {
     private nonisolated struct FolderRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let databaseTableName = "sessionFolder"
 
+        var windowID: UUID
+
         var id: UUID
         var position: Int
         var name: String
@@ -37,6 +107,8 @@ extension BrowserModel {
     private nonisolated struct ItemRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let databaseTableName = "sessionItem"
 
+        var windowID: UUID
+
         var position: Int
         var tabID: UUID?
         var folderID: UUID?
@@ -46,6 +118,8 @@ extension BrowserModel {
     private nonisolated struct SplitTreeRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let databaseTableName = "sessionSplitTree"
 
+        var windowID: UUID
+
         var id: UUID
         var position: Int
         var tree: String
@@ -53,6 +127,8 @@ extension BrowserModel {
 
     private nonisolated struct SplitPaneRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
         static let databaseTableName = "sessionSplitPane"
+
+        var windowID: UUID
 
         var tabID: UUID
         var splitID: UUID
@@ -63,6 +139,10 @@ extension BrowserModel {
     }
 
     private nonisolated struct SessionSnapshot: Sendable {
+        var windowID: UUID
+        var revision: Int64
+        var savedAt: Date
+        var closedAt: Date?
         var tabs: [TabRecord]
         var folders: [FolderRecord]
         var items: [ItemRecord]
@@ -118,6 +198,24 @@ extension BrowserModel {
         }
     }
 
+    /// Commit both owners before a close or profile switch can save either window.
+    func saveTransferredSession(from source: BrowserModel) {
+        source.cancelPendingSave()
+        cancelPendingSave()
+        let sourceSnapshot = source.snapshot()
+        let destinationSnapshot = snapshot()
+        do {
+            try database.writer.write { db in
+                try Self.persist(sourceSnapshot, in: db)
+                try Self.persist(destinationSnapshot, in: db)
+            }
+        } catch {
+            Pipeline.log.error("session: tab transfer write failed")
+            source.forgetWrittenState(of: sourceSnapshot)
+            forgetWrittenState(of: destinationSnapshot)
+        }
+    }
+
     var hasPendingSave: Bool {
         saveTask != nil
     }
@@ -146,6 +244,7 @@ extension BrowserModel {
     }
 
     private func snapshot() -> SessionSnapshot {
+        sessionRevision += 1
         let persisted = tabs.filter {
             $0.extensionBaseURL == nil && (!$0.isPrivate || (opensPrivately && database.isEphemeral))
         }
@@ -157,6 +256,7 @@ extension BrowserModel {
                 writtenStateGeneration[tab.id] = tab.sessionStateGeneration
             }
             return TabRecord(
+                windowID: windowID,
                 id: tab.id,
                 title: tab.pageTitle,
                 customTitle: tab.customTitle.isEmpty ? nil : tab.customTitle,
@@ -174,6 +274,7 @@ extension BrowserModel {
 
         let folderRecords = folders.enumerated().map { position, folder in
             FolderRecord(
+                windowID: windowID,
                 id: folder.id,
                 position: position,
                 name: folder.name,
@@ -190,11 +291,11 @@ extension BrowserModel {
                 case .tab(let id):
                     guard known.contains(id) else { continue }
                     itemRecords.append(ItemRecord(
-                        position: itemRecords.count, tabID: id, folderID: nil, parentID: parent
+                        windowID: windowID, position: itemRecords.count, tabID: id, folderID: nil, parentID: parent
                     ))
                 case .folder(let id):
                     itemRecords.append(ItemRecord(
-                        position: itemRecords.count, tabID: nil, folderID: id, parentID: parent
+                        windowID: windowID, position: itemRecords.count, tabID: nil, folderID: id, parentID: parent
                     ))
                     write(id)
                 }
@@ -207,10 +308,11 @@ extension BrowserModel {
             guard let tree = try? encoder.encode(split.root),
                   let text = String(data: tree, encoding: .utf8)
             else { return nil }
-            return SplitTreeRecord(id: split.leader ?? UUID(), position: position, tree: text)
+            return SplitTreeRecord(windowID: windowID, id: split.leader ?? UUID(), position: position, tree: text)
         }
 
         return SessionSnapshot(
+            windowID: windowID, revision: sessionRevision, savedAt: Date(), closedAt: sessionClosedAt,
             tabs: tabRecords,
             folders: folderRecords,
             items: itemRecords,
@@ -220,13 +322,26 @@ extension BrowserModel {
     }
 
     private nonisolated static func persist(_ snapshot: SessionSnapshot, in db: Database) throws {
-        try FolderRecord.deleteAll(db)
+        let retiredRevision = try Int64.fetchOne(
+            db, sql: "SELECT revision FROM sessionWindowRetirement WHERE id = ?", arguments: [snapshot.windowID]
+        ) ?? -1
+        guard snapshot.revision > retiredRevision else { return }
+        let revision = try Int64.fetchOne(db, sql: "SELECT revision FROM sessionWindow WHERE id = ?", arguments: [snapshot.windowID]) ?? 0
+        guard snapshot.revision >= revision else { return }
+        try db.execute(sql: """
+            INSERT INTO sessionWindow (id, lastActiveAt, closedAt, revision) VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET lastActiveAt = excluded.lastActiveAt,
+                closedAt = excluded.closedAt, revision = excluded.revision
+            """, arguments: [snapshot.windowID, snapshot.savedAt, snapshot.closedAt, snapshot.revision])
+        let belongsToWindow = Column("windowID") == snapshot.windowID
+        try FolderRecord.filter(belongsToWindow).deleteAll(db)
         for folder in snapshot.folders {
             try folder.insert(db)
         }
 
         let keptIDs = snapshot.tabs.map(\.id)
         try TabRecord
+            .filter(belongsToWindow)
             .filter(!keptIDs.contains(Column("id")))
             .deleteAll(db)
 
@@ -235,10 +350,11 @@ extension BrowserModel {
             try db.execute(
                 sql: """
                     INSERT INTO sessionTab
-                        (id, title, customTitle, url, state, pinnedURL, pinnedTitle,
+                        (id, windowID, title, customTitle, url, state, pinnedURL, pinnedTitle,
                          internalPage, isActive)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
+                        windowID = excluded.windowID,
                         title = excluded.title,
                         customTitle = excluded.customTitle,
                         url = excluded.url,
@@ -249,24 +365,24 @@ extension BrowserModel {
                         isActive = excluded.isActive
                     """,
                 arguments: [
-                    tab.id, tab.title, tab.customTitle, tab.url, tab.state,
+                    tab.id, tab.windowID, tab.title, tab.customTitle, tab.url, tab.state,
                     tab.pinnedURL, tab.pinnedTitle,
                     tab.internalPage?.rawValue, tab.isActive,
                 ]
             )
         }
 
-        try ItemRecord.deleteAll(db)
+        try ItemRecord.filter(belongsToWindow).deleteAll(db)
         for item in snapshot.items {
             try item.insert(db)
         }
 
         do {
-            try SplitTreeRecord.deleteAll(db)
+            try SplitTreeRecord.filter(belongsToWindow).deleteAll(db)
             for grid in snapshot.splits {
                 try grid.insert(db)
             }
-            try SplitPaneRecord.deleteAll(db)
+            try SplitPaneRecord.filter(belongsToWindow).deleteAll(db)
         } catch {
             Pipeline.log.error("session: split write failed")
         }
@@ -295,22 +411,28 @@ extension BrowserModel {
 
     func restoreSession() {
         guard tabs.isEmpty else { return }
+        sessionClosedAt = nil
+        let belongsToWindow = Column("windowID") == windowID
+        try? database.writer.write { db in
+            try db.execute(sql: "UPDATE sessionWindow SET closedAt = NULL WHERE id = ?", arguments: [windowID])
+        }
 
         let stored = try? database.writer.read { db in
             (
-                tabs: try TabRecord.fetchAll(db),
-                folders: try FolderRecord.fetchAll(db),
-                items: try ItemRecord.order(Column("position")).fetchAll(db)
+                tabs: try TabRecord.filter(belongsToWindow).fetchAll(db),
+                folders: try FolderRecord.filter(belongsToWindow).fetchAll(db),
+                items: try ItemRecord.filter(belongsToWindow).order(Column("position")).fetchAll(db)
             )
         }
         guard let stored, !stored.tabs.isEmpty else { return }
 
         let storedTrees = (try? database.writer.read { db in
-            try SplitTreeRecord.order(Column("position")).fetchAll(db)
+            try SplitTreeRecord.filter(belongsToWindow).order(Column("position")).fetchAll(db)
         }) ?? []
         let storedPanes = storedTrees.isEmpty
             ? (try? database.writer.read { db in
                 try SplitPaneRecord
+                    .filter(belongsToWindow)
                     .order(Column("rowIndex"), Column("columnIndex"))
                     .fetchAll(db)
             }) ?? []
@@ -487,9 +609,19 @@ extension BrowserModel {
         } else {
             self.database = database
         }
+        sessionRevision = Self.savedRevision(in: self.database, windowID: windowID)
+        sessionClosedAt = nil
         self.sitePermissions = sitePermissions
+        if context.profile.isPrivate != privately {
+            context = .shared(for: privately ? .privateBrowsing() : .original())
+        }
         opensPrivately = privately
-        history = HistoryStore(database: self.database)
-        history.prune(retention: BrowserSettings.shared.historyRetention)
+        if (context.database.writer as AnyObject) === (self.database.writer as AnyObject) {
+            history = context.history
+            downloads = context.downloads
+        } else {
+            history = HistoryStore(database: self.database)
+        }
+        history.prune(retention: context.settings.historyRetention)
     }
 }

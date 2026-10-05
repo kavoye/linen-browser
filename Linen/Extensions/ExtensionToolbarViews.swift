@@ -60,6 +60,7 @@ struct ExtensionActionsCluster: View {
             if !overflowed.isEmpty || drag != nil {
                 ExtensionOverflowButton(
                     manager: manager,
+                    browser: browser,
                     records: overflowed,
                     collapsedCount: collapsed.count,
                     isArmed: isOverOverflow,
@@ -81,7 +82,7 @@ struct ExtensionActionsCluster: View {
         .overlay {
             ClusterMenuCatcher(
                 extensionID: extensionID(atX:),
-                menuForExtension: { manager.contextMenu(for: $0) }
+                menuForExtension: { manager.contextMenu(for: $0, in: browser) }
             )
         }
         .overlay(alignment: .topLeading) { chip }
@@ -97,7 +98,7 @@ struct ExtensionActionsCluster: View {
     @ViewBuilder
     private var chip: some View {
         if let drag, let record = pinned.first(where: { $0.id == drag.id }) {
-            ExtensionArtwork(manager: manager, record: record)
+            ExtensionArtwork(manager: manager, record: record, browser: browser)
                 .frame(width: drag.origin.width, height: drag.origin.height)
                 .background(
                     Theme.windowBackground.opacity(0.82),
@@ -207,12 +208,13 @@ struct ExtensionActionsCluster: View {
 struct ExtensionArtwork: View {
     let manager: ExtensionManager
     let record: InstalledExtension
+    var browser: BrowserModel?
     var size: CGFloat = 16
 
     var body: some View {
         _ = manager.actionRevision
         return Group {
-            if let icon = manager.action(for: record.id)?
+            if let icon = manager.action(for: record.id, in: browser)?
                 .icon(for: CGSize(width: size, height: size)) {
                 Image(nsImage: icon)
                     .resizable()
@@ -236,7 +238,7 @@ struct ExtensionActionButton: View {
 
     private var action: WKWebExtension.Action? {
         _ = manager.actionRevision
-        return manager.action(for: record.id)
+        return manager.action(for: record.id, in: browser)
     }
 
     private var badge: String {
@@ -245,7 +247,7 @@ struct ExtensionActionButton: View {
 
     var body: some View {
         let action = action
-        ExtensionArtwork(manager: manager, record: record)
+        ExtensionArtwork(manager: manager, record: record, browser: browser)
             .frame(width: 30, height: 28)
             .overlay(alignment: .bottomTrailing) {
                 if !badge.isEmpty {
@@ -260,20 +262,21 @@ struct ExtensionActionButton: View {
             }
             .hoverBackground(isActive: hovering)
             .opacity(isLifted ? 0 : (action?.isEnabled == false ? 0.4 : 1))
-            .onTapGesture { manager.performAction(for: record.id) }
+            .onTapGesture { manager.performAction(for: record.id, in: browser) }
             .onHover { hovering = $0 }
             .animation(Theme.Motion.quick, value: hovering)
             .help(action?.label ?? record.displayName)
             .accessibilityElement()
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(action?.label ?? record.displayName)
-            .accessibilityAction { manager.performAction(for: record.id) }
-            .background { PopupAnchor(manager: manager, extensionID: record.id) }
+            .accessibilityAction { manager.performAction(for: record.id, in: browser) }
+            .background { PopupAnchor(manager: manager, browser: browser, extensionID: record.id) }
     }
 }
 
 struct ExtensionOverflowButton: View {
     let manager: ExtensionManager
+    let browser: BrowserModel
     let records: [InstalledExtension]
     let collapsedCount: Int
     let isArmed: Bool
@@ -305,10 +308,11 @@ struct ExtensionOverflowButton: View {
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
         .help(Text(helpText))
-        .background { OverflowAnchor(manager: manager) }
+        .background { OverflowAnchor(manager: manager, browser: browser) }
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
             ExtensionOverflowList(
                 manager: manager,
+                browser: browser,
                 records: records,
                 collapsedCount: collapsedCount,
                 isPresented: $isPresented
@@ -335,7 +339,7 @@ struct ExtensionOverflowButton: View {
 
     private var hasBadge: Bool {
         _ = manager.actionRevision
-        return records.contains { !(manager.action(for: $0.id)?.badgeText ?? "").isEmpty }
+        return records.contains { !(manager.action(for: $0.id, in: browser)?.badgeText ?? "").isEmpty }
     }
 
     private var helpText: LocalizedStringResource {
@@ -349,6 +353,7 @@ private struct ExtensionOverflowList: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     let manager: ExtensionManager
+    let browser: BrowserModel
     let records: [InstalledExtension]
     let collapsedCount: Int
     @Binding var isPresented: Bool
@@ -360,6 +365,7 @@ private struct ExtensionOverflowList: View {
             ForEach(records.enumerated(), id: \.element.id) { position, record in
                 ExtensionOverflowRow(
                     manager: manager,
+                    browser: browser,
                     record: record,
                     isCollapsedByWidth: position < collapsedCount,
                     isPresented: $isPresented
@@ -382,6 +388,7 @@ private struct ExtensionOverflowList: View {
 
 private struct ExtensionOverflowRow: View {
     let manager: ExtensionManager
+    let browser: BrowserModel
     let record: InstalledExtension
     let isCollapsedByWidth: Bool
     @Binding var isPresented: Bool
@@ -393,7 +400,7 @@ private struct ExtensionOverflowRow: View {
     var body: some View {
         HStack(spacing: 9) {
             HStack(spacing: 9) {
-                ExtensionArtwork(manager: manager, record: record)
+                ExtensionArtwork(manager: manager, record: record, browser: browser)
                 Text(verbatim: record.displayName)
                     .font(.system(size: 13))
                     .lineLimit(1)
@@ -414,7 +421,7 @@ private struct ExtensionOverflowRow: View {
         .overlay {
             ClusterMenuCatcher(
                 extensionID: { _ in record.id },
-                menuForExtension: { manager.contextMenu(for: $0) }
+                menuForExtension: { manager.contextMenu(for: $0, in: browser) }
             )
         }
         .animation(Theme.Motion.quick, value: hovering)
@@ -458,34 +465,37 @@ private struct ExtensionOverflowRow: View {
         isPresented = false
         Task {
             try? await Task.sleep(for: .milliseconds(120))
-            manager.performAction(for: record.id)
+            manager.performAction(for: record.id, in: browser)
         }
     }
 }
 
 private struct OverflowAnchor: NSViewRepresentable {
     let manager: ExtensionManager
+    let browser: BrowserModel
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
-        manager.registerOverflowAnchor(view)
+        manager.registerOverflowAnchor(view, in: browser)
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        manager.registerOverflowAnchor(nsView)
+        manager.registerOverflowAnchor(nsView, in: browser)
     }
 }
 
 struct PopupAnchor: NSViewRepresentable {
     let manager: ExtensionManager
+    let browser: BrowserModel
     let extensionID: String
 
     func makeNSView(context: Context) -> ExtensionAnchorView {
         let view = ExtensionAnchorView()
         view.manager = manager
+        view.browser = browser
         view.extensionID = extensionID
-        manager.registerAnchor(view, for: extensionID)
+        manager.registerAnchor(view, for: extensionID, in: browser)
         return view
     }
 
@@ -494,6 +504,7 @@ struct PopupAnchor: NSViewRepresentable {
 
 final class ExtensionAnchorView: NSView {
     weak var manager: ExtensionManager?
+    weak var browser: BrowserModel?
     var extensionID = ""
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -501,7 +512,7 @@ final class ExtensionAnchorView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        SecondaryClick.present(manager?.contextMenu(for: extensionID), with: event, in: self)
+        SecondaryClick.present(manager?.contextMenu(for: extensionID, in: browser), with: event, in: self)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -509,11 +520,11 @@ final class ExtensionAnchorView: NSView {
             super.mouseDown(with: event)
             return
         }
-        SecondaryClick.present(manager?.contextMenu(for: extensionID), with: event, in: self)
+        SecondaryClick.present(manager?.contextMenu(for: extensionID, in: browser), with: event, in: self)
     }
 
     override func menu(for event: NSEvent) -> NSMenu? {
-        manager?.contextMenu(for: extensionID)
+        manager?.contextMenu(for: extensionID, in: browser)
     }
 }
 

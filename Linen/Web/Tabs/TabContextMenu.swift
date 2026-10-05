@@ -7,6 +7,27 @@ import AppKit
 enum TabContextMenu {
     static let inspectItem = "WKMenuItemIdentifierInspectElement"
 
+    static func linkWindowItems(opensPrivately: Bool, target: AnyObject, action: Selector) -> [NSMenuItem] {
+        let privateWindow = NSMenuItem(
+            title: String(localized: "Open Link in New Private Window"), action: action, keyEquivalent: ""
+        )
+        privateWindow.identifier = .init("LinenOpenLinkInNewPrivateWindow")
+        privateWindow.target = target
+        privateWindow.tag = 1
+        privateWindow.keyEquivalentModifierMask = []
+        guard !opensPrivately else { return [privateWindow] }
+
+        let window = NSMenuItem(
+            title: String(localized: "Open Link in New Window"), action: action, keyEquivalent: ""
+        )
+        window.identifier = .init("LinenOpenLinkInNewWindow")
+        window.target = target
+        window.keyEquivalentModifierMask = []
+        privateWindow.isAlternate = true
+        privateWindow.keyEquivalentModifierMask = .option
+        return [window, privateWindow]
+    }
+
     static let linkTail = [
         "WKMenuItemIdentifierCopyLink",
         "WKMenuItemIdentifierShareMenu",

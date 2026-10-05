@@ -57,6 +57,10 @@ final class MCPBrowserSession: Identifiable {
         self.openConsent = openConsent
     }
 
+    func isBound(to browser: BrowserModel) -> Bool {
+        self.browser === browser
+    }
+
     func revoke() {
         isConnected = false
         grants = [:]
