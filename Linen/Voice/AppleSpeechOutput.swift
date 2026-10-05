@@ -4,9 +4,32 @@
 import AVFoundation
 
 @MainActor
+final class AppleSpeechVoiceCatalog {
+    static let shared = AppleSpeechVoiceCatalog()
+
+    private let loadVoices: () -> [AVSpeechSynthesisVoice]
+    private var isPrepared = false
+    private(set) var voice: AVSpeechSynthesisVoice?
+
+    init(loadVoices: @escaping () -> [AVSpeechSynthesisVoice] = AVSpeechSynthesisVoice.speechVoices) {
+        self.loadVoices = loadVoices
+    }
+
+    /// Call from synchronous app launch: Apple's voice lookup forces a sync
+    /// operation internally and warns when entered from a Swift task.
+    func prepare() {
+        guard !isPrepared else { return }
+        let english = loadVoices().filter { $0.language.hasPrefix("en") }
+        voice = english.first { $0.quality == .premium }
+            ?? english.first { $0.quality == .enhanced }
+            ?? english.first
+        isPrepared = true
+    }
+}
+
+@MainActor
 final class AppleSpeechOutput: SpeechOutput {
     private let synthesizer = AVSpeechSynthesizer()
-    private let voice = AppleSpeechOutput.bestEnglishVoice()
     private var watcher: SpeakingWatcher?
 
     var isMuted = false
@@ -25,7 +48,7 @@ final class AppleSpeechOutput: SpeechOutput {
     func speak(_ text: String) {
         guard !isMuted else { return }
         let utterance = AVSpeechUtterance(string: text)
-        utterance.voice = voice
+        utterance.voice = AppleSpeechVoiceCatalog.shared.voice
         synthesizer.speak(utterance)
     }
 
@@ -33,12 +56,6 @@ final class AppleSpeechOutput: SpeechOutput {
         synthesizer.stopSpeaking(at: .immediate)
     }
 
-    private static func bestEnglishVoice() -> AVSpeechSynthesisVoice? {
-        let english = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("en") }
-        return english.first { $0.quality == .premium }
-            ?? english.first { $0.quality == .enhanced }
-            ?? english.first
-    }
 }
 
 private nonisolated final class SpeakingWatcher: NSObject, AVSpeechSynthesizerDelegate {

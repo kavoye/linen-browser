@@ -209,6 +209,35 @@ struct FaviconLoaderTests {
         #expect(loader.cached(for: "example.com") == nil)
     }
 
+    @Test(arguments: ["http://127.0.0.1:43127/deep/page?test=1#section", "https://localhost:8443/page", "http://[::1]:43127/page"])
+    func pageFallbackPreservesSchemeAndPort(_ address: String) async throws {
+        let page = try #require(URL(string: address))
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var expected = try #require(URLComponents(url: page, resolvingAgainstBaseURL: false))
+        expected.path = "/favicon.ico"
+        expected.query = nil
+        expected.fragment = nil
+        let stub = StubIconProtocol.fixture(routes: [try #require(expected.url).absoluteString: try iconData()])
+        defer { stub.close() }
+        let loader = FaviconLoader(cacheDirectory: directory, session: stub.session)
+
+        #expect(await loader.load(forPageURL: page) != nil)
+        #expect(stub.responses.requestCount == 1)
+    }
+
+    @Test(arguments: ["127.0.0.1", "localhost", "dev.localhost", "[::1]"])
+    func bareLocalHostDoesNotGuessHTTPS(_ host: String) async throws {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let stub = StubIconProtocol.fixture(payload: try iconData())
+        defer { stub.close() }
+        let loader = FaviconLoader(cacheDirectory: directory, session: stub.session)
+
+        #expect(await loader.load(forHost: host) == nil)
+        #expect(stub.responses.requestCount == 0)
+    }
+
     // MARK: - Icons that are not icons
 
     private func flatData(_ colour: NSColor, side: CGFloat = 16) throws -> Data {
@@ -360,9 +389,7 @@ struct FaviconNavigationTests {
         let server = try await HTTPFixtureServer.start(routes: [
             "/page": .html(#"<link rel="icon" href="/declared.png"><h1>Page</h1>"#),
         ])
-        // The guess is built as `https://<host>/favicon.ico`, with no port, so
-        // it can never reach the fixture server. Both icon fetches go through
-        // the stub instead; the page itself still comes from the server.
+        // Stub both icon responses; the document comes from the fixture server.
         let stub = StubIconProtocol.fixture(routes: [
             "/favicon.ico": try iconData(side: 16),
             "/declared.png": try iconData(side: 24),
@@ -375,8 +402,8 @@ struct FaviconNavigationTests {
         )
         let host = try #require(server.url("/page").host())
 
-        // No page yet: the bare guess is all there is, and it dresses the row.
-        let guessed = await loader.load(forHost: host)
+        // The saved URL can supply a fallback before the web view loads.
+        let guessed = await loader.load(forPageURL: try server.url("/page"))
         #expect(guessed?.size.width == 16)
 
         let webView = makeWebView()
@@ -497,7 +524,7 @@ private nonisolated final class StubIconProtocol: URLProtocol, @unchecked Sendab
         guard let id = request.value(forHTTPHeaderField: Self.header),
               let reply = Self.fixtures.withLock({ $0[id] }),
               let url = request.url,
-              let data = reply.routes.isEmpty ? reply.payload : reply.routes[url.path()] else {
+              let data = reply.routes.isEmpty ? reply.payload : (reply.routes[url.absoluteString] ?? reply.routes[url.path()]) else {
             client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
             return
         }

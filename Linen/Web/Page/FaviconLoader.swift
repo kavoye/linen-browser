@@ -4,6 +4,7 @@
 import AppKit
 import CryptoKit
 import Foundation
+import Network
 import WebKit
 
 @MainActor
@@ -113,11 +114,34 @@ final class FaviconLoader {
         if let hit = cached(for: host) {
             return hit
         }
-        guard let url = URL(string: "https://\(host)/favicon.ico") else { return nil }
+        // A bare local host does not identify the scheme or development-server port.
+        // Wait for a page URL instead of probing an unrelated HTTPS service.
+        let address = host.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        guard host != "localhost", !host.hasSuffix(".localhost"),
+              IPv4Address(address) == nil, IPv6Address(address) == nil,
+              let pageURL = URL(string: "https://\(host)") else { return nil }
+        return await load(forPageURL: pageURL)
+    }
+
+    func load(forPageURL pageURL: URL) async -> NSImage? {
+        guard let url = Self.fallbackURL(for: pageURL), let host = url.host()?.lowercased() else { return nil }
+        if let hit = cached(for: host) {
+            return hit
+        }
 
         return await coalesced(key: key(host)) { [weak self] in
             await self?.fetchAndCache(url, forHost: host, isGuess: true)
         }
+    }
+
+    nonisolated private static func fallbackURL(for pageURL: URL) -> URL? {
+        guard isFetchable(pageURL), var components = URLComponents(url: pageURL, resolvingAgainstBaseURL: false) else { return nil }
+        components.path = "/favicon.ico"
+        components.query = nil
+        components.fragment = nil
+        components.user = nil
+        components.password = nil
+        return components.url
     }
 
     func load(for webView: WKWebView) async -> NSImage? {
@@ -193,13 +217,8 @@ final class FaviconLoader {
             candidates.append(answered)
             mask = Self.declaredMaskURL(fromAnswer: answer, requestedHost: host, pageURL: pageURL)
         }
-        if var components = URLComponents(url: pageURL, resolvingAgainstBaseURL: false) {
-            components.path = "/favicon.ico"
-            components.query = nil
-            components.fragment = nil
-            if let fallback = components.url {
-                candidates.append(fallback)
-            }
+        if let fallback = Self.fallbackURL(for: pageURL) {
+            candidates.append(fallback)
         }
 
         for candidate in candidates {

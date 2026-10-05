@@ -97,8 +97,9 @@ struct MediaCropSurface: NSViewRepresentable {
         nsView: MediaCropContainer,
         context: Context
     ) -> CGSize? {
-        guard let width = proposal.width, let height = proposal.height else { return nil }
-        return CGSize(width: width, height: height)
+        guard let width = proposal.width, let height = proposal.height,
+              width.isFinite, height.isFinite else { return nil }
+        return CGSize(width: max(0, width), height: max(0, height))
     }
 }
 

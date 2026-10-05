@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppleSpeechVoiceCatalog.shared.prepare()
         guard !isRunningTests else { return }
         NSApp.setActivationPolicy(.regular)
         guard MoveToApplications.offerIfNeeded() != .relaunching else { return }

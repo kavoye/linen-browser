@@ -398,11 +398,11 @@ private struct PinReturnSegment: View {
         .help(Text(verbatim: help))
         .task(id: tab.pinnedURL) {
             pinnedFavicon = nil
-            guard let host = tab.pinnedURL?.host() else { return }
+            guard let pageURL = tab.pinnedURL, let host = pageURL.host() else { return }
             if let cached = tab.context.favicons.cached(for: host) {
                 pinnedFavicon = cached
             } else {
-                pinnedFavicon = await tab.context.favicons.load(forHost: host)
+                pinnedFavicon = await tab.context.favicons.load(forPageURL: pageURL)
             }
         }
     }

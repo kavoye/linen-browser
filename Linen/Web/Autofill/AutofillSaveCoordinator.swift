@@ -300,7 +300,11 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
         })
         AutofillDiagnostics.note(policy["password"] == true ? .policyEnabled : .policyDisabled, kind: .password)
         Task {
-            _ = try? await webView.callAsyncJavaScript("globalThis.__linenAutofillSave?.setPolicy(policy);", arguments: ["policy": policy], in: frame, contentWorld: Self.world)
+            do {
+                _ = try await webView.callAsyncJavaScript("globalThis.__linenAutofillSave?.setPolicy(policy);", arguments: ["policy": policy], in: frame, contentWorld: Self.world)
+            } catch {
+                AutofillDiagnostics.policyFailed(.save, error: error, isMainFrame: frame.isMainFrame)
+            }
         }
     }
 

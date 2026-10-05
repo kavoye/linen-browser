@@ -51,10 +51,14 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
         let owner = owners.object(forKey: view) as UUID?
         let enabled = owner.map { isEnabled(profileID: $0) } ?? false
         Task {
-            _ = try? await view.callAsyncJavaScript(
-                "globalThis.__linenPasswords?.setEnabled(enabled);", arguments: ["enabled": enabled],
-                in: frame, contentWorld: Self.world
-            )
+            do {
+                _ = try await view.callAsyncJavaScript(
+                    "globalThis.__linenPasswords?.setEnabled(enabled);", arguments: ["enabled": enabled],
+                    in: frame, contentWorld: Self.world
+                )
+            } catch {
+                AutofillDiagnostics.policyFailed(.password, error: error, isMainFrame: frame.isMainFrame)
+            }
         }
     }
 

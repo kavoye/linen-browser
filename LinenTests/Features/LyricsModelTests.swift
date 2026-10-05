@@ -64,6 +64,43 @@ private func signature(
 
 @MainActor
 struct LyricsModelTests {
+    @Test func tickingRequiresVisibleSyncedLyricsAndActivePlayback() async throws {
+        let clock = TestClock()
+        let model = LyricsModel(source: StubCatalog(best: match()), defaults: scratchDefaults(), clock: clock)
+        model.isOnScreen = true
+        model.sync(time: 0, isPlaying: true)
+        #expect(clock.pendingCount == 0)
+
+        await model.load(signature())
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        model.sync(time: 5, isPlaying: false)
+        #expect(await waitUntil { clock.pendingCount == 0 })
+
+        model.sync(time: 5, isPlaying: true)
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        model.isOnScreen = false
+        #expect(await waitUntil { clock.pendingCount == 0 })
+
+        model.isOnScreen = true
+        try #require(await waitUntil { clock.pendingCount == 1 })
+        model.use(match(synced: ""))
+        #expect(await waitUntil { clock.pendingCount == 0 })
+    }
+
+    @Test func releasingLyricsCancelsItsPendingTick() async throws {
+        let clock = TestClock()
+        weak var released: LyricsModel?
+        do {
+            let model = LyricsModel(source: StubCatalog(best: match()), defaults: scratchDefaults(), clock: clock)
+            released = model
+            await model.load(signature())
+            model.isOnScreen = true
+            model.sync(time: 0, isPlaying: true)
+            try #require(await waitUntil { clock.pendingCount == 1 })
+        }
+        #expect(await waitUntil { released == nil && clock.pendingCount == 0 })
+    }
+
     @Test func aFoundTrackBecomesTimedLines() async {
         let model = LyricsModel(source: StubCatalog(best: match()), defaults: scratchDefaults())
 
