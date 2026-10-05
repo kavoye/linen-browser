@@ -89,7 +89,7 @@ actor LocalMCPTransport: Transport {
                 let data = try await readChunk()
                 guard let data else { break }
                 for message in try frames.append(data) {
-                    if case .dropped = continuation.yield(message) {
+                    if case .dropped = continuation.yield(MCPInitializationCompatibility.normalize(message)) {
                         throw MCPError.invalidRequest("Too many pending messages.")
                     }
                 }

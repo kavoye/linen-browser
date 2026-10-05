@@ -12,6 +12,36 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct MCPTransportTests {
+    @Test func initializationIgnoresUnsupportedExtensionsAndPreservesStandardFields() throws {
+        let request = Data(#"""
+            {"jsonrpc":"2.0","id":"init-1","method":"initialize","params":{
+              "protocolVersion":"2025-06-18","capabilities":{
+                "experimental":{"codex/auth-change":{},"future":{"enabled":true}},
+                "elicitation":{"form":{},"url":{}},"roots":{"listChanged":true}},
+              "clientInfo":{"name":"Codex","version":"1"}}}
+            """#.utf8)
+        var expected = try #require(JSONSerialization.jsonObject(with: request) as? [String: Any])
+        var params = try #require(expected["params"] as? [String: Any])
+        var capabilities = try #require(params["capabilities"] as? [String: Any])
+        capabilities.removeValue(forKey: "experimental")
+        params["capabilities"] = capabilities
+        expected["params"] = params
+        let actual = try JSONSerialization.jsonObject(with: MCPInitializationCompatibility.normalize(request))
+        #expect((actual as? NSDictionary) == expected as NSDictionary)
+    }
+
+    @Test(arguments: [
+        #"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"initialize","capabilities":{"experimental":{"extension":{}}}}}"#,
+        #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{"experimental":[]}}}"#,
+        #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}"#,
+        #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":null}"#,
+        "invalid JSON",
+    ])
+    func initializationCompatibilityLeavesOtherMessagesUnchanged(_ request: String) {
+        let message = Data(request.utf8)
+        #expect(MCPInitializationCompatibility.normalize(message) == message)
+    }
+
     @Test(.timeLimit(.minutes(1))) func relayCanStartBeforeBrowserAndRecoverAfterItLaunches() async throws {
         let directory = "/tmp/linen-mcp-test-\(UUID().uuidString)"
         defer { try? FileManager.default.removeItem(atPath: directory) }
@@ -244,7 +274,8 @@ struct MCPTransportTests {
                 process.terminate()
             }
         }
-        let request = #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{"elicitation":{"form":{},"url":{}}},"#
+        let request = #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","#
+            + #""capabilities":{"experimental":{"codex/auth-change":{}},"elicitation":{"form":{},"url":{}}},"#
             + #""clientInfo":{"name":"Stdio integration","title":"Codex","version":"1"}}}"#
         try input.fileHandleForWriting.write(contentsOf: Data((request + "\n").utf8))
         let (lines, continuation) = AsyncThrowingStream<Data, any Error>.makeStream()
