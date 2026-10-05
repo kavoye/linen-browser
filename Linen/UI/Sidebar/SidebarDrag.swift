@@ -203,7 +203,6 @@ struct SidebarDropMark: View {
     var isArmed = false
 
     @Environment(\.sidebarStyle) private var sidebarStyle
-    @Environment(\.windowColorScheme) private var windowColorScheme
 
     private static let dash: [CGFloat] = [4, 3]
 
@@ -261,7 +260,6 @@ struct SidebarDropMark: View {
                 style: StrokeStyle(lineWidth: 1, dash: isArmed && calls ? [] : Self.dash)
             )
         }
-        .environment(\.colorScheme, windowColorScheme)
         .allowsHitTesting(false)
     }
 }
