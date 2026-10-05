@@ -28,6 +28,7 @@ nonisolated enum AgentStopReason: String, Codable, Sendable {
     case noProgress = "no_progress"
     case contextLimit = "context_limit"
     case providerError = "provider_error"
+    case rateLimited = "rate_limited"
     case interrupted
     case verificationRequired = "verification_required"
     case blocked
@@ -44,6 +45,8 @@ nonisolated enum AgentStopReason: String, Codable, Sendable {
             String(localized: "Paused because the last actions weren’t making progress. Your progress is saved; check the page, then choose Continue.")
         case .contextLimit:
             String(localized: "Paused because the conversation couldn’t be compacted safely. Your progress is saved.")
+        case .rateLimited:
+            String(localized: "The model provider’s rate limit was reached. Your progress is saved; wait a moment, then choose Continue.")
         case .providerError:
             String(localized: "The model request failed. Your progress is saved; choose Continue to retry.")
         case .interrupted:

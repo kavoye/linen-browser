@@ -104,7 +104,7 @@ Advanced settings to revoke that connection immediately.
 | `clickOnPage` | Click a numbered control from that observation. |
 | `typeOnPage` | Fill a nonsensitive field, optionally submitting it. |
 | `selectOption` | Choose an option in a select control. |
-| `fillFields` | Fill up to eight independent fields without submitting; report partial completion. |
+| `fillFields` | Fill up to 32 text, dropdown, date, color, range, checkbox, or radio controls without submitting; report verified refs and per-field failures. |
 | `inspectControl` | Read control state and paginate dropdown options. |
 | `setChecked` | Set a checkbox, switch, or radio to the requested state. |
 | `waitForPage` | Wait for text, absent text, a URL substring, or document readiness, up to 15 seconds. |

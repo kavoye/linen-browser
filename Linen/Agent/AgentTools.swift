@@ -225,19 +225,16 @@ nonisolated struct TypeOnPageTool: Tool {
 
 nonisolated struct FillFieldsTool: Tool {
     let name = "fillFields"
-    let description = """
-        Fill up to eight independent fields or dropdowns without submitting. Use the latest observation. \
-        Stops if the page changes; check the completed count before continuing.
-        """
+    let description = AgentToolkit.Descriptions.fillFields
     let toolkit: AgentToolkit
 
     @Generable
     struct Field {
         @Guide(description: "The field ref from the latest page observation")
         var ref: Int
-        @Guide(description: "Text to enter, or the dropdown option to select")
+        @Guide(description: "Text, dropdown option, #RRGGBB color, numeric range value, or true/false for a checkbox or radio")
         var value: String
-        @Guide(description: "True for a dropdown, false for a text field")
+        @Guide(description: "True for a dropdown; false for other controls")
         var select: Bool
     }
 
@@ -248,7 +245,7 @@ nonisolated struct FillFieldsTool: Tool {
         @Guide(description: "Exact observationID from the latest read or action result.")
         var observationID: String
 
-        @Guide(description: "One to eight independent fields, in order; never login or payment fields")
+        @Guide(description: "One to 32 independent controls, in order; exclude sensitive, disabled, read-only, and file inputs")
         var fields: [Field]
     }
 

@@ -15,6 +15,16 @@ struct AgentProviderRetryTests {
         #expect(AgentProviderRetry.delay(for: OpenAIFailure(kind: .http, status: 503, retryAfter: 120), attempt: 0, remoteActionsEnabled: false) == nil)
     }
 
+    @Test func streamedRateLimitsWithoutHTTPStatusCanRetry() {
+        let failure = OpenAIFailure.event(["error": ["code": "rate_limit_exceeded"]])
+        #expect(failure.isRateLimited)
+        #expect(AgentProviderRetry.delay(for: failure, attempt: 0, remoteActionsEnabled: false, jitter: 0) == 2)
+        #expect(AgentProviderRetry.delay(for: failure, attempt: 1, remoteActionsEnabled: false, jitter: 0) == 4)
+        #expect(AgentProviderRetry.delay(for: failure, attempt: 2, remoteActionsEnabled: false) == nil)
+        #expect(AgentProviderRetry.delay(for: failure, attempt: 0, remoteActionsEnabled: true) == nil)
+        #expect(!OpenAIFailure(kind: .http, status: 429, code: "insufficient_quota").isRateLimited)
+    }
+
     @Test func permanentErrorsAndUncertainDeliveryAreNotRetried() {
         for error in [OpenAIFailure(kind: .http, status: 401), .init(kind: .http, status: 429, code: "insufficient_quota"), .init(kind: .streamInterrupted)] {
             #expect(AgentProviderRetry.delay(for: error, attempt: 0, remoteActionsEnabled: false) == nil)
@@ -41,6 +51,28 @@ struct AgentRetryWorkflowTests {
         #expect(fixture.state.calls == 1)
         #expect(fixture.model.requests.count == 3)
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.state == .completed)
+    }
+
+    @Test func streamedRateLimitRetriesWithoutRepeatingBrowserActions() async throws {
+        let fixture = HarnessFixture([.calls(["typeOnPage"]),
+                                     .failure(OpenAIFailure(kind: .http, code: "rate_limit_exceeded", retryAfter: 0)), .text("Finished."),
+        ])
+        await fixture.run()
+        #expect(fixture.state.calls == 1)
+        #expect(fixture.model.requests.count == 3)
+        #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.state == .completed)
+    }
+
+    @Test func exhaustedRateLimitPausesWithoutAnotherSummaryRequest() async throws {
+        let failure = OpenAIFailure(kind: .http, code: "rate_limit_exceeded", retryAfter: 0)
+        let fixture = HarnessFixture([.failure(failure), .failure(failure), .failure(failure), .text("Must not request a summary")])
+        await fixture.run()
+        #expect(fixture.model.requests.count == 3)
+        let trace = fixture.log.latestTrace(forTab: fixture.tabID)
+        #expect(trace?.stopReason == .rateLimited)
+        #expect(trace?.state == .paused)
+        #expect(trace?.response.contains("rate limit") == true)
+        #expect(trace?.diagnostics.events.last?.values["status"] == "rate_limited")
     }
 
     @Test func retryRespectsTheRequestLimit() async throws {

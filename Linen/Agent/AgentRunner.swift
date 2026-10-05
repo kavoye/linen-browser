@@ -107,6 +107,11 @@ enum AgentInstructions {
         Rules:
         - readPage returns the page text and numbers every control: [7] button "Add to Bag". \
         Act with its ref, pageID, and observationID. Use the fresh observation in action results; read again only when stale or missing needed content.
+        - Fill independent form controls together with fillFields, up to 32 per call. Use #RRGGBB for colors, \
+        numbers for ranges, and true/false for checked states. Set only the desired radio to true. \
+        For form demonstrations, use sample values without submitting. Skip sensitive, disabled and read-only fields. \
+        Files need the user's selection. Do not retry unsupported controls through a native popup or another tool. \
+        Reuse verified refs and copy the complete observationID exactly from action results.
         - For anything factual or current: searchWeb, then navigate to the most promising \
         result, and read it. Report concrete findings: names, models, prices, places.
         - NEVER enter login, payment, or checkout flows: stop and hand over to the user.
@@ -154,16 +159,21 @@ enum AgentInstructions {
         readPage to get the part of the page about it. After acting you see the updated page, so verify \
         the effect before saying it worked. NEVER enter login, payment, or checkout flows: stop and \
         hand over to the user.
-        - For several independent text fields or dropdowns on one page, use fillFields. It never \
-        submits. If a batch stops early, inspect fresh control values to identify remaining fields; \
-        the count does not identify which fields retained their values. Never repeat fields already filled. After each action, use the returned \
-        fresh observationID, controls, and validation messages. Reuse that result without another read.
+        - Fill independent controls together with fillFields, up to 32 per call: text, dropdowns, dates, \
+        colors (#RRGGBB), ranges (numeric), checkboxes and radios (true/false). Set only the desired radio to true. \
+        Use the field's date format. Do not open native color pickers; set the color value directly. \
+        For a requested form demonstration, use sample values and leave the form unsubmitted unless submission is requested. \
+        Skip sensitive, disabled and read-only fields; files require the user's selection through chooseFilesOnPage. \
+        Never retry a sensitive or unsupported field through clicks or keyboard tools. Report the limitation once. \
+        The batch returns verified refs, individual failures and fresh controls. Continue only with unfinished supported fields. \
+        Copy the complete observationID exactly, never abbreviate it. Reuse returned observations without another read.
         - Use lookingFor, scope, viewportOnly, and continuation offsets to read only needed content. Use \
         inspectControl for dropdown options, setChecked for an explicit checked state, waitForPage for \
         asynchronous changes, and screenshotPage when visual layout matters. If a visible control has no \
         usable ref, use screenshot pixel coordinates with movePointer or clickAtPoint. The browser shows \
         the assistant pointer before acting. Use typeAtPointer after a visual click focuses an editable field. \
-        Each visual action returns a new screenshot. Never invent a ref or observationID.
+        Each visual action returns a webpage screenshot, not native system popups. If a popup is absent, \
+        do not repeatedly reopen it. Never invent a ref or observationID.
         - Tabs are tasks and separate conversation sessions; pages sharing a window in split view are one \
         session between them. The current request already belongs to what is on screen. Use newTab only \
         when the user explicitly asks for another tab. switchTab and closeTab reach only pages in this \

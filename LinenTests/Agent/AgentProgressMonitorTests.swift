@@ -31,6 +31,16 @@ struct AgentProgressMonitorTests {
         #expect(decisions == [.proceed, .proceed, .recover, .proceed, .proceed, .pause])
     }
 
+    @Test func differentCoordinatesAndInputMethodsCannotHideAnUnchangedPage() {
+        var monitor = AgentProgressMonitor(policy: .interactive)
+        let decisions = (1...6).map { index in
+            monitor.observe(name: index.isMultiple(of: 2) ? "clickAtPoint" : "typeAtPointer",
+                            arguments: "{\"page\":\"form\",\"x\":\(index * 10),\"y\":100}",
+                            output: "Action completed.", failed: false, images: [Data("same-page".utf8)])
+        }
+        #expect(decisions == [.proceed, .proceed, .recover, .proceed, .proceed, .pause])
+    }
+
     @Test func changingScreenshotsDoNotExcuseConsecutiveFailures() {
         var monitor = AgentProgressMonitor(policy: .interactive)
         let decisions = (1...6).map { index in

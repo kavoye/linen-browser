@@ -87,7 +87,7 @@ nonisolated enum AgentToolCatalog {
         AgentToolDescriptor(
             id: "fillFields",
             title: "Fill Multiple Fields",
-            summary: "Fill several text fields or dropdowns together without submitting.",
+            summary: "Fill form controls together without submitting.",
             category: .page,
             isCore: false
         ),

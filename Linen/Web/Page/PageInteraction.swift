@@ -31,6 +31,12 @@ extension PageDriver {
               checked: el.checked ?? el.getAttribute('aria-checked'),
               bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } };
             if (R.isSensitiveField(el)) result.value = '(hidden)';
+            else if (el.tagName === 'INPUT') {
+              result.type = el.type;
+              if (['range','color','date','datetime-local','time','month','week','number'].includes(el.type)) result.value = el.value;
+              result.min = el.min.slice(0, 100); result.max = el.max.slice(0, 100);
+              result.step = el.step.slice(0, 100); result.placeholder = el.placeholder.slice(0, 200);
+            }
             else if (el.options) {
               result.options = Array.from(el.options).slice(\(start), \(start + 12)).map(o => ({
                 label: R.norm(o.text).slice(0, 100), value: o.value.slice(0, 100),
@@ -49,32 +55,30 @@ extension PageDriver {
             + "\nobservationID: " + (observation(in: view)?.id ?? "")
     }
 
-    static func setChecked(ref: Int, checked: Bool, in view: WKWebView, announced: Bool = false) async -> String {
+    static func setChecked(
+        ref: Int, checked: Bool, in view: WKWebView, announced: Bool = false, refreshControls: Bool = true
+    ) async -> String {
         guard await validateObservation(in: view, ref: ref) else { return staleMessage }
-        let state = await evaluateJSON(
-            scripted(
-                """
-                const el = window.__linenRefs[\(ref) - 1];
-                return JSON.stringify({ kind: R.kindOf(el), checked: el.checked ?? (el.getAttribute('aria-checked') === 'true') });
-                """), in: view)
+        let state = await evaluateJSON(scripted("""
+            const el = window.__linenRefs[\(ref) - 1];
+            if (R.isSensitiveField(el)) return JSON.stringify({ refused: true });
+            R.expectValue(el, \(checked));
+            return JSON.stringify({ kind: R.kindOf(el), checked: el.checked ?? (el.getAttribute('aria-checked') === 'true') });
+            """), in: view)
+        if state?["refused"] as? Bool == true { return "The user must fill this sensitive field. Do not retry with another tool." }
         guard let kind = state?["kind"] as? String, ["checkbox", "radio"].contains(kind) else { return "Use a checkbox, switch, or radio ref." }
-        if state?["checked"] as? Bool == checked { return "Checked state already matches.\n" + (await snapshot(view)) }
-        if kind == "radio", !checked { return "Choose another radio option to change the selection." }
         let document = observation(in: view)?.documentID
-        let output = await click(ref: ref, label: "", in: view, announced: announced)
-        guard output.hasPrefix("Clicked") else { return output }
-        guard observation(in: view)?.documentID == document else { return "The page changed before the checked state could be confirmed.\n" + output }
-        let confirmed = await PageAutomationGuard.withCurrentDocument(in: view) {
-            let actual = await evaluateJSON(
-            scripted(
-                """
-                const el = window.__linenRefs[\(ref) - 1];
-                return JSON.stringify({ matches: !!el?.isConnected && (el.checked ?? (el.getAttribute('aria-checked') === 'true')) === \(checked) });
-                """), in: view)
-            return actual?["matches"] as? Bool == true ? "confirmed" : "unconfirmed"
+        let status: String
+        if state?["checked"] as? Bool == checked {
+            status = "Checked state already matches."
+        } else {
+            if kind == "radio", !checked { return "Choose another radio option to change the selection." }
+            let output = await click(ref: ref, label: "", in: view, announced: announced, refreshControls: false)
+            guard output.hasPrefix("Clicked") else { return output }
+            status = "Set checked state to \(checked)."
         }
-        guard confirmed == "confirmed" else { return "The requested checked state was not confirmed.\n" + output }
-        return "Set checked state to \(checked).\n" + output
+        return await finishValueAction(status: status, ref: ref, documentID: document,
+                                       refreshControls: refreshControls, in: view)
     }
 
     static func waitForPage(condition: String, value: String, timeout: Int = 5, in view: WKWebView) async -> String {

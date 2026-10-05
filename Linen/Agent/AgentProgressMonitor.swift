@@ -32,7 +32,16 @@ nonisolated struct AgentProgressMonitor {
             return .proceed
         }
         let comparison = Self.comparison(name: name, arguments: arguments, output: output)
-        let bytes = Data((name + "\u{0}" + comparison.arguments + "\u{0}" + comparison.output).utf8)
+        let visualActions: Set<String> = ["clickAtPoint", "doubleClickAtPoint", "typeAtPointer", "dragOnPage"]
+        let fingerprint: String
+        if visualActions.contains(name), !images.isEmpty {
+            let object = arguments.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+            let page = object?["page"] as? String ?? ""
+            fingerprint = "visual-result\u{0}" + page + "\u{0}" + String(failed)
+        } else {
+            fingerprint = name + "\u{0}" + comparison.arguments + "\u{0}" + comparison.output
+        }
+        let bytes = Data(fingerprint.utf8)
         var digest = SHA256()
         digest.update(data: bytes)
         // Visual tools return fixed status text. Compare their screenshots as well so

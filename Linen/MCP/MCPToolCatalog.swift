@@ -157,9 +157,10 @@ nonisolated enum MCPToolCatalog {
                     description: "Enter, Tab, Escape, Space, ArrowLeft, ArrowRight, ArrowDown, ArrowUp, Home, End, Backspace, or Delete"),
             ]),
         Entry(
-            name: "fillFields", description: "Fill up to eight independent fields without submitting. Stops on page changes; check the completed count.",
+            name: "fillFields", description: AgentToolkit.Descriptions.fillFields,
             parameters: [
-                tab, snapshot, Parameter(name: "fields", type: "array", description: "Fields with ref, value, and select."),
+                tab, snapshot, Parameter(name: "fields", type: "array",
+                                         description: "One to 32 controls with ref, value, and select. Use true/false for checked states, #RRGGBB for colors, and numbers for ranges."),
             ]),
         Entry(
             name: "inspectControl", description: "Inspect control state and up to twelve dropdown options.",

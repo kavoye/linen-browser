@@ -21,7 +21,7 @@ nonisolated struct AgentEvaluationEvent: Codable, Equatable, Sendable {
         }
         let statuses: Set<String> = [
             "completed", "cancelled", "agent_error", "budget_exceeded", "request_limit",
-            "no_progress", "context_limit", "provider_error", "interrupted", "input_budget",
+            "no_progress", "context_limit", "provider_error", "rate_limited", "interrupted", "input_budget",
             "failed", "succeeded", "not_executed", "manual", "empty_summary", "not_smaller", "summary_too_large",
             "verification_required", "blocked", "answered", "verified", "unverified",
         ]

@@ -142,7 +142,7 @@ struct PageInteractionTests {
             .init(ref: 1, value: "first", select: false), .init(ref: 2, value: "second", select: false),
         ], in: view)
         #expect(result.hasPrefix("Filled 1 of 2 fields."), "\(result)")
-        #expect(result.contains("earlier values changed"))
+        #expect(result.contains("[1] not verified"))
     }
 
     @Test func queriesReachDeepTextAndControlPaginationPreservesRefs() async throws {

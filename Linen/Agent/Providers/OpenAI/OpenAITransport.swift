@@ -47,6 +47,11 @@ nonisolated struct OpenAIFailure: LocalizedError, Sendable {
                      status: payload["status"].int, code: code)
     }
 
+    var isRateLimited: Bool {
+        (kind == .http || kind == .incomplete) && (status == 429 || code == "rate_limit_exceeded")
+            && !["insufficient_quota", "billing_hard_limit_reached"].contains(code ?? "")
+    }
+
     var errorDescription: String? {
         switch kind {
         case .configuration:

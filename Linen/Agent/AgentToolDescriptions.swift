@@ -40,8 +40,16 @@ extension AgentToolkit {
             user declines. Click a read-only date field to open its calendar, then click a day.
             """
         static let typeOnPage = """
-            Type into a field by its [ref] or label, with optional submission. The browser refuses \
+            Set text, a #RRGGBB color, or a numeric range value by [ref] or label, with optional submission. Use fillFields for multiple controls. The browser refuses \
             passwords, payment details, codes, and account or identity numbers.
+            """
+        static let fillFields = """
+            Fill up to 32 independent controls in one call without submitting. Prefer this over separate field actions. \
+            Supports text, textarea, editable content, dropdowns, dates, colors (#RRGGBB), ranges (numeric), \
+            checkboxes and radios (true/false). Set only the desired radio to true. Use dates in the field's format. \
+            Copy the exact latest observationID. Returns verified refs and per-field failures; never repeat verified fields. \
+            Skips sensitive, disabled, read-only, and file inputs; stops if the page changes. Do not retry sensitive fields. \
+            File selection needs chooseFilesOnPage. Set colors directly; native color popups are outside page screenshots and controls.
             """
         static let selectOption = "Choose an option in a native select control by its [ref] or label. For custom dropdowns, use clickOnPage on a visible option."
         static let scrollPage = "Scroll up, down, left, or right. Supply a ref inside a container to scroll that container."

@@ -750,10 +750,12 @@ extension PageDriverTests {
         let other = try #require(refs(in: page, matching: "field \"Other\"").first)
         let result = await PageDriver.fillFields([
             .init(ref: password, value: "fixture-secret", select: false),
-            .init(ref: other, value: "never-entered", select: false),
+            .init(ref: other, value: "safe-value", select: false),
         ], in: webView)
-        #expect(result.hasPrefix("Filled 0 of 2 fields."))
-        #expect(await js(webView, "Array.from(document.querySelectorAll('input')).every(e => e.value === '')") as? Bool == true)
+        #expect(result.hasPrefix("Filled 1 of 2 fields."))
+        #expect(result.contains("sensitive field"))
+        #expect(await js(webView, "document.querySelector('input[type=password]').value") as? String == "")
+        #expect(await js(webView, "document.querySelectorAll('input')[1].value") as? String == "safe-value")
     }
 
     @Test func aBatchRejectsDuplicateOrStaleRefsBeforeFurtherWrites() async throws {
@@ -780,5 +782,89 @@ extension PageDriverTests {
         let secondResult = await PageDriver.type(text: "two", intoField: "", ref: newSecond, submit: false, in: webView)
         #expect(secondResult.hasPrefix("Typed"))
         #expect(await js(webView, "document.querySelectorAll('input')[1].value") as? String == "two")
+    }
+}
+
+extension PageDriverTests {
+    @Test func mixedFormFillsInOneCallWithoutOpeningPickersOrSubmitting() async throws {
+        let webView = await loadedWebView("""
+        <form onsubmit="window.submitted=true;return false">
+          <input aria-label="Name"><textarea aria-label="Notes"></textarea>
+          <select aria-label="Choice"><option>A</option><option>B</option></select>
+          <input aria-label="City" list="cities"><datalist id="cities"><option value="Paris"></datalist>
+          <input aria-label="Color" type="color" value="#563d7c">
+          <input aria-label="Date" type="date" onfocus="document.body.insertAdjacentHTML('beforeend','<p>Calendar open</p>')">
+          <input aria-label="Range" type="range" min="0" max="10" step="1">
+          <input aria-label="Checked" type="checkbox" checked>
+          <input aria-label="Unchecked" type="checkbox">
+          <input aria-label="First radio" type="radio" name="choice" checked>
+          <input aria-label="Second radio" type="radio" name="choice">
+          <input aria-label="Password" type="password"><input aria-label="File" type="file">
+          <input aria-label="Disabled" disabled><input aria-label="Readonly" readonly>
+          <button>Submit</button>
+        </form>
+        <script>window.events=[]; document.addEventListener('change', e => window.events.push(e.target.getAttribute('aria-label')));</script>
+        """)
+        let page = await PageDriver.readRenderedPage(webView)
+        let values = [("Name", "Jordan"), ("Notes", "Sample"), ("Choice", "B"), ("City", "Paris"),
+                      ("Color", "#3366AA"), ("Date", "2026-10-15"), ("Range", "7"),
+                      ("Checked", "false"), ("Unchecked", "true"), ("Second radio", "true"),
+                      ("Password", "never-write"), ("File", "never-write"), ("Disabled", "never-write"), ("Readonly", "never-write"),
+        ]
+        let fields = try values.map { label, value in
+            PageDriver.FieldValue(ref: try #require(refs(in: page, matching: "\"\(label)\"").first), value: value, select: false)
+        }
+        let result = await PageDriver.fillFields(fields, in: webView)
+        #expect(result.hasPrefix("Filled 10 of 14 fields."), "\(result)")
+        #expect(await js(webView, "document.querySelector('[type=color]').value") as? String == "#3366aa")
+        #expect(await js(webView, "document.querySelector('[type=range]').value") as? String == "7")
+        #expect(await js(webView, "document.querySelector('[type=date]').value") as? String == "2026-10-15")
+        #expect(await js(webView, "Array.from(document.querySelectorAll('[type=checkbox],[type=radio]')).map(e=>e.checked)") as? [Bool] == [false, true, false, true])
+        #expect(await js(webView, "Array.from(document.querySelectorAll('[type=password],[type=file],[disabled],[readonly]')).every(e=>e.value==='')") as? Bool == true)
+        #expect(await js(webView, "window.submitted === true || document.body.textContent.includes('Calendar open')") as? Bool == false)
+        #expect(await js(webView, "window.events.filter(x=>x==='Color'||x==='Range').length") as? Int == 2)
+        #expect(result.contains("Verified refs:"))
+    }
+
+    @Test func invalidColorAndRangeAreReportedWhileOtherFieldsFill() async throws {
+        let webView = await loadedWebView("""
+        <input aria-label="Color" type="color" value="#563d7c">
+        <input aria-label="Range" type="range" min="0" max="10" step="2" value="4">
+        <input aria-label="Name">
+        """)
+        _ = await PageDriver.readRenderedPage(webView)
+        for value in ["11", "3", "", "NaN"] {
+            let result = await PageDriver.fillFields([
+                .init(ref: 1, value: "red", select: false), .init(ref: 2, value: value, select: false),
+                .init(ref: 3, value: "Jordan", select: false),
+            ], in: webView)
+            #expect(result.hasPrefix("Filled 1 of 3 fields."), "\(result)")
+            #expect(result.contains("[1] not filled") && result.contains("[2] not filled"))
+            #expect(await js(webView, "document.querySelector('[type=color]').value") as? String == "#563d7c")
+            #expect(await js(webView, "document.querySelector('[type=range]').value") as? String == "4")
+        }
+        let inspection = await PageDriver.inspectControl(ref: 2, in: webView)
+        #expect(inspection.contains("\"step\":\"2\""))
+    }
+
+    @Test func oversizedBatchCannotPartiallyWrite() async {
+        let webView = await loadedWebView("<input aria-label='First'>")
+        _ = await PageDriver.readRenderedPage(webView)
+        let result = await PageDriver.fillFields((1...33).map { .init(ref: $0, value: "unexpected", select: false) }, in: webView)
+        #expect(result.contains("one to 32"))
+        #expect(await js(webView, "document.querySelector('input').value") as? String == "")
+    }
+
+    @Test func batchVerifiesRadioStatesAfterLaterSelections() async {
+        let webView = await loadedWebView("""
+        <input aria-label="First" type="radio" name="choice"><input aria-label="Second" type="radio" name="choice">
+        """)
+        _ = await PageDriver.readRenderedPage(webView)
+        let result = await PageDriver.fillFields([
+            .init(ref: 1, value: "true", select: false), .init(ref: 2, value: "true", select: false),
+        ], in: webView)
+        #expect(result.hasPrefix("Filled 1 of 2 fields."))
+        #expect(result.contains("[1] not verified"))
+        #expect(await js(webView, "document.querySelectorAll('input')[1].checked") as? Bool == true)
     }
 }

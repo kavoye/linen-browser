@@ -91,10 +91,12 @@ extension AnyLanguageModelAgent {
                 ?? (error as? OpenAIMCPFailure)?.errorDescription ?? state.finalText
             if error is AgentRequestLimitReached {
                 state.stop = .requestLimit
+            } else if (error as? OpenAIFailure)?.isRateLimited == true {
+                state.stop = .rateLimited
             } else {
                 state.stop = Self.isContextWindowError(error) || error is AgentCompactionFailure ? .contextLimit : .providerError
             }
-            if state.stop == .providerError {
+            if state.stop == .providerError || state.stop == .rateLimited {
                 let failure = error as? OpenAIFailure
                 event("provider_failure", [
                     "failure_kind": failure?.kind.rawValue ?? (error is URLError ? "network" : "other"),
@@ -232,7 +234,10 @@ extension AnyLanguageModelAgent {
                     return nil
                 }
                 state.providerRetries += 1
-                callbacks.publishProgress(String(localized: "The model request failed temporarily. Retrying without repeating browser actions."))
+                let retryMessage = (error as? OpenAIFailure)?.isRateLimited == true
+                    ? String(localized: "The model provider’s rate limit was reached. Waiting before retrying.")
+                    : String(localized: "The model request failed temporarily. Retrying without repeating browser actions.")
+                callbacks.publishProgress(retryMessage)
                 try await retrySleep(delay)
                 return nil
             }

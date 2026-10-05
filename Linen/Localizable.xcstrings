@@ -2171,13 +2171,13 @@
     "Fill fields" : {
 
     },
+    "Fill form controls together without submitting." : {
+
+    },
     "Fill in search boxes and forms. Never passwords or payment details." : {
       "comment" : "Caption for the Type tool in assistant settings."
     },
     "Fill Multiple Fields" : {
-
-    },
-    "Fill several text fields or dropdowns together without submitting." : {
 
     },
     "Find" : {
@@ -4953,6 +4953,12 @@
     },
     "The model couldn’t group the tabs. Try again." : {
       "comment" : "Message shown when the Organize Tabs command asked the language model to sort the open tabs into folders and the reply could not be used. The model is the AI; try again is addressed to the person. Curly apostrophe."
+    },
+    "The model provider’s rate limit was reached. Waiting before retrying." : {
+
+    },
+    "The model provider’s rate limit was reached. Your progress is saved; wait a moment, then choose Continue." : {
+
     },
     "The model request failed temporarily. Retrying without repeating browser actions." : {
 

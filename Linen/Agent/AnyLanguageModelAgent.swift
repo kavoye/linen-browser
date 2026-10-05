@@ -179,7 +179,7 @@ final class AnyLanguageModelAgent: AgentRunner {
     ) async -> Bool {
         var finalText = text
         if let reason = stop {
-            if !Task.isCancelled, reason != .contextLimit, finalText == nil {
+            if !Task.isCancelled, reason != .contextLimit, reason != .rateLimited, reason != .providerError, finalText == nil {
                 event("generation", [:])
                 finalText = try? await progressSummary(session, nativeState: nativeState, event: event)
             }
