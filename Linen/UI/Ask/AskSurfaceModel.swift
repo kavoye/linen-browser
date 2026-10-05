@@ -285,7 +285,7 @@ final class AskSurfaceModel {
     }
 
     var pendingQuestion: AgentQuestionModel.Ask? {
-        coordinator.agentQuestions.ask(inSpace: activeSpaceID)
+        coordinator.pendingAgentQuestion(inChrome: true)
     }
 
     func answer(_ text: String) {

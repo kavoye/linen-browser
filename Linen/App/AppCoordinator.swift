@@ -342,6 +342,12 @@ final class AppCoordinator {
         agentReply.isStreaming && agentReply.showsInChrome(inSpace: browser.activeSpaceID)
     }
 
+    func pendingAgentQuestion(inChrome: Bool) -> AgentQuestionModel.Ask? {
+        let spaceID = browser.activeSpaceID
+        guard agentReply.showsInChrome(inSpace: spaceID) == inChrome else { return nil }
+        return agentQuestions.ask(inSpace: spaceID)
+    }
+
     func readAloud(_ text: String) {
         endVoiceConversation()
         guard !text.isEmpty else { return }

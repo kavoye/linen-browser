@@ -51,6 +51,42 @@ struct AskSurfaceModelTests {
         )
     }
 
+    @Test(arguments: [AskSurface.Placement.toolbar, .startPage], [true, false])
+    func questionsAppearOnlyWhereTheRequestStarted(
+        placement: AskSurface.Placement, showsInChrome: Bool
+    ) throws {
+        let model = model(placement: placement)
+        model.browser.newTab()
+        let spaceID = try #require(model.activeSpaceID)
+        let coordinator = model.coordinator
+        coordinator.agentReply.bind(toSpace: spaceID, showsInChrome: showsInChrome)
+        let question = coordinator.agentQuestions.present(
+            [.init(text: "Which color?", options: [])], inSpace: spaceID
+        )
+
+        #expect(model.pendingQuestion == (showsInChrome ? question : nil))
+        #expect(coordinator.pendingAgentQuestion(inChrome: false) == (showsInChrome ? nil : question))
+
+        coordinator.agentQuestions.answer("Red")
+        #expect(model.pendingQuestion == nil)
+        #expect(coordinator.pendingAgentQuestion(inChrome: false) == nil)
+    }
+
+    @Test(arguments: [true, false])
+    func questionsFromAnotherSpaceStayHidden(showsInChrome: Bool) throws {
+        let model = model()
+        model.browser.newTab()
+        let otherSpaceID = UUID()
+        let coordinator = model.coordinator
+        coordinator.agentReply.bind(toSpace: otherSpaceID, showsInChrome: showsInChrome)
+        coordinator.agentQuestions.present(
+            [.init(text: "Which color?", options: [])], inSpace: otherSpaceID
+        )
+
+        #expect(model.pendingQuestion == nil)
+        #expect(coordinator.pendingAgentQuestion(inChrome: false) == nil)
+    }
+
     @Test func theToolbarFieldRestsOnThePageAddress() {
         Omnibox.$agentOnlyForTesting.withValue(true) {
             let model = model()
