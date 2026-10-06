@@ -41,7 +41,11 @@ struct CommandPalette: View {
                 onMoveSelection: model.moveSelection,
                 onMoveSection: model.moveSection,
                 onChipsChange: model.mentionsDidChange,
-                onDismiss: model.dismiss
+                onDismiss: model.dismiss,
+                searchSite: model.searchSite,
+                suggestedSite: model.suggestedSite,
+                onActivateSite: model.activateSiteSearch,
+                onRemoveSite: model.removeSearchSite
             )
             .frame(height: CommandPaletteLayout.fieldHeight)
 
@@ -59,7 +63,9 @@ struct CommandPalette: View {
             AskContextStrip(pages: model.contextPages)
         }
         .frame(width: layout.panelWidth)
-        .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.panel, style: .continuous))
+        .background {
+            CommandPaletteGlass(referenceHeight: CommandPaletteLayout.fieldHeight + layout.maxListHeight)
+        }
         .shadow(color: .black.opacity(0.4), radius: 44, y: 18)
         .padding(.top, layout.topInset)
         .onAppear {

@@ -14,6 +14,10 @@ struct CommandPaletteField: View {
     let onMoveSection: (Int) -> Void
     let onChipsChange: ([UUID]) -> Void
     let onDismiss: () -> Void
+    let searchSite: SearchEngine?
+    let suggestedSite: SearchEngine?
+    let onActivateSite: () -> Bool
+    let onRemoveSite: () -> Bool
 
     @State private var closeHovering = false
 
@@ -24,13 +28,21 @@ struct CommandPaletteField: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 
+            if let searchSite {
+                CommandPaletteSiteChip(site: searchSite) {
+                    _ = onRemoveSite()
+                    focused = true
+                }
+            }
+
             MentionField(
                 text: $query,
                 chips: chips,
                 placeholder: placeholder,
                 fontSize: 19,
                 isFocused: focused,
-                accessibilityLabel: String(localized: "Search tabs, history, and actions"),
+                accessibilityLabel: searchSite.map { String(localized: "Search \($0.name)") }
+                    ?? String(localized: "Search tabs, history, and actions"),
                 onFocusChange: { focused = $0 },
                 onChipsChange: onChipsChange,
                 onSubmit: onSubmit,
@@ -42,15 +54,25 @@ struct CommandPaletteField: View {
                     } else {
                         onMoveSelection(delta)
                     }
-                }
+                },
+                onTab: onActivateSite,
+                onDeleteBackward: onRemoveSite
             )
 
+            if let suggestedSite {
+                CommandPaletteSiteHint(site: suggestedSite) {
+                    _ = onActivateSite()
+                    focused = true
+                }
+            }
+
             Button {
-                if query.isEmpty {
+                if query.isEmpty && searchSite == nil {
                     onDismiss()
                 } else {
                     query = ""
                     onChipsChange([])
+                    _ = onRemoveSite()
                     focused = true
                 }
             } label: {
@@ -61,10 +83,55 @@ struct CommandPaletteField: View {
             }
             .buttonStyle(.plain)
             .onHover { closeHovering = $0 }
-            .help(query.isEmpty ? Text("Close (esc)") : Text("Clear"))
-            .accessibilityLabel(query.isEmpty ? Text("Close") : Text("Clear"))
+            .help(query.isEmpty && searchSite == nil ? Text("Close (esc)") : Text("Clear"))
+            .accessibilityLabel(query.isEmpty && searchSite == nil ? Text("Close") : Text("Clear"))
         }
         .padding(.horizontal, 20)
+    }
+}
+
+private struct CommandPaletteSiteChip: View {
+    let site: SearchEngine
+    let onRemove: () -> Void
+
+    var body: some View {
+        let appearance = SiteSearchAppearance(site: site)
+
+        Button(action: onRemove) {
+            Text(site.name)
+                .lineLimit(1)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(appearance.foreground)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(appearance.background, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .help("Remove \(site.name) search")
+        .accessibilityLabel("Remove \(site.name) search")
+    }
+}
+
+private struct CommandPaletteSiteHint: View {
+    let site: SearchEngine
+    let onActivate: () -> Void
+
+    var body: some View {
+        Button(action: onActivate) {
+            HStack(spacing: 6) {
+                Text("Search \(site.name)")
+                    .lineLimit(1)
+                Text("Tab")
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(.quaternary, in: .rect(cornerRadius: 4))
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Search \(site.name)")
+        .accessibilityHint("Press Tab to search this site")
     }
 }
 

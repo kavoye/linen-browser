@@ -118,6 +118,8 @@ struct MentionField: NSViewRepresentable {
     var onCommandSubmit: () -> Void = {}
     var onCancel: () -> Void = {}
     var onMove: (Int, Bool) -> Void = { _, _ in }
+    var onTab: () -> Bool = { false }
+    var onDeleteBackward: () -> Bool = { false }
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -150,6 +152,8 @@ struct MentionField: NSViewRepresentable {
         coordinator.onCommandSubmit = onCommandSubmit
         coordinator.onCancel = onCancel
         coordinator.onMove = onMove
+        coordinator.onTab = onTab
+        coordinator.onDeleteBackward = onDeleteBackward
 
         let isDark = colorScheme == .dark
         let appearance: NSAppearance.Name = isDark ? .darkAqua : .aqua
@@ -160,8 +164,9 @@ struct MentionField: NSViewRepresentable {
             field.font = .systemFont(ofSize: fontSize)
         }
         field.setAccessibilityLabel(accessibilityLabel.isEmpty ? nil : accessibilityLabel)
-        coordinator.applyPlaceholder(placeholder, fontSize: fontSize, to: field)
         coordinator.apply(text: text, chips: chips, isDark: isDark, to: field)
+        // AppKit keeps the old placeholder in the field editor if it changes before the text is cleared.
+        coordinator.applyPlaceholder(placeholder, fontSize: fontSize, to: field)
         coordinator.syncFocus(isFocused, in: field)
         coordinator.selectAll(token: selectAllToken, in: field)
     }
@@ -191,6 +196,8 @@ struct MentionField: NSViewRepresentable {
         var onCommandSubmit: () -> Void = {}
         var onCancel: () -> Void = {}
         var onMove: (Int, Bool) -> Void = { _, _ in }
+        var onTab: () -> Bool = { false }
+        var onDeleteBackward: () -> Bool = { false }
 
         private var renderedText: String?
         private var renderedChips: [UUID] = []
@@ -322,30 +329,36 @@ struct MentionField: NSViewRepresentable {
         }
 
         func controlTextDidBeginEditing(_ notification: Notification) {
-            reportFocus(true)
+            guard let field = notification.object as? NSTextField else { return }
+            reportFocus(true, in: field)
         }
 
         func controlTextDidEndEditing(_ notification: Notification) {
-            reportFocus(false)
+            guard let field = notification.object as? NSTextField else { return }
+            reportFocus(false, in: field)
         }
 
-        /// Rewriting the field's string ends editing and begins it again, and
-        /// AppKit posts both from inside a SwiftUI update.
-        private func reportFocus(_ focused: Bool) {
+        /// Content and placeholder updates can end editing without moving focus.
+        /// Check the actual responder after AppKit finishes the update.
+        private func reportFocus(_ focused: Bool, in field: NSTextField) {
             pendingFocus = focused
             guard !isReportingFocus else { return }
             isReportingFocus = true
-            DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async { [weak self, weak field] in
                 guard let self else { return }
                 isReportingFocus = false
-                guard let settled = pendingFocus else { return }
                 pendingFocus = nil
-                onFocusChange(settled)
+                guard let field else { return }
+                onFocusChange(holdsFocus(field))
             }
         }
 
         func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
             switch selector {
+            case #selector(NSResponder.insertTab(_:)):
+                return !textView.hasMarkedText() && onTab()
+            case #selector(NSResponder.deleteBackward(_:)):
+                return !textView.hasMarkedText() && textView.string.isEmpty && onDeleteBackward()
             case #selector(NSResponder.insertNewline(_:)):
                 onSubmit()
             case #selector(NSResponder.insertLineBreak(_:)),

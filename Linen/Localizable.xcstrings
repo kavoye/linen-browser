@@ -3669,6 +3669,9 @@
     "Press a shortcut. Press Escape to cancel." : {
       "comment" : "Instruction shown under the keyboard-shortcut field while it is listening for a keystroke. Escape is the name of the key — use the name printed on keyboards in the target language."
     },
+    "Press Tab to search this site" : {
+      "comment" : "Accessibility hint for the command palette's site search suggestion. Tab is the keyboard key."
+    },
     "Press buttons and follow links." : {
       "comment" : "Caption for the Click tool in assistant settings."
     },
@@ -3896,6 +3899,9 @@
     },
     "Remove %@ from this profile?" : {
 
+    },
+    "Remove %@ search" : {
+      "comment" : "Accessibility label and tooltip for removing the active site search chip. %@ is the website's name and should not be translated."
     },
     "Remove Address" : {
 
@@ -4273,6 +4279,9 @@
     },
     "Search" : {
       "comment" : "Title of the General settings section grouping the search engine rows. A noun heading beside an icon, not a button or a verb."
+    },
+    "Search %@" : {
+      "comment" : "Command palette site search hint, placeholder, and result detail. %@ is the website's name and should not be translated. Search is a verb."
     },
     "Search engine" : {
       "comment" : "Title of the General settings row that chooses which search engine is used, and the same wording in the Settings search index. A noun phrase, not an instruction. Sentence case."

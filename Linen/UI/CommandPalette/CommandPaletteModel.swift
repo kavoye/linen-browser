@@ -378,14 +378,19 @@ final class CommandPaletteModel {
         didSet {
             guard interaction.query != oldValue.query, !isPreviewingSelection else { return }
             suggestionPreview.clear()
-            suggestions.update(for: MentionText.stripped(
-                CommandPaletteProjection.suggestionQuery(for: interaction.query)
-            ), settings: browser.context.settings)
+            if searchSite == nil {
+                suggestions.update(for: MentionText.stripped(
+                    CommandPaletteProjection.suggestionQuery(for: interaction.query)
+                ), settings: browser.context.settings)
+            } else {
+                suggestions.clear()
+            }
             refreshSections()
         }
     }
     private(set) var sections: [OmniboxSection] = []
     private(set) var mentionedTabIDs: [UUID] = []
+    private(set) var searchSite: SearchEngine?
     private var isPreviewingSelection = false
     private var suggestionPreview = OmniboxSuggestionPreview()
 
@@ -404,7 +409,36 @@ final class CommandPaletteModel {
     }
 
     var placeholder: String {
-        CommandPaletteProjection.placeholder(agentOnly: Omnibox.isAgentOnly(settings: browser.context.settings))
+        if let searchSite {
+            return String(localized: "Search \(searchSite.name)")
+        }
+        return CommandPaletteProjection.placeholder(agentOnly: Omnibox.isAgentOnly(settings: browser.context.settings))
+    }
+
+    var suggestedSite: SearchEngine? {
+        guard searchSite == nil, mentionedTabIDs.isEmpty else { return nil }
+        return SiteSearch.match(interaction.query, customEngine: browser.context.settings.searchEngine)
+    }
+
+    @discardableResult
+    func activateSiteSearch() -> Bool {
+        guard let site = suggestedSite else { return false }
+        searchSite = site
+        suggestionPreview.clear()
+        suggestions.clear()
+        interaction.query = ""
+        refreshSections()
+        return true
+    }
+
+    @discardableResult
+    func removeSearchSite() -> Bool {
+        guard searchSite != nil else { return false }
+        searchSite = nil
+        suggestionPreview.clear()
+        interaction.selection = 0
+        refreshSections()
+        return true
     }
 
     func prepare() {
@@ -448,14 +482,20 @@ final class CommandPaletteModel {
     }
 
     func submit() {
+        guard searchSite == nil || !sections.isEmpty else { return }
         run(at: interaction.selection)
     }
 
     func submitInCurrentTab() {
+        guard searchSite == nil || !sections.isEmpty else { return }
         runAlternate(at: interaction.selection)
     }
 
     func askWhateverIsTyped() {
+        if searchSite != nil {
+            submit()
+            return
+        }
         ask(interaction.query)
     }
 
@@ -491,7 +531,7 @@ final class CommandPaletteModel {
     }
 
     var contextPages: [AskContextPage] {
-        guard CommandPaletteProjection.isAssistantQuery(
+        guard searchSite == nil, CommandPaletteProjection.isAssistantQuery(
             interaction.query,
             hasMentions: !mentionedTabIDs.isEmpty,
             agentOnly: Omnibox.isAgentOnly(settings: browser.context.settings)
@@ -514,6 +554,28 @@ final class CommandPaletteModel {
 
     private func refreshSections() {
         guard suggestionPreview.sections == nil else { return }
+        if let searchSite {
+            let query = interaction.query.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !query.isEmpty, let url = searchSite.searchURL(for: query) {
+                sections = [
+                    OmniboxSection(id: "site-search", title: "", items: [
+                        OmniboxItem(
+                            id: "site-search-\(searchSite.id)",
+                            kind: .search,
+                            title: query,
+                            detail: String(localized: "Search \(searchSite.name)"),
+                            iconHost: searchSite.host,
+                            alternate: { [weak self] in self?.openCurrent(url) },
+                            run: { [weak self] in self?.openNew(url) }
+                        ),
+                    ]),
+                ]
+            } else {
+                sections = []
+            }
+            interaction.clampSelection(to: sections.flattened.count)
+            return
+        }
         sections = CommandPaletteProjection.sections(
             query: interaction.query,
             agentName: coordinator.agentDisplayName,
