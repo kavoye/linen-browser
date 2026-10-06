@@ -44,7 +44,9 @@ extension AppCoordinator {
     }
 
     var windowTitle: String {
-        let title = browser.activeTab?.title ?? String(localized: "New Window")
+        let pageTitle = browser.activeTab?.title ?? String(localized: "New Window")
+        // AppKit also uses this title in the Dock menu, where it sets the menu's width.
+        let title = pageTitle.count > 40 ? String(pageTitle.prefix(39)) + "…" : pageTitle
         return profiles.isPrivate
             ? String(localized: "\(title) — Private Browsing")
             : String(localized: "\(title) — \(profiles.current.name)")

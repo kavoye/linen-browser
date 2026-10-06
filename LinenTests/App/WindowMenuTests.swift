@@ -9,6 +9,30 @@ import Testing
 @MainActor
 @Suite(.serialized, .boundedWebViews)
 struct WindowMenuTests {
+    @Test(arguments: [false, true])
+    func nativeWindowTitlesLimitLongPageTitles(isPrivate: Bool) throws {
+        let profile: Profile = isPrivate ? .privateBrowsing() : .original()
+        let context = BrowserProfileContext.shared(for: profile)
+        let coordinator = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
+        defer { coordinator.closeWindow() }
+        let tab = coordinator.browser.newTab()
+        coordinator.showBrowser(activate: false)
+        let window = try #require(coordinator.nativeWindow)
+        let suffix = isPrivate ? String(localized: "Private Browsing") : coordinator.profiles.current.name
+        let cases = [
+            ("Short title", "Short title"),
+            (String(repeating: "a", count: 40), String(repeating: "a", count: 40)),
+            (String(repeating: "W", count: 300), String(repeating: "W", count: 39) + "…"),
+            (String(repeating: "👨‍👩‍👧‍👦", count: 41), String(repeating: "👨‍👩‍👧‍👦", count: 39) + "…"),
+        ]
+        for (pageTitle, expectedTitle) in cases {
+            tab.title = pageTitle
+            coordinator.updateWindowAppearance()
+            #expect(window.title == "\(expectedTitle) — \(suffix)")
+            #expect(tab.title == pageTitle)
+        }
+    }
+
     @Test(arguments: [true, false])
     func bothWindowsStayRegisteredUntilClosed(installAfterFirstWindow: Bool) throws {
         let savedMainMenu = NSApp.mainMenu
