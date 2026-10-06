@@ -33,6 +33,35 @@ struct WindowMenuTests {
         }
     }
 
+    @Test(arguments: [false, true])
+    func handoffPublishesTheActiveWebPage(isPrivate: Bool) throws {
+        let profile: Profile = isPrivate ? .privateBrowsing() : .original()
+        let context = BrowserProfileContext.shared(for: profile)
+        let coordinator = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
+        defer { coordinator.closeWindow() }
+        let tab = coordinator.browser.newTab()
+        coordinator.showBrowser(activate: false)
+        let window = try #require(coordinator.nativeWindow)
+
+        tab.urlString = "https://example.com/page"
+        tab.title = "Example"
+        coordinator.updateHandoff()
+        if isPrivate {
+            #expect(window.userActivity == nil)
+        } else {
+            let activity = try #require(window.userActivity)
+            #expect(activity.activityType == NSUserActivityTypeBrowsingWeb)
+            #expect(activity.webpageURL == URL(string: "https://example.com/page"))
+            #expect(activity.title == "Example")
+        }
+
+        for local in ["linen://settings", "file:///tmp/page.html", ""] {
+            tab.urlString = local
+            coordinator.updateHandoff()
+            #expect(window.userActivity == nil)
+        }
+    }
+
     @Test(arguments: [true, false])
     func bothWindowsStayRegisteredUntilClosed(installAfterFirstWindow: Bool) throws {
         let savedMainMenu = NSApp.mainMenu

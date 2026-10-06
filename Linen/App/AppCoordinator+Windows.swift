@@ -115,7 +115,30 @@ extension AppCoordinator {
         nativeWindow?.appearance = profiles.isPrivate
             ? NSAppearance(named: .darkAqua) : settings.appearance.nsAppearance
         nativeWindow?.title = windowTitle
+        updateHandoff()
         reloadFaviconsIfSchemeChanged()
+    }
+
+    var handoffURL: URL? {
+        guard !profiles.isPrivate, let tab = browser.activeTab, !tab.isPrivate,
+              let url = tab.committedURL ?? URL(string: tab.urlString),
+              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https"
+        else { return nil }
+        return url
+    }
+
+    func updateHandoff() {
+        guard let nativeWindow else { return }
+        guard let url = handoffURL else {
+            nativeWindow.userActivity?.invalidate()
+            nativeWindow.userActivity = nil
+            return
+        }
+        let activity = nativeWindow.userActivity
+            ?? NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
+        activity.webpageURL = url
+        activity.title = browser.activeTab?.title
+        nativeWindow.userActivity = activity
     }
 
     func windowDidClose() {
@@ -150,6 +173,7 @@ extension AppCoordinator {
         closePeekImmediately()
         browser.closeAllTabs(saving: false)
         application?.didClose(self)
+        nativeWindow?.userActivity?.invalidate()
         releaseWindowHost()
         if profiles.isPrivate {
             browser.downloads.forgetPrivateDownloads()

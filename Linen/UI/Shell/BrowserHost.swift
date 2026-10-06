@@ -415,6 +415,9 @@ struct BrowserRootView: View {
             .onChange(of: coordinator.windowTitle) { _, _ in
                 coordinator.updateWindowAppearance()
             }
+            .onChange(of: coordinator.handoffURL) { _, _ in
+                coordinator.updateHandoff()
+            }
     }
 }
 
