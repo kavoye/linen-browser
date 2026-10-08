@@ -265,9 +265,11 @@ struct CommandPaletteModelTests {
         #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .shift, key: "p"))
         #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [], key: "p"))
 
+        #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .control, key: "f"))
+        #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .option, key: "p"))
+
         #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: "l"))
-        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .control, key: "f"))
-        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .option, key: "p"))
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .control, key: "\t"))
     }
 
     @Test(arguments: [
@@ -317,7 +319,7 @@ struct CommandPaletteModelTests {
             modifiers: [.command, .option, .shift, .capsLock], key: "М", commandKey: "v"
         ))
         #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: "в", commandKey: "l"))
-        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .control, key: "f", commandKey: "v"))
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [.command, .control], key: "f", commandKey: "v"))
     }
 
     @Test func paletteShortcutsToggleAndNewTabSelectionTracksThePalette() {
@@ -361,6 +363,67 @@ struct CommandPaletteModelTests {
             #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .option, key: key))
         }
         #expect(CommandPaletteShortcutPolicy.arrowKeys.count == 4)
+    }
+
+    @Test func lineAndWordEditingKeepsThePaletteOpen() {
+        let backspace = "\u{7f}"
+        let forwardDelete = String(UnicodeScalar(NSDeleteFunctionKey)!)
+        let left = String(UnicodeScalar(NSLeftArrowFunctionKey)!)
+        let right = String(UnicodeScalar(NSRightArrowFunctionKey)!)
+        let edits: [(NSEvent.ModifierFlags, String)] = [
+            (.command, backspace), (.option, backspace), (.control, backspace),
+            (.option, forwardDelete), (.command, left), (.command, right),
+            ([.command, .shift], left), ([.option, .shift], right),
+        ]
+        for (modifiers, key) in edits {
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: modifiers, key: key))
+        }
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: "l"))
+    }
+
+    @Test func optionTypingAndControlEditingKeepThePaletteOpen() {
+        let kept: [(NSEvent.ModifierFlags, String)] = [
+            (.option, "e"), (.option, "l"), ([.option, .shift], "-"),
+            (.control, "a"), (.control, "e"), (.control, "k"), ([.control, .option], "b"),
+            ([.command, .control], " "),
+        ]
+        for (modifiers, key) in kept {
+            #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: modifiers, key: key))
+        }
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .control, key: "\t"))
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [.control, .shift], key: "\t"))
+        #expect(CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [.command, .control], key: "f"))
+    }
+
+    @Test func commandArrowReachesAFocusedTextFieldBeforeBackAndForward() throws {
+        let cases: [(modifiers: NSEvent.ModifierFlags, key: Int, expected: Bool)] = [
+            (.command, NSLeftArrowFunctionKey, true),
+            (.command, NSRightArrowFunctionKey, true),
+            ([.command, .shift], NSLeftArrowFunctionKey, true),
+            ([.command, .option], NSRightArrowFunctionKey, true),
+            ([.command, .control], NSRightArrowFunctionKey, false),
+            (.option, NSLeftArrowFunctionKey, false),
+        ]
+        for testCase in cases {
+            let character = String(try #require(UnicodeScalar(testCase.key)))
+            let event = try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: testCase.modifiers.union([.function, .numericPad]),
+                timestamp: 0, windowNumber: 0, context: nil,
+                characters: character, charactersIgnoringModifiers: character,
+                isARepeat: false, keyCode: 0
+            ))
+            #expect(ShortcutPriority.textEditorAnswersFirst(event) == testCase.expected)
+        }
+    }
+
+    @Test func commandBackspaceReachesAFocusedTextField() throws {
+        let event = try #require(NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: .command,
+            timestamp: 0, windowNumber: 0, context: nil,
+            characters: "\u{7f}", charactersIgnoringModifiers: "\u{7f}",
+            isARepeat: false, keyCode: 51
+        ))
+        #expect(ShortcutPriority.textEditorAnswersFirst(event))
     }
 
     /// Command-arrow moves by section, and the sections it counts are the ones

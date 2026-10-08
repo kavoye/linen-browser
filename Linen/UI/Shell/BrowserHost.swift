@@ -447,6 +447,11 @@ private final class BrowserWindow: NSWindow {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let editor = firstResponder as? NSTextView, editor.isEditable,
+           ShortcutPriority.textEditorAnswersFirst(event) {
+            editor.keyDown(with: event)
+            return true
+        }
         if ShortcutPriority.menuAnswersFirst(event),
            NSApp.mainMenu?.performKeyEquivalent(with: event) == true {
             return true

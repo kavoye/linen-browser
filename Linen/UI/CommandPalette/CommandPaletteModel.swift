@@ -91,10 +91,11 @@ enum CommandPaletteShortcutPolicy {
             || modifiers == [.command, .shift] && normalizedKey == "z"
             || modifiers == [.command, .option, .shift] && normalizedKey == "v"
         let isPaletteShortcut = modifiers == .command && (normalizedKey == "k" || normalizedKey == "t")
-        let isListNavigation = arrowKeys.contains(key)
+        let isCaretEditing = ShortcutPriority.textEditingKeys.contains(key)
         let isRun = returnKeys.contains(key)
-        let isCommand = !modifiers.isDisjoint(with: [.command, .control, .option])
-        return isCommand && !isTextEditing && !isPaletteShortcut && !isListNavigation && !isRun
+        let isCharacterPalette = modifiers == [.command, .control] && key == " "
+        let isTyping = !modifiers.contains(.command) && (!modifiers.contains(.control) || key != "\t")
+        return !isTyping && !isTextEditing && !isPaletteShortcut && !isCaretEditing && !isRun && !isCharacterPalette
     }
 }
 

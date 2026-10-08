@@ -24,6 +24,22 @@ enum ShortcutPriority {
         (rightArrow, [.command]),
     ]
 
+    static let textEditingKeys: Set<String> = Set(
+        [
+            NSLeftArrowFunctionKey, NSRightArrowFunctionKey, NSUpArrowFunctionKey, NSDownArrowFunctionKey,
+            NSHomeFunctionKey, NSEndFunctionKey, NSPageUpFunctionKey, NSPageDownFunctionKey, NSDeleteFunctionKey,
+        ]
+            .compactMap { UnicodeScalar($0).map(String.init) } + ["\u{7f}"]
+    )
+
+    static func textEditorAnswersFirst(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags
+            .intersection(.deviceIndependentFlagsMask)
+            .subtracting([.capsLock, .numericPad, .function])
+        guard flags.contains(.command), flags.isSubset(of: [.command, .option, .shift]) else { return false }
+        return textEditingKeys.contains(event.charactersIgnoringModifiers ?? "")
+    }
+
     static func menuAnswersFirst(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags
             .intersection(.deviceIndependentFlagsMask)
