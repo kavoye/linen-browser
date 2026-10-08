@@ -68,7 +68,7 @@ struct MediaScriptTests {
         configuration.userContentController.addUserScript(
             WKUserScript(
                 source: MediaCenter.frameScriptSource,
-                injectionTime: .atDocumentEnd,
+                injectionTime: .atDocumentStart,
                 forMainFrameOnly: false
             )
         )
@@ -198,6 +198,122 @@ struct MediaScriptTests {
         collector.messages.removeAll()
         _ = try? await webView.evaluateJavaScript("document.querySelector('audio').remove(); true")
         #expect(await waitUntil { collector.messages.contains("audio:0") })
+    }
+
+    @Test func aPlayerThatNeverJoinsThePageIsStillHeard() async {
+        let (webView, collector) = await player(hasVideo: false)
+        collector.messages.removeAll()
+        _ = try? await webView.evaluateJavaScript("""
+        const audio = document.createElement('audio');
+        Object.defineProperty(audio, 'paused', { get() { return false; } });
+        Object.defineProperty(audio, 'duration', { get() { return 200; } });
+        audio.play().catch(() => {});
+        true
+        """)
+        #expect(await waitUntil { collector.messages.contains("audio:1") })
+        #expect(await state(webView, collector)["d"] == 200)
+    }
+
+    @Test func aPlayerStartedWhileThePageLoadsIsStillHeard() async {
+        let collector = Collector()
+        let configuration = WebViewPool.makeConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        configuration.userContentController.add(collector, name: MediaCenter.frameScriptHandlerName)
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: MediaCenter.frameScriptSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        )
+        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
+        webView.loadHTMLString(
+            """
+            <!doctype html><html><head><script>
+            const early = document.createElement('audio');
+            Object.defineProperty(early, 'paused', { get() { return false; } });
+            Object.defineProperty(early, 'duration', { get() { return 200; } });
+            early.play().catch(() => {});
+            </script></head><body><p>Loading page</p></body></html>
+            """,
+            baseURL: nil
+        )
+
+        #expect(await waitUntil { collector.messages.contains("audio:1") })
+        #expect(await state(webView, collector)["d"] == 200)
+    }
+
+    @Test func theSongIsReportedOverAShortSilentLoopBesideIt() async {
+        let (webView, collector) = await player(hasVideo: false)
+        _ = try? await webView.evaluateJavaScript("""
+        const song = document.createElement('audio');
+        Object.defineProperty(song, 'paused', { get() { return false; } });
+        Object.defineProperty(song, 'duration', { get() { return 130; } });
+        Object.defineProperty(song, 'currentTime', { get() { return 28; } });
+        song.play().catch(() => {});
+        const loop = document.createElement('video');
+        Object.defineProperty(loop, 'paused', { get() { return false; } });
+        Object.defineProperty(loop, 'muted', { get() { return true; } });
+        Object.defineProperty(loop, 'duration', { get() { return 9; } });
+        Object.defineProperty(loop, 'currentTime', { get() { return 4; } });
+        loop.play().catch(() => {});
+        true
+        """)
+
+        #expect(await waitUntil { collector.messages.contains("audio:1") })
+        let fields = await state(webView, collector)
+        #expect(fields["d"] == 130)
+        #expect(fields["t"] == 28)
+    }
+
+    @Test func aPageThatHandlesTrackChangesSaysSoAndIsAskedToSkip() async {
+        let (webView, collector) = await player(hasVideo: false)
+        collector.messages.removeAll()
+        _ = try? await webView.evaluateJavaScript("""
+        window.__skipped = [];
+        navigator.mediaSession.setActionHandler('nexttrack', (details) => window.__skipped.push(details.action));
+        true
+        """)
+        #expect(await waitUntil { collector.messages.contains("tracks:01") })
+
+        _ = try? await webView.evaluateJavaScript("\(post("linen-nexttrack")); true")
+        #expect(await waitUntil {
+            (try? await webView.evaluateJavaScript("window.__skipped.join()")) as? String == "nexttrack"
+        })
+
+        _ = try? await webView.evaluateJavaScript("navigator.mediaSession.setActionHandler('nexttrack', null); true")
+        #expect(await waitUntil { collector.messages.contains("tracks:00") })
+    }
+
+    @Test func theSongIsReportedOverAMutedLoopingVideoOnThePage() async {
+        let (webView, collector) = await player()
+        _ = try? await webView.evaluateJavaScript("""
+        Object.assign(window.__box, { paused: false, muted: true, duration: 8, currentTime: 3, videoWidth: 720, readyState: 4 });
+        const song = document.createElement('audio');
+        Object.defineProperty(song, 'paused', { get() { return false; } });
+        Object.defineProperty(song, 'duration', { get() { return 130; } });
+        Object.defineProperty(song, 'currentTime', { get() { return 28; } });
+        song.play().catch(() => {});
+        true
+        """)
+
+        #expect(await waitUntil { collector.messages.contains("audio:1") })
+        let fields = await state(webView, collector)
+        #expect(fields["d"] == 130)
+        #expect(fields["t"] == 28)
+    }
+
+    @Test func theOffPagePlayerThatIsPlayingIsTheOneReported() async {
+        let (webView, collector) = await player(hasVideo: false)
+        _ = try? await webView.evaluateJavaScript("""
+        const playing = document.createElement('audio');
+        Object.defineProperty(playing, 'paused', { get() { return false; } });
+        Object.defineProperty(playing, 'duration', { get() { return 200; } });
+        playing.play().catch(() => {});
+        const next = document.createElement('audio');
+        Object.defineProperty(next, 'paused', { get() { return true; } });
+        next.play().catch(() => {});
+        true
+        """)
+
+        #expect(await waitUntil { collector.messages.contains("audio:1") })
+        #expect(await state(webView, collector)["d"] == 200)
     }
 
     /// Runs `script`, asks the page to report, and reads the line it sends.

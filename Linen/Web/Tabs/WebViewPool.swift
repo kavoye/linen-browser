@@ -369,7 +369,7 @@ final class WebViewPool {
     func prepare(scriptSource: String, handlerName: String, handler: any WKScriptMessageHandler & AnyObject) {
         addScript(
             scriptSource,
-            injectionTime: .atDocumentEnd,
+            injectionTime: .atDocumentStart,
             forMainFrameOnly: false,
             handlerName: handlerName,
             handler: handler

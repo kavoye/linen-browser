@@ -608,6 +608,74 @@ struct MediaCenterTests {
         #expect(media.watched.duration == 331)
     }
 
+    @Test func theDockLearnsWhichTrackSkipsThePageHandles() {
+        let media = MediaCenter()
+        let page = WKWebView()
+        media.controlTab(webView: page, title: "Spotify", tabID: UUID(), artwork: nil)
+
+        media.receiveScriptMessage("tracks:11", from: page, isMainFrame: true)
+        #expect(media.model.canGoToPreviousTrack)
+        #expect(media.model.canGoToNextTrack)
+
+        media.receiveScriptMessage("tracks:00", from: page, isMainFrame: false)
+        #expect(media.model.canGoToNextTrack, "an embedded frame does not speak for the page")
+
+        media.releaseControl()
+        #expect(!media.model.canGoToPreviousTrack)
+        #expect(!media.model.canGoToNextTrack)
+    }
+
+    @Test func dockingTheWatchedTabKeepsItsTrack() {
+        let media = MediaCenter()
+        let page = WKWebView()
+        let tabID = UUID()
+        media.watch(webView: page, title: "YouTube", tabID: tabID, artwork: nil)
+        media.receiveScriptMessage(
+            "meta:{\"t\":\"Ordinary\",\"a\":\"Alex Warren\",\"al\":\"\",\"art\":\"\",\"g\":\"0\"}",
+            from: page,
+            isMainFrame: true
+        )
+        media.receiveScriptMessage("state:{\"t\":30,\"d\":186,\"l\":0,\"p\":1,\"v\":1,\"m\":0,\"w\":0}", from: page, isMainFrame: true)
+
+        media.controlTab(webView: page, title: "YouTube", tabID: tabID, artwork: nil)
+
+        #expect(media.model.trackTitle == "Ordinary")
+        #expect(media.model.artist == "Alex Warren")
+        #expect(media.model.duration == 186)
+    }
+
+    @Test func watchingTheTabTheDockLetGoKeepsItsTrack() {
+        let media = MediaCenter()
+        let page = WKWebView()
+        let tabID = UUID()
+        media.controlTab(webView: page, title: "YouTube", tabID: tabID, artwork: nil)
+        media.receiveScriptMessage(
+            "meta:{\"t\":\"Ordinary\",\"a\":\"Alex Warren\",\"al\":\"\",\"art\":\"\",\"g\":\"0\"}",
+            from: page,
+            isMainFrame: true
+        )
+        media.receiveScriptMessage("state:{\"t\":30,\"d\":186,\"l\":0,\"p\":1,\"v\":1,\"m\":0,\"w\":0}", from: page, isMainFrame: true)
+
+        media.releaseControl()
+        media.watch(webView: page, title: "YouTube", tabID: tabID, artwork: nil)
+
+        #expect(media.watched.trackTitle == "Ordinary")
+        #expect(media.watched.duration == 186)
+    }
+
+    @Test func anotherTabIsNotHandedTheDocksTrack() {
+        let media = MediaCenter()
+        let page = WKWebView()
+        media.controlTab(webView: page, title: "YouTube", tabID: UUID(), artwork: nil)
+        media.receiveScriptMessage("state:{\"t\":30,\"d\":186,\"l\":0,\"p\":1,\"v\":1,\"m\":0,\"w\":0}", from: page, isMainFrame: true)
+
+        media.releaseControl()
+        media.watch(webView: WKWebView(), title: "Other", tabID: UUID(), artwork: nil)
+
+        #expect(media.watched.duration == 0)
+        #expect(media.watched.trackTitle.isEmpty)
+    }
+
     @Test func lettingGoOfTheWatchedTabForgetsItsTrack() {
         let media = MediaCenter()
         let page = WKWebView()
@@ -688,12 +756,6 @@ struct MediaScriptRectTests {
         await waitUntil { collector.messages.contains { $0.hasPrefix(prefix) } }
     }
 
-    private func settle(_ webView: WKWebView, _ collector: Collector) async {
-        collector.messages.removeAll { $0.hasPrefix("rect:") }
-        _ = try? await webView.evaluateJavaScript("window.postMessage('linen-resend', '*')")
-        _ = await waitForMessage(collector, prefix: "rect:")
-    }
-
     @Test func thePlayerRectIsReported() async {
         let (webView, collector) = await playerWebView()
         defer { withExtendedLifetime(webView) {} }
@@ -766,9 +828,9 @@ struct MediaScriptRectTests {
         collector.messages.removeAll()
 
         _ = try? await webView.evaluateJavaScript("window.postMessage('linen-pip', '*')")
-        await settle(webView, collector)
+        #expect(await waitForMessage(collector, prefix: "diag:"))
 
-        #expect(!collector.messages.contains("diag:not-playing"))
+        #expect(collector.messages.first { $0.hasPrefix("diag:") } == "diag:no-video")
     }
 
     @Test func revealReportsTheRectAgainAfterItWasAlreadyPosted() async {

@@ -19,12 +19,73 @@ enum MediaScript {
       let scanTimer = null;
       let pendingScan = null;
       let pageHidden = false;
+      const loose = [];
+      function keepLoose(m) {
+        if (m.isConnected || loose.indexOf(m) >= 0) { return; }
+        loose.unshift(m);
+        if (loose.length > 4) { loose.pop(); }
+        scheduleScan();
+      }
+      function followLoose(m) {
+        if (m.__linenLoose) { return; }
+        m.__linenLoose = true;
+        m.addEventListener('play', function () { keepLoose(m); });
+      }
+      const nativePlay = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        keepLoose(this);
+        return nativePlay.apply(this, arguments);
+      };
+      const nativeCreate = Document.prototype.createElement;
+      Document.prototype.createElement = function () {
+        const made = nativeCreate.apply(this, arguments);
+        if (made instanceof HTMLMediaElement) { followLoose(made); }
+        return made;
+      };
+      const NativeAudio = window.Audio;
+      if (NativeAudio) {
+        window.Audio = function Audio() {
+          const made = new (Function.prototype.bind.apply(NativeAudio, [null].concat(Array.prototype.slice.call(arguments))))();
+          followLoose(made);
+          return made;
+        };
+        window.Audio.prototype = NativeAudio.prototype;
+      }
+      const trackActions = { previoustrack: null, nexttrack: null };
+      let lastTracks = '';
+      function reportTracks() {
+        if (window !== window.top) { return; }
+        const payload = (trackActions.previoustrack ? '1' : '0') + (trackActions.nexttrack ? '1' : '0');
+        if (payload === lastTracks) { return; }
+        lastTracks = payload;
+        post('tracks:' + payload);
+      }
+      if (window.MediaSession && MediaSession.prototype.setActionHandler) {
+        const nativeSetAction = MediaSession.prototype.setActionHandler;
+        MediaSession.prototype.setActionHandler = function (action, handler) {
+          if (action === 'previoustrack' || action === 'nexttrack') {
+            trackActions[action] = typeof handler === 'function' ? handler : null;
+            reportTracks();
+          }
+          return nativeSetAction.apply(this, arguments);
+        };
+      }
       function media() {
-        return Array.prototype.slice.call(document.querySelectorAll('video, audio'));
+        const found = Array.prototype.slice.call(document.querySelectorAll('video, audio'));
+        loose.forEach(function (m) { if (!m.isConnected) { found.push(m); } });
+        return found;
       }
       function primary() {
-        if (video && !video.isConnected) { video = null; }
-        return video || media()[0] || null;
+        if (video && !video.isConnected && loose.indexOf(video) < 0) { video = null; }
+        const all = media();
+        const longest = function (list) {
+          return list.reduce(function (best, m) {
+            return !best || realDuration(m) > realDuration(best) ? m : best;
+          }, null);
+        };
+        return longest(all.filter(audible)) || video
+          || longest(all.filter(function (m) { return !m.paused && !m.ended; }))
+          || all[0] || null;
       }
       function audible(m) {
         if (m.paused || m.ended) { return false; }
@@ -89,7 +150,7 @@ enum MediaScript {
         } catch (e) {}
       }
       function stageElement() {
-        const media = primary();
+        const media = video || primary();
         if (media) { return media; }
         let best = null;
         let bestArea = 40000;
@@ -188,7 +249,16 @@ enum MediaScript {
           reportRect();
           return;
         }
+        if (data === 'linen-previoustrack' || data === 'linen-nexttrack') {
+          const handler = trackActions[data.slice('linen-'.length)];
+          if (handler) {
+            try { handler({ action: data.slice('linen-'.length) }); } catch (e) {}
+          }
+          return;
+        }
         if (data === 'linen-resend') {
+          lastTracks = '';
+          reportTracks();
           lastMeta = '';
           lastAudio = null;
           lastVideo = null;
@@ -457,8 +527,15 @@ enum MediaScript {
         scheduleScan();
       });
       if (window === window.top) { post('hello'); }
-      scan();
-      observeChanges();
+      function start() {
+        scan();
+        observeChanges();
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start, { once: true });
+      } else {
+        start();
+      }
     })();
     """
 }

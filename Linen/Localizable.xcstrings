@@ -3075,6 +3075,9 @@
     "Next (⌘G)" : {
       "comment" : "Tooltip on the down-chevron in the find bar, which moves to the next match on the page. ⌘G is the keyboard shortcut — keyboard symbols, keep exactly, including the parentheses."
     },
+    "Next Track" : {
+
+    },
     "No %@ key yet, using Apple Intelligence" : {
       "comment" : "Status message when the chosen provider has no API key stored and Linen falls back to the on-device model. %@ is the provider's name, e.g. OpenAI; “Apple Intelligence” is Apple's product name — leave as is."
     },
@@ -3695,6 +3698,9 @@
     },
     "previous flagship" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the vendor’s previous top model. Lowercase, and the space is very tight."
+    },
+    "Previous Track" : {
+
     },
     "Print Page…" : {
       "comment" : "Command in the page’s right-click menu, below Save Page As…. It opens the macOS print panel. The ellipsis says that a panel opens; keep it. Title Case."

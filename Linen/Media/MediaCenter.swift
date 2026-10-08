@@ -17,6 +17,8 @@ final class MediaModel {
     var isActive = false
     var isInNativePiP = false
     var hasVideo = false
+    var canGoToPreviousTrack = false
+    var canGoToNextTrack = false
 
     // MARK: - Transport state
 
@@ -149,6 +151,10 @@ final class MediaCenter {
         watched.isLive = false
         watched.isPlaying = true
         watched.isActive = true
+        if let handedBack, handedBack.tabID == tabID {
+            handedBack.track.apply(to: watched)
+        }
+        handedBack = nil
         Self.post("linen-resend", to: webView)
     }
 
@@ -212,11 +218,17 @@ final class MediaCenter {
         model.title = title.isEmpty ? String(localized: "Now Playing") : title
         model.isInNativePiP = nativePiPView === webView
         model.hasVideo = false
+        model.canGoToPreviousTrack = false
+        model.canGoToNextTrack = false
         model.isPlaying = isPlaying
         model.isLive = false
         model.currentTime = 0
         model.duration = 0
         model.isActive = true
+        if watched.isActive, watched.controlledTabID == tabID {
+            MediaTrack(watched).apply(to: model)
+        }
+        handedBack = nil
         needsReveal = true
         Self.post("linen-resend", to: webView)
         Pipeline.log.notice("media: controlling playback in a background tab")
@@ -224,9 +236,12 @@ final class MediaCenter {
 
     func releaseControl() {
         guard let previous = controlledTabID else { return }
+        handedBack = model.isActive ? (previous, MediaTrack(model)) : nil
         setPicture(nil)
         model.isInNativePiP = false
         model.hasVideo = false
+        model.canGoToPreviousTrack = false
+        model.canGoToNextTrack = false
         model.playerViewportRect = nil
         model.controlledTabID = nil
         controlledWebView = nil
@@ -272,6 +287,8 @@ final class MediaCenter {
     private func forgetControlledPage() {
         setPicture(nil)
         model.hasVideo = false
+        model.canGoToPreviousTrack = false
+        model.canGoToNextTrack = false
         model.pageTitle = ""
         model.trackTitle = ""
         model.artist = ""
@@ -298,6 +315,7 @@ final class MediaCenter {
     }
     private weak var controlledWebView: WKWebView?
     private weak var watchedWebView: WKWebView?
+    private var handedBack: (tabID: UUID, track: MediaTrack)?
     private var needsReveal = true
 
     var pictureCrop: CGRect? {
@@ -345,6 +363,14 @@ final class MediaCenter {
     func playPause() {
         model.isPlaying.toggle()
         send(model.isPlaying ? "linen-play" : "linen-pause")
+    }
+
+    func previousTrack() {
+        send("linen-previoustrack")
+    }
+
+    func nextTrack() {
+        send("linen-nexttrack")
     }
 
     func skip(by seconds: Double) {
@@ -598,6 +624,13 @@ final class MediaCenter {
         if message.hasPrefix("rect:") {
             guard isMainFrame else { return }
             applyRect(String(message.dropFirst("rect:".count)))
+            return
+        }
+        if message.hasPrefix("tracks:") {
+            guard isMainFrame else { return }
+            let flags = Array(message.dropFirst("tracks:".count))
+            model.canGoToPreviousTrack = flags.first == "1"
+            model.canGoToNextTrack = flags.count > 1 && flags[1] == "1"
             return
         }
         if message == "ended" {

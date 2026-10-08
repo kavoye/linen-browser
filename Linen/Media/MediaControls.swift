@@ -200,6 +200,10 @@ struct MediaTransport: View {
         media.model
     }
 
+    private var isMusic: Bool {
+        model.canGoToPreviousTrack || model.canGoToNextTrack
+    }
+
     private var playPauseHelp: LocalizedStringResource {
         model.isPlaying ? "Pause" : "Play"
     }
@@ -215,12 +219,22 @@ struct MediaTransport: View {
     var body: some View {
         HStack(spacing: spacing) {
             if !model.isLive {
-                MediaButton(
-                    systemName: "gobackward.15",
-                    size: 11,
-                    help: "Back 15 seconds"
-                ) {
-                    media.skip(by: -15)
+                if isMusic {
+                    MediaSkipButton(systemName: "backward.fill", size: 11, help: "Previous Track") {
+                        if model.canGoToPreviousTrack {
+                            media.previousTrack()
+                        } else {
+                            media.skip(by: -15)
+                        }
+                    } onHold: {
+                        media.skip(by: -5)
+                    }
+                } else {
+                    MediaSkipButton(systemName: "gobackward.15", size: 11, help: "Back 15 seconds") {
+                        media.skip(by: -15)
+                    } onHold: {
+                        media.skip(by: -5)
+                    }
                 }
             }
 
@@ -233,12 +247,22 @@ struct MediaTransport: View {
             }
 
             if !model.isLive {
-                MediaButton(
-                    systemName: "goforward.15",
-                    size: 11,
-                    help: "Forward 15 seconds"
-                ) {
-                    media.skip(by: 15)
+                if isMusic {
+                    MediaSkipButton(systemName: "forward.fill", size: 11, help: "Next Track") {
+                        if model.canGoToNextTrack {
+                            media.nextTrack()
+                        } else {
+                            media.skip(by: 15)
+                        }
+                    } onHold: {
+                        media.skip(by: 5)
+                    }
+                } else {
+                    MediaSkipButton(systemName: "goforward.15", size: 11, help: "Forward 15 seconds") {
+                        media.skip(by: 15)
+                    } onHold: {
+                        media.skip(by: 5)
+                    }
                 }
             } else {
                 LiveBadge(font: .system(size: 10, weight: .medium))
@@ -459,6 +483,61 @@ struct MediaSlider: View {
         .frame(height: max(height * 3, 10))
         .animation(Theme.Motion.quick, value: isActive)
         .onHover { hovering = $0 }
+    }
+}
+
+struct MediaSkipButton: View {
+    let systemName: String
+    var size: CGFloat
+    var help: LocalizedStringResource
+    let onTap: () -> Void
+    let onHold: () -> Void
+
+    @State private var hovering = false
+    @State private var hold: Task<Void, Never>?
+    @State private var didHold = false
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: size, weight: .semibold))
+            .hoverLift(hovering)
+            .frame(width: (size * 1.5).rounded(), height: (size * 1.5).rounded())
+            .contentShape(Rectangle())
+            .foregroundStyle(hovering ? Color.primary : Color.secondary)
+            .onHover { hovering = $0 }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in press() }
+                    .onEnded { _ in release() }
+            )
+            .onDisappear { hold?.cancel() }
+            .help(Text(help))
+            .accessibilityElement()
+            .accessibilityLabel(Text(help))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { onTap() }
+    }
+
+    private func press() {
+        guard hold == nil else { return }
+        didHold = false
+        hold = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            while !Task.isCancelled {
+                didHold = true
+                onHold()
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+        }
+    }
+
+    private func release() {
+        hold?.cancel()
+        hold = nil
+        if !didHold {
+            onTap()
+        }
+        didHold = false
     }
 }
 
