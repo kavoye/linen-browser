@@ -23,9 +23,7 @@ struct CommandPaletteContext {
     var isStacked = false
     var hasSplitAxis = false
     var isSidebarVisible = true
-    var isActivityVisible = false
-    var isLyricsVisible = false
-    var canShowLyrics = false
+    var isSidePanelVisible = false
     var isFullScreen = false
     var canCheckForUpdates = false
 }
@@ -83,8 +81,7 @@ enum CommandPaletteAction: String, CaseIterable {
     case closeOtherPanes
 
     case toggleSidebar
-    case toggleActivity
-    case toggleLyrics
+    case toggleSidePanel
     case toggleFullScreen
     case closeWindow
     case minimizeWindow
@@ -588,10 +585,9 @@ enum CommandPaletteCatalog {
 
         var view: [CommandPaletteCommand] {
             let sidebarTitle: LocalizedStringResource = context.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar"
-            let activityTitle: LocalizedStringResource = context.isActivityVisible
-                ? "Hide Assistant"
-                : "Show Assistant"
-            let lyricsTitle: LocalizedStringResource = context.isLyricsVisible ? "Hide Lyrics" : "Show Lyrics"
+            let sidePanelTitle: LocalizedStringResource = context.isSidePanelVisible
+                ? "Hide Side Panel"
+                : "Show Side Panel"
             let fullScreenTitle: LocalizedStringResource = context.isFullScreen
                 ? "Exit Full Screen"
                 : "Enter Full Screen"
@@ -605,23 +601,12 @@ enum CommandPaletteCatalog {
                     aliases: ["tabs list", "panel"]
                 ),
                 make(
-                    .toggleActivity,
+                    .toggleSidePanel,
                     group: .view,
-                    title: activityTitle,
-                    detail: "what the assistant is doing",
-                    symbol: "sparkle",
-                    shortcut: "⌥⌘A",
-                    aliases: ["inspector", "transcript", "log"]
-                ),
-                make(
-                    .toggleLyrics,
-                    group: .view,
-                    title: lyricsTitle,
-                    detail: "sing along with the track",
-                    symbol: "quote.bubble",
-                    shortcut: "⌥⌘Y",
-                    aliases: ["words", "sing", "karaoke", "song", "music"],
-                    isAvailable: context.canShowLyrics
+                    title: sidePanelTitle,
+                    symbol: "sidebar.right",
+                    shortcut: "⌥⌘S",
+                    aliases: ["assistant", "inspector", "lyrics"]
                 ),
                 make(
                     .toggleFullScreen,

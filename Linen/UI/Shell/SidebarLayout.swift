@@ -178,6 +178,12 @@ final class SidebarLayout {
         dragOrigin != nil
     }
 
+    var dockedWidth: CGFloat? {
+        guard isVisible else { return nil }
+        guard style == .full else { return SidebarMetrics.iconsWidth }
+        return SidebarMetrics.clampWidth(width, container: 0)
+    }
+
     func openWidth(in container: CGFloat) -> CGFloat {
         if let dragWidth {
             return dragWidth

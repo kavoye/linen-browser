@@ -92,6 +92,7 @@ struct ChromeWashTests {
             "Linen/UI/Sidebar/Sidebar.swift",
             "Linen/UI/Content/ContentNavBar.swift",
             "Linen/UI/Shell/BrowserView.swift",
+            "Linen/UI/Shell/SidePanelView.swift",
             "Linen/Media/Lyrics/LyricsView.swift",
         ]
         for path in sources {

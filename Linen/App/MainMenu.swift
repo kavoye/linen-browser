@@ -214,12 +214,11 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(.separator())
         menu.addItem(command("Hide Sidebar", #selector(toggleSidebar), key: "s", modifiers: [.command, .control]))
         menu.addItem(command(
-            "Show Assistant",
-            #selector(toggleAgentInspector),
-            key: "a",
+            "Show Side Panel",
+            #selector(toggleSidePanel),
+            key: "s",
             modifiers: [.command, .option]
         ))
-        menu.addItem(command("Show Lyrics", #selector(toggleLyrics), key: "y", modifiers: [.command, .option]))
         menu.addItem(.separator())
         let developer = NSMenu()
         developer.addItem(command("Restart Page", #selector(restartPage)))
@@ -371,11 +370,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func toggleSidebar() {
         coordinator.toggleSidebar()
     }
-    @objc private func toggleAgentInspector() {
-        coordinator.toggleAgentInspector()
-    }
-    @objc private func toggleLyrics() {
-        coordinator.toggleLyrics()
+    @objc private func toggleSidePanel() {
+        coordinator.toggleSidePanel()
     }
 
     @objc private func splitRight() {
@@ -516,19 +512,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
                 ? "Hide Sidebar" : "Show Sidebar"
             menuItem.title = String(localized: sidebarTitle)
             return true
-        case #selector(toggleAgentInspector):
-            let activityTitle: LocalizedStringResource = coordinator.sidePanel.isShowing(.activity)
-                ? "Hide Assistant"
-                : "Show Assistant"
-            menuItem.title = String(localized: activityTitle)
+        case #selector(toggleSidePanel):
+            let sidePanelTitle: LocalizedStringResource = coordinator.sidePanel.isVisible
+                ? "Hide Side Panel"
+                : "Show Side Panel"
+            menuItem.title = String(localized: sidePanelTitle)
             return true
-        case #selector(toggleLyrics):
-            let lyricsTitle: LocalizedStringResource = coordinator.sidePanel.isShowing(.lyrics)
-                ? "Hide Lyrics"
-                : "Show Lyrics"
-            menuItem.title = String(localized: lyricsTitle)
-            menuItem.isHidden = !coordinator.settings.showsLyrics
-            return coordinator.settings.showsLyrics
         default:
             return true
         }

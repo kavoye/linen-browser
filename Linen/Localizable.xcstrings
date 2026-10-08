@@ -730,6 +730,9 @@
     "Add Provider…" : {
       "comment" : "Settings → Assistant. Row that opens the list of providers not yet set up. Matches \"Add Profile…\" on the Profiles page."
     },
+    "Add to Side Panel" : {
+      "comment" : "Tooltip and accessibility label on the + at the end of the side panel’s tab strip. It opens a menu that adds or removes optional panels such as Lyrics and GitHub. “Side Panel” is the right-hand one; the left is the Sidebar. Title Case."
+    },
     "Added" : {
       "comment" : "Label of a disabled button on the onboarding extensions screen, shown in place of Add once that extension is installed. Title Case."
     },
@@ -935,6 +938,9 @@
     },
     "Ask about this page" : {
 
+    },
+    "Ask about websites and get help with tasks." : {
+      "comment" : "Description of the Assistant panel. Shown under its name where side panel integrations are listed. One short sentence."
     },
     "Ask Again" : {
       "comment" : "Words that replace the footer of a recent-task card on the start page while the pointer is over it; clicking the card runs the same prompt again. Verb phrase in Title Case, one line in a narrow card."
@@ -2276,9 +2282,6 @@
     "Help" : {
       "comment" : "Title of the Help menu in the menu bar. Use the standard macOS wording."
     },
-    "Hide Assistant" : {
-
-    },
     "Hide details" : {
 
     },
@@ -2287,9 +2290,6 @@
     },
     "Hide Linen" : {
 
-    },
-    "Hide Lyrics" : {
-      "comment" : "Tooltip on the lyrics button in the media player while the lyrics are on screen. Pairs with “Show Lyrics”. Title Case."
     },
     "Hide Others" : {
       "comment" : "Standard macOS app-menu item that hides every other app. Use the system's own wording. Title Case."
@@ -2796,6 +2796,9 @@
     },
     "Lyrics from LRCLIB" : {
       "comment" : "Credit line at the foot of the lyrics view, naming the website the words came from. LRCLIB is a name and is never translated. Not a sentence; very small type."
+    },
+    "Lyrics that follow the song, from LRCLIB." : {
+      "comment" : "Description under “Lyrics” in the side panel’s Add to Side Panel popover. It also tells people where song details are sent; keep the service name LRCLIB untranslated."
     },
     "lyrics.offset.seconds" : {
       "comment" : "Reading at the foot of the lyrics view once the user has shifted the words against the sound, for example “+0.50 s”. %@ is an already-formatted number carrying its own plus or minus sign. “s” is the symbol for seconds; keep it short.",
@@ -3954,6 +3957,9 @@
     "Remove from List" : {
       "comment" : "Tooltip on the close button of a download row, on the start page and in the Downloads view. It forgets the row only — the downloaded file stays on disk — so avoid a verb that sounds like deleting the file. Title Case."
     },
+    "Remove from Side Panel" : {
+      "comment" : "Context menu item on an optional side panel tab, such as Lyrics or GitHub. It removes the tab and turns that integration off until it is added again from the + menu. Title Case."
+    },
     "Remove Key" : {
 
     },
@@ -4379,9 +4385,6 @@
     "Send questions to the assistant. Open links normally." : {
       "comment" : "Settings search caption for Ask instead of search. The page caption names the chosen model instead."
     },
-    "Send the song and artist to LRCLIB to find lyrics. Private tabs don’t send song details." : {
-
-    },
     "Send you notifications?" : {
       "comment" : "Question in the permission panel when a website asks to send notifications. The website is named in the header just above, so the question deliberately has no subject. Use “send” rather than “show”."
     },
@@ -4463,9 +4466,6 @@
     "Show all models" : {
 
     },
-    "Show Assistant" : {
-
-    },
     "Show Backup" : {
       "comment" : "External MCP client setup in Advanced settings."
     },
@@ -4492,9 +4492,6 @@
     },
     "Show link address" : {
 
-    },
-    "Show lyrics" : {
-      "comment" : "Title of the switch on the General settings page that adds the lyrics button to the media player, and its settings-search title. Sentence case, as settings rows are."
     },
     "Show Lyrics" : {
       "comment" : "Tooltip on the lyrics button in the media player while the lyrics are hidden. Pairs with “Hide Lyrics”. Title Case."
@@ -4538,6 +4535,9 @@
     "Show Tab %lld" : {
       "comment" : "Hidden menu commands under Window bound to ⌘1 through ⌘8. %lld is the tab’s position in the row, a number from 1 to 8. Title Case and established platform terminology."
     },
+    "Show the side panel without transparency." : {
+      "comment" : "Settings > Appearance > Side Panel: caption for the Solid background toggle."
+    },
     "Show Video" : {
       "comment" : "Tooltip on the same eye button once the picture is hidden; it brings the picture back. Title Case, narrow dock."
     },
@@ -4549,6 +4549,9 @@
     },
     "Side by side" : {
 
+    },
+    "Side Panel" : {
+      "comment" : "Settings > Appearance: section title for the panel on the right side of the window (Assistant, Lyrics, GitHub, Watches)."
     },
     "Sidebar" : {
       "comment" : "Title of the Appearance settings section for the tab sidebar. A noun heading beside an icon."
@@ -4589,9 +4592,6 @@
     "Since %@" : {
       "comment" : "How far back a profile’s history goes, joined to the page count by “ · ”. %@ is a date, such as “March 4”. A fragment, not a sentence."
     },
-    "sing along with the track" : {
-      "comment" : "Second line of the Show Lyrics row in the command palette, under the command name. A fragment, not a sentence: lower case and no final full stop, as every palette caption is."
-    },
     "Skip" : {
 
     },
@@ -4618,6 +4618,9 @@
     },
     "Software updates can fail when Linen runs from another folder. Linen will move itself to Applications and reopen." : {
       "comment" : "Body of that alert, for a copy that can be moved — usually one sitting in the Downloads folder. The second sentence promises what the default button does. Use the system name of the Applications folder."
+    },
+    "Solid background" : {
+      "comment" : "Settings > Appearance > Side Panel: toggle that replaces the side panel’s transparent glass with a solid color."
     },
     "Some extension features aren’t supported by WebKit. Other features remain available." : {
 
@@ -5583,9 +5586,6 @@
     },
     "Welcome to Linen" : {
       "comment" : "Heading of the first onboarding screen, shown under the app icon. Linen is the application name and is never translated. Keep it short — it is set in large type."
-    },
-    "what the assistant is doing" : {
-      "comment" : "Caption under the Show Agent Activity command in the command palette; the panel lists the steps the assistant is taking. Sentence fragment, lower case."
     },
     "What the assistant may do" : {
       "comment" : "Something a profile keeps separately from every other profile."

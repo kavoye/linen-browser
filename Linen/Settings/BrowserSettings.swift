@@ -41,6 +41,7 @@ final class BrowserSettings {
         static let mediaPlayer = "media.player"
         static let lyrics = "media.lyrics"
         static let tabColorRefraction = "appearance.tabColorRefraction"
+        static let solidSidePanel = "appearance.solidSidePanel"
         static let automaticPiP = "media.automaticPiP"
         static let videoInPlayer = "experiments.videoInPlayer"
         static let passwordAutofill = "autofill.passwords"
@@ -116,6 +117,8 @@ final class BrowserSettings {
             showsLyrics = source.showsLyrics
         case Key.tabColorRefraction:
             refractsTabColor = source.refractsTabColor
+        case Key.solidSidePanel:
+            hasSolidSidePanel = source.hasSolidSidePanel
         case Key.automaticPiP:
             automaticPictureInPicture = source.automaticPictureInPicture
         case Key.videoInPlayer:
@@ -264,6 +267,13 @@ final class BrowserSettings {
         didSet {
             guard refractsTabColor != oldValue else { return }
             write(refractsTabColor, forKey: Key.tabColorRefraction)
+        }
+    }
+
+    var hasSolidSidePanel: Bool {
+        didSet {
+            guard hasSolidSidePanel != oldValue else { return }
+            write(hasSolidSidePanel, forKey: Key.solidSidePanel)
         }
     }
 
@@ -577,8 +587,9 @@ final class BrowserSettings {
             ? 0.5
             : min(max(double(Key.transparency), 0), 1)
         showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
-        showsLyrics = object(Key.lyrics) as? Bool ?? true
+        showsLyrics = object(Key.lyrics) as? Bool ?? false
         refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? true
+        hasSolidSidePanel = object(Key.solidSidePanel) as? Bool ?? false
         sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false
         showsLinkPreview = object(Key.linkPreview) as? Bool ?? true
         peeksAtLinks = object(Key.linkPeek) as? Bool ?? true
@@ -713,6 +724,7 @@ final class BrowserSettings {
         matchesWebsiteColor = true
         transparency = 0.5
         refractsTabColor = true
+        hasSolidSidePanel = false
         pageZoom = 1
         searchEngineID = SearchEngine.duckDuckGo.id
         customSearchName = ""

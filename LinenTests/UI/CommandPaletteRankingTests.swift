@@ -174,7 +174,7 @@ struct CommandPaletteRankingTests {
 
         #expect(quiet.first { $0.id == "action-toggleSpeech" }?.title == String(localized: "Enable Voice"))
         #expect(loud.first { $0.id == "action-toggleSpeech" }?.title == String(localized: "Disable Voice"))
-        #expect(quiet.first { $0.id == "action-toggleActivity" }?.title == String(localized: "Show Assistant"))
+        #expect(quiet.first { $0.id == "action-toggleSidePanel" }?.title == String(localized: "Show Side Panel"))
         #expect(quiet.first { $0.id == "action-toggleSidebar" }?.title == String(localized: "Hide Sidebar"))
         #expect(loud.first { $0.id == "action-toggleSidebar" }?.title == String(localized: "Show Sidebar"))
     }
@@ -195,7 +195,6 @@ struct CommandPaletteRankingTests {
             isSplit: true,
             canSwapPanes: true,
             hasSplitAxis: true,
-            canShowLyrics: true,
             canCheckForUpdates: true
         )
         var performed: [CommandPaletteAction] = []

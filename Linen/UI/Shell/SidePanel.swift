@@ -17,12 +17,12 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
         }
     }
 
-    var symbol: String {
+    var icon: SidePanelIcon {
         switch self {
         case .activity:
-            "sparkle"
+            .orb
         case .lyrics:
-            "quote.bubble"
+            .symbol("quote.bubble")
         }
     }
 
@@ -30,9 +30,28 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
         false
     }
 
+    var summary: LocalizedStringResource {
+        switch self {
+        case .activity:
+            "Ask about websites and get help with tasks."
+        case .lyrics:
+            "Lyrics that follow the song, from LRCLIB."
+        }
+    }
+
+    var isRemovable: Bool {
+        self != .activity
+    }
+
     var usesImmersiveBackdrop: Bool {
         self == .lyrics
     }
+}
+
+nonisolated enum SidePanelIcon: Equatable, Sendable {
+    case symbol(String)
+    case asset(String)
+    case orb
 }
 
 nonisolated struct SidePanelTab: Identifiable, Equatable, Sendable {

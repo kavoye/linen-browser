@@ -28,6 +28,21 @@ struct ThemePickerTests {
         #expect(reset.refractsTabColor)
     }
 
+    @Test func theSolidSidePanelIsOffUntilChosenAndResetsToOff() throws {
+        let name = TestDefaults.name("SolidSidePanelTests")
+        let suite = try #require(UserDefaults(suiteName: name))
+        defer { suite.removePersistentDomain(forName: name) }
+
+        let settings = BrowserSettings(defaults: suite)
+        #expect(!settings.hasSolidSidePanel)
+
+        settings.hasSolidSidePanel = true
+        #expect(BrowserSettings(defaults: suite).hasSolidSidePanel)
+
+        settings.resetToDefaults()
+        #expect(!BrowserSettings(defaults: suite).hasSolidSidePanel)
+    }
+
     @Test func everyModeHasSomethingToDraw() {
         for mode in AppearanceMode.allCases {
             #expect(!ThemeThumbnailPalette.palettes(for: mode).isEmpty)

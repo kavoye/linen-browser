@@ -119,7 +119,7 @@ struct SidePanelTests {
         #expect(!panel.close())
     }
 
-    // MARK: - A kind turned off in Settings
+    // MARK: - A kind turned off
 
     @Test func aKindTurnedOffHasNoTabAtAll() {
         let panel = panel()
@@ -238,6 +238,23 @@ struct SidePanelTests {
 
     @Test func aWindowTooSmallForTheMinimumStillGetsTheMinimum() {
         #expect(SidePanelMetrics.clampWidth(400, available: 200) == SidePanelMetrics.minWidth)
+    }
+
+    @Test func theWindowMinimumLeavesThePageItsMinimumBesideBothColumns() throws {
+        let sidebar = SidebarLayout(defaults: scratch())
+        let docked = try #require(sidebar.dockedWidth)
+        let window = BrowserWindowMetrics.minWidth(dockedSidebarWidth: docked, isPanelVisible: true)
+        let room = window - sidebar.openWidth(in: window)
+        let panel = SidePanelMetrics.clampWidth(SidePanelMetrics.minWidth, available: room)
+
+        #expect(room - panel >= SidePanelMetrics.pageMinWidth)
+    }
+
+    @Test func theWindowMinimumOnlyGrowsForAnOpenPanel() {
+        #expect(BrowserWindowMetrics.minWidth(dockedSidebarWidth: 400, isPanelVisible: false)
+            == BrowserWindowMetrics.minWidth)
+        #expect(BrowserWindowMetrics.minWidth(dockedSidebarWidth: nil, isPanelVisible: true)
+            >= SidePanelMetrics.minWidth + SidePanelMetrics.pageMinWidth)
     }
 
     @Test func draggingWiderShowsTheNewWidthBeforeItIsReleased() {

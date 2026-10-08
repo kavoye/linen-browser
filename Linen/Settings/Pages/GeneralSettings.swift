@@ -94,16 +94,6 @@ struct GeneralSettings: View {
             }
             .settingsAnchor("general.automaticPiP")
             .disabled(settings.showsVideoInPlayer)
-
-            RowSeparator()
-
-            DetailRow(
-                title: "Show lyrics",
-                caption: "Send the song and artist to LRCLIB to find lyrics. Private tabs don’t send song details."
-            ) {
-                SettingsToggle($settings.showsLyrics)
-            }
-            .settingsAnchor("general.lyrics")
         }
 
         ImportSection(coordinator: coordinator)

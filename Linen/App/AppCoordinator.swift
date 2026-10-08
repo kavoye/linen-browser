@@ -278,6 +278,17 @@ final class AppCoordinator {
         applyHoverShield()
     }
 
+    var windowMinimumWidth: CGFloat {
+        BrowserWindowMetrics.minWidth(
+            dockedSidebarWidth: sidebar.dockedWidth,
+            isPanelVisible: sidePanel.isVisible
+        )
+    }
+
+    func updateWindowMinimum() {
+        host?.setMinimumWidth(windowMinimumWidth)
+    }
+
     func applyHoverShield() {
         let shellFrame = shellFrameInWindow
         guard shellFrame.width > 0 else { return }
@@ -675,11 +686,11 @@ final class AppCoordinator {
         browser.showReleaseNotes()
     }
 
-    func toggleAgentInspector() {
+    func toggleSidePanel() {
         if !browserVisible {
             showBrowser()
         }
-        sidePanel.toggle(.activity)
+        sidePanel.toggleVisibility(seeding: showsLyrics ? .lyrics : .activity)
     }
 
     func toggleSidebar() {

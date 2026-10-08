@@ -65,6 +65,16 @@ struct AppearanceSettings: View {
             }
             .settingsAnchor("appearance.sidebarStyle")
         }
+
+        SettingsSection(title: "Side Panel", symbol: "sidebar.right") {
+            DetailRow(
+                title: "Solid background",
+                caption: "Show the side panel without transparency."
+            ) {
+                SettingsToggle($settings.hasSolidSidePanel)
+            }
+            .settingsAnchor("appearance.solidSidePanel")
+        }
     }
 }
 

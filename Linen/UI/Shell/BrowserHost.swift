@@ -32,6 +32,8 @@ final class BrowserHost: NSObject, NSWindowDelegate {
     private(set) var isVisible = false
 
     private var bloom: Bloom?
+    private var isBlooming = false
+    private var minimumWidth = BrowserWindowMetrics.minWidth
 
     init(coordinator: AppCoordinator) {
         self.coordinator = coordinator
@@ -90,6 +92,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
         let target = window.frame
         bloom = Bloom(target: target, minSize: window.minSize)
+        isBlooming = true
         window.setFrameAutosaveName("")
         window.minSize = .zero
         window.setFrame(
@@ -113,11 +116,34 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         } completionHandler: { [weak self, weak window] in
             MainActor.assumeIsolated {
                 window?.minSize = bloom.minSize
-                if let self, self.coordinator?.profiles.isPrivate == false {
+                guard let self else { return }
+                self.isBlooming = false
+                if let window = self.window {
+                    self.applyMinimumWidth(to: window)
+                }
+                if self.coordinator?.profiles.isPrivate == false {
                     window?.setFrameAutosaveName(self.frameKey)
                 }
             }
         }
+    }
+
+    func setMinimumWidth(_ width: CGFloat) {
+        guard width != minimumWidth else { return }
+        minimumWidth = width
+        guard let window, !isBlooming else { return }
+        applyMinimumWidth(to: window)
+    }
+
+    private func applyMinimumWidth(to window: NSWindow) {
+        window.minSize = NSSize(width: minimumWidth, height: window.minSize.height)
+        guard !window.styleMask.contains(.fullScreen), window.frame.width < minimumWidth else { return }
+        var frame = window.frame
+        frame.size.width = minimumWidth
+        if let visible = window.screen?.visibleFrame, frame.maxX > visible.maxX {
+            frame.origin.x = max(visible.minX, visible.maxX - frame.width)
+        }
+        window.setFrame(frame, display: true)
     }
 
     private struct Bloom {
@@ -148,7 +174,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         created.titlebarSeparatorStyle = .none
         created.isOpaque = false
         created.backgroundColor = .clear
-        created.minSize = NSSize(width: BrowserWindowMetrics.minWidth, height: 580)
+        created.minSize = NSSize(width: minimumWidth, height: 580)
         created.preservesContentDuringLiveResize = true
         created.collectionBehavior = [.fullScreenPrimary]
         created.isReleasedWhenClosed = false
@@ -171,6 +197,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         if coordinator?.profiles.isPrivate == true || !created.setFrameUsingName(frameKey) {
             created.setFrame(Self.openingFrame(for: created), display: false)
         }
+        applyMinimumWidth(to: created)
         let root = NSView(frame: NSRect(x: 0, y: 0, width: 1280, height: 820))
         content.frame = root.bounds
         content.autoresizingMask = [.width, .height]
@@ -418,6 +445,9 @@ struct BrowserRootView: View {
             .onChange(of: coordinator.handoffURL) { _, _ in
                 coordinator.updateHandoff()
             }
+            .onChange(of: coordinator.windowMinimumWidth, initial: true) { _, _ in
+                coordinator.updateWindowMinimum()
+            }
     }
 }
 
@@ -427,6 +457,12 @@ extension EnvironmentValues {
 
 nonisolated enum BrowserWindowMetrics {
     static let minWidth: CGFloat = 680
+
+    static func minWidth(dockedSidebarWidth: CGFloat?, isPanelVisible: Bool) -> CGFloat {
+        guard isPanelVisible else { return minWidth }
+        let besidePanel = (dockedSidebarWidth ?? 0) + SidePanelMetrics.pageMinWidth
+        return max(minWidth, besidePanel + SidePanelMetrics.minWidth)
+    }
 }
 
 private final class BrowserWindow: NSWindow {

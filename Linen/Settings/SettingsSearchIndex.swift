@@ -83,9 +83,6 @@ enum SettingsIndex {
                       ["picture in picture", "pip", "automatic", "auto", "float", "floating", "video",
                        "pop out", "always on top", "media", "player", "overlay",
                        ]),
-        SettingsEntry("general.lyrics", .general, "Show lyrics",
-                      "Send the song and artist to LRCLIB to find lyrics. Private tabs don’t send song details.",
-                      ["lyrics", "words", "sing", "karaoke", "music", "song", "lrclib", "synced", "media", "player"]),
         SettingsEntry("general.agentOnly", .search, "Always ask the assistant", "Send questions to the assistant. Open links normally.",
                       ["agent", "assistant", "ask", "search", "no search", "web search", "address bar",
                        "omnibox", "command palette", "start page", "model", "llm", "chat",
@@ -133,6 +130,8 @@ enum SettingsIndex {
                       ["refract", "glass", "colour", "color", "tint", "selected tab", "favicon", "sidebar"]),
         SettingsEntry("appearance.sidebarStyle", .appearance, "Icons only", "Narrow the sidebar to its icons.",
                       ["sidebar", "icons", "narrow", "compact", "tabs"]),
+        SettingsEntry("appearance.solidSidePanel", .appearance, "Solid background", "Show the side panel without transparency.",
+                      ["side panel", "transparency", "transparent", "opaque", "solid", "glass", "contrast", "assistant"]),
 
         SettingsEntry("profiles.current", .profiles, "Current profile", "Edit the current profile.",
                       ["profile", "current", "open now", "name", "color", "symbol"]),

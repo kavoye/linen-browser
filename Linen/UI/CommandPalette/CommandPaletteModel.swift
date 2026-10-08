@@ -618,9 +618,7 @@ final class CommandPaletteModel {
             isStacked: split?.axis == .stacked,
             hasSplitAxis: split?.axis != nil,
             isSidebarVisible: coordinator.sidebar.isVisible,
-            isActivityVisible: coordinator.sidePanel.isShowing(.activity),
-            isLyricsVisible: coordinator.sidePanel.isShowing(.lyrics),
-            canShowLyrics: coordinator.settings.showsLyrics,
+            isSidePanelVisible: coordinator.sidePanel.isVisible,
             isFullScreen: window?.styleMask.contains(.fullScreen) ?? false,
             canCheckForUpdates: coordinator.updates.canCheck
         )
@@ -747,10 +745,8 @@ final class CommandPaletteModel {
             coordinator.closeOtherPanes()
         case .toggleSidebar:
             coordinator.toggleSidebar()
-        case .toggleActivity:
-            coordinator.toggleAgentInspector()
-        case .toggleLyrics:
-            coordinator.toggleLyrics()
+        case .toggleSidePanel:
+            coordinator.toggleSidePanel()
         case .toggleFullScreen:
             coordinator.toggleFullScreen()
         case .closeWindow:

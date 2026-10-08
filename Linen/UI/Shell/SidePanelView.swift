@@ -4,6 +4,29 @@
 import AppKit
 import SwiftUI
 
+extension AppCoordinator {
+    func isAdded(_ kind: SidePanelKind) -> Bool {
+        switch kind {
+        case .activity:
+            true
+        case .lyrics:
+            settings.showsLyrics
+        }
+    }
+
+    func setAdded(_ isAdded: Bool, _ kind: SidePanelKind) {
+        switch kind {
+        case .activity:
+            return
+        case .lyrics:
+            settings.showsLyrics = isAdded
+        }
+        if isAdded {
+            sidePanel.show(kind)
+        }
+    }
+}
+
 struct SidePanelSurface: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
@@ -17,11 +40,16 @@ struct SidePanelSurface: View {
 
     var body: some View {
         let shape = LoomChrome.canvasShape
+        let wash = panelWash
         ZStack {
             if panel.selectedKind?.usesImmersiveBackdrop == true {
                 LyricsBackdrop(artwork: coordinator.lyricsSource.artworkURL)
             } else {
-                LoomPanelFill(shape: shape)
+                if coordinator.settings.hasSolidSidePanel {
+                    shape.fill(Theme.windowBackground)
+                } else {
+                    LoomPanelFill(shape: shape)
+                }
 
                 if panel.selectedKind == .activity, coordinator.isVoiceConversationPresented {
                     VoiceConversationBackdrop(session: coordinator.conversationVoice)
@@ -43,7 +71,19 @@ struct SidePanelSurface: View {
         .contentShape(shape)
         .clipShape(shape)
         .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
-        .colorScheme(panel.selectedKind?.usesImmersiveBackdrop == true ? .dark : colorScheme)
+        .environment(\.chromeIsLight, wash.isLight)
+        .environment(\.chromeWash, wash)
+        .environment(\.colorScheme, wash.isLight ? .light : .dark)
+    }
+
+    private var panelWash: ChromeWash {
+        if panel.selectedKind?.usesImmersiveBackdrop == true {
+            return .of(nil, isLight: false)
+        }
+        if coordinator.settings.hasSolidSidePanel {
+            return .of(nil, isLight: colorScheme == .light)
+        }
+        return ChromeBand.loomWash(browser: browser, coordinator: coordinator, scheme: colorScheme)
     }
 
     @ViewBuilder
@@ -113,6 +153,8 @@ private struct SidePanelHeader: View {
         coordinator.sidePanel
     }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var expandHelp: LocalizedStringResource {
         panel.isExpanded ? "Collapse Side Panel" : "Expand Side Panel"
     }
@@ -124,9 +166,13 @@ private struct SidePanelHeader: View {
                     tab: tab,
                     isSelected: panel.selection == tab.id,
                     mark: tab.kind == .activity ? coordinator.agentMark : nil,
-                    onSelect: { panel.select(tab.id) }
+                    count: 0,
+                    onSelect: { panel.select(tab.id) },
+                    onRemove: tab.kind.isRemovable ? { coordinator.setAdded(false, tab.kind) } : nil
                 )
             }
+
+            SidePanelAddMenu(coordinator: coordinator)
 
             Spacer(minLength: 4)
 
@@ -142,6 +188,7 @@ private struct SidePanelHeader: View {
         }
         .padding(.horizontal, SidePanelMetrics.tabInset)
         .frame(height: SidePanelMetrics.headerHeight)
+        .animation(reduceMotion ? nil : .spring(duration: 0.32, bounce: 0.18), value: panel.selection)
     }
 }
 
@@ -171,11 +218,11 @@ struct SidePanelToggle: View {
             highlightsWhenOn: false,
             help: String(
                 localized: panel.isVisible
-                    ? "Hide Side Panel (⌥⌘A)"
-                    : "Show Side Panel (⌥⌘A)"
+                    ? "Hide Side Panel (⌥⌘S)"
+                    : "Show Side Panel (⌥⌘S)"
             )
         ) {
-            panel.toggleVisibility(seeding: coordinator.showsLyrics ? .lyrics : .activity)
+            coordinator.toggleSidePanel()
         }
         .overlay(alignment: .topTrailing) {
             if !panel.isVisible {
@@ -247,36 +294,171 @@ struct PanelNotice: View {
     }
 }
 
+private struct SidePanelAddMenu: View {
+    let coordinator: AppCoordinator
+
+    @State private var hovering = false
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented.toggle()
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(hovering || isPresented ? .primary : .secondary)
+                .hoverLift(hovering)
+                .frame(width: 28, height: SidePanelMetrics.tabHeight)
+                .selectionBackground(isSelected: isPresented, isHovering: false, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .onHover { hovering = $0 }
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            SidePanelGallery(coordinator: coordinator) { isPresented = false }
+                .chromePopoverAppearance()
+        }
+        .help(Text("Add to Side Panel"))
+        .accessibilityLabel(Text("Add to Side Panel"))
+    }
+}
+
+private struct SidePanelGallery: View {
+    let coordinator: AppCoordinator
+    let onAdd: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add to Side Panel")
+                .font(.system(size: 13, weight: .semibold))
+
+            ForEach(SidePanelKind.allCases.filter(\.isRemovable), id: \.self) { kind in
+                SidePanelGalleryRow(kind: kind, isAdded: coordinator.isAdded(kind)) {
+                    let adding = !coordinator.isAdded(kind)
+                    coordinator.setAdded(adding, kind)
+                    if adding {
+                        onAdd()
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: 320)
+    }
+}
+
+private struct SidePanelKindIcon: View {
+    let kind: SidePanelKind
+    let size: CGFloat
+
+    var body: some View {
+        switch kind.icon {
+        case .symbol(let name):
+            Image(systemName: name)
+                .font(.system(size: size, weight: .medium))
+        case .asset(let name):
+            Image(name)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size + 1, height: size + 1)
+        case .orb:
+            ComposingOrb(size: size + 5, isAnimating: false)
+                .frame(width: size + 1, height: size + 1)
+        }
+    }
+}
+
+private struct SidePanelGalleryRow: View {
+    let kind: SidePanelKind
+    let isAdded: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            SidePanelKindIcon(kind: kind, size: 14)
+                .foregroundStyle(.primary)
+                .frame(width: 34, height: 34)
+                .settingsSurface(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(kind.title)
+                    .font(.system(size: 12.5, weight: .semibold))
+                Text(kind.summary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Group {
+                if isAdded {
+                    SettingsButton(title: "Remove", isDestructive: true, minWidth: 72, action: onToggle)
+                } else {
+                    SettingsButton(title: "Add", isProminent: true, minWidth: 72, action: onToggle)
+                }
+            }
+            .frame(height: 34)
+        }
+    }
+}
+
 private struct SidePanelTabChip: View {
     let tab: SidePanelTab
     let isSelected: Bool
     let mark: AgentActivityDot.State?
+    let count: Int
     let onSelect: () -> Void
+    let onRemove: (() -> Void)?
 
     @State private var hovering = false
+
+    private var lifts: Bool {
+        hovering && !isSelected
+    }
 
     var body: some View {
         let shape = Capsule()
         HStack(spacing: 5) {
-            if let mark {
-                AgentStateMarker(isRunning: true, tint: mark == .attention ? Theme.warning : Theme.accent)
+            if mark == .attention {
+                AgentStateMarker(isRunning: true, tint: Theme.warning)
                     .frame(width: 11, height: 11)
+            } else if tab.kind == .activity {
+                ComposingOrb(size: 15, isAnimating: mark == .working)
+                    .frame(width: 11, height: 11)
+                    .opacity(isSelected || hovering ? 1 : 0.6)
+                    .hoverLift(lifts)
             } else {
-                Image(systemName: tab.kind.symbol)
-                    .font(.system(size: 10, weight: .medium))
+                SidePanelKindIcon(kind: tab.kind, size: 10)
+                    .foregroundStyle(count > 0 ? Theme.accent : isSelected || hovering ? Color.primary : Color.secondary)
+                    .hoverLift(lifts)
             }
 
-            Text(tab.kind.title)
-                .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
-                .lineLimit(1)
+            if isSelected {
+                Text(tab.kind.title)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .lineLimit(1)
+                    .transition(.scale(scale: 0.4, anchor: .leading).combined(with: .opacity))
+            }
         }
         .foregroundStyle(isSelected ? Color.primary : Color.secondary)
         .padding(.horizontal, 9)
         .frame(height: SidePanelMetrics.tabHeight)
-        .selectionBackground(isSelected: isSelected, isHovering: hovering, in: shape)
+        .selectionBackground(isSelected: isSelected, isHovering: false, in: shape)
         .contentShape(shape)
         .onTapGesture(perform: onSelect)
         .onHover { hovering = $0 }
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .help(isSelected ? "" : String(localized: tab.kind.title))
+        .contextMenu {
+            if let onRemove {
+                Button("Remove from Side Panel", action: onRemove)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(tab.kind.title))
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityValue(count > 0 ? Text("\(count) loaded unread notifications") : Text(""))
     }
 }

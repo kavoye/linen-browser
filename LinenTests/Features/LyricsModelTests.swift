@@ -307,13 +307,13 @@ struct LyricsModelTests {
 
     // MARK: - The setting
 
-    @Test func lyricsAreOnUntilTheyAreTurnedOff() {
+    @Test func lyricsStayOffUntilTheyAreAdded() {
         let defaults = scratchDefaults()
 
-        #expect(BrowserSettings(defaults: defaults).showsLyrics)
-
-        BrowserSettings(defaults: defaults).showsLyrics = false
-
         #expect(!BrowserSettings(defaults: defaults).showsLyrics)
+
+        BrowserSettings(defaults: defaults).showsLyrics = true
+
+        #expect(BrowserSettings(defaults: defaults).showsLyrics)
     }
 }
