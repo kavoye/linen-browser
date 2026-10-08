@@ -160,57 +160,53 @@ struct FindBar: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(Theme.Font.label)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary.opacity(0.75))
 
-            TextField("", text: $session.query)
-                .fieldPlaceholder("Find on page", isShowing: session.query.isEmpty)
-                .textFieldStyle(.plain)
-                .font(Theme.Font.row)
-                .frame(width: 200)
-                .focused($focused)
-                .onSubmit { session.find() }
-                .onChange(of: session.query) { _, _ in session.queryDidChange() }
+            HStack(spacing: 8) {
+                TextField("", text: $session.query)
+                    .overlay(alignment: .leading) {
+                        if session.query.isEmpty {
+                            Text("Find on page")
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .textFieldStyle(.plain)
+                    .font(Theme.Font.row)
+                    .focused($focused)
+                    .onSubmit { session.find() }
+                    .onChange(of: session.query) { _, _ in session.queryDidChange() }
 
-            if !session.query.isEmpty {
-                if session.totalMatches > 0 {
-                    Text("\(session.currentMatch) of \(session.totalMatches)")
-                        .font(Theme.Font.label)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                } else if session.noMatches {
-                    Text("Not found")
-                        .font(Theme.Font.label)
-                        .foregroundStyle(Theme.warning)
+                if !session.query.isEmpty {
+                    if session.totalMatches > 0 {
+                        Text("\(session.currentMatch) of \(session.totalMatches)")
+                            .font(Theme.Font.label)
+                            .monospacedDigit()
+                            .foregroundStyle(.primary.opacity(0.75))
+                            .fixedSize()
+                    } else if session.noMatches {
+                        Text("Not found")
+                            .font(Theme.Font.label)
+                            .foregroundStyle(Theme.warning)
+                            .fixedSize()
+                    }
                 }
             }
+            .frame(width: 220)
 
             Divider()
                 .frame(height: 14)
 
-            Button {
+            FindBarStepButton(symbol: "chevron.up", help: "Previous (⇧⌘G)") {
                 session.find(backwards: true)
-            } label: {
-                Image(systemName: "chevron.up")
-                    .font(Theme.Font.badge)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help("Previous (⇧⌘G)")
 
-            Button {
+            FindBarStepButton(symbol: "chevron.down", help: "Next (⌘G)") {
                 session.find()
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(Theme.Font.badge)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
-            .help("Next (⌘G)")
 
-            Button("Done") { session.close() }
-                .buttonStyle(.plain)
-                .font(Theme.Font.body)
-                .foregroundStyle(.secondary)
+            FindBarDoneButton { session.close() }
         }
         .padding(.horizontal, 12)
         .frame(height: 34)
@@ -224,5 +220,42 @@ struct FindBar: View {
             session.close()
             return .handled
         }
+    }
+}
+
+private struct FindBarStepButton: View {
+    let symbol: String
+    let help: LocalizedStringKey
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(Theme.Font.badge)
+                .foregroundStyle(.primary.opacity(hovering ? 1 : 0.75))
+                .hoverLift(hovering)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
+        .help(help)
+    }
+}
+
+private struct FindBarDoneButton: View {
+    let action: () -> Void
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button("Done", action: action)
+            .buttonStyle(.plain)
+            .font(Theme.Font.body)
+            .foregroundStyle(.primary.opacity(hovering ? 1 : 0.75))
+            .hoverLift(hovering)
+            .onHover { hovering = $0 }
+            .animation(Theme.Motion.quick, value: hovering)
     }
 }
