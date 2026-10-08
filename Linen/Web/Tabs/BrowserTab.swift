@@ -981,10 +981,12 @@ extension BrowserTab {
             favicon = cached
             guard context.favicons.isGuessedIcon(for: host) else { return }
         }
-        Task { [weak self] in
-            guard let self else { return }
-            let icon = await context.favicons.load(for: webView)
-            guard let icon, webView.url?.host()?.lowercased() == host else { return }
+        let view = webView
+        let favicons = context.favicons
+        Task { [weak self, weak view] in
+            guard let view else { return }
+            let icon = await favicons.load(for: view)
+            guard let self, let icon, liveView === view, view.url?.host()?.lowercased() == host else { return }
             favicon = icon
         }
     }
