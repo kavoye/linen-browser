@@ -111,6 +111,15 @@ private struct LinkPeekCard: View {
     @ViewBuilder
     private func body(for phase: LinkPeek.Phase) -> some View {
         switch phase {
+        case .loadingPullRequest:
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Loading pull request…")
+                    .font(Theme.Font.body)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(minHeight: 34, alignment: .leading)
+
         case .loading:
             HStack(spacing: 8) {
                 ComposingOrb(size: 16)
@@ -158,6 +167,15 @@ private struct LinkPeekCard: View {
 
         case .failed:
             Text("Couldn’t summarize this page.")
+                .font(Theme.Font.body)
+                .foregroundStyle(.secondary)
+                .frame(minHeight: 34, alignment: .leading)
+
+        case .pullRequest(let pr, let details):
+            GitHubPRPreview(pr: pr, details: details, padded: false)
+
+        case .pullRequestUnavailable:
+            Text("Couldn’t load this pull request.")
                 .font(Theme.Font.body)
                 .foregroundStyle(.secondary)
                 .frame(minHeight: 34, alignment: .leading)

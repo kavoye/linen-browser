@@ -111,6 +111,7 @@ struct TabPreviewOverlay: View {
     let browser: BrowserModel
     let model: TabPreviewModel
     let sidebarEdge: CGFloat
+    var github: GitHubPanelModel?
 
     @State private var cardSize: CGSize = .zero
 
@@ -125,7 +126,7 @@ struct TabPreviewOverlay: View {
                     max(shown.anchor.midY - origin.y - cardSize.height / 2, Self.margin),
                     max(proxy.size.height - cardSize.height - Self.margin, Self.margin)
                 )
-                TabPreviewCard(subject: shown.subject)
+                TabPreviewCard(subject: shown.subject, github: github)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { cardSize = $0 }
                     .offset(
                         x: max(shown.anchor.maxX - origin.x, sidebarEdge) + Self.gap,
@@ -152,6 +153,7 @@ struct TabPreviewOverlay: View {
 
 private struct TabPreviewCard: View {
     let subject: TabPreviewModel.Subject
+    let github: GitHubPanelModel?
 
     static let width: CGFloat = 252
 
@@ -159,7 +161,7 @@ private struct TabPreviewCard: View {
         Group {
             switch subject {
             case .tab(let tab):
-                TabFace(tab: tab)
+                TabFace(tab: tab, github: github)
             case .folder(let folder, let tabs):
                 GroupFace(
                     symbol: "folder",
@@ -276,8 +278,10 @@ struct TabFaviconMark: View {
 
 private struct TabFace: View {
     let tab: BrowserTab
+    let github: GitHubPanelModel?
 
     @State private var memoryBytes: UInt64?
+    @State private var lookedUp: String?
 
     private static let imageHeight: CGFloat = 150
 
@@ -288,6 +292,10 @@ private struct TabFace: View {
     private var host: String {
         guard !isSystemPage else { return "" }
         return URL(string: tab.urlString)?.host() ?? ""
+    }
+
+    private var pullRequest: GitHubPullRequestReference? {
+        GitHubPullRequestReference(url: tab.committedURL ?? URL(string: tab.urlString))
     }
 
     private var isSystemPage: Bool {
@@ -343,6 +351,24 @@ private struct TabFace: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
+
+            if let github, let reference = pullRequest {
+                Group {
+                    if let status = github.cachedPreview(reference) {
+                        GitHubPRStatusStrip(pr: status.pr, digest: GitHubPRDigest(pr: status.pr, details: status.details))
+                    } else if lookedUp != reference.key {
+                        ProgressView().controlSize(.mini)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10).padding(.bottom, 10)
+            }
+        }
+        .task(id: pullRequest?.key) {
+            guard let github, let reference = pullRequest else { return }
+            await github.refreshPreview(reference)
+            guard !Task.isCancelled else { return }
+            lookedUp = reference.key
         }
         .task(id: tab.id) {
             guard !isSystemPage else { return }

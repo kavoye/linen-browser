@@ -377,6 +377,7 @@
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				GITHUB_OAUTH_CLIENT_ID = Ov23liyHrHMecQlQ4QLS;
 				INFOPLIST_FILE = Linen/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Linen;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -422,6 +423,7 @@
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				GITHUB_OAUTH_CLIENT_ID = Ov23liyHrHMecQlQ4QLS;
 				INFOPLIST_FILE = Linen/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Linen;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";

@@ -100,6 +100,9 @@ extension Profile {
     static func erase(_ profile: Profile) async {
         guard !profile.isOriginal else { return }
         if !profile.isPrivate {
+            try? GitHubConnectionStore(profileID: profile.id).save(nil)
+            // WebKit crashes removing a store before any store exists in the process.
+            _ = WKWebsiteDataStore.nonPersistent()
             try? await WKWebsiteDataStore.remove(forIdentifier: profile.id)
             try? await AutofillVaults.cards(for: profile.id).erase()
             try? await AutofillVaults.contacts(for: profile.id).erase()

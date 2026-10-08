@@ -64,6 +64,9 @@
     "%@ blocked" : {
       "comment" : "Fragment in the one-line summary under a website in the list, for permissions that were refused. %@ is a list of permission names already worded and joined. Lower case: joined with other fragments, never shown alone."
     },
+    "%@ commented" : {
+
+    },
     "%@ doesn’t offer suggestions." : {
 
     },
@@ -89,6 +92,9 @@
     },
     "%@ of %@" : {
       "comment" : "Progress line under a file in the downloads list. The first %@ is the amount received and the second the file's total size, both already formatted by the system, e.g. “3.2 MB of 18 MB”; the order may be changed with positional specifiers."
+    },
+    "%@ opened" : {
+
     },
     "%@ out" : {
       "comment" : "The other half of the same footer line in the agent activity column: %@ is an abbreviated count of tokens the model produced, and “out” is the short form of “returned”. Must balance the “%@ in” string beside it; extremely tight."
@@ -171,6 +177,29 @@
         }
       }
     },
+    "%lld comments" : {
+      "comment" : "GitHub: number of comments on a pull request.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld comment"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld comments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld downloads will be removed from the list. The files stay in your Downloads folder." : {
       "comment" : "Explanatory text in the confirmation sheet for clearing the download list, shown both in the downloads popover and on the Downloads settings page. %lld is how many finished downloads disappear from the list. “Downloads folder” is the macOS folder of that name.",
       "localizations" : {
@@ -223,6 +252,32 @@
     "%lld extensions, all running." : {
       "comment" : "Caption under the Extensions settings title. %lld is the total of extensions installed in Linen plus Safari extensions found on the Mac, and every one of them is switched on."
     },
+    "%lld failing" : {
+      "comment" : "GitHub checks summary part, joined into a list like “1 failing, 4 successful”."
+    },
+    "%lld files" : {
+      "comment" : "GitHub pull request preview: number of changed files.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld file"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld files"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld folders" : {
       "comment" : "How many tab folders a profile has, shown after “%lld tabs” and joined to it by “ · ”. A fragment, not a sentence. %lld is the number of folders.",
       "localizations" : {
@@ -245,6 +300,12 @@
           }
         }
       }
+    },
+    "%lld from bots" : {
+      "comment" : "GitHub pull request checklist: folded row that reveals comments written by bots."
+    },
+    "%lld in progress" : {
+      "comment" : "GitHub checks summary part, joined into a list like “2 in progress, 3 successful”."
     },
     "%lld installed" : {
       "comment" : "How many extensions a profile has, shown under the word “Extensions” on a profile’s page. A fragment, not a sentence. %lld is the number of extensions.",
@@ -315,6 +376,9 @@
         }
       }
     },
+    "%lld loaded unread notifications" : {
+
+    },
     "%lld min read" : {
       "comment" : "Reader view: estimated reading time under the article title. %lld is a number of minutes."
     },
@@ -344,6 +408,29 @@
     "%lld more" : {
 
     },
+    "%lld new comments" : {
+      "comment" : "GitHub banner text for your pull request: comments added since the last check.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld new comment"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld new comments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld of %lld" : {
       "comment" : "Match position in the find bar: current match, then total matches, e.g. “3 of 17”. Sits between the field and the arrow buttons.",
       "localizations" : {
@@ -351,6 +438,42 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld results" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld results"
+          }
+        }
+      }
+    },
+    "%lld older" : {
+      "comment" : "GitHub pull request checklist: number of older comments that are not shown."
+    },
+    "%lld open threads" : {
+      "comment" : "GitHub pull request: number of unresolved review threads.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld open thread"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld open threads"
+                }
+              }
+            }
           }
         }
       }
@@ -384,6 +507,29 @@
     "%lld percent" : {
 
     },
+    "%lld pull requests" : {
+      "comment" : "Live count under the search field in the GitHub filter editor: how many pull requests the search matches right now. %lld is the number.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pull request"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pull requests"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld questions" : {
 
     },
@@ -410,6 +556,9 @@
         }
       }
     },
+    "%lld skipped" : {
+      "comment" : "GitHub checks summary part, joined into a list like “4 successful, 1 skipped”."
+    },
     "%lld steps" : {
       "comment" : "One field of the metadata line under a task's prompt in the agent activity panel, joined with “ · ” into something like “2 min ago · 4.2s · 6 steps”. %lld is how many steps the assistant took. Lowercase fragment; the catalogue carries the plural forms.",
       "localizations" : {
@@ -433,6 +582,32 @@
         }
       }
     },
+    "%lld successful" : {
+      "comment" : "GitHub checks summary part, joined into a list like “1 failing, 4 successful”."
+    },
+    "%lld successful checks" : {
+      "comment" : "GitHub checks summary when every check passed.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld successful check"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld successful checks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld tabs" : {
       "comment" : "How many tabs a profile has open, shown in the profile list and on a profile’s own page. It is joined to other fragments by “ · ”, so it is a fragment, not a sentence. %lld is the number of tabs.",
       "localizations" : {
@@ -449,6 +624,29 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld tabs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld teams" : {
+      "comment" : "GitHub pull request checklist: number of teams asked to review whose names are hidden.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld team"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld teams"
                 }
               }
             }
@@ -781,6 +979,12 @@
     "AI summary, can be wrong" : {
 
     },
+    "All" : {
+      "comment" : "Option in the Show menu of the GitHub filter editor: pull requests in any state."
+    },
+    "All pull requests" : {
+
+    },
     "all time" : {
       "comment" : "Lowercase phrase naming the widest time range, inserted mid-sentence into the confirmation before clearing browsing data, which reads roughly: browsing history will be cleared for all time. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised menu label All time is a separate string."
     },
@@ -933,6 +1137,18 @@
     "Apply" : {
       "comment" : "Button beside the field where a model identifier is typed by hand in Settings > Provider. A verb (a command)."
     },
+    "Approval requested" : {
+      "comment" : "GitHub inbox row reason: someone asked you to approve a deployment."
+    },
+    "Approved" : {
+
+    },
+    "Approved by %@" : {
+      "comment" : "GitHub pull request checklist. %@ is a list of usernames."
+    },
+    "Approved by %@. Needs more approvals." : {
+      "comment" : "GitHub pull request checklist detail under Review required. %@ is a list of usernames."
+    },
     "Archive tabs after" : {
       "comment" : "Title of a row in the Tabs section of General settings. A pop-up menu completes it: “Archive tabs after 12 hours”, “… a day”, “… a week”, or Never."
     },
@@ -969,10 +1185,16 @@
     "Ask anything" : {
 
     },
+    "Ask Assistant" : {
+
+    },
     "Ask before opening %@" : {
 
     },
     "Ask next time" : {
+
+    },
+    "Ask the assistant to explain a pull request or a failing check." : {
 
     },
     "Ask this again" : {
@@ -989,6 +1211,12 @@
     },
     "Ask, or enter website name" : {
       "comment" : "Placeholder in the address/ask field when the browser is set to agent-only input, where there is no web search. Sentence case; “Ask” is the verb. Match the wording of “Search, “@” to ask, or enter website name”."
+    },
+    "Assigned to me" : {
+
+    },
+    "Assigned to you" : {
+
     },
     "Assistant" : {
       "comment" : "Fallback name for the assistant before a model provider is configured. A short noun used in headings and settings captions."
@@ -1040,6 +1268,9 @@
     },
     "Authentication was canceled. Open this page again to try again." : {
 
+    },
+    "Author" : {
+      "comment" : "GitHub comment badge: this person opened the pull request."
     },
     "Authorization server" : {
 
@@ -1116,8 +1347,14 @@
     "Base URL" : {
       "comment" : "Title of the field on the custom endpoint page where the model server's address is typed. Technical term — the address a client sends requests to."
     },
+    "Behind %@" : {
+      "comment" : "GitHub pull request checklist: the branch is behind its base. %@ is the base branch name, like main."
+    },
     "Best for longer, complex tasks. Your key stays in your Keychain." : {
       "comment" : "Caption for the remote-model choice on the onboarding provider screen. Keychain is the macOS password store — use Apple's own name for it."
+    },
+    "Best match" : {
+      "comment" : "Sort option in the GitHub filter editor: GitHub’s own relevance order. Matches GitHub’s wording."
     },
     "Block" : {
       "comment" : "Pop-up choice: the window does not open and nothing is shown. One word, Title Case. Sits beside “Block and Notify” and “Allow”."
@@ -1142,6 +1379,33 @@
     },
     "Block trackers on every website." : {
       "comment" : "Settings search description for the Block known trackers switch. Every website distinguishes it from the same switch on one website's page. Imperative."
+    },
+    "Blocked" : {
+      "comment" : "GitHub pull request verdict: a branch rule blocks the merge."
+    },
+    "Blocked — %lld checks failing" : {
+      "comment" : "GitHub pull request verdict: checks are failing.",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Blocked — %lld check failing"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Blocked — %lld checks failing"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "Blocked on this page" : {
 
@@ -1194,6 +1458,12 @@
     "Camera" : {
       "comment" : "Name of the camera permission: a row on the Websites settings page and a label in the permission badge in the toolbar."
     },
+    "Can read public and private repositories." : {
+      "comment" : "GitHub panel footer tooltip on the access icon. The connected account can read private repositories."
+    },
+    "Can read public repositories only." : {
+      "comment" : "GitHub panel footer tooltip on the access icon. Clicking it offers to include private repositories."
+    },
     "Can’t find this website" : {
       "comment" : "Headline on the error page shown when a website's address cannot be resolved. Curly apostrophe; the explanatory sentence below it is a separate entry."
     },
@@ -1236,14 +1506,26 @@
     "Change…" : {
       "comment" : "Button that reopens the API key popover once a key is stored; it reads Add Key… when none is. A verb, with a real ellipsis (…) promising a popover."
     },
+    "Changes" : {
+      "comment" : "GitHub pull request detail chip. Opens the changed files of the pull request on GitHub."
+    },
     "Changes apply after you save. Linen manages permissions, model selection, and conversation state." : {
 
+    },
+    "Changes requested" : {
+      "comment" : "GitHub pull request: a reviewer requested changes."
+    },
+    "Changes requested by %@" : {
+      "comment" : "GitHub pull request checklist. %@ is a list of usernames."
     },
     "Changing this can break websites." : {
       "comment" : "Caption under the User agent row on the Advanced settings page, beside a segmented control offering the system agent, Linen's own, or a custom one. One short sentence; the row title already says what it is."
     },
     "cheapest" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the least expensive to use. Lowercase superlative, and the space is very tight."
+    },
+    "Check activity" : {
+
     },
     "Check Downloads" : {
 
@@ -1290,6 +1572,18 @@
     "Checking…" : {
       "comment" : "The update button's title, and the update status shown in the sidebar, while a check is running. Ends with a real ellipsis (…), not three dots."
     },
+    "Checks" : {
+
+    },
+    "Checks failed" : {
+      "comment" : "GitHub banner text for your pull request."
+    },
+    "Checks passed" : {
+      "comment" : "GitHub banner text for your pull request: checks that were running have passed."
+    },
+    "Checks running" : {
+      "comment" : "GitHub pull request status: CI checks are still in progress."
+    },
     "Choose" : {
       "comment" : "Used twice, as a verb: the placeholder in a Settings pop-up menu with nothing selected yet, and the confirm button of the macOS folder-picking panel for the download folder — for the second, use the wording macOS itself puts on that button."
     },
@@ -1309,6 +1603,12 @@
       "comment" : "Tooltip on the lyrics panel title while more than one tab has media; the title opens a menu that lists those tabs so the user can pick which one the lyrics follow. Title Case. Twin of “Choose Which Tab to Control”, which is the same control on the media dock."
     },
     "Choose a time range to clear history, cookies, and cached files." : {
+
+    },
+    "Choose an icon" : {
+      "comment" : "Tooltip of the icon button in the GitHub filter editor."
+    },
+    "Choose another filter or edit your search." : {
 
     },
     "Choose Configuration" : {
@@ -1532,6 +1832,12 @@
     "Close Window" : {
       "comment" : "Standard macOS File menu item that closes the window. Use the system's own wording. Title Case."
     },
+    "Closed" : {
+      "comment" : "State of a GitHub pull request or issue, and an option in the Show menu of the GitHub filter editor. An adjective."
+    },
+    "Closes #%lld" : {
+      "comment" : "GitHub pull request: an issue that merging closes. %lld is the issue number."
+    },
     "Closing this tab also removes its pin. You can pin the page again later." : {
       "comment" : "Body of the alert that asks before closing a pinned tab. It says what is lost and nothing else; the title above already asks the question."
     },
@@ -1551,6 +1857,18 @@
       "comment" : "Label of the color swatches that tint a profile’s symbol."
     },
     "Color the selected tab using the website icon." : {
+
+    },
+    "Combine terms with AND, OR, and parentheses. Use @me for your GitHub account." : {
+      "comment" : "Footnote in the GitHub filter editor. Do not translate AND, OR, or “@me”: they are typed into searches literally."
+    },
+    "Commented" : {
+      "comment" : "GitHub review state: the reviewer left comments without approving or requesting changes."
+    },
+    "Commented by me" : {
+
+    },
+    "Commits" : {
 
     },
     "Compact" : {
@@ -1588,6 +1906,9 @@
     },
     "Connect external assistants to tabs you choose. Private tabs are never shared." : {
       "comment" : "MCP settings: private browsing pauses access without changing the saved enabled preference."
+    },
+    "Connect GitHub" : {
+
     },
     "Connect services your assistant can use." : {
 
@@ -1634,6 +1955,9 @@
     "Continue past a certificate macOS rejects. Linen removes the exception when you quit." : {
 
     },
+    "Continue to GitHub" : {
+
+    },
     "Control media" : {
 
     },
@@ -1662,6 +1986,12 @@
       "comment" : "Standard macOS Edit menu item. Use the system's own wording. A verb."
     },
     "Copy Answer" : {
+
+    },
+    "Copy Branch Name" : {
+      "comment" : "GitHub pull request actions menu item. Copies the source branch name."
+    },
+    "Copy Code" : {
 
     },
     "Copy configuration" : {
@@ -1709,8 +2039,20 @@
     "Couldn’t generate a password." : {
 
     },
+    "Couldn’t load pull requests" : {
+
+    },
     "Couldn’t load saved contacts." : {
 
+    },
+    "Couldn’t load the latest comment." : {
+
+    },
+    "Couldn’t load this pull request." : {
+      "comment" : "Link preview card when a GitHub pull request could not be loaded with the user’s GitHub connection."
+    },
+    "Couldn’t load your inbox" : {
+      "comment" : "GitHub inbox empty-state title after a refresh failed."
     },
     "Couldn’t play the OpenAI voice. Check your voice settings and connection." : {
 
@@ -1734,6 +2076,9 @@
 
     },
     "Couldn’t Reset Save Suggestions" : {
+
+    },
+    "Couldn’t save the GitHub connection in your Keychain." : {
 
     },
     "Couldn’t save these details." : {
@@ -1772,6 +2117,9 @@
     "Country or region" : {
 
     },
+    "Created in the last month" : {
+      "comment" : "Item in the Qualifier menu of the GitHub filter editor. Adds a search term for pull requests opened in the last 30 days."
+    },
     "Current profile" : {
       "comment" : "Heading over the card describing the profile the browser is in right now."
     },
@@ -1793,6 +2141,9 @@
     "Data and privacy" : {
 
     },
+    "Dates" : {
+      "comment" : "Section heading in the Qualifier menu of the GitHub filter editor: search terms about dates."
+    },
     "DeepSeek models." : {
       "comment" : "One-line description of the DeepSeek provider in the provider list in Settings, also shown in that row's tooltip. A fragment with no verb; keep it terse."
     },
@@ -1810,6 +2161,9 @@
     },
     "Delete “%@”?" : {
       "comment" : "Heading of the delete confirmation for a sidebar folder or a profile. %@ is its name as the user typed it."
+    },
+    "Delete Filter" : {
+      "comment" : "GitHub filter row menu item. Removes that saved filter."
     },
     "Delete Folder" : {
       "comment" : "Verb on the destructive button of the delete-folder confirmation alert. Title Case, and it should read as the same command as the “Delete Folder…” menu item that raised the alert."
@@ -1834,6 +2188,9 @@
     },
     "Deny" : {
       "comment" : "The saved policy that refuses a permission for a website; an option in the pop-up menus on the Websites settings page. A verb."
+    },
+    "Description" : {
+      "comment" : "GitHub pull request detail: section title for the pull request description."
     },
     "Details" : {
 
@@ -1868,11 +2225,17 @@
     "Disconnect" : {
       "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
     },
+    "Disconnect GitHub" : {
+
+    },
     "Discovering OAuth settings…" : {
 
     },
     "Dismiss Error" : {
 
+    },
+    "Dismissed" : {
+      "comment" : "GitHub review state: the review was dismissed."
     },
     "Don’t Allow" : {
       "comment" : "Button in the permission panel that refuses the website's request, beside “Allow Once” and “Always Allow”. Keep the curly apostrophe. Title Case, and the three buttons share one narrow row."
@@ -1930,6 +2293,9 @@
         }
       }
     },
+    "Draft" : {
+      "comment" : "State of a GitHub pull request, and an option in the Show menu of the GitHub filter editor. An adjective."
+    },
     "Drag between points in a page screenshot." : {
 
     },
@@ -1974,6 +2340,12 @@
     },
     "Edit endpoint" : {
       "comment" : "Heading of the Settings page for a custom model server when an existing one is being changed; it reads “Custom endpoint” when a new one is being added. Sentence case; “Edit” is a verb."
+    },
+    "Edit Filter" : {
+
+    },
+    "Edit Filter…" : {
+      "comment" : "GitHub filter row menu item. Opens the editor for that saved filter."
     },
     "Edit or switch profiles." : {
 
@@ -2138,6 +2510,9 @@
     "Explain a paper to me" : {
 
     },
+    "Explain this GitHub pull request and summarize any visible check failures or review requests. Say which details are unavailable." : {
+
+    },
     "Export your bookmarks as an HTML file in the other browser first." : {
 
     },
@@ -2192,6 +2567,9 @@
     "File" : {
       "comment" : "Title of the File menu in the menu bar. Use the standard macOS wording."
     },
+    "Files" : {
+
+    },
     "Fill field" : {
 
     },
@@ -2207,8 +2585,17 @@
     "Fill Multiple Fields" : {
 
     },
+    "Filter options" : {
+      "comment" : "GitHub filter row: tooltip and accessibility label for the more-options menu."
+    },
+    "Filters" : {
+
+    },
     "Find" : {
       "comment" : "Title of the Find submenu inside the Edit menu. A noun here — the name of a group of find commands."
+    },
+    "Find a filter" : {
+
     },
     "Find a video and play it in the media player." : {
       "comment" : "Caption for the Play Videos tool in assistant settings."
@@ -2279,6 +2666,9 @@
     "Frequently Visited" : {
       "comment" : "Title of the start page block showing the sites you open most. Title Case, matching the other block titles."
     },
+    "from" : {
+      "comment" : "GitHub pull request header, between two branch names: “kavoye:main from mira:fix-startup”. Lowercase, mid-phrase."
+    },
     "Fwd Del" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the forward delete key (delete to the right), abbreviated because the cap is tiny; the plain Delete key has its own entry."
     },
@@ -2297,11 +2687,77 @@
     "Get a Key" : {
       "comment" : "Button in the API key row in Settings > Provider that opens the provider's own website, where a key can be obtained. A command; “key” means API key."
     },
+    "Get notified when your pull requests get reviews, comments, or check results." : {
+
+    },
+    "GitHub" : {
+
+    },
+    "GitHub access wasn’t approved." : {
+
+    },
+    "GitHub account options" : {
+
+    },
+    "GitHub can’t run this search" : {
+      "comment" : "Shown under the search field in the GitHub filter editor when GitHub rejects the search, usually because of a typing mistake. The tooltip holds GitHub’s own error text."
+    },
+    "GitHub is limiting requests. Linen refreshes again at %@." : {
+
+    },
+    "GitHub is unavailable in Private Browsing." : {
+
+    },
+    "GitHub request failed (%lld)." : {
+      "comment" : "GitHub panel error when the API gives no message. %lld is the HTTP status code, for example 502."
+    },
+    "GitHub returned an unexpected response." : {
+
+    },
+    "GitHub sign-in failed. Check the OAuth app’s device flow setting." : {
+
+    },
+    "GitHub sign-in is unavailable. Try again later." : {
+
+    },
+    "GitHub sign-in isn’t set up in this build." : {
+
+    },
+    "github.filter.state.open" : {
+      "comment" : "Option in the Show menu of the GitHub filter editor: show pull requests that are still open. An adjective, not the verb. Kept separate from “Open”, which is a button that opens a page.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Open"
+          }
+        }
+      }
+    },
+    "github.page.actions" : {
+      "comment" : "Command palette GitHub mode: opens the repository’s GitHub Actions page. GitHub product name; the “Actions” section title of the palette is a separate key.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Actions"
+          }
+        }
+      }
+    },
+    "GitHub’s access to private repositories also allows changes. Linen only reads them, and marks notifications as read when you ask." : {
+
+    },
     "go" : {
       "comment" : "Hint word printed beside a ↩ key cap under the address field, reading “↩ go”, shown when what is typed looks like an address: pressing Return loads it. One lowercase verb, tiny type."
     },
     "Go Back" : {
       "comment" : "Tool name in assistant settings: going back one page."
+    },
+    "Go to #%lld" : {
+      "comment" : "Command palette GitHub mode: opens the issue or pull request with this number in the current repository."
     },
     "Go to the Tab Playing This" : {
       "comment" : "Tooltip on the arrow in the media dock while another tab is providing the sound; clicking switches to that tab. “This” means what is currently playing. Title Case."
@@ -2414,6 +2870,9 @@
     "Hundreds of models from every vendor, with a single key." : {
       "comment" : "One-line description of the OpenRouter provider in the provider picker. Key means API key. OpenRouter is a vendor name and is not in this string."
     },
+    "Icon" : {
+      "comment" : "Accessibility label of the button in the GitHub filter editor that shows the filter’s icon and lets the user choose another."
+    },
     "Icons only" : {
       "comment" : "Title of the switch on the Appearance settings page that narrows the sidebar to favicons alone, and the title of that same row in Settings search. Sentence case."
     },
@@ -2456,6 +2915,9 @@
     "Imported Bookmarks" : {
       "comment" : "Name of the sidebar folder that imported bookmarks go into. The user can rename the folder afterwards. Title Case."
     },
+    "In progress" : {
+      "comment" : "GitHub check row: the check is still running."
+    },
     "In sync" : {
       "comment" : "Label between the two timing buttons at the foot of the lyrics view, shown while the words have not been shifted against the sound. Clicking it puts a shift back to zero. Sentence case; the space is very tight."
     },
@@ -2467,6 +2929,18 @@
     },
     "In use, allowed until you leave" : {
       "comment" : "Caption under a permission's name in the site permission panel: the site is using it right now, and the grant lasts only for this visit. Keep the comma, sentence case, one line."
+    },
+    "Inbox" : {
+      "comment" : "GitHub panel: the default view that groups pull requests by what needs you."
+    },
+    "Include private repositories" : {
+
+    },
+    "Include private repositories?" : {
+
+    },
+    "Include Private Repositories…" : {
+
     },
     "Input" : {
 
@@ -2510,8 +2984,14 @@
     "Interrupt" : {
 
     },
+    "Involving me" : {
+
+    },
     "Issued to: %@" : {
 
+    },
+    "Issues" : {
+      "comment" : "Command palette GitHub mode: opens the repository’s issues page."
     },
     "Its %lld pages of history are removed, along with the start page tiles. Other profiles are not affected." : {
       "comment" : "Message in the dialog that confirms clearing one profile’s history. %lld is the number of pages in that profile’s history.",
@@ -2588,6 +3068,9 @@
     "Keep track of each requested result." : {
 
     },
+    "Keep track of your pull requests" : {
+
+    },
     "Keep Website Loaded" : {
 
     },
@@ -2632,6 +3115,9 @@
     },
     "Latest action: %@" : {
       "comment" : "Most recent tool used by an external MCP connection. The inserted action name is already localized."
+    },
+    "Least recently updated" : {
+      "comment" : "Sort option in the GitHub filter editor: pull requests changed longest ago come first."
     },
     "Leave blank to keep the saved token" : {
 
@@ -2774,6 +3260,24 @@
     "Load a model, then start the local server from LM Studio’s Developer tab." : {
       "comment" : "Setup hint shown under the LM Studio provider in Settings > Provider. “LM Studio” is the app's name and “Developer” is a tab inside it — leave both as is. Two imperatives; curly apostrophe."
     },
+    "Load more notifications" : {
+
+    },
+    "Load more pull requests" : {
+
+    },
+    "Loading details…" : {
+      "comment" : "GitHub pull request detail: shown while checks, reviews, and comments load."
+    },
+    "Loading pull request…" : {
+      "comment" : "Link preview card while a GitHub pull request loads with the user’s own GitHub connection."
+    },
+    "Loading pull requests…" : {
+
+    },
+    "Loading your inbox…" : {
+      "comment" : "GitHub inbox empty-state title during the first refresh."
+    },
     "Local models with a GUI, on port 1234." : {
       "comment" : "One-line description of the LM Studio provider in the provider list in Settings, also shown in that row's tooltip. “GUI” means a graphical interface, and the port number is literal — keep it."
     },
@@ -2788,6 +3292,9 @@
     },
     "Location" : {
       "comment" : "Name of the location permission: a row on the Websites settings page and a label in the permission badge in the toolbar. Means the Mac's geographic location."
+    },
+    "Logic" : {
+      "comment" : "Section heading in the Qualifier menu of the GitHub filter editor: the words AND and OR and parentheses, which combine search terms."
     },
     "Login details" : {
 
@@ -2843,6 +3350,9 @@
     "Make text smaller" : {
       "comment" : "Reader view appearance popover: reduce the text size."
     },
+    "Manage GitHub Access" : {
+
+    },
     "Manage profiles" : {
       "comment" : "Subtitle under the open profile's name at the top of the Settings sidebar, saying that clicking it opens the Profiles page. A profile is a separate set of cookies, history and tabs. Sentence case, no final full stop, and short enough for a narrow sidebar."
     },
@@ -2860,6 +3370,9 @@
     },
     "Manually" : {
 
+    },
+    "Mark as Read" : {
+      "comment" : "GitHub inbox row context menu item. Marks the GitHub notification as read."
     },
     "Max" : {
       "comment" : "Label for the highest Thinking level in model and provider settings."
@@ -2882,6 +3395,9 @@
     "Medium" : {
       "comment" : "The third of the four Thinking levels in Settings > Provider (None, Low, Medium, High). One segment of a segmented control, so space is tight."
     },
+    "Mentioned you" : {
+
+    },
     "Menu commands already use ⌘ shortcuts. Hold ⌥, ⌃ or ⇧ instead." : {
       "comment" : "Warning shown under the shortcut recorder in Settings > Voice when the user records a shortcut that uses the Command key. The menu bar claims those, so the recorder refuses them. The four glyphs are the ones macOS prints on the modifier keys — Command, Option, Control and Shift — and stay exactly as they are. Two sentences: the reason, then what to press instead."
     },
@@ -2896,6 +3412,12 @@
           }
         }
       }
+    },
+    "Merge conflicts" : {
+      "comment" : "GitHub pull request: the branch has merge conflicts."
+    },
+    "Merged" : {
+      "comment" : "State of a GitHub pull request, and an option in the Show menu of the GitHub filter editor. An adjective."
     },
     "microphone" : {
       "comment" : "Lowercase name of one website permission, inserted mid-sentence into the confirmation: Are you sure you want to remove the microphone setting for every website? Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Microphone is a separate string."
@@ -2995,6 +3517,15 @@
     "most capable" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the strongest of the group. Lowercase, and the space is very tight."
     },
+    "Most commented" : {
+      "comment" : "Sort option in the GitHub filter editor: pull requests with the most comments come first."
+    },
+    "Most interactions" : {
+      "comment" : "Sort option in the GitHub filter editor: pull requests with the most comments and reactions come first. Matches GitHub’s wording."
+    },
+    "Most reactions" : {
+      "comment" : "Sort option in the GitHub filter editor: pull requests with the most emoji reactions come first."
+    },
     "Move" : {
       "comment" : "Label in the gap a dragged sidebar row will drop into, saying the drop only changes where the row sits in the list. Imperative verb, one word. Very tight space — a sidebar row is a few characters wide."
     },
@@ -3049,11 +3580,14 @@
     "Muted" : {
       "comment" : "Option in the Autoplay segmented control on the Websites settings page: video may start on its own but sound waits for a click. A past participle describing the media; space in a segment is tight."
     },
+    "My pull requests" : {
+
+    },
     "My server" : {
       "comment" : "Placeholder text in the Name field of the custom endpoint form — an example of what to type, not a value the app uses."
     },
     "Name" : {
-      "comment" : "Used twice as a field label: the title of the name field on the custom endpoint page, and the placeholder in the field that names a custom search engine. A noun."
+      "comment" : "Used as a field label in three places: the title of the name field on the custom endpoint page, the placeholder in the field that names a custom search engine, and the name row of the GitHub filter editor. A noun."
     },
     "Name and appearance" : {
       "comment" : "Heading over the name field, color swatches and symbol grid of one profile."
@@ -3079,6 +3613,18 @@
     "Needs an API key" : {
       "comment" : "Settings → Assistant → Add a provider. Section heading over providers set up by entering an API key."
     },
+    "Needs an approving review." : {
+      "comment" : "GitHub pull request checklist detail under Review required."
+    },
+    "Needs review" : {
+      "comment" : "GitHub pull request status: open, with no checks or review decision yet."
+    },
+    "Needs you" : {
+      "comment" : "GitHub inbox section header: review requests, mentions, and new comments."
+    },
+    "Needs you, your pull requests, and recently opened" : {
+      "comment" : "GitHub panel view menu: description of the Inbox view."
+    },
     "Never" : {
       "comment" : "Option in the Autoplay segmented control on the Websites settings page: nothing starts playing on its own."
     },
@@ -3088,11 +3634,26 @@
     "Never opened" : {
       "comment" : "Summary of a profile that has never been used, shown in place of its counts."
     },
+    "New activity" : {
+      "comment" : "GitHub banner text for your pull request: something changed that has no more specific description, like a review comment."
+    },
+    "New activity on your pull request" : {
+      "comment" : "GitHub inbox row reason: new comments or reviews on a pull request you opened."
+    },
+    "New comment" : {
+
+    },
+    "New Filter" : {
+
+    },
     "New Folder" : {
       "comment" : "The name a newly created sidebar folder carries until it is renamed. Title Case, the way macOS names new folders."
     },
     "New Folder…" : {
       "comment" : "Last item of that “Move to Folder” submenu; it makes a new folder with the rows the menu acts on — the one tab, or every selected row — in it. The real ellipsis character marks that a name is asked for — keep it. Title Case."
+    },
+    "New issue" : {
+      "comment" : "Command palette GitHub mode: opens the page to file a new issue in the repository."
     },
     "New Page" : {
       "comment" : "Fallback title for a browser tab whose website has no title, including while a new website is loading. Title Case."
@@ -3111,6 +3672,9 @@
     },
     "New Window" : {
 
+    },
+    "Newest" : {
+      "comment" : "Sort option in the GitHub filter editor: pull requests created most recently come first."
     },
     "Next (⌘G)" : {
       "comment" : "Tooltip on the down-chevron in the find bar, which moves to the next match on the page. ⌘G is the keyboard shortcut — keyboard symbols, keep exactly, including the parentheses."
@@ -3145,6 +3709,15 @@
     "No bookmarks in this file." : {
       "comment" : "Caption under the Bookmarks row when the chosen file was read but held no web pages."
     },
+    "No checks" : {
+      "comment" : "GitHub pull request checklist: the pull request has no CI checks."
+    },
+    "No comments" : {
+      "comment" : "GitHub pull request checklist: no one has commented."
+    },
+    "No conflicts" : {
+      "comment" : "GitHub pull request checklist: the branch merges cleanly."
+    },
     "No connected services" : {
 
     },
@@ -3156,6 +3729,9 @@
     },
     "No data stored" : {
       "comment" : "Shown under “Size on disk” when a profile is holding nothing."
+    },
+    "No description provided." : {
+
     },
     "No extensions installed yet." : {
 
@@ -3178,6 +3754,12 @@
     "No matches" : {
       "comment" : "Shown in place of the website-data list when the filter text matches no website in it."
     },
+    "No matching filters" : {
+
+    },
+    "No matching pull requests" : {
+
+    },
     "No microphone signal detected. Check your input volume and microphone mode in macOS." : {
 
     },
@@ -3186,6 +3768,9 @@
     },
     "No notes for this release." : {
       "comment" : "Shown in the release notes sheet when the update carries no description."
+    },
+    "No open threads" : {
+      "comment" : "GitHub pull request checklist: every review thread is resolved."
     },
     "No pages match “%@”." : {
       "comment" : "Empty state in the History view when a search returns nothing. %@ is the text the user typed into the search field. Keep the curly quotation marks and the final period."
@@ -3213,6 +3798,12 @@
     },
     "No related tabs to group." : {
       "comment" : "Status line shown after the assistant looked at the open tabs and found no group worth making."
+    },
+    "No reviews" : {
+      "comment" : "GitHub pull request: no review yet."
+    },
+    "No reviews yet" : {
+      "comment" : "GitHub pull request checklist: no one has reviewed or been asked to review."
     },
     "No room" : {
       "comment" : "Shown in place of a Pin button beside an extension in the overflow list, meaning the toolbar is too narrow to hold its button. A very small label in a narrow row — keep it to two short words."
@@ -3316,6 +3907,9 @@
     "Notifications" : {
       "comment" : "Name of one of the four website permissions, used as a row title in the Websites settings page and in the site-permission badge. Title case; a separate lowercase form exists for use inside a sentence."
     },
+    "Notify About My Pull Requests" : {
+      "comment" : "GitHub panel options menu toggle. Shows banners when your pull requests get reviews, comments, or check results."
+    },
     "now" : {
       "comment" : "Relative time on a task card, shown while the task is still running; every other age is written by the system in the reader's own locale. Lowercase fragment on a metadata line, very tight."
     },
@@ -3333,6 +3927,9 @@
     },
     "OK" : {
       "comment" : "Button that simply dismisses an alert, used both for a web page’s own JavaScript alert and for the warning that no app on the Mac handles a link type. It confirms nothing beyond having read the message."
+    },
+    "Oldest" : {
+      "comment" : "Sort option in the GitHub filter editor: pull requests created longest ago come first."
     },
     "on %@" : {
       "comment" : "Fragment inserted into the dialog asking the user to approve an action the assistant wants to take, giving the place: The assistant wants to click “Pay now” on example.com. %@ is the website’s hostname. The alternative fragment, used when there is no hostname, is on this page."
@@ -3362,6 +3959,9 @@
 
     },
     "Only images and video on this page." : {
+
+    },
+    "Open" : {
 
     },
     "Open %@" : {
@@ -3403,11 +4003,20 @@
     "Open Beside Current Page" : {
       "comment" : "Context-menu command on a sidebar row that shows that tab next to the page already open, as two panes. Title Case. Current page means the one on screen now."
     },
+    "Open Comment on GitHub" : {
+      "comment" : "GitHub pull request detail: tooltip on the button that opens one comment on GitHub."
+    },
     "Open downloads" : {
       "comment" : "Settings row that opens the Downloads page."
     },
     "Open Frame in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Frame means an HTML frame within the page. Title Case."
+    },
+    "Open GitHub" : {
+
+    },
+    "Open GitHub profile" : {
+
     },
     "Open Image in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
@@ -3502,6 +4111,15 @@
     "OpenAI-compatible endpoint at %@" : {
       "comment" : "Description the app writes for a user-added provider once its address is saved; it appears under the provider’s name in the provider list. %@ is the hostname taken from the URL the user typed, for example localhost or api.example.com. OpenAI is a vendor name — leave as is."
     },
+    "Opened" : {
+      "comment" : "GitHub inbox row reason when the pull request author is unknown."
+    },
+    "Opened by" : {
+      "comment" : "GitHub inbox row, followed by the author’s avatar and username."
+    },
+    "Opened by %@" : {
+      "comment" : "GitHub inbox row reason. %@ is the GitHub username of the pull request author."
+    },
     "Opened Tab" : {
       "comment" : "Detail suffix on an address bar result row that stands for an already-open tab; it is joined after the host with “ • ”, giving “example.com • Opened Tab”. Adjective plus noun, Title Case, very tight."
     },
@@ -3512,6 +4130,9 @@
 
     },
     "Opens a new issue on Linen’s repository." : {
+
+    },
+    "Opens your GitHub profile" : {
 
     },
     "Optional" : {
@@ -3531,6 +4152,9 @@
     },
     "Organizing tabs needs a model: add a provider key or enable Apple Intelligence." : {
 
+    },
+    "Other activity" : {
+      "comment" : "GitHub inbox section header: notifications that do not need you, like watched repositories."
     },
     "Other Pane" : {
       "comment" : "Menu command that moves focus to the second of two pages shown at once, so the address bar and Find follow it. Title Case. A noun phrase naming where focus goes, not a verb."
@@ -3592,6 +4216,9 @@
     "Paste and Search" : {
       "comment" : "The same context-menu item when the clipboard holds words rather than an address: it pastes and runs a web search. Title Case."
     },
+    "Paste this code on GitHub to connect Linen. It’s already copied." : {
+
+    },
     "Paste your key…" : {
       "comment" : "Placeholder text inside the secure field where the user pastes an API key. Key means API key. Real ellipsis."
     },
@@ -3633,6 +4260,12 @@
     },
     "Payment cards are locked" : {
 
+    },
+    "Pending" : {
+      "comment" : "GitHub review state: the reviewer was asked to review and has not yet."
+    },
+    "People" : {
+      "comment" : "Section heading in the Qualifier menu of the GitHub filter editor: search terms about authors, assignees, and mentions."
     },
     "permanently deletes something" : {
       "comment" : "Clause that completes the sentence This … and usually can’t be undone. in the dialog asking the user to approve an action the assistant wants to take. Lowercase, third person singular, and the implied subject is the action being approved."
@@ -3781,6 +4414,9 @@
     "Private Browsing" : {
 
     },
+    "Private repository" : {
+      "comment" : "Command palette GitHub mode: row detail for a private repository without a description."
+    },
     "Private, offline, and no API key. Best for short answers." : {
       "comment" : "Caption inside the Apple Intelligence card on the model-choice onboarding screen. Three properties, then what the model suits. It is set against the caption on the card beside it, which ends “Best for longer, complex tasks”, so keep that contrast. Two short lines."
     },
@@ -3795,6 +4431,15 @@
     },
     "Providers" : {
       "comment" : "Settings → Assistant. Section heading over the providers the user has already set up."
+    },
+    "Pull request filter" : {
+
+    },
+    "Pull requests" : {
+      "comment" : "Command palette GitHub mode: opens the repository’s pull requests page."
+    },
+    "Pull requests and issues" : {
+      "comment" : "Command palette GitHub mode: section of matching pull requests and issues."
     },
     "Pulled locally" : {
       "comment" : "Heading over the group of models already downloaded onto this Mac, in the model pop-up menu. Pulled is Ollama’s word for downloading a model; locally means onto this computer. The alternative heading for a remote provider is Available to this key."
@@ -3813,6 +4458,9 @@
     },
     "Put appearance, search, privacy, websites, and downloads back to their defaults." : {
       "comment" : "Description of the Reset settings row, shown only in the Settings search results. The five nouns name Settings pages, so translate them the same way their page titles are translated. Imperative with a final full stop."
+    },
+    "Qualifier" : {
+      "comment" : "Button in the GitHub filter editor that opens a menu of GitHub search terms to add. Use the term GitHub uses in its search documentation for your language."
     },
     "Quit Linen" : {
 
@@ -3907,6 +4555,9 @@
     "Ready to install" : {
       "comment" : "Status line under the Software Update heading in Settings once the update has been downloaded and unpacked. An adjective phrase describing the update, not an instruction."
     },
+    "Ready to merge" : {
+      "comment" : "GitHub pull request verdict: checks pass and nothing blocks the merge."
+    },
     "Reasoning summary" : {
 
     },
@@ -3915,6 +4566,12 @@
     },
     "Recent Tasks" : {
       "comment" : "Title Case name of the start page section listing earlier requests made to the assistant, shown where the start page’s sections can be turned on and off. Tasks means things the user asked the assistant to do."
+    },
+    "Recently opened" : {
+      "comment" : "GitHub inbox section header: pull requests opened by others in the last week."
+    },
+    "Recently updated" : {
+      "comment" : "Sort option in the GitHub filter editor: pull requests changed most recently come first."
     },
     "Recently Visited" : {
       "comment" : "Section heading in the ⌘K palette over pages taken from history. Title Case."
@@ -3931,6 +4588,9 @@
     "Recognizes your speech on this Mac at no cost." : {
       "comment" : "Voice settings: caption for the on-device dictation option."
     },
+    "Reconnect GitHub to show team names." : {
+      "comment" : "Tooltip on the Show Team Names button."
+    },
     "Record task outcome" : {
 
     },
@@ -3945,6 +4605,12 @@
     },
     "Redo" : {
       "comment" : "Standard macOS Edit menu command, shortcut ⇧⌘Z. Use Apple’s own wording for it in the target language."
+    },
+    "Refresh GitHub" : {
+
+    },
+    "Refresh to try again." : {
+      "comment" : "GitHub inbox empty-state detail after a refresh failed."
     },
     "Register public client" : {
 
@@ -3981,6 +4647,9 @@
           }
         }
       }
+    },
+    "Releases" : {
+      "comment" : "Command palette GitHub mode: opens the repository’s releases page."
     },
     "Reload" : {
       "comment" : "Tooltip on the circular-arrow button in the toolbar, which loads the current page again. Verb; alternates with “Stop” while a page is still loading. Title Case, very tight."
@@ -4108,6 +4777,12 @@
     "Reply length" : {
 
     },
+    "Repositories" : {
+      "comment" : "Command palette GitHub mode: section of repositories."
+    },
+    "Repository" : {
+      "comment" : "Command palette GitHub mode: row detail for a repository without a description."
+    },
     "Request Tab Access" : {
       "comment" : "Activity title for an external connection requesting access to the visible tabs."
     },
@@ -4206,8 +4881,23 @@
     "Reveal hover content" : {
 
     },
+    "Review" : {
+      "comment" : "Section heading in the Qualifier menu of the GitHub filter editor: search terms about code review. A noun, not the verb."
+    },
+    "Review checks, comments, and changes here." : {
+
+    },
     "Review Details…" : {
 
+    },
+    "Review requested" : {
+
+    },
+    "Review requests, mentions, and your pull requests appear here." : {
+      "comment" : "GitHub inbox empty-state detail when nothing needs you."
+    },
+    "Review required" : {
+      "comment" : "GitHub pull request checklist title: branch rules need an approving review before merging."
     },
     "Review Saved Details" : {
 
@@ -4384,7 +5074,7 @@
       "comment" : "Hint word printed beside a ↩ key cap under the address field, reading “↩ search”, shown when what is typed is not an address: pressing Return searches the web for it. One lowercase verb, tiny type."
     },
     "Search" : {
-      "comment" : "Title of the General settings section grouping the search engine rows. A noun heading beside an icon, not a button or a verb."
+      "comment" : "Title of the General settings section grouping the search engine rows. A noun heading beside an icon, not a button or a verb. Also the label above the search field in the GitHub filter editor."
     },
     "Search %@" : {
       "comment" : "Command palette site search hint, placeholder, and result detail. %@ is the website's name and should not be translated. Search is a verb."
@@ -4449,6 +5139,9 @@
     "Security code (optional)" : {
 
     },
+    "See a pull request’s status when you hover over its tab." : {
+
+    },
     "See the addresses and titles of your open tabs" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Addresses means web addresses. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
@@ -4459,6 +5152,9 @@
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
     "Select a card number, cardholder name, or expiration field to fill a card." : {
+
+    },
+    "Select a pull request" : {
 
     },
     "Select a visible name, email, phone, or address field and try again." : {
@@ -4593,8 +5289,14 @@
     "Shared tabs: %lld · Tool calls: %lld" : {
       "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
     },
+    "Shift-click a pull request link to peek at its checks and reviews." : {
+
+    },
     "Short" : {
 
+    },
+    "Show" : {
+      "comment" : "Label of the menu in the GitHub filter editor that chooses which pull requests to include: open, draft, merged, closed, or all. Reads as “Show: Open”."
     },
     "Show %@ on the toolbar" : {
       "comment" : "Tooltip on the Pin button in the extensions overflow popover. %@ is the extension’s own display name, taken from the extension’s manifest — it is not translated. Show is a verb, and toolbar is the row of buttons at the top of the window."
@@ -4604,6 +5306,9 @@
     },
     "Show All" : {
       "comment" : "Serves two places at once: the standard macOS application-menu command that unhides all applications, and a button at the end of the start page’s history list that reveals the full list. Use Apple’s own wording for the system command, since that is the one users recognise. Title Case, Show is a verb."
+    },
+    "Show all %lld files" : {
+      "comment" : "GitHub pull request detail: opens the full list of changed files on GitHub."
     },
     "Show All History" : {
       "comment" : "Menu bar command under History, shortcut ⌘Y, which opens the full history list. Title Case and established platform terminology."
@@ -4635,6 +5340,9 @@
     "Show Last Tab" : {
       "comment" : "Hidden menu command under Window, shortcut ⌘9, which switches to the last tab in the row. Title Case and established platform terminology."
     },
+    "Show Less" : {
+      "comment" : "GitHub pull request detail: collapses the description."
+    },
     "Show link address" : {
 
     },
@@ -4649,6 +5357,9 @@
     },
     "Show media player" : {
       "comment" : "Label of the switch on the General settings page that decides whether video and sound move into the player in the sidebar. Sentence case, as settings labels are."
+    },
+    "Show More" : {
+      "comment" : "GitHub pull request detail: expands the description."
     },
     "Show Next Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘] and ⌃Tab, which switches to the tab after the current one. Title Case and established platform terminology."
@@ -4685,6 +5396,9 @@
     },
     "Show Tab %lld" : {
       "comment" : "Hidden menu commands under Window bound to ⌘1 through ⌘8. %lld is the tab’s position in the row, a number from 1 to 8. Title Case and established platform terminology."
+    },
+    "Show Team Names…" : {
+      "comment" : "GitHub pull request checklist button. Reconnects GitHub with permission to read organization teams."
     },
     "Show the side panel without transparency." : {
       "comment" : "Settings > Appearance > Side Panel: caption for the Solid background toggle."
@@ -4740,6 +5454,9 @@
     "Sign-ins and cookies" : {
       "comment" : "Something a profile keeps separately from every other profile."
     },
+    "Signed in as %@" : {
+      "comment" : "GitHub panel options menu. %@ is the GitHub username."
+    },
     "Signs you out of most websites." : {
       "comment" : "Caption under the Cookies and site data checkbox in the Clear browsing data section, warning what clearing them will do. The implied subject is the clearing. Third person singular; website is one word."
     },
@@ -4782,11 +5499,17 @@
     "Some extension features aren’t supported by WebKit. Other features remain available." : {
 
     },
+    "Some organizations require authorization." : {
+
+    },
     "Something else" : {
 
     },
     "Something else…" : {
       "comment" : "Last entry in the search engine pop-up menu, chosen when the user wants an engine that is not listed and will type its address instead. Real ellipsis, promising that a field appears."
+    },
+    "Sorted by" : {
+      "comment" : "Label of the menu in the GitHub filter editor that chooses the order of the pull requests. Reads as “Sorted by: Recently updated”."
     },
     "Sounds more natural. Billed for each answer read aloud." : {
       "comment" : "Voice settings: caption for the OpenAI reading aloud option."
@@ -5207,6 +5930,9 @@
     "The server refused the connection or isn’t running." : {
       "comment" : "Explanation on the error page shown when the site could not be reached, below the headline. Curly apostrophe."
     },
+    "The sign-in code expired. Connect again to get a new code." : {
+
+    },
     "The sign-in response could not be verified. Try signing in again." : {
 
     },
@@ -5479,6 +6205,9 @@
     "Type" : {
       "comment" : "Tool name in assistant settings: typing into fields on a web page."
     },
+    "Type “github” in the address bar and press Tab to search pull requests." : {
+
+    },
     "Type > for commands" : {
       "comment" : "Note beside the Actions heading in the ⌘K palette, telling the reader that typing the greater-than sign filters the list down to commands only. Keep the “>” character as it is: it is the key the user presses, not punctuation."
     },
@@ -5539,6 +6268,9 @@
     "Unpinned tabs you haven’t used close automatically. Find them again with ⌘K." : {
       "comment" : "Caption under “Archive tabs after” in General settings. ⌘K opens the command palette."
     },
+    "Unread" : {
+
+    },
     "Unsupported CRX container version %lld" : {
       "comment" : "Error shown when an extension package uses a file format version the app cannot read. %lld is the version number found in the file. CRX is the name of Chrome’s extension package format — leave as is. No final full stop."
     },
@@ -5547,6 +6279,9 @@
     },
     "Up to date" : {
       "comment" : "Update status meaning no newer version exists, shown both in the Settings update section and on the sidebar update card. An adjective phrase describing the app."
+    },
+    "Up to date with %@" : {
+      "comment" : "GitHub pull request checklist. %@ is the base branch name, like main."
     },
     "Update" : {
 
@@ -5598,6 +6333,15 @@
           }
         }
       }
+    },
+    "Updated" : {
+
+    },
+    "Updated %@" : {
+
+    },
+    "Updated in the last week" : {
+      "comment" : "Item in the Qualifier menu of the GitHub filter editor. Adds a search term for pull requests changed in the last 7 days."
     },
     "Updated to %@" : {
 
@@ -5755,8 +6499,23 @@
     "Wait for Page Changes" : {
 
     },
+    "Waiting for %@" : {
+      "comment" : "Watches tab: what a watch waits for. %@ is the person's own words, e.g. “price below $50”."
+    },
+    "Waiting for approval…" : {
+
+    },
     "Waiting for sign-in…" : {
 
+    },
+    "Waiting for update" : {
+
+    },
+    "Waiting on %@" : {
+      "comment" : "GitHub pull request checklist: reviewers who have not reviewed yet. %@ is a list of usernames or team names."
+    },
+    "Waiting on a team" : {
+      "comment" : "GitHub pull request checklist: a team was asked to review, and its name is hidden."
     },
     "Watch every network request the browser makes" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Watch means observe. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
@@ -5836,6 +6595,9 @@
     "When your Mac runs low on memory, inactive tabs unload. They reload when you open them." : {
 
     },
+    "Where" : {
+      "comment" : "Section heading in the Qualifier menu of the GitHub filter editor: search terms about the repository, organization, branch, label, and milestone."
+    },
     "Where downloaded files are saved." : {
       "comment" : "Caption describing the Save files to setting in the Settings search results. A sentence fragment."
     },
@@ -5881,6 +6643,9 @@
     "You can change this later in Settings." : {
 
     },
+    "You’re all caught up" : {
+      "comment" : "GitHub inbox empty-state title when nothing needs you."
+    },
     "You’re offline" : {
       "comment" : "Headline on the error page shown when the Mac has no internet connection. A short sentence in sentence case, displayed large above a longer explanation. Curly apostrophe."
     },
@@ -5899,7 +6664,13 @@
     "You’ve reached the model provider’s rate limit. Wait a moment, then choose Continue." : {
 
     },
+    "Your activity" : {
+
+    },
     "Your extension handles password autofill." : {
+
+    },
+    "Your GitHub connection expired or was revoked. Connect again." : {
 
     },
     "Your microphone pauses while Linen speaks." : {
@@ -5907,6 +6678,12 @@
     },
     "Your own server" : {
       "comment" : "Settings → Assistant → Add a provider. Row for connecting any OpenAI-compatible server."
+    },
+    "Your pull requests" : {
+      "comment" : "GitHub inbox section header: open pull requests you authored."
+    },
+    "Your pull requests and notifications." : {
+      "comment" : "Description under “GitHub” in the side panel’s Add to Side Panel popover. Pull requests and notifications are GitHub features."
     },
     "Zoom" : {
       "comment" : "Standard macOS Window menu command that resizes the window — nothing to do with the page zoom controls elsewhere in the app. Use Apple’s own wording for the system Zoom command."

@@ -144,9 +144,13 @@ struct BrowserView: View {
             TabPreviewOverlay(
                 browser: browser,
                 model: coordinator.tabPreview,
-                sidebarEdge: sidebar.isShowing ? width : 0
+                sidebarEdge: sidebar.isShowing ? width : 0,
+                github: coordinator.settings.showsGitHub && coordinator.github.canPreview ? coordinator.github : nil
             )
             .environment(\.colorScheme, loomScheme)
+
+            GitHubPreviewOverlay(presenter: coordinator.githubPreview, model: coordinator.github)
+                .environment(\.colorScheme, loomScheme)
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
                 .environment(\.windowColorScheme, loomScheme)

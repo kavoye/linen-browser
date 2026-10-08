@@ -8,6 +8,53 @@ import Testing
 @testable import Linen
 
 struct LinkPeekTests {
+    @Test @MainActor func pullRequestLinksPreviewFromGitHubWithoutAModel() async throws {
+        let suite = TestDefaults.name("LinkPeekGitHub")
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = BrowserSettings(defaults: defaults)
+        settings.peeksAtLinks = true
+        let peek = LinkPeek()
+        peek.use(settings: settings)
+        var askedForModel = false
+        peek.makeModel = { askedForModel = true; return nil }
+        peek.canPreviewPullRequests = { true }
+        let pr = try GitHubFixtures.pullRequest(state: "OPEN", checks: "SUCCESS", review: "APPROVED")
+        var requested: GitHubPullRequestReference?
+        peek.previewPullRequest = { reference in
+            requested = reference
+            return (pr, nil)
+        }
+        peek.show(URL(string: "https://github.com/kavoye/linen-browser/pull/42/files")!, tabID: UUID(), anchor: .zero)
+        #expect(await waitUntil { peek.shown?.phase == .pullRequest(pr, nil) })
+        #expect(requested?.number == 42)
+        #expect(!askedForModel)
+
+        peek.dismiss()
+        peek.canPreviewPullRequests = { false }
+        peek.show(URL(string: "https://github.com/kavoye/linen-browser/pull/42")!, tabID: UUID(), anchor: .zero)
+        #expect(peek.shown == nil)
+        #expect(askedForModel)
+    }
+
+    @Test @MainActor func aPullRequestLoadsInItsOwnPhase() async throws {
+        let suite = TestDefaults.name("LinkPeekGitHubLoading")
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = BrowserSettings(defaults: defaults)
+        settings.peeksAtLinks = true
+        let peek = LinkPeek()
+        peek.use(settings: settings)
+        peek.canPreviewPullRequests = { true }
+        peek.previewPullRequest = { _ in
+            try? await Task.sleep(for: .seconds(5))
+            return nil
+        }
+        peek.show(URL(string: "https://github.com/kavoye/linen-browser/pull/42")!, tabID: UUID(), anchor: .zero)
+        #expect(await waitUntil { peek.shown?.phase == .loadingPullRequest })
+        peek.dismiss()
+    }
+
     @Test func onlyWebAddressesArePeekedAt() {
         #expect(LinkPeekLoader.canPeek(URL(string: "https://example.com/post")!))
         #expect(LinkPeekLoader.canPeek(URL(string: "http://example.com")!))

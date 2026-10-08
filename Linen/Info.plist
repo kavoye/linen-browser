@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>GitHubOAuthClientID</key>
+	<string>$(GITHUB_OAUTH_CLIENT_ID)</string>
 	<!-- Local model servers (Ollama, LM Studio, llama.cpp, vLLM) listen on
 	     plain http over loopback, which App Transport Security blocks by
 	     default. This exemption covers loopback and .local only; everything

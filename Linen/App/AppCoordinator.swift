@@ -55,6 +55,9 @@ final class AppCoordinator {
     var supportsReasoningEffort = false
 
     let browser: BrowserModel
+    var github: GitHubPanelModel {
+        browser.context.github
+    }
     var extensions: ExtensionManager {
         browser.context.extensions
     }
@@ -101,6 +104,7 @@ final class AppCoordinator {
     let sidePanel = SidePanelModel()
     #endif
     let tabPreview = TabPreviewModel()
+    let githubPreview = GitHubPreviewPresenter()
     let linkPeek = LinkPeek()
     let peek = PeekPanel()
     let sidebarDrag = SidebarDragModel()

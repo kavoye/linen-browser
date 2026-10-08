@@ -8,6 +8,7 @@ struct ChatMarkdown: View {
     var fontSize: CGFloat = 13
     var spacing: CGFloat = 7
     var joinsWrappedLines = false
+    var isDocument = false
     var onOpenLink: ((URL) -> Void)?
 
     private var blocks: [ChatMarkdownBlock] {
@@ -30,6 +31,17 @@ struct ChatMarkdown: View {
     @ViewBuilder
     private func row(_ block: ChatMarkdownBlock) -> some View {
         switch block.kind {
+        case .heading(let level) where isDocument:
+            VStack(alignment: .leading, spacing: 5) {
+                inline(block.text)
+                    .font(.system(size: fontSize + [7, 5, 2][min(level, 3) - 1], weight: .semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                if level <= 2 {
+                    Rectangle().fill(Theme.Wash.selection).frame(height: 1)
+                }
+            }
+            .padding(.top, block.id == 0 ? 0 : 6)
+
         case .heading(let level):
             inline(block.text)
                 .font(.system(size: fontSize + (level <= 2 ? 1 : 0), weight: .semibold))
@@ -120,8 +132,20 @@ struct ChatMarkdown: View {
         let options = AttributedString.MarkdownParsingOptions(
             interpretedSyntax: .inlineOnlyPreservingWhitespace
         )
-        guard let parsed = try? AttributedString(markdown: source, options: options) else {
+        guard var parsed = try? AttributedString(markdown: source, options: options) else {
             return Text(verbatim: source)
+        }
+        if isDocument {
+            for run in parsed.runs {
+                if run.inlinePresentationIntent?.contains(.code) == true {
+                    parsed[run.range].font = .system(size: fontSize - 1, design: .monospaced)
+                    parsed[run.range].backgroundColor = Theme.Wash.selection
+                }
+                if run.link != nil {
+                    parsed[run.range].foregroundColor = Theme.accent
+                    parsed[run.range].underlineStyle = .single
+                }
+            }
         }
         return Text(parsed)
     }

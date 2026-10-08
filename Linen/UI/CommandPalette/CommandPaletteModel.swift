@@ -387,11 +387,15 @@ final class CommandPaletteModel {
     let coordinator: AppCoordinator
     let dismiss: () -> Void
     let suggestions = SearchSuggestions()
+    let gitHubSearch = GitHubPaletteSearch()
 
     var interaction = CommandPaletteInteraction() {
         didSet {
             guard interaction.query != oldValue.query, !isPreviewingSelection else { return }
             suggestionPreview.clear()
+            if isGitHubMode {
+                gitHubSearch.update(interaction.query, model: coordinator.github)
+            }
             if searchSite == nil {
                 suggestions.update(for: MentionText.stripped(
                     CommandPaletteProjection.suggestionQuery(for: interaction.query)
@@ -420,6 +424,11 @@ final class CommandPaletteModel {
         self.browser = browser
         self.coordinator = coordinator
         self.dismiss = dismiss
+        gitHubSearch.onChange = { [weak self] in self?.suggestionsDidChange() }
+    }
+
+    private var isGitHubMode: Bool {
+        searchSite?.id == "github" && browser.context.settings.showsGitHub && coordinator.github.canPreview
     }
 
     var placeholder: String {
@@ -448,6 +457,7 @@ final class CommandPaletteModel {
     @discardableResult
     func removeSearchSite() -> Bool {
         guard searchSite != nil else { return false }
+        gitHubSearch.cancel()
         searchSite = nil
         suggestionPreview.clear()
         interaction.selection = 0
@@ -570,20 +580,38 @@ final class CommandPaletteModel {
         guard suggestionPreview.sections == nil else { return }
         if let searchSite {
             let query = interaction.query.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !query.isEmpty, let url = searchSite.searchURL(for: query) {
-                sections = [
-                    OmniboxSection(id: "site-search", title: "", items: [
-                        OmniboxItem(
-                            id: "site-search-\(searchSite.id)",
-                            kind: .search,
-                            title: query,
-                            detail: String(localized: "Search \(searchSite.name)"),
-                            iconHost: searchSite.host,
-                            alternate: { [weak self] in self?.openCurrent(url) },
-                            run: { [weak self] in self?.openNew(url) }
-                        ),
-                    ]),
-                ]
+            let webItem = query.isEmpty ? nil : searchSite.searchURL(for: query).map { url in
+                OmniboxItem(
+                    id: "site-search-\(searchSite.id)",
+                    kind: .search,
+                    title: query,
+                    detail: String(localized: "Search \(searchSite.name)"),
+                    iconHost: searchSite.host,
+                    alternate: { [weak self] in self?.openCurrent(url) },
+                    run: { [weak self] in self?.openNew(url) }
+                )
+            }
+            if isGitHubMode {
+                let github = coordinator.github
+                sections = GitHubPaletteSections.build(
+                    query: query, webItem: webItem,
+                    context: GitHubPaletteRoute.repository(of: browser.activeTab?.committedURL),
+                    known: github.knownRepositories, mine: github.triage.authored,
+                    hits: gitHubSearch.hits, hitsQuery: gitHubSearch.hitsQuery,
+                    actions: GitHubPaletteActions(
+                        open: { [weak self] url in
+                            self?.coordinator.openGitHubLink(url)
+                            self?.dismiss()
+                        },
+                        openCurrent: { [weak self] url in self?.openCurrent(url) },
+                        split: { [weak self] url, other in
+                            self?.coordinator.openGitHubSplit(url, beside: other)
+                            self?.dismiss()
+                        }
+                    )
+                )
+            } else if let webItem {
+                sections = [OmniboxSection(id: "site-search", title: "", items: [webItem])]
             } else {
                 sections = []
             }

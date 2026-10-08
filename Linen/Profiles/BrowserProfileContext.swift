@@ -25,6 +25,7 @@ final class BrowserProfileContext {
     }
 
     static func forget(_ profileID: UUID) {
+        persistent[profileID]?.github.stop()
         persistent[profileID] = nil
     }
 
@@ -47,6 +48,11 @@ final class BrowserProfileContext {
     lazy var tabArchive = TabArchive(database: database)
     lazy var conversationLog = ConversationLog(database: database)
     lazy var extensions = ExtensionManager(profile: profile, dataStore: dataStore)
+    lazy var github = GitHubPanelModel(
+        profileID: profile.id,
+        isPrivate: profile.isPrivate,
+        defaults: ProfileSettingsStore.defaults(for: profile)
+    )
 
     init(profile: Profile, settingsOwner: Profile? = nil) {
         self.profile = profile

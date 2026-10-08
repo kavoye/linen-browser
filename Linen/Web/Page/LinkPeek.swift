@@ -17,6 +17,9 @@ final class LinkPeek {
         case mediaOnly
         case noText
         case failed
+        case loadingPullRequest
+        case pullRequest(GitHubInboxPR, GitHubPRDetails?)
+        case pullRequestUnavailable
     }
 
     static func emptyPhase(for page: LinkPeekPage) -> Phase {
@@ -67,6 +70,12 @@ final class LinkPeek {
 
     private var settings: BrowserSettings = .shared
     @ObservationIgnored var makeModel: () -> (any LanguageModel)? = { UtilityModelSource.make() }
+    @ObservationIgnored var canPreviewPullRequests: () -> Bool = { false }
+    @ObservationIgnored var previewPullRequest: (GitHubPullRequestReference) async -> (pr: GitHubInboxPR, details: GitHubPRDetails?)? = { _ in nil }
+
+    private func isPullRequest(_ url: URL) -> Bool {
+        GitHubPullRequestReference(url: url) != nil && canPreviewPullRequests()
+    }
 
     func use(settings: BrowserSettings) {
         guard self.settings !== settings else { return }
@@ -137,7 +146,7 @@ final class LinkPeek {
 
     func show(_ url: URL, tabID: UUID, anchor: CGPoint) {
         guard settings.peeksAtLinks, !isSuppressed else { return }
-        guard LinkPeekLoader.canPeek(url), isEnabled else { return }
+        guard LinkPeekLoader.canPeek(url), isPullRequest(url) || isEnabled else { return }
         candidate = Candidate(url: url, tabID: tabID, anchor: anchor)
         isHeld = true
         start()
@@ -196,7 +205,7 @@ final class LinkPeek {
         guard shown?.url != candidate.url, pending != candidate.url else { return }
         // `isEnabled` asks for a language model, which is far too heavy to ask
         // on the pointer's path.
-        guard isEnabled else { return }
+        guard isPullRequest(candidate.url) || isEnabled else { return }
 
         work?.cancel()
         pending = candidate.url
@@ -209,6 +218,12 @@ final class LinkPeek {
     }
 
     private func peek(at target: Candidate) async {
+        if let reference = GitHubPullRequestReference(url: target.url), canPreviewPullRequests() {
+            present(target, phase: .loadingPullRequest)
+            let result = await previewPullRequest(reference)
+            settle(target.url, to: result.map { .pullRequest($0.pr, $0.details) } ?? .pullRequestUnavailable)
+            return
+        }
         if let kept = remembered[target.url] {
             present(target, phase: .ready(kept.summary), snapshot: kept.snapshot)
             return

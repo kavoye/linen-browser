@@ -41,6 +41,7 @@ final class BrowserSettings {
         static let autoplay = "content.autoplay"
         static let mediaPlayer = "media.player"
         static let lyrics = "media.lyrics"
+        static let github = "sidePanel.github"
         static let tabColorRefraction = "appearance.tabColorRefraction"
         static let solidSidePanel = "appearance.solidSidePanel"
         static let automaticPiP = "media.automaticPiP"
@@ -81,6 +82,7 @@ final class BrowserSettings {
     @ObservationIgnored var onWebPreferencesChanged: (() -> Void)?
     @ObservationIgnored var onUpdateChannelChanged: ((UpdateChannel) -> Void)?
     @ObservationIgnored var onLyricsChanged: ((Bool) -> Void)?
+    @ObservationIgnored var onGitHubChanged: ((Bool) -> Void)?
     @ObservationIgnored var onMediaPlayerChanged: ((Bool) -> Void)?
     @ObservationIgnored var onAutomaticPictureInPictureChanged: ((Bool) -> Void)?
     @ObservationIgnored var onVideoInPlayerChanged: ((Bool) -> Void)?
@@ -119,6 +121,8 @@ final class BrowserSettings {
             showsMediaPlayer = source.showsMediaPlayer
         case Key.lyrics:
             showsLyrics = source.showsLyrics
+        case Key.github:
+            showsGitHub = source.showsGitHub
         case Key.tabColorRefraction:
             refractsTabColor = source.refractsTabColor
         case Key.solidSidePanel:
@@ -249,6 +253,14 @@ final class BrowserSettings {
             guard showsLyrics != oldValue else { return }
             write(showsLyrics, forKey: Key.lyrics)
             onLyricsChanged?(showsLyrics)
+        }
+    }
+
+    var showsGitHub: Bool {
+        didSet {
+            guard showsGitHub != oldValue else { return }
+            write(showsGitHub, forKey: Key.github)
+            onGitHubChanged?(showsGitHub)
         }
     }
 
@@ -644,6 +656,7 @@ final class BrowserSettings {
             : min(max(double(Key.transparency), 0), 1)
         showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
         showsLyrics = object(Key.lyrics) as? Bool ?? false
+        showsGitHub = object(Key.github) as? Bool ?? false
         refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? true
         hasSolidSidePanel = object(Key.solidSidePanel) as? Bool ?? false
         sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false

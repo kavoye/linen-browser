@@ -11,6 +11,8 @@ extension AppCoordinator {
             true
         case .lyrics:
             settings.showsLyrics
+        case .github:
+            settings.showsGitHub
         }
     }
 
@@ -20,6 +22,8 @@ extension AppCoordinator {
             return
         case .lyrics:
             settings.showsLyrics = isAdded
+        case .github:
+            settings.showsGitHub = isAdded
         }
         if isAdded {
             sidePanel.show(kind)
@@ -93,6 +97,8 @@ struct SidePanelSurface: View {
             AgentInspector(browser: browser, coordinator: coordinator)
         case .lyrics:
             LyricsSurface(coordinator: coordinator)
+        case .github:
+            GitHubPanelSurface(browser: browser, coordinator: coordinator)
         case nil:
             Spacer(minLength: 0)
         }
@@ -166,7 +172,7 @@ private struct SidePanelHeader: View {
                     tab: tab,
                     isSelected: panel.selection == tab.id,
                     mark: tab.kind == .activity ? coordinator.agentMark : nil,
-                    count: 0,
+                    count: tab.kind == .github ? coordinator.github.notifications.count : 0,
                     onSelect: { panel.select(tab.id) },
                     onRemove: tab.kind.isRemovable ? { coordinator.setAdded(false, tab.kind) } : nil
                 )
@@ -202,6 +208,9 @@ struct SidePanelToggle: View {
     private var status: SidePanelStatus? {
         if let mark = coordinator.agentMark {
             return .agent(mark)
+        }
+        if !coordinator.github.notifications.isEmpty {
+            return .github
         }
         return coordinator.hasLyrics ? .lyrics : nil
     }
@@ -239,6 +248,7 @@ struct SidePanelToggle: View {
 private enum SidePanelStatus: Equatable {
     case agent(AgentActivityDot.State)
     case lyrics
+    case github
 }
 
 private struct SidePanelStatusMark: View {
@@ -254,6 +264,12 @@ private struct SidePanelStatusMark: View {
             Image(systemName: "music.note")
                 .font(.system(size: 9, weight: .black))
                 .foregroundStyle(Theme.accent)
+        case .github:
+            Circle()
+                .fill(Theme.accent)
+                .frame(width: 7, height: 7)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .offset(x: 1, y: -1)
         case nil:
             EmptyView()
         }

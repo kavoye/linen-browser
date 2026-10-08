@@ -13,6 +13,7 @@ final class NotificationBridge: NSObject {
     nonisolated static let handlerName = "linennotify"
 
     var tabResolver: ((WKWebView) -> BrowserTab?)?
+    var linkOpener: ((URL, UUID?) -> Void)?
 
     private override init() {
         super.init()
@@ -144,6 +145,25 @@ final class NotificationBridge: NSObject {
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
+
+    func post(title: String, subtitle: String, body: String, identifier: String, link: URL, profileID: UUID) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.subtitle = subtitle
+        content.body = body
+        content.userInfo = ["link": link.absoluteString, "profile": profileID.uuidString]
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let settings = await center.notificationSettings()
+            if settings.authorizationStatus == .notDetermined {
+                guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else { return }
+            } else if settings.authorizationStatus == .denied {
+                return
+            }
+            try? await center.add(request)
+        }
+    }
 }
 
 // MARK: - WKScriptMessageHandler
@@ -175,5 +195,9 @@ extension NotificationBridge: UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse
     ) async {
         NSApp.activate()
+        let info = response.notification.request.content.userInfo
+        if let link = (info["link"] as? String).flatMap(URL.init(string:)) {
+            linkOpener?(link, (info["profile"] as? String).flatMap(UUID.init(uuidString:)))
+        }
     }
 }

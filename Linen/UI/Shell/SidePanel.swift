@@ -7,6 +7,7 @@ import SwiftUI
 nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
     case activity
     case lyrics
+    case github
 
     var title: LocalizedStringResource {
         switch self {
@@ -14,6 +15,8 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
             "Assistant"
         case .lyrics:
             "Lyrics"
+        case .github:
+            "GitHub"
         }
     }
 
@@ -23,6 +26,8 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
             .orb
         case .lyrics:
             .symbol("quote.bubble")
+        case .github:
+            .asset("GitHubMark")
         }
     }
 
@@ -36,6 +41,8 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
             "Ask about websites and get help with tasks."
         case .lyrics:
             "Lyrics that follow the song, from LRCLIB."
+        case .github:
+            "Your pull requests and notifications."
         }
     }
 

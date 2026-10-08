@@ -316,4 +316,14 @@ struct LyricsModelTests {
 
         #expect(BrowserSettings(defaults: defaults).showsLyrics)
     }
+
+    @Test func gitHubStaysOffUntilItIsAdded() {
+        let defaults = scratchDefaults()
+
+        #expect(!BrowserSettings(defaults: defaults).showsGitHub)
+
+        BrowserSettings(defaults: defaults).showsGitHub = true
+
+        #expect(BrowserSettings(defaults: defaults).showsGitHub)
+    }
 }

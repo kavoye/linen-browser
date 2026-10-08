@@ -173,6 +173,13 @@ extension AppCoordinator {
     }
 
     private func configureWindowEngines() {
+        linkPeek.canPreviewPullRequests = { [weak self] in
+            guard let self else { return false }
+            return settings.showsGitHub && github.canPreview
+        }
+        linkPeek.previewPullRequest = { [weak self] reference in
+            await self?.github.preview(reference)
+        }
         linkPeek.makeModel = { [weak self] in
             guard let self else { return UtilityModelSource.onDevice() }
             let selected = modelProviders.resolve(selectedProvider)
@@ -253,6 +260,25 @@ extension AppCoordinator {
     }
 
     func followSettings() {
+        let profileID = browser.context.profile.id
+        github.announce = { update in
+            NotificationBridge.shared.post(
+                title: update.pr.title, subtitle: "\(update.pr.repository.nameWithOwner) #\(update.pr.number)",
+                body: update.summary, identifier: "github-\(update.pr.id)", link: update.pr.url,
+                profileID: profileID
+            )
+        }
+        NotificationBridge.shared.linkOpener = { [weak application] url, profileID in
+            guard let application, let profileID,
+                  let profile = ProfileStore.shared.profiles.first(where: { $0.id == profileID }) else { return }
+            let windows = application.windows.filter { $0.profiles.current.id == profileID }
+            let window = windows.first { $0.isKeyWindow } ?? windows.last ?? application.newWindow(profile: profile)
+            window.showBrowser()
+            window.openGitHubLink(url)
+        }
+        if !AppDatabase.isRunningTests, settings.showsGitHub {
+            github.start()
+        }
         let context = browser.context
         let targets: () -> [AppCoordinator] = { [weak context, weak application, weak self] in
             guard let context else { return [] }
@@ -280,9 +306,19 @@ extension AppCoordinator {
         settings.onArchiveTabsAfterChanged = { _ in
             targets().forEach { $0.browser.archiveStaleTabs() }
         }
+        settings.onGitHubChanged = { [weak context] isOn in
+            targets().forEach { $0.sidePanel.setAvailable(isOn, for: .github) }
+            guard !AppDatabase.isRunningTests, let github = context?.github else { return }
+            if isOn {
+                github.start()
+            } else {
+                github.stop()
+            }
+        }
         media.isEnabled = settings.showsMediaPlayer
         applyPictureLending()
         sidePanel.setAvailable(settings.showsLyrics, for: .lyrics)
+        sidePanel.setAvailable(settings.showsGitHub, for: .github)
         updateWindowAppearance()
         browser.downloads.webViewProvider = {
             let windows = targets()
