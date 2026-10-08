@@ -119,7 +119,7 @@ struct AskSurfaceInteraction: Equatable {
 enum AskRestingContent: Equatable {
     case transcript(String)
     case agent(String)
-    case notice(String)
+    case notice(String, symbol: String? = nil)
     case status(String)
     case placeholder(String)
     case address(String, symbol: String? = nil)
@@ -139,7 +139,7 @@ enum AskRestingContent: Equatable {
             text.isEmpty ? String(localized: "Listening…") : text
         case .agent(let text):
             String(localized: "AI reply: \(text)")
-        case .notice(let text), .status(let text):
+        case .notice(let text, _), .status(let text):
             text
         case .placeholder:
             ""
@@ -157,6 +157,7 @@ enum AskRestingContent: Equatable {
         isFocused: Bool,
         typedText: String,
         notice: String?,
+        noticeSymbol: String? = nil,
         status: String?,
         placeholder: String,
         currentURL: String
@@ -169,7 +170,7 @@ enum AskRestingContent: Equatable {
             return .agent(agentMessage)
         }
         if let notice, yieldsToTyping {
-            return .notice(notice)
+            return .notice(notice, symbol: noticeSymbol)
         }
         if let status, yieldsToTyping {
             return .status(status)

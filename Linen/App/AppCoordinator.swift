@@ -183,6 +183,7 @@ final class AppCoordinator {
     }
 
     private(set) var notice: String?
+    private(set) var noticeSymbol: String?
     private var noticeToken = 0
 
     let voicePreferences = VoicePreferences.shared
@@ -557,7 +558,7 @@ final class AppCoordinator {
         pasteboard.writeObjects(urls.map { $0 as NSURL })
         pasteboard.setString(urls.map(\.absoluteString).joined(separator: "\n"), forType: .string)
         let notice: LocalizedStringResource = urls.count == 1 ? "Link Copied" : "Links Copied"
-        show(notice: String(localized: notice))
+        show(notice: String(localized: notice), symbol: "checkmark")
     }
 
     func linkURL(for tab: BrowserTab) -> URL? {
@@ -568,14 +569,16 @@ final class AppCoordinator {
         return url
     }
 
-    func show(notice message: String) {
+    func show(notice message: String, symbol: String? = nil) {
         notice = message
+        noticeSymbol = symbol
         noticeToken += 1
         let token = noticeToken
         Task {
             try? await Task.sleep(for: .seconds(1.6))
             guard noticeToken == token else { return }
             notice = nil
+            noticeSymbol = nil
         }
     }
 

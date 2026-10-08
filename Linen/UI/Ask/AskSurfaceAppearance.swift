@@ -168,6 +168,13 @@ struct AskRestingLine: View {
 
     @Environment(\.chromeIsLight) private var chromeIsLight
 
+    private func noticeStyle(symbol: String?) -> AnyShapeStyle {
+        if symbol != nil {
+            return ChromeInk.glyph(onLight: chromeIsLight)
+        }
+        return security == .insecure ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
+    }
+
     var body: some View {
         HStack(spacing: 5) {
             switch content {
@@ -196,10 +203,16 @@ struct AskRestingLine: View {
                     .id(message)
                     .transition(.opacity)
 
-            case .notice(let notice):
+            case .notice(let notice, let symbol):
+                if let symbol {
+                    Image(systemName: symbol)
+                        .font(.system(size: placement.textSize - 1, weight: .semibold))
+                        .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight))
+                        .transition(.opacity)
+                }
                 Text(verbatim: notice)
                     .font(.system(size: placement.textSize, weight: .medium))
-                    .foregroundStyle(security == .insecure ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(noticeStyle(symbol: symbol))
                     .lineLimit(1)
                     .transition(.opacity)
 

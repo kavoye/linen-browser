@@ -77,6 +77,7 @@ final class AskSurfaceModel {
             isFocused: isFocused,
             typedText: interaction.trimmedText,
             notice: coordinator.notice,
+            noticeSymbol: coordinator.noticeSymbol,
             status: coordinator.statusMessage,
             placeholder: placeholder,
             currentURL: currentURL
