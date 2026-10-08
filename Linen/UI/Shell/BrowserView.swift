@@ -8,18 +8,6 @@ struct BrowserView: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
 
-    @State private var settingsWorkspace: SettingsWorkspace
-
-    init(browser: BrowserModel, coordinator: AppCoordinator) {
-        self.browser = browser
-        self.coordinator = coordinator
-        let workspace = SettingsWorkspace(coordinator: coordinator)
-        workspace.onRoute = { [weak coordinator] category in
-            coordinator?.routeSettings(to: category)
-        }
-        _settingsWorkspace = State(initialValue: workspace)
-    }
-
     private var sidebar: SidebarLayout {
         coordinator.sidebar
     }
@@ -69,7 +57,7 @@ struct BrowserView: View {
             ContentArea(
                 browser: browser,
                 coordinator: coordinator,
-                settingsWorkspace: settingsWorkspace,
+                settingsWorkspace: coordinator.settingsWorkspace,
                 canvasTrailingInset: shell.canvasTrailingInset
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -224,7 +212,7 @@ struct BrowserView: View {
         }
         .background(Color.clear)
         .onChange(of: ObjectIdentifier(browser.context)) { _, _ in
-            settingsWorkspace.adoptProfile(coordinator: coordinator)
+            coordinator.settingsWorkspace.adoptProfile(coordinator: coordinator)
         }
         .environment(\.chromeIsLight, scheme == .light)
         .environment(\.chromeWash, .of(nil, isLight: scheme == .light))

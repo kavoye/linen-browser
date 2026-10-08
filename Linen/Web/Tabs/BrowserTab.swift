@@ -8,21 +8,6 @@ import os
 import SwiftUI
 import WebKit
 
-struct ExtensionPageHost {
-    let configuration: WKWebViewConfiguration
-    let baseURL: URL
-    let name: String
-    let icon: NSImage?
-}
-
-enum PageSecurity: Equatable {
-    case secure
-    case pending
-    case mixed
-    case insecure
-    case none
-}
-
 @MainActor
 @Observable
 final class BrowserTab: Identifiable {
@@ -124,39 +109,6 @@ final class BrowserTab: Identifiable {
     private(set) var hasPresentedContent = false
 
     private(set) var security: PageSecurity = .none
-
-    enum InternalPage: String, Codable, CaseIterable {
-        case history
-        case downloads
-        case releaseNotes
-        case settings
-
-        var title: String {
-            switch self {
-            case .settings:
-                "Settings"
-            case .history:
-                "History"
-            case .downloads:
-                "Downloads"
-            case .releaseNotes:
-                "Release Notes"
-            }
-        }
-
-        var symbol: String {
-            switch self {
-            case .settings:
-                "gearshape"
-            case .history:
-                "clock"
-            case .downloads:
-                "arrow.down"
-            case .releaseNotes:
-                "doc.text"
-            }
-        }
-    }
 
     var internalPage: InternalPage? {
         if let addressed = InternalPage(url: URL(string: urlString)) {
@@ -1000,11 +952,5 @@ extension BrowserTab {
             guard let self, let icon, liveView === view, view.url?.host()?.lowercased() == host else { return }
             favicon = icon
         }
-    }
-}
-
-extension BrowserTab: Equatable {
-    nonisolated static func == (lhs: BrowserTab, rhs: BrowserTab) -> Bool {
-        lhs === rhs
     }
 }

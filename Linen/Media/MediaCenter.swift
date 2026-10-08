@@ -937,18 +937,3 @@ enum MediaRoster {
         return roster[(index + 1) % roster.count]
     }
 }
-
-private final class MediaMessageHandler: NSObject, WKScriptMessageHandler {
-    var onMessage: ((String, WKWebView?, Bool) -> Void)?
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage
-    ) {
-        onMessage?(
-            message.body as? String ?? "",
-            message.webView,
-            message.frameInfo.isMainFrame
-        )
-    }
-}
