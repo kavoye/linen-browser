@@ -6,8 +6,9 @@ adapter. Other providers use AnyLanguageModel. The implementation lives in
 
 ## Settings and tools
 
-Open Settings > Assistant > OpenAI to configure voice, external connections,
-and data use. Developer Settings contains advanced JSON and model overrides.
+Open Settings > Assistant > OpenAI to configure external connections and data
+use. Developer Settings contains advanced JSON and model overrides. Open
+Settings > Voice to configure voice.
 
 For supported models on the official OpenAI endpoint, Linen enables web search,
 code interpreter, and image generation automatically. Model capability checks
@@ -42,12 +43,20 @@ are private conversation data and must not enter diagnostic exports.
 
 ## Voice
 
-OpenAI dictation uses microphone transcription. Voice conversations use the
-Realtime connection and PCM playback, with browser work delegated to Linen's
-assistant. Conversation text follows the chat's storage lifecycle. Users can
-choose on-device voice in settings.
+OpenAI dictation uses microphone transcription. OpenAI reading aloud uses the
+speech endpoint. Voice conversations use the Realtime connection and PCM
+playback, with browser work delegated to Linen's assistant. Conversation text
+follows the chat's storage lifecycle.
 
-Voice preferences belong to the provider. Switching profiles or ending a voice
+Each voice feature uses on-device speech until the user selects OpenAI in
+Settings > Voice. Voice conversation is off until the user turns it on. OpenAI
+voice features need an OpenAI API key. The key does not need to belong to the
+selected assistant. Linen uses the selected provider when it is an OpenAI
+provider with a key. Otherwise, Linen uses the first OpenAI provider with a key.
+Without a key, Linen uses on-device speech.
+
+The engine choices apply to all windows and profiles. The voice, speed, and
+speaking style belong to the provider. Switching profiles or ending a voice
 conversation stops its active session. Microphone access requires macOS permission.
 
 ## External connections

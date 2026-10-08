@@ -8,6 +8,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case appearance
     case search
     case provider
+    case voice
     case profiles
     case privacy
     case autofill
@@ -32,6 +33,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "Appearance"
         case .provider:
             "Assistant"
+        case .voice:
+            "Voice"
         case .profiles:
             "Profiles"
         case .autofill:
@@ -63,6 +66,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "circle.lefthalf.filled"
         case .provider:
             "sparkles"
+        case .voice:
+            "waveform"
         case .profiles:
             "person.2"
         case .autofill:
@@ -88,7 +93,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         switch self {
         case .general, .search, .appearance:
             .setup
-        case .provider:
+        case .provider, .voice:
             .intelligence
         case .privacy, .autofill, .websites, .downloads, .extensions:
             .browsing
@@ -109,6 +114,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             Color(nsColor: .systemIndigo)
         case .provider:
             Color(nsColor: .systemPurple)
+        case .voice:
+            Color(nsColor: .systemRed)
         case .profiles:
             Color(nsColor: .systemCyan)
         case .autofill:
@@ -138,8 +145,11 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             ["theme", "dark", "light", "loom", "color", "zoom", "sidebar", "font size"]
         case .provider:
             ["model", "api key", "openai", "anthropic", "ollama", "endpoint", "reasoning", "llm", "engine",
-             "intelligence", "provider", "voice", "speech", "spoken", "push to talk", "microphone",
-             "dictation", "shortcut",
+             "intelligence", "provider",
+             ]
+        case .voice:
+            ["voice", "speech", "spoken", "read aloud", "push to talk", "microphone", "dictation", "shortcut",
+             "conversation", "text to speech", "transcription", "billing", "cost",
              ]
         case .profiles:
             ["profile", "profiles", "work", "personal", "separate", "account", "switch", "identity"]

@@ -147,7 +147,9 @@ struct AgentInspector: View {
                                     }
                                 },
                                 onEdit: { prompt in seed = prompt },
-                                onSpeak: { answer in coordinator.readAloud(answer) }
+                                speakingAnswerID: coordinator.speakingAnswerID,
+                                readsWithOpenAI: coordinator.readsWithOpenAI,
+                                onSpeak: { trace in coordinator.readAloud(trace.response, id: trace.id) }
                             )
                         } else {
                             Spacer(minLength: 0)

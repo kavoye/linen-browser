@@ -30,8 +30,7 @@ struct AssistantSettings: View {
         .task { await model.onAppear() }
         .onChange(of: highlight, initial: true) { _, anchor in
             guard let anchor else { return }
-            if anchor == "provider.connected" || anchor == "privacy.assistant"
-                || anchor.hasPrefix("voice.") || anchor.hasPrefix("assistant.") {
+            if anchor == "provider.connected" || anchor == "privacy.assistant" || anchor.hasPrefix("assistant.") {
                 model.showOverview()
             } else if anchor.hasPrefix("provider.") {
                 model.open(model.selected)
@@ -51,10 +50,7 @@ private struct AssistantOverview: View {
     let coordinator: AppCoordinator
 
     var body: some View {
-        SettingsPageHeader(
-            title: "Assistant",
-            caption: "Choose the assistant’s model, behavior, and permissions."
-        )
+        SettingsPageHeader(title: "Assistant")
 
         AnsweringNotice(model: model, coordinator: coordinator)
 
@@ -76,7 +72,7 @@ private struct AssistantOverview: View {
         .settingsAnchor("provider.connected")
         .padding(.top, 6)
 
-        BehaviourSection(coordinator: coordinator, settings: coordinator.settings)
+        BehaviourSection(settings: coordinator.settings)
 
         AssistantExecutionSettings()
 
@@ -142,52 +138,10 @@ private struct AnsweringNotice: View {
 }
 
 private struct BehaviourSection: View {
-    let coordinator: AppCoordinator
-
     @Bindable var settings: BrowserSettings
 
-    @State private var talk = ActivationSettings.talk
-    @State private var recording: String?
-
     var body: some View {
-        SettingsSection(title: "How it behaves", symbol: "slider.horizontal.3") {
-            DetailRow(
-                title: "Read aloud",
-                caption: readAloudCaption
-            ) {
-                SettingsToggle(Binding(
-                    get: { !coordinator.isSpeechMuted },
-                    set: { enabled in
-                        if enabled == coordinator.isSpeechMuted {
-                            coordinator.toggleSpeechMute()
-                        }
-                    }
-                ))
-            }
-            .settingsAnchor("voice.readAloud")
-
-            RowSeparator()
-
-            DetailRow(
-                title: "Push to talk",
-                caption: "Hold the shortcut to speak, then release it to send."
-            ) {
-                ShortcutRecorder(
-                    id: "talk",
-                    recording: $recording,
-                    shortcut: talk,
-                    defaultShortcut:
-                        ActivationSettings.defaultTalk
-                ) { recorded in
-                    talk = recorded
-                    ActivationSettings.talk = recorded
-                    coordinator.reloadActivation()
-                }
-            }
-            .settingsAnchor("voice.talk")
-
-            RowSeparator()
-
+        SettingsSection(title: "Links", symbol: "link") {
             DetailRow(
                 title: "Summarize a link on hover",
                 caption: "Hold Shift while pointing at a link to get a summary before opening it."
@@ -195,17 +149,6 @@ private struct BehaviourSection: View {
                 SettingsToggle($settings.peeksAtLinks)
             }
             .settingsAnchor("assistant.linkPeek")
-        }
-        .onChange(of: recording) { _, listening in
-            coordinator.setActivationSuspended(listening != nil)
-        }
-    }
-
-    private var readAloudCaption: LocalizedStringResource {
-        if coordinator.selectedProvider.adapter == .openAIResponses {
-            "Set the voice and speed in your OpenAI provider settings."
-        } else {
-            "Set the voice and speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)."
         }
     }
 }

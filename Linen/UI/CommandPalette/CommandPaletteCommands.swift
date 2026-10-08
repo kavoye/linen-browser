@@ -660,7 +660,12 @@ enum CommandPaletteCatalog {
         }
 
         var assistant: [CommandPaletteCommand] {
-            let voiceTitle: LocalizedStringResource = context.isSpeechMuted ? "Enable Voice" : "Disable Voice"
+            let voiceTitle: LocalizedStringResource
+            if context.isSpeechMuted {
+                voiceTitle = "Speak Answers Automatically"
+            } else {
+                voiceTitle = "Stop Speaking Answers Automatically"
+            }
             let listenTitle: LocalizedStringResource = context.isListening ? "Stop Listening" : "Start Listening"
             return [
                 make(
@@ -669,7 +674,7 @@ enum CommandPaletteCatalog {
                     title: voiceTitle,
                     detail: "agent speech",
                     symbol: context.isSpeechMuted ? "speaker.wave.2" : "speaker.slash",
-                    aliases: ["mute", "unmute", "sound", "speech", "read aloud"],
+                    aliases: ["mute", "unmute", "sound", "speech", "read aloud", "voice"],
                     isSuggested: true
                 ),
                 make(

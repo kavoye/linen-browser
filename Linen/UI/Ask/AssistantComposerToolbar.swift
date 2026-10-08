@@ -184,8 +184,15 @@ private struct ComposerSendButton: View {
         .disabled(!isEnabled)
         .onHover { hovering = $0 }
         .accessibilityLabel(Text(label))
-        .help(Text(label))
+        .help(Text(help))
     }
 
     private var label: LocalizedStringResource { stops ? "Stop" : (isVoice ? "Start voice conversation" : "Send") }
+
+    private var help: LocalizedStringResource {
+        if isVoice && !stops {
+            return "Start voice conversation. Uses your OpenAI API key."
+        }
+        return label
+    }
 }

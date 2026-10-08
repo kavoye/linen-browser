@@ -180,9 +180,20 @@ final class AppCoordinator {
     private(set) var notice: String?
     private var noticeToken = 0
 
-    private(set) var isSpeechMuted: Bool
-    private static let speechMutedKey = "speech.muted"
+    let voicePreferences = VoicePreferences.shared
+    var voicePreferencesObserver: NSObjectProtocol?
+    var openAIVoiceProviderID: String?
+    var previewingVoice: String?
+    @ObservationIgnored var voicePreview: OpenAISpeechOutput?
+    var dictatesWithOpenAI = false
+    var readsWithOpenAI = false
+
+    var isSpeechMuted: Bool {
+        !voicePreferences.speaksAnswers
+    }
     private(set) var isAgentSpeaking = false
+    private(set) var readingAloudID: UUID?
+    @ObservationIgnored private var readingAloudStarted = false
 
     init(
         browser: BrowserModel = BrowserModel(),
@@ -206,12 +217,26 @@ final class AppCoordinator {
             modelSettings: browser.context.modelSettings,
             actionPolicy: browser.context.actionPolicy
         )
-        isSpeechMuted = Self.initialSpeechMuted(
-            stored: UserDefaults.standard.object(forKey: Self.speechMutedKey)
-        )
-        speech.isMuted = isSpeechMuted
+        speech.isMuted = !voicePreferences.speaksAnswers
+        voicePreferencesObserver = NotificationCenter.default.addObserver(
+            forName: VoicePreferences.didChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.applyVoicePreferences()
+            }
+        }
         speech.onSpeakingChange = { [weak self] speaking in
-            self?.isAgentSpeaking = speaking
+            guard let self else { return }
+            isAgentSpeaking = speaking
+            if speaking {
+                readingAloudStarted = readingAloudID != nil
+            } else if readingAloudStarted {
+                readingAloudID = nil
+                readingAloudStarted = false
+            }
+            agentSpeechChanged(speaking)
         }
         connectReaderListener()
         voiceInput.onWillBegin = { [weak self] in
@@ -343,23 +368,30 @@ final class AppCoordinator {
         return browser.activeTab
     }
 
-    nonisolated static func initialSpeechMuted(stored: Any?) -> Bool {
-        stored as? Bool ?? true
+    func toggleSpeechMute() {
+        voicePreferences.speaksAnswers.toggle()
     }
 
-    func toggleSpeechMute() {
-        isSpeechMuted.toggle()
-        UserDefaults.standard.set(isSpeechMuted, forKey: Self.speechMutedKey)
+    func applyVoicePreferences() {
+        let mutes = isSpeechMuted && !speech.isMuted
         speech.isMuted = isSpeechMuted
-        if isSpeechMuted {
-            endVoiceConversation()
+        if mutes {
             speech.stopSpeaking()
         }
+        if !voicePreferences.allowsConversation, isVoiceConversationPresented || conversationVoice != nil {
+            endVoiceConversation()
+        }
+        configureVoice()
     }
 
     func stopAgentSpeech() {
         endVoiceConversation()
         speech.stopSpeaking()
+        readingAloudID = nil
+    }
+
+    var speakingAnswerID: UUID? {
+        isAgentSpeaking ? readingAloudID : nil
     }
 
     var isSpeakingInChrome: Bool {
@@ -372,13 +404,16 @@ final class AppCoordinator {
         return agentQuestions.ask(inSpace: spaceID)
     }
 
-    func readAloud(_ text: String) {
+    func readAloud(_ text: String, id: UUID) {
         endVoiceConversation()
         guard !text.isEmpty else { return }
-        if isAgentSpeaking {
-            speech.stopSpeaking()
-            return
-        }
+        readerListener.stop()
+        let stopsCurrent = speakingAnswerID == id
+        speech.stopSpeaking()
+        readingAloudID = nil
+        guard !stopsCurrent else { return }
+        readingAloudID = id
+        readingAloudStarted = false
         let muted = speech.isMuted
         speech.isMuted = false
         speech.speak(text)

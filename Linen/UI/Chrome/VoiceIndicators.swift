@@ -21,7 +21,13 @@ struct MicButton: View {
         if isAgentTurn {
             return "Stop"
         }
-        return coordinator.state == .listening ? "Stop and Run" : "Click to Talk"
+        if coordinator.state == .listening {
+            return "Stop and Run"
+        }
+        if coordinator.dictatesWithOpenAI {
+            return "Click to Talk. Uses your OpenAI API key."
+        }
+        return "Click to Talk"
     }
 
     var body: some View {

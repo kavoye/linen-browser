@@ -32,9 +32,6 @@ struct OpenAISettingsSection: View {
                 .settingsAnchor("openai.replyLength")
                 RowSeparator()
             }
-            DrillInRow(title: "Voice", symbol: "waveform", caption: "Choose voices for conversation and reading aloud.") { destination = .voice }
-                .settingsAnchor("openai.voice")
-            RowSeparator()
             DrillInRow(title: "Connections", symbol: "link", caption: "Connect services your assistant can use.") { destination = .connections }
                 .settingsAnchor("openai.connections")
             RowSeparator()
@@ -51,9 +48,7 @@ struct OpenAISettingsSection: View {
         }
         .onChange(of: highlight, initial: true) { _, anchor in
             guard let anchor else { return }
-            if anchor.hasPrefix("openai.voice") {
-                destination = .voice
-            } else if anchor.hasPrefix("openai.connections") {
+            if anchor.hasPrefix("openai.connections") {
                 destination = .connections
             } else if anchor.hasPrefix("openai.privacy") {
                 destination = .privacy
@@ -64,8 +59,6 @@ struct OpenAISettingsSection: View {
         .sheet(item: $destination) { page in
             OpenAISettingsSheet(title: page.title) {
                 switch page {
-                case .voice:
-                    OpenAIVoiceSettingsView(options: savedOptions.voice)
                 case .connections:
                     OpenAIMCPSettingsView(providerID: providerID, servers: savedOptions.mcpServers)
                         .id("mcp:\(providerID):\(credentialRevision)")
@@ -87,14 +80,12 @@ struct OpenAISettingsSection: View {
 }
 
 private enum OpenAISettingsDestination: String, Identifiable {
-    case voice, connections, privacy, developer
+    case connections, privacy, developer
     var id: String {
         rawValue
     }
     var title: LocalizedStringResource {
         switch self {
-        case .voice:
-            "Voice"
         case .connections:
             "Connections"
         case .privacy:

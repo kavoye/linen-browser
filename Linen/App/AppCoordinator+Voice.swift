@@ -4,21 +4,69 @@
 import Foundation
 
 extension AppCoordinator {
+    var canUseOpenAIVoice: Bool {
+        openAIVoiceProviderID != nil
+    }
+
+    func openAIVoiceCredentials() -> (provider: Provider, endpoint: URL, key: String)? {
+        let candidates = [selectedProvider] + ProviderCatalog.shared.all.filter { $0.id != selectedProvider.id }
+        for provider in candidates where provider.adapter == .openAIResponses {
+            if let endpoint = provider.baseURL, let key = CredentialStore.key(for: provider), !key.isEmpty {
+                return (provider, endpoint, key)
+            }
+        }
+        return nil
+    }
+
+    func previewOpenAIVoice(_ voice: String) {
+        let replaying = previewingVoice == voice
+        stopVoicePreview()
+        guard !replaying, let credentials = openAIVoiceCredentials() else { return }
+        var settings = OpenAISettingsStore.load(providerID: credentials.provider.id).voice
+        settings.voice = voice
+        let output = OpenAISpeechOutput(
+            client: OpenAIVoiceClient(endpoint: credentials.endpoint, key: credentials.key, settings: settings)
+        )
+        output.onSpeakingChange = { [weak self, weak output] speaking in
+            guard let self, !speaking, voicePreview === output else { return }
+            voicePreview = nil
+            previewingVoice = nil
+        }
+        output.onFailure = { [weak self] in
+            self?.statusMessage = String(localized: "Couldn’t play the OpenAI voice. Check your voice settings and connection.")
+        }
+        stopAgentSpeech()
+        readerListener.stop()
+        voicePreview = output
+        previewingVoice = voice
+        output.speak(String(localized: "Hi, I’m \(voice.capitalized). This is how I sound in Linen."))
+    }
+
+    func stopVoicePreview() {
+        voicePreview?.stopSpeaking()
+        voicePreview = nil
+        previewingVoice = nil
+    }
+
     func configureVoice() {
-        let provider = selectedProvider
+        let preferences = voicePreferences
+        let credentials = openAIVoiceCredentials()
+        let provider = credentials?.provider ?? selectedProvider
+        openAIVoiceProviderID = credentials?.provider.id
+        dictatesWithOpenAI = canUseOpenAIVoice && preferences.dictation == .openAI
+        readsWithOpenAI = canUseOpenAIVoice && preferences.reading == .openAI
         let openAI: (endpoint: URL, key: String, options: OpenAIVoiceSettings)?
-        let identity: String
-        if provider.adapter == .openAIResponses,
-           let endpoint = provider.baseURL,
-           let key = CredentialStore.key(for: provider), !key.isEmpty {
-            let options = OpenAISettingsStore.load(providerID: provider.id).voice
-            openAI = (endpoint, key, options)
-            identity = OpenAIConversationState.binding(endpoint: endpoint, model: provider.id, credential: key)
-                + ((try? OpenAIJSON.encode(options).text()) ?? "")
+        if let credentials, dictatesWithOpenAI || readsWithOpenAI {
+            openAI = (credentials.endpoint, credentials.key, OpenAISettingsStore.load(providerID: provider.id).voice)
         } else {
             openAI = nil
-            identity = "apple:" + provider.id
         }
+        var identity = "apple:" + provider.id
+        if let openAI {
+            identity = OpenAIConversationState.binding(endpoint: openAI.endpoint, model: provider.id, credential: openAI.key)
+                + ((try? OpenAIJSON.encode(openAI.options).text()) ?? "")
+        }
+        identity += "|\(dictatesWithOpenAI)|\(readsWithOpenAI)"
         guard voiceConfigurationID != identity else { return }
         endVoiceConversation()
         conversationVoice = nil
@@ -26,18 +74,31 @@ extension AppCoordinator {
         voicePreparation?.cancel()
         voiceInput.cancel()
         speech.stopSpeaking()
+        readerListener.stop()
+        let client = openAI.map { OpenAIVoiceClient(endpoint: $0.endpoint, key: $0.key, settings: $0.options) }
         let transcriber: any TranscriberEngine
-        if let openAI {
-            let client = OpenAIVoiceClient(endpoint: openAI.endpoint, key: openAI.key, settings: openAI.options)
+        if dictatesWithOpenAI, let client {
             transcriber = OpenAITranscriberEngine(client: client)
+        } else {
+            transcriber = AppleTranscriberEngine()
+        }
+        if readsWithOpenAI, let client {
             let output = OpenAISpeechOutput(client: client)
             output.onFailure = { [weak self] in
                 self?.statusMessage = String(localized: "Couldn’t play the OpenAI voice. Check your voice settings and connection.")
             }
             speech.use(output)
+            readerSpeech.setAssistantOutput { [weak self] in
+                let readerOutput = OpenAISpeechOutput(client: client)
+                readerOutput.onFailure = {
+                    self?.readerListener.stop()
+                    output.onFailure?()
+                }
+                return readerOutput
+            }
         } else {
-            transcriber = AppleTranscriberEngine()
             speech.use(AppleSpeechOutput())
+            readerSpeech.setAssistantOutput(nil)
         }
         voicePreparation = Task { [weak self] in
             guard let self else { return }
@@ -57,7 +118,7 @@ extension AppCoordinator {
 
 extension AppCoordinator {
     var supportsVoiceConversation: Bool {
-        selectedProvider.adapter == .openAIResponses
+        canUseOpenAIVoice && voicePreferences.allowsConversation
     }
 
     func startVoiceConversation() {
@@ -70,12 +131,12 @@ extension AppCoordinator {
             voiceConversationMessage = statusMessage ?? Self.microphoneDeniedMessage
             return
         }
-        let provider = selectedProvider
-        guard let endpoint = provider.baseURL, let key = CredentialStore.key(for: provider), !key.isEmpty else {
+        guard let credentials = openAIVoiceCredentials() else {
             statusMessage = String(localized: "Add an OpenAI API key in Settings to start a voice conversation.")
             voiceConversationMessage = statusMessage
             return
         }
+        let (provider, endpoint, key) = credentials
         voiceInput.cancel()
         speech.stopSpeaking()
         agentTurns.cancel()

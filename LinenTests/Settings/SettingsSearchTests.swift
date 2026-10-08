@@ -28,10 +28,11 @@ struct SettingsSearchTests {
         #expect(SettingsIndex.search("activation").contains { $0.id == "voice.talk" })
     }
 
-    @Test func theVoiceRowsLiveOnTheAssistantPage() {
+    @Test func theVoiceRowsLiveOnTheVoicePage() {
         let voice = SettingsIndex.all.filter { $0.id.hasPrefix("voice.") }
-        #expect(voice.count == 2)
-        #expect(voice.allSatisfy { $0.category == .provider })
+        #expect(voice.count == 9)
+        #expect(voice.allSatisfy { $0.category == .voice })
+        #expect(!SettingsIndex.all.contains { $0.category != .voice && $0.id.contains("voice.") && !$0.id.hasPrefix("openai.developer") })
     }
 
     @Test func theLinkSummaryRowLivesOnTheAssistantPage() {
@@ -89,8 +90,8 @@ struct SettingsSearchTests {
     @Test func openAISettingsBehindProviderNavigationAreSearchable() {
         let expected: [(String, String)] = [
             ("reply length", "openai.replyLength"),
-            ("speaking style", "openai.voice.speakingStyle"),
-            ("reading speed", "openai.voice.readingSpeed"),
+            ("speaking style", "voice.speakingStyle"),
+            ("reading speed", "voice.readingSpeed"),
             ("MCP", "openai.connections"),
             ("keep replies", "openai.privacy"),
             ("run commands at OpenAI", "openai.developer.runCommands"),

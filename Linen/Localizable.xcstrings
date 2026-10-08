@@ -685,6 +685,9 @@
     "Add an API key to use %@." : {
       "comment" : "Settings → Assistant → a provider page. %@ is the provider name, e.g. \"Anthropic\". Caption under the \"Needs a key\" status; the key is an API key."
     },
+    "Add an OpenAI API key in Assistant. The assistant can still use a different provider." : {
+      "comment" : "Voice settings: caption shown when no OpenAI API key is set up. OpenAI voices work with any assistant once a key is added."
+    },
     "Add an OpenAI API key in Settings to start a voice conversation." : {
 
     },
@@ -1143,6 +1146,9 @@
     "Bookmarks" : {
       "comment" : "Title of the row that imports bookmarks, in the Import section of the General settings page and on the last onboarding screen. A noun."
     },
+    "Brief" : {
+      "comment" : "Option in the Style segmented control in Voice settings: the OpenAI voice speaks briskly and keeps it short."
+    },
     "Bring All to Front" : {
       "comment" : "Standard macOS item at the bottom of the Window menu. Use the system's own wording. Title Case."
     },
@@ -1169,6 +1175,9 @@
     },
     "Cached files" : {
       "comment" : "Name of one of the three kinds of data listed with tick boxes on the Privacy settings page. A noun phrase at the head of a row; a separate lowercase variant exists for use inside sentences."
+    },
+    "Calm" : {
+      "comment" : "Option in the Style segmented control in Voice settings: the OpenAI voice speaks calmly and warmly."
     },
     "camera" : {
       "comment" : "Lowercase name of one website permission, inserted mid-sentence into the confirmation: Are you sure you want to remove the camera setting for every website? Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Camera is a separate string."
@@ -1311,6 +1320,9 @@
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
+    "Choose how Linen listens and speaks. Voices on this Mac are free. OpenAI voices are billed to your API key." : {
+      "comment" : "Voice settings page caption."
+    },
     "Choose short, medium, or long replies." : {
 
     },
@@ -1320,11 +1332,11 @@
     "Choose Standard or Transparent." : {
 
     },
-    "Choose the assistant’s model, behavior, and permissions." : {
-
-    },
     "Choose the bookmarks file you exported from another browser." : {
       "comment" : "Message at the top of the macOS file panel that Choose File… opens. It tells the user which file to pick."
+    },
+    "Choose the OpenAI voice that reads answers aloud." : {
+      "comment" : "Settings search result detail for the OpenAI reading voice."
     },
     "Choose the provider and model" : {
 
@@ -1332,16 +1344,7 @@
     "Choose the voice used during conversations." : {
 
     },
-    "Choose the voice used to read replies aloud." : {
-
-    },
     "Choose the ZIP exported by Safari or its PaymentCards.json file." : {
-
-    },
-    "Choose voices for conversation and reading aloud." : {
-
-    },
-    "Choose voices for conversation and reading aloud. Voice features send audio or text to OpenAI." : {
 
     },
     "Choose what to clear and how far back to go. This can’t be undone." : {
@@ -1436,6 +1439,9 @@
     },
     "Click to Talk" : {
       "comment" : "Tooltip on the microphone button in the toolbar while it is idle: one click starts listening. Title Case; alternates with “Stop and Run”."
+    },
+    "Click to Talk. Uses your OpenAI API key." : {
+      "comment" : "Tooltip on the microphone button when dictation uses OpenAI, which is billed."
     },
     "Client ID" : {
 
@@ -1627,6 +1633,9 @@
     },
     "Conversation model" : {
 
+    },
+    "Conversation voice" : {
+      "comment" : "Settings search result title for the voice used in voice conversations."
     },
     "cookies" : {
       "comment" : "The same kind of data named partway through a sentence, joined with others into a summary under a website's name. Lower case; never shown alone."
@@ -1832,8 +1841,8 @@
     "Developer settings…" : {
 
     },
-    "Dictation and read aloud" : {
-
+    "Dictation" : {
+      "comment" : "Voice settings section title; also an item in the list of billed features."
     },
     "Dictation model" : {
 
@@ -1843,9 +1852,6 @@
     },
     "Disable Extension" : {
 
-    },
-    "Disable Voice" : {
-      "comment" : "Command in the ⌘K palette that stops the assistant reading its replies aloud; its detail line reads “agent speech”. Title Case; pairs with “Enable Voice”."
     },
     "Disabled for this website" : {
       "comment" : "Status under Tracker Blocking in the website information popover when this website is exempt. Sentence fragment."
@@ -1992,9 +1998,6 @@
     },
     "empty" : {
       "comment" : "Badge shown in place of the tab count on a sidebar folder row that holds no tabs. A single adjective in a tiny capsule — deliberately lowercase and as short as possible; follow your own language's capitalisation rather than copying the English lowercase if that would look wrong."
-    },
-    "Enable Voice" : {
-      "comment" : "Command in the ⌘K palette that turns the assistant's spoken replies back on; its detail line reads “agent speech”. Title Case; pairs with “Disable Voice”."
     },
     "Enabled for this website" : {
       "comment" : "Status under Tracker Blocking in the website information popover when protection applies to this website. Sentence fragment."
@@ -2162,8 +2165,14 @@
     "Fast responses from open models." : {
       "comment" : "One-line description of the Groq provider in the provider picker. Open models means open-weight AI models, and voice refers to spoken conversation with the assistant, where the reply has to arrive quickly."
     },
+    "Faster" : {
+      "comment" : "Option in the Speed segmented control in Voice settings: 1.25 times normal reading speed."
+    },
     "fastest" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the quickest to answer. Lowercase superlative, and the space is very tight."
+    },
+    "Fastest" : {
+      "comment" : "Option in the Speed segmented control in Voice settings: 1.5 times normal reading speed."
     },
     "fastest · default" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the quickest to answer and the one used unless another is picked. The middle dot separates the two words and should be kept. Lowercase, and the space is very tight."
@@ -2252,6 +2261,9 @@
     "Forward 15 seconds" : {
       "comment" : "Tooltip on the skip-forward button in the media player docked at the foot of the sidebar. The player jumps ahead exactly fifteen seconds; keep the number. “Forward” is directional, not the browser's Forward command."
     },
+    "Free" : {
+      "comment" : "Badge on a Voice settings section header: this feature runs on this Mac at no cost."
+    },
     "Frees up space. Pages load more slowly the next time." : {
       "comment" : "Caption under Cached files on the Privacy settings page. Only the next visit to a website is slower."
     },
@@ -2296,6 +2308,9 @@
     },
     "Help" : {
       "comment" : "Title of the Help menu in the menu bar. Use the standard macOS wording."
+    },
+    "Hi, I’m %@. This is how I sound in Linen." : {
+      "comment" : "Sample sentence an OpenAI voice speaks aloud when the user previews it in Voice settings. %@ is the voice’s name, such as Cedar. Never translated."
     },
     "Hide details" : {
 
@@ -2367,9 +2382,6 @@
 
     },
     "How are markets today?" : {
-
-    },
-    "How it behaves" : {
 
     },
     "How long finished downloads stay in the list." : {
@@ -2726,6 +2738,9 @@
     "Link Copied" : {
       "comment" : "Brief notice confirming the page's address is now on the clipboard. Title Case, as the app's other short notices are; a past participle, not a command."
     },
+    "Links" : {
+
+    },
     "Links Copied" : {
       "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
     },
@@ -3043,6 +3058,9 @@
     "Narrow the sidebar to its icons." : {
       "comment" : "Description of the Icons only switch, shown only in the Settings search results, meaning the sidebar keeps each row's symbol and drops its text. Imperative with a final full stop."
     },
+    "Natural" : {
+      "comment" : "Option in the Style segmented control in Voice settings: the OpenAI voice speaks clearly and naturally. This is the default."
+    },
     "Needs a key" : {
       "comment" : "Settings → Assistant → a provider page. Readiness status when the provider has no API key."
     },
@@ -3244,6 +3262,9 @@
     "None installed" : {
       "comment" : "Shown under “Extensions” when a profile has none."
     },
+    "Normal" : {
+      "comment" : "Option in the Speed segmented control in Voice settings: normal reading speed."
+    },
     "Not detected. Install the client or choose its configuration file." : {
       "comment" : "External MCP client setup in Advanced settings."
     },
@@ -3319,6 +3340,9 @@
     "on this Mac" : {
       "comment" : "Short phrase shown where a provider’s server address would otherwise be, for a model that runs on the user’s own computer; it appears after a dash in a tooltip, so it is a fragment rather than a sentence and stays lowercase."
     },
+    "On this Mac" : {
+      "comment" : "Voice settings option: speech runs on this Mac instead of OpenAI."
+    },
     "on this page" : {
       "comment" : "Fragment inserted into the dialog asking the user to approve an action the assistant wants to take, used when the website’s name is unknown: The assistant wants to click “Pay now” on this page. The alternative fragment, which names the site, is on %@."
     },
@@ -3363,6 +3387,9 @@
     },
     "Open and Share This Website?" : {
       "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
+    },
+    "Open Assistant…" : {
+      "comment" : "Button that opens the Assistant settings page."
     },
     "Open Beside Current Page" : {
       "comment" : "Context-menu command on a sidebar row that shows that tab next to the page already open, as two panes. Title Case. Current page means the one on screen now."
@@ -3448,11 +3475,17 @@
     "OpenAI" : {
 
     },
+    "OpenAI · Billed" : {
+      "comment" : "Badge on a Voice settings section header: this feature uses OpenAI and is billed to the user’s API key."
+    },
     "OpenAI compatible" : {
       "comment" : "Small tag beside a user-added endpoint in Settings, naming which API dialect the server speaks. OpenAI is a vendor name — leave as is; only the word compatible is translatable. Very tight space."
     },
     "OpenAI receives microphone audio during voice chat. The voice is generated by AI." : {
 
+    },
+    "OpenAI voices need an OpenAI API key" : {
+      "comment" : "Voice settings notice title when no OpenAI API key is set up."
     },
     "OpenAI-compatible endpoint" : {
       "comment" : "Placeholder description shown for a user-added provider before its address has been saved. OpenAI is a vendor name — leave as is."
@@ -3637,6 +3670,9 @@
     "Play" : {
       "comment" : "Tooltip on the play/pause button in the media player docked at the foot of the sidebar, while playback is stopped. Verb; the dock is narrow, so keep it to one word."
     },
+    "Play a sample. Uses your OpenAI API key." : {
+      "comment" : "Tooltip on the play button beside a voice menu in Voice settings. Playing a sample is billed by OpenAI."
+    },
     "Play a song in a tab to see synced lyrics." : {
 
     },
@@ -3775,9 +3811,6 @@
     "Read a page’s text and controls." : {
       "comment" : "Caption for the Read Pages tool in assistant settings."
     },
-    "Read aloud" : {
-      "comment" : "Title of the Voice settings row that has answers spoken by the Mac, and the same wording in the Settings search index. Read is a verb here. Sentence case."
-    },
     "Read an embedded website with separate permission." : {
 
     },
@@ -3787,6 +3820,9 @@
     "Read and change your data on:" : {
       "comment" : "Heading line above a bulleted list of website names in the extension install confirmation dialog. The trailing colon is part of the string and must stay, since the hostnames follow directly beneath it."
     },
+    "Read answers with a voice on this Mac or with OpenAI." : {
+      "comment" : "Settings search result detail for the reading aloud engine choice."
+    },
     "Read article" : {
       "comment" : "Agent activity log title for the tool that reads just the main article of a page."
     },
@@ -3795,6 +3831,9 @@
     },
     "Read control state and dropdown options." : {
 
+    },
+    "Read each answer aloud when it finishes." : {
+      "comment" : "Voice settings: caption for Speak answers automatically."
     },
     "Read embedded page" : {
 
@@ -3823,6 +3862,9 @@
     "Read this answer aloud" : {
 
     },
+    "Read this answer aloud. Uses your OpenAI API key." : {
+      "comment" : "Tooltip on an answer’s speaker button when reading aloud uses OpenAI, which is billed."
+    },
     "Read this article aloud" : {
       "comment" : "Tooltip on the Listen button in reader view."
     },
@@ -3837,6 +3879,12 @@
     },
     "Read-aloud model" : {
 
+    },
+    "Reader uses the same voice. To add better voices to this Mac, download them in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)." : {
+      "comment" : "Voice settings footnote under Reading aloud. Keep the Markdown link."
+    },
+    "Reading aloud" : {
+      "comment" : "Voice settings section title; also an item in the list of billed features."
     },
     "Reading speed" : {
 
@@ -3864,6 +3912,15 @@
     },
     "Recently visited pages" : {
       "comment" : "Description of the History section in the start page editor. Pages means web pages. No final full stop."
+    },
+    "Recognize speech on this Mac or with OpenAI." : {
+      "comment" : "Settings search result detail for the dictation engine choice."
+    },
+    "Recognizes names and mixed languages better. Billed for each minute you speak." : {
+      "comment" : "Voice settings: caption for the OpenAI dictation option."
+    },
+    "Recognizes your speech on this Mac at no cost." : {
+      "comment" : "Voice settings: caption for the on-device dictation option."
     },
     "Record task outcome" : {
 
@@ -4452,17 +4509,11 @@
     "Set defaults for websites and review the settings you changed." : {
 
     },
+    "Set how fast OpenAI reads answers aloud." : {
+      "comment" : "Settings search result detail for the OpenAI reading speed."
+    },
     "Set the default zoom for websites. You can also zoom individual tabs." : {
 
-    },
-    "Set the speed for reading replies aloud." : {
-
-    },
-    "Set the voice and speed in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)." : {
-      "comment" : "Caption under the Read aloud toggle. The bracketed words are a link that opens the Spoken Content pane of System Settings; translate the words, never the address in parentheses."
-    },
-    "Set the voice and speed in your OpenAI provider settings." : {
-      "comment" : "Caption under the Read aloud toggle when an OpenAI provider is selected."
     },
     "Set Up…" : {
       "comment" : "Settings → Assistant. Button that opens the page of the chosen provider so its key or server can be fixed."
@@ -4650,6 +4701,9 @@
     "Sleep inactive tabs is off, so every website stays loaded." : {
 
     },
+    "Slower" : {
+      "comment" : "Option in the Speed segmented control in Voice settings: 0.75 times normal reading speed."
+    },
     "Small" : {
       "comment" : "First of the four sizes in the lyrics text-size menu (Small, Regular, Large, Extra Large). An adjective for the size of the words. Title Case, as macOS menu items are."
     },
@@ -4677,14 +4731,20 @@
     "Something else…" : {
       "comment" : "Last entry in the search engine pop-up menu, chosen when the user wants an engine that is not listed and will type its address instead. Real ellipsis, promising that a field appears."
     },
+    "Sounds more natural. Billed for each answer read aloud." : {
+      "comment" : "Voice settings: caption for the OpenAI reading aloud option."
+    },
     "Space" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the space bar."
     },
     "Speak Answer" : {
 
     },
-    "Speak answers as they arrive." : {
-      "comment" : "Settings search caption for Read aloud. The page caption adds a System Settings link."
+    "Speak answers automatically" : {
+      "comment" : "Voice settings toggle title."
+    },
+    "Speak Answers Automatically" : {
+      "comment" : "Command palette command that turns on automatic spoken answers."
     },
     "Speaking style" : {
 
@@ -4694,6 +4754,9 @@
     },
     "Speech recognition is starting. Try again shortly." : {
       "comment" : "Brief status line shown when the user tries to speak before the speech recogniser has finished starting up. Conversational and reassuring."
+    },
+    "Speed" : {
+      "comment" : "Voice settings row title for the OpenAI reading speed slider."
     },
     "Split" : {
 
@@ -4734,6 +4797,9 @@
     "Start voice conversation" : {
 
     },
+    "Start voice conversation. Uses your OpenAI API key." : {
+      "comment" : "Tooltip on the composer’s voice conversation button, which is billed by OpenAI."
+    },
     "Start with these shortcuts." : {
       "comment" : "Caption under the You’re set heading on the last onboarding screen, introducing the three lines below it."
     },
@@ -4758,8 +4824,14 @@
     "Stop Listening" : {
       "comment" : "Command that turns the microphone off. The same command reads “Start Listening” while it is off. Title Case."
     },
+    "Stop reading aloud" : {
+      "comment" : "Tooltip in reader view: stop reading the article aloud."
+    },
     "Stop Speaking" : {
       "comment" : "Tooltip on the toolbar's speaker button while the assistant is reading a reply aloud; clicking cuts the speech off mid-sentence. It does not change any setting. Title Case."
+    },
+    "Stop Speaking Answers Automatically" : {
+      "comment" : "Command palette command that turns off automatic spoken answers."
     },
     "Stop the reply and speak" : {
 
@@ -4881,6 +4953,9 @@
     },
     "Take this page’s place" : {
       "comment" : "Caption shown over a page while another is dragged onto it, when the window is already showing as many as it can. The page underneath goes back to being an ordinary sidebar row rather than being closed. Sentence case, no final period; curly apostrophe."
+    },
+    "Talk back and forth with the assistant. Billed for each minute a conversation is open." : {
+      "comment" : "Voice settings: caption for the Voice conversation toggle."
     },
     "Talk to apps outside the browser" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Apps means other applications on the Mac. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
@@ -5527,6 +5602,9 @@
     "Username or email" : {
 
     },
+    "Uses the best voice installed on this Mac at no cost." : {
+      "comment" : "Voice settings: caption for the on-device reading aloud option."
+    },
     "Using %@" : {
 
     },
@@ -5595,6 +5673,18 @@
     },
     "Voice models" : {
 
+    },
+    "voice.style.custom" : {
+      "comment" : "Option in the Style segmented control in Voice settings: the user writes their own speaking instructions. Separate from the user agent’s Custom option.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Custom"
+          }
+        }
+      }
     },
     "Wait for expected text or loading to finish." : {
 

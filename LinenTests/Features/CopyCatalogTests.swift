@@ -127,7 +127,7 @@ struct CopyCatalogTests {
         "new tab", "on this mac", "page zoom", "posting and sending",
         "reset settings", "show lyrics", "show sidebar", "software update",
         "start page", "remove extension", "sign in", "extension options",
-        "clear list", "pop-up windows", "check for updates",
+        "clear list", "pop-up windows", "check for updates", "speak answers automatically",
     ]
 
     /// Two keys that differ only in case are one label about to fork - the
@@ -160,7 +160,6 @@ struct SettingsIndexParityTests {
         "general.agentOnly",        // the page caption names the chosen model
         "search.engine",            // the page caption names the chosen model
         "provider.tools",           // the page caption names the chosen model
-        "voice.readAloud",          // the page caption adds a System Settings link
         "about.updates",            // the About page renders version state, not a caption
         "about.updates.channel",    // the page caption names the chosen channel; the index covers both
         "about.acknowledgements",
@@ -170,7 +169,9 @@ struct SettingsIndexParityTests {
         "general.defaultBrowser",
         "search.custom", "appearance.theme", "profiles.list", "profiles.current",
         "provider.model", "provider.connected", "provider.key", "provider.endpoint",
-        "openai.replyLength", "openai.voice.readingVoice", "openai.voice.readingSpeed",
+        "openai.replyLength", "voice.readingVoice", "voice.readingSpeed", "voice.conversationVoice",
+        // Each engine option carries its own caption.
+        "voice.dictation", "voice.reading",
         "openai.developer", // The button opens a group of advanced settings.
         "appearance.sidebar", "appearance.sidebarStyle", "advanced.reset",
         "privacy.history",
@@ -206,7 +207,7 @@ struct SettingsIndexParityTests {
         "Linen/Settings/Pages/ProfileSettings.swift",
         "Linen/Settings/Pages/IntelligenceSettings.swift",
         "Linen/Settings/Pages/OpenAISettingsSection.swift",
-        "Linen/Settings/Pages/OpenAIVoiceSettingsView.swift",
+        "Linen/Settings/Pages/VoiceSettings.swift",
         "Linen/Settings/Pages/OpenAIDeveloperSettings.swift",
         "Linen/Settings/Pages/SearchSettings.swift",
         "Linen/Settings/Pages/AssistantGrantsPage.swift",

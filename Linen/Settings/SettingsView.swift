@@ -170,6 +170,12 @@ private struct SettingsDetail: View {
                         AppearanceSettings(coordinator: coordinator, settings: coordinator.settings)
                     case .provider:
                         AssistantSettings(model: intelligence, coordinator: coordinator)
+                    case .voice:
+                        VoiceSettings(
+                            coordinator: coordinator,
+                            preferences: coordinator.voicePreferences,
+                            onOpenAssistant: { onReveal("provider.connected") }
+                        )
                     case .profiles:
                         ProfileSettings(coordinator: coordinator)
                     case .autofill:

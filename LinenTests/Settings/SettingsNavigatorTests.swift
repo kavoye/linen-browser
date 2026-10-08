@@ -10,7 +10,7 @@ import Testing
 struct SettingsNavigatorTests {
     @Test func categoryRawValuesAreStable() {
         let expected = [
-            "general", "appearance", "search", "provider", "profiles",
+            "general", "appearance", "search", "provider", "voice", "profiles",
             "privacy", "autofill", "websites", "downloads", "extensions", "advanced", "experiments", "about",
         ]
         #expect(SettingsCategory.allCases.map(\.rawValue) == expected)
@@ -69,9 +69,10 @@ struct SettingsNavigatorTests {
         #expect(SettingsCategory.provider.matches("provider"))
     }
 
-    @Test func theOldVoicePageStillFindsTheAssistantPage() {
-        #expect(SettingsCategory.provider.matches("voice"))
-        #expect(SettingsCategory.provider.matches("microphone"))
-        #expect(SettingsCategory.provider.matches("push to talk"))
+    @Test func voiceTopicsFindTheVoicePage() {
+        #expect(SettingsCategory.voice.matches("voice"))
+        #expect(SettingsCategory.voice.matches("microphone"))
+        #expect(SettingsCategory.voice.matches("push to talk"))
+        #expect(SettingsCategory.voice.group == .intelligence)
     }
 }

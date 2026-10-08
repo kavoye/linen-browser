@@ -6,6 +6,7 @@ import SwiftUI
 struct ProviderBrandIcon: View {
     let providerID: String
     var size: CGFloat = 16
+    var tint: Color?
 
     private var assetName: String? {
         switch providerID {
@@ -39,18 +40,19 @@ struct ProviderBrandIcon: View {
             if providerID == ProviderCatalog.appleOnDevice.id {
                 Image(systemName: "apple.logo")
                     .font(.system(size: size * 0.88))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(tint ?? .primary)
                     .offset(y: -size * 0.03)
             } else if let assetName {
                 Image(assetName)
                     .resizable()
-                    .renderingMode(.original)
+                    .renderingMode(tint == nil ? .original : .template)
                     .interpolation(.high)
                     .scaledToFit()
+                    .foregroundStyle(tint ?? .primary)
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: size * 0.7))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(tint.map(AnyShapeStyle.init) ?? AnyShapeStyle(.tertiary))
             }
         }
         .frame(width: size, height: size)

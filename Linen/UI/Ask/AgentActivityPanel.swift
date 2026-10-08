@@ -11,7 +11,9 @@ struct AgentActivityPanel: View {
     var compactionMessage: LocalizedStringResource?
     let onRetry: (ConversationLog.TaskTrace) -> Void
     let onEdit: (ConversationLog.TaskTrace) -> Void
-    let onSpeak: (String) -> Void
+    var speakingAnswerID: UUID?
+    var readsWithOpenAI = false
+    let onSpeak: (ConversationLog.TaskTrace) -> Void
 
     @State private var edges = Edges()
 
@@ -34,6 +36,8 @@ struct AgentActivityPanel: View {
                             browser: browser,
                             onRetry: onRetry,
                             onEdit: onEdit,
+                            isSpeaking: trace.id == speakingAnswerID,
+                            readsWithOpenAI: readsWithOpenAI,
                             onSpeak: onSpeak,
                             isLatest: trace.id == traces.last?.id
                         )
@@ -238,7 +242,9 @@ private struct AgentTaskTraceView: View {
     let browser: BrowserModel
     let onRetry: (ConversationLog.TaskTrace) -> Void
     let onEdit: (ConversationLog.TaskTrace) -> Void
-    let onSpeak: (String) -> Void
+    var isSpeaking = false
+    var readsWithOpenAI = false
+    let onSpeak: (ConversationLog.TaskTrace) -> Void
 
     var isLatest = true
 
@@ -283,12 +289,14 @@ private struct AgentTaskTraceView: View {
                         || !(trace.checkpoint?.openAI?.presentation?.summaries.isEmpty ?? true),
                     isThinking: isThinking,
                     stepsAreShown: showsSteps,
-                    showsActions: hovering && !trace.response.isEmpty,
+                    showsActions: (hovering || isSpeaking) && !trace.response.isEmpty,
+                    isSpeaking: isSpeaking,
+                    readsWithOpenAI: readsWithOpenAI,
                     onToggleSteps: {
                         withAnimation(Theme.Motion.quick) { showsSteps.toggle() }
                     },
                     onCopy: { copy(trace.response) },
-                    onSpeak: { onSpeak(trace.response) }
+                    onSpeak: { onSpeak(trace) }
                 )
 
                 if showsWorkHistory {
@@ -328,8 +336,12 @@ private struct AgentTaskTraceView: View {
             }
             Button("Copy Diagnostics") { copy(trace.diagnostics.exported()) }
             Divider()
-            Button("Speak Answer") { onSpeak(trace.response) }
-                .disabled(trace.response.isEmpty)
+            if isSpeaking {
+                Button("Stop Speaking") { onSpeak(trace) }
+            } else {
+                Button("Speak Answer") { onSpeak(trace) }
+                    .disabled(trace.response.isEmpty)
+            }
         }
     }
 
@@ -489,6 +501,8 @@ private struct ChatTurnFooter: View {
     let isThinking: Bool
     let stepsAreShown: Bool
     let showsActions: Bool
+    let isSpeaking: Bool
+    let readsWithOpenAI: Bool
     let onToggleSteps: () -> Void
     let onCopy: () -> Void
     let onSpeak: () -> Void
@@ -517,7 +531,13 @@ private struct ChatTurnFooter: View {
             if showsActions && !isThinking {
                 HStack(spacing: 0) {
                     ChatCopyAction(help: "Copy this answer", action: onCopy)
-                    ChatAction(symbol: "speaker.wave.2", help: "Read this answer aloud", action: onSpeak)
+                    if isSpeaking {
+                        ChatAction(symbol: "stop.fill", help: "Stop reading aloud", action: onSpeak)
+                    } else if readsWithOpenAI {
+                        ChatAction(symbol: "speaker.wave.2", help: "Read this answer aloud. Uses your OpenAI API key.", action: onSpeak)
+                    } else {
+                        ChatAction(symbol: "speaker.wave.2", help: "Read this answer aloud", action: onSpeak)
+                    }
                 }
             }
 

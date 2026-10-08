@@ -168,6 +168,10 @@ extension AppCoordinator {
             NotificationCenter.default.removeObserver(resignActiveObserver)
         }
         resignActiveObserver = nil
+        if let voicePreferencesObserver {
+            NotificationCenter.default.removeObserver(voicePreferencesObserver)
+        }
+        voicePreferencesObserver = nil
         browser.cancelPendingSave()
         closePeekImmediately()
         browser.closeAllTabs(saving: false)
