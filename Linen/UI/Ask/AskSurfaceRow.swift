@@ -25,6 +25,19 @@ struct AskSurfaceRow: View {
 
     private static let centredAddressInset: CGFloat = 78
 
+    @State private var rowWidth: CGFloat = 0
+    @State private var centredLineWidth: CGFloat = 0
+    @State private var centredLineFits = true
+    @Namespace private var restingLineSpace
+
+    private func updateCentredLineFits() {
+        let fits = rowWidth == 0 || centredLineWidth <= rowWidth - 2 * Self.centredAddressInset
+        guard fits != centredLineFits else { return }
+        withAnimation(.smooth(duration: 0.3)) {
+            centredLineFits = fits
+        }
+    }
+
     var body: some View {
         @Bindable var model = model
         let placement = model.placement
@@ -60,11 +73,15 @@ struct AskSurfaceRow: View {
                 .allowsHitTesting(restingContent == nil)
                 .accessibilityValue(Text(verbatim: accessibilityValue))
 
-                if let restingContent, !restingContent.isCentred {
+                if let restingContent, !restingContent.isCentred || !centredLineFits {
                     AskRestingLine(
                         placement: placement,
                         content: restingContent,
                         security: security
+                    )
+                    .matchedGeometryEffect(
+                        id: restingContent.isCentred ? "centred" : "leading",
+                        in: restingLineSpace
                     )
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .allowsHitTesting(false)
@@ -104,7 +121,28 @@ struct AskSurfaceRow: View {
                     content: restingContent,
                     security: security
                 )
-                .padding(.horizontal, Self.centredAddressInset)
+                .fixedSize()
+                .hidden()
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
+                    centredLineWidth = $0
+                    updateCentredLineFits()
+                }
+                .frame(maxWidth: .infinity)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
+                    rowWidth = $0
+                    updateCentredLineFits()
+                }
+                .overlay {
+                    if centredLineFits {
+                        AskRestingLine(
+                            placement: placement,
+                            content: restingContent,
+                            security: security
+                        )
+                        .matchedGeometryEffect(id: "centred", in: restingLineSpace)
+                        .padding(.horizontal, Self.centredAddressInset)
+                    }
+                }
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
             }
