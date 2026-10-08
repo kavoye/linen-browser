@@ -433,7 +433,7 @@ enum PageDriver {
         guard ["up", "down", "left", "right"].contains(direction) else { return "Use up, down, left, or right." }
         guard PageAutomationGuard.allowsExecution else { return staleMessage }
         if ref > 0, !(await validateObservation(in: webView, ref: ref)) {
-            return staleMessage
+            return staleMessage(ref: ref, in: webView)
         }
         let horizontal = direction == "left" || direction == "right"
         let sign = direction == "up" || direction == "left" ? -1 : 1
@@ -509,12 +509,19 @@ enum PageDriver {
     static let staleMessage =
         "That element is gone - the page has changed since it was read. Use readPage and act on the fresh refs."
 
+    static func staleMessage(ref: Int, in view: WKWebView) -> String {
+        guard let current = observation(in: view), expectedObservation == nil || expectedObservation == current.id,
+            !current.refs.contains(ref)
+        else { return staleMessage }
+        return "[\(ref)] was not listed in that observation. Use a ref it listed, or readPage with lookingFor to find the control."
+    }
+
     static func resolve(ref: Int, label: String, kinds: String, in webView: WKWebView) async -> Resolution {
         guard ref > 0 || !label.trimmingCharacters(in: .whitespaces).isEmpty else {
             return .failure("Say which element: a [ref] number from readPage, or a visible label.")
         }
         if ref > 0, !(await validateObservation(in: webView, ref: ref)) {
-            return .failure(staleMessage)
+            return .failure(staleMessage(ref: ref, in: webView))
         }
         if ref == 0, expectedObservation != nil, !(await validateObservation(in: webView)) {
             return .failure(staleMessage)

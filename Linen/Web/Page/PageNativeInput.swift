@@ -7,9 +7,9 @@ import WebKit
 
 extension PageDriver {
     static func hover(ref: Int, in view: WKWebView) async -> String {
-        guard await validateObservation(in: view, ref: ref) else { return staleMessage }
+        guard await validateObservation(in: view, ref: ref) else { return staleMessage(ref: ref, in: view) }
         await announce(ref: ref, in: view, pause: false)
-        guard await validateObservation(in: view, ref: ref) else { return staleMessage }
+        guard await validateObservation(in: view, ref: ref) else { return staleMessage(ref: ref, in: view) }
         let result = await evaluateJSON(
             scripted(
                 """

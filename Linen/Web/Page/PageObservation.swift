@@ -68,7 +68,7 @@ extension PageDriver {
         var lastError = "The control did not become stable. Read the page again."
         var samples = 0
         repeat {
-            guard await validateObservation(in: view, ref: ref) else { return staleMessage }
+            guard await validateObservation(in: view, ref: ref) else { return staleMessage(ref: ref, in: view) }
             let result = await evaluateJSON(
                 scripted(
                     """

@@ -19,7 +19,7 @@ extension PageDriver {
     }
 
     static func inspectControl(ref: Int, offset: Int = 0, in view: WKWebView) async -> String {
-        guard await validateObservation(in: view, ref: ref) else { return staleMessage }
+        guard await validateObservation(in: view, ref: ref) else { return staleMessage(ref: ref, in: view) }
         let start = max(0, offset)
         let script = scripted(
             """
@@ -66,7 +66,7 @@ extension PageDriver {
     static func setChecked(
         ref: Int, checked: Bool, in view: WKWebView, announced: Bool = false, refreshControls: Bool = true
     ) async -> String {
-        guard await validateObservation(in: view, ref: ref) else { return staleMessage }
+        guard await validateObservation(in: view, ref: ref) else { return staleMessage(ref: ref, in: view) }
         let state = await evaluateJSON(scripted("""
             const el = window.__linenRefs[\(ref) - 1];
             if (R.isSensitiveField(el)) return JSON.stringify({ refused: true });

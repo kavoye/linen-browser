@@ -168,7 +168,7 @@ struct PageInteractionTests {
         #expect(page.contains("[100]"))
         let observation = try #require(PageDriver.observation(in: view))
         #expect(!observation.refs.contains(1))
-        #expect(await PageDriver.click(ref: 1, label: "", in: view) == PageDriver.staleMessage)
+        #expect((await PageDriver.click(ref: 1, label: "", in: view)).hasPrefix("[1] was not listed in that observation."))
     }
 
     @Test func calendarPaginationRecoversFromRefOffsetsAndChangedQueries() async {
@@ -376,6 +376,13 @@ struct PageInteractionTests {
         let fields = await PageDriver.snapshot(view, scope: "textarea, input")
         #expect(fields.contains("\"First\"") && fields.contains("\"Second\""), "\(fields)")
         #expect((await PageDriver.snapshot(view, scope: "article")) == "No element matches that scope.")
+    }
+
+    @Test func unlistedRefsAreNotReportedAsStale() async {
+        let view = await page("<nav><a href='#a'>Home</a></nav><main><button>Help</button></main>")
+        _ = await PageDriver.snapshot(view, scope: "nav")
+        let output = await PageDriver.click(ref: 2, label: "", in: view)
+        #expect(output.hasPrefix("[2] was not listed in that observation."), "\(output)")
     }
 
     @Test func sensitiveEditableTextIsRedactedAndCannotBeOverwritten() async {
