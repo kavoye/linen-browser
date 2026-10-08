@@ -104,8 +104,8 @@ struct CommandPaletteModelTests {
         }
     }
 
-    @Test func optionReturnOpensTheSelectedWebResultInTheCurrentTab() throws {
-        try Omnibox.$agentOnlyForTesting.withValue(false) {
+    @Test func optionReturnOpensTheSelectedWebResultInTheCurrentTab() {
+        Omnibox.$agentOnlyForTesting.withValue(false) {
             let coordinator = AppCoordinator()
             let active = coordinator.browser.newTab()
             let count = coordinator.browser.tabs.count

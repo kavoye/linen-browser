@@ -211,8 +211,9 @@ struct MCPClientInstallerTests {
         let url = directory.appending(path: "config.toml")
         let original = Data("# Keep this comment\nmodel = \"test\"\n[mcp_servers.\"other.server\"]\ncommand = \"/bin/true\"\nenabled = false\n".utf8)
         try original.write(to: url)
+        let codex = try #require(Self.installedCodex)
         let destination = MCPClientTarget(kind: .codex, configurationURL: url,
-                                          codexExecutable: try #require(Self.installedCodex), isDetected: true)
+                                          codexExecutable: codex, isDetected: true)
         let installer = MCPClientInstaller()
         #expect(try await !installer.isInstalled(destination, command: command))
         let result = try await installer.install(destination, command: command)
