@@ -464,11 +464,15 @@ final class BrowserTab: Identifiable {
 
     func discardWebContent() {
         guard canDiscardWebContent else { return }
+        unloadUntilShown()
+    }
+
+    private func unloadUntilShown() {
+        guard let outgoing = liveView else { return }
         let state = sessionState
         let url = URL(string: urlString)
         guard state != nil || url != nil else { return }
 
-        let outgoing = webView
         retire(outgoing)
         stoppedNavigation = false
 
@@ -596,6 +600,7 @@ final class BrowserTab: Identifiable {
     var onSameDocumentNavigation: (() -> Void)?
 
     var onContentProcessTerminated: (() -> Void)?
+    var isShown: (() -> Bool)?
 
     private(set) var isClosed = false
 
@@ -618,6 +623,7 @@ final class BrowserTab: Identifiable {
         onLinkHovered = nil
         onSameDocumentNavigation = nil
         onContentProcessTerminated = nil
+        isShown = nil
         onLocationRevoked = nil
         navigationDelegate = nil
         guard let view = liveView else { return }
@@ -634,6 +640,11 @@ final class BrowserTab: Identifiable {
         guard !isClosed else { return }
         isPlayingAudio = false
         onContentProcessTerminated?()
+        if isShown?() == false {
+            Pipeline.log.notice("web content process died in a background tab; restoring it when shown")
+            unloadUntilShown()
+            return
+        }
         if !processState.shouldReloadAfterUnexpectedTermination() {
             Pipeline.log.error("web content process died twice; leaving the tab alone")
             return
