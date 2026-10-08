@@ -16,8 +16,8 @@ OpenAI usage charges apply.
 
 Browser actions, including screenshot and pointer tools, pass through Linen's
 permission checks. Hosted tools do not grant extra access to local tabs, files,
-or credentials. Hosted shell runs in an OpenAI container; Linen does not
-execute local shell commands from model output. Unknown action types stop with
+or credentials. Hosted shell runs in an OpenAI container. Linen does not
+run local shell commands from model output. Unknown action types stop with
 an unsupported-action result.
 
 The assistant can display citations, reasoning summaries, and generated images.
@@ -31,7 +31,7 @@ across tool calls and checkpoints. Native compaction preserves the returned inpu
 window. The generic transcript remains available when switching providers.
 Partial or failed responses do not execute local tools.
 
-Connection reuse is managed for chat on the official endpoint. WebSocket
+The client reuses its connection for chat on the official endpoint. WebSocket
 continuations send incremental input only when the stored history matches the
 connection's cached prefix. Otherwise the client sends the full input. It does
 not automatically replay failed or cancelled requests.
@@ -87,7 +87,7 @@ and the same derived-data path for the build and its tests.
 Reports omit prompts, generated text, reasoning state, and credentials. Output
 folders also contain local Xcode logs and test bundles. Review and share the
 sanitized report rather than the whole directory. Voice service tests use
-synthetic audio; they do not establish microphone or speaker quality.
+synthetic audio. They do not test microphone or speaker quality.
 
 Check for changes in the upstream SDK contract without an API key:
 

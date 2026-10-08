@@ -10,28 +10,29 @@ the document and there is no page-world credential bridge.
 `AutofillFormScript` owns document, form, and field identities, semantic field
 classification, section ownership, and bounded DOM/open-shadow-root discovery.
 Native form ownership and `form` attributes take precedence. Unowned controls
-get synthetic groups from their structure; nested component groups normalize
+get synthetic groups from their structure. Nested component groups normalize
 to consistent ownership. Standalone fields do not require a submit button.
-Mutation and focus notifications invalidate cached structure. Field values are
-not part of the structural cache.
+Mutation and focus notifications invalidate cached structure. The structural
+cache does not include field values.
 
-The category and field kind used to offer/fill a record are also used to capture
-it. `autocomplete` takes precedence over label heuristics. Login usernames are
-classified with their password group, so contact filling cannot claim them.
-Hidden/disabled controls cannot be filled. An explicit hidden username belonging
+Capture uses the same category and field kind that offering and filling a
+record use. `autocomplete` takes precedence over label heuristics. The script
+classifies login usernames with their password group, so contact filling cannot
+claim them. Hidden and disabled controls cannot be filled. An explicit hidden username belonging
 to a native form can supply account metadata for saving a multipage login.
 
 ## Suggestion presentation
 
 Focus and click share a field token, so native code reuses pending lookups and
-visible panels. A focus/click interaction waits up to one second for its field
-to become eligible and hold a stable position for 100 ms. Leaving the field,
-typing, or dismissal cancels that wait. Empty or failed lookups remain silent.
-DOM mutations can dismiss a disconnected target but never start a suggestion
-interaction or trigger metadata lookups by themselves.
-Only a visible, populated panel runs the geometry watcher; ownership, policy and
-origin are still revalidated before presentation and around authenticated filling.
-Typing or dismissal requires another focus/click interaction to reopen the panel.
+visible panels. A focus or click interaction waits up to one second for its
+field to become eligible and keep a stable position for 100 ms. Leaving the
+field, typing, or dismissal cancels that wait. Empty or failed lookups show
+nothing. DOM mutations can dismiss a disconnected target. They never start a
+suggestion interaction or trigger metadata lookups by themselves.
+Only a visible, populated panel runs the geometry watcher. Native code still
+checks ownership, policy and origin again before presentation and around
+authenticated filling. After typing or dismissal, only another focus or click
+interaction reopens the panel.
 
 ## Submission lifecycle
 
@@ -42,39 +43,40 @@ automatic submission. A replacement password field, a disabled form, or a
 recognized verification-code step delays completion. Snapshots and attempts are
 bounded and expire after two minutes.
 
-`AutofillSubmissionTracker` retains pending candidates in the tab's memory across
+`AutofillSubmissionTracker` keeps pending candidates in the tab's memory across
 navigation. It checks registered frame reports for a settled new document or a
 removed login frame before requesting the native save UI. Ordinary browser
 navigation, HTTP errors, genuine navigation failures, profile changes, locking,
 and policy changes discard pending state. Canceled redirects can continue the
-flow. Username steps are restricted to their HTTPS origin and expire after five
-minutes. A native address-bar popover presents the pending offer without changing
-page layout. Closing it keeps the offer available from its icon until expiry or
-explicit dismissal. Only explicit Save/Update writes a candidate to the existing vaults.
+flow. Username steps stay on their HTTPS origin and expire after five minutes.
+A native address-bar popover shows the pending offer without changing page
+layout. After you close it, its icon keeps the offer available until it expires
+or you dismiss it. Only an explicit Save or Update writes a candidate to the
+existing vaults.
 
-Native code binds messages to WKFrameInfo origins. Filling additionally checks
-the document/form/field identity, selection token, focus, geometry, and policy
-before and after authentication. A new document at the same URL is still a
-different document. Browser password fills reuse an authenticated context for
+Native code binds messages to WKFrameInfo origins. Filling also checks the
+document, form, and field identity, the selection token, focus, geometry, and
+policy before and after authentication. A new document at the same URL is still
+a different document. Browser password fills reuse an authenticated context for
 five minutes on the same top-level document, profile, and credential origin.
-The context is cleared on policy changes, authentication failure, sleep,
-screen lock, or user-session switch. Password settings own
-a separate, page-scoped context that is invalidated on page dismissal, sleep,
-screen lock, and user-session switch. Browser fills and save prompts never share
-that context. Diagnostics contain static event names/counts only.
+Policy changes, authentication failure, sleep, screen lock, and a user-session
+switch clear the context. Password settings own a separate, page-scoped context.
+Page dismissal, sleep, screen lock, and a user-session switch invalidate it.
+Browser fills and save prompts never share that context. Diagnostics contain
+only static event names and counts.
 
 ## Limits and validation
 
 Completion signals are heuristics, not proof that a server accepted a password
-or payment. This uses public WKWebView APIs; it does not implement Chromium's
-network/renderer hooks or server predictions. Closed shadow roots and arbitrary
-custom editing widgets remain unsupported. Fields belonging to different
-frames are not combined. Embedded dropdown geometry currently requires a
-resolvable focused frame chain; multiple unrelated nested origins can be refused.
+or payment. Autofill uses public WKWebView APIs. It does not implement
+Chromium's network and renderer hooks or server predictions. Closed shadow roots
+and arbitrary custom editing widgets are unsupported. Autofill does not combine
+fields from different frames. Embedded dropdown geometry needs a resolvable
+focused frame chain. Autofill can refuse multiple unrelated nested origins.
 
 Regression fixtures cover structural ownership, standalone fields, non-English
 actions, protected fields, and fill boundaries. Use a normally signed build for
-manual checks. Removing entitlements prevents validation of real Keychain access.
+manual checks. Without entitlements, you cannot test real Keychain access.
 System authentication, the Contacts picker, and live sign-in need manual testing.
 
 ## Manual checks

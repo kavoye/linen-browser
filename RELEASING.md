@@ -7,8 +7,8 @@ does not show the Sparkle windows. The update interface is only the banner in
 Two files contain the hosting configuration. The values in these two files must
 agree:
 
-- `Linen/Updates/UpdateFeed.swift` — the `owner` and `repository` values
-- `Linen/Info.plist` — the `SUFeedURL` value
+- `Linen/Updates/UpdateFeed.swift`: the `owner` and `repository` values
+- `Linen/Info.plist`: the `SUFeedURL` value
 
 The feed URL is
 `https://github.com/<owner>/<repo>/releases/latest/download/appcast.xml`.

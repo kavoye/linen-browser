@@ -33,7 +33,7 @@ flowchart LR
 `BrowserApplication` owns the native window registry, active-window routing, updates,
 and one MCP server. Each window has an `AppCoordinator` with its own tabs, sidebar,
 selection, voice input, and assistant task. Views observe
-their coordinator and its focused models; they should not contain persistence, networking or
+their coordinator and its focused models. They should not contain persistence, networking or
 WebKit policy. New work should prefer a narrow model or protocol over another
 coordinator responsibility.
 
@@ -50,7 +50,7 @@ lifecycle. `TabProcessState` owns process-protection signals, unload status and
 unexpected-termination throttling. `WebViewPool` prepares reusable views
 without owning tab state.
 
-A restored tab holds no `WKWebView` until you open it. `BrowserTab.webView`
+A restored tab has no `WKWebView` until you open it. `BrowserTab.webView`
 builds one on first use and `isMaterialised` reports whether it exists, so code
 that iterates over tabs must check it before accessing the view. A tab unloaded
 under memory pressure retains its view but replaces the loaded page.
@@ -76,7 +76,7 @@ layouts are scoped to that ID. The migration assigns the old session to one
 window, and the application gives migrated windows unique IDs across profiles.
 Revisions reject stale queued saves after a close or synchronous final save.
 Remapped IDs keep a hidden revision cutoff so delayed saves cannot recreate the
-old window record; a later profile switch may reuse the ID with a newer revision.
+old window record. A later profile switch may reuse the ID with a newer revision.
 A tab transfer moves the existing tab and web view, rebinds callbacks, cancels
 source-window assistant work, and commits both windows together. A live tab may
 move only between windows sharing the same context.
@@ -113,17 +113,18 @@ authorize access, protect credentials or confirm an irreversible action.
 
 External MCP clients use a separate `MCPBrowserSession`, with explicit tab-and-
 origin grants and connection-local consequential-action approvals. The session
-uses `PageDriver` through a revocable `PageAutomationGuard`; it does not enter
-`AgentTurnModel` or write assistant conversation history. Each connection binds to one regular window when it connects. Focus changes do
-not retarget it. Closing or switching that window revokes its connections before
-replacing stores; other windows keep their connections. The
+uses `PageDriver` through a revocable `PageAutomationGuard`. It does not enter
+`AgentTurnModel` or write assistant conversation history. Each connection binds
+to one regular window when it connects. Focus changes do not retarget it.
+Closing or switching that window revokes its connections before replacing
+stores. Other windows keep their connections. The
 bundled `--mcp` process relays stdio to a user-only Unix socket without opening a
 second browser session. See [MCP.md](MCP.md) for the tool contract and boundaries.
 
 MCP enablement is an app-level preference. Runtime shutdown clears connections
-and grants without changing that preference. The listener belongs to the application. New connections are refused when the
-focused window is private; existing connections to regular windows remain bound
-to their original window. Consent sheets attach to that window.
+and grants without changing that preference. The listener belongs to the
+application. It refuses new connections when the focused window is private.
+Existing connections to regular windows stay bound to their original window. Consent sheets attach to that window.
 
 `MCPClientInstaller` handles optional client setup on its own actor. It merges
 standard JSON configs and uses the installed Codex CLI on a staged TOML copy.
@@ -152,7 +153,7 @@ device. The OpenAI adapter also preserves native Responses state.
 
 The context indicator estimates occupancy, including tool definitions. It does
 not report measured provider token usage. Progress updates remain in private chat
-history; diagnostics record only their event type and status.
+history. Diagnostics record only their event type and status.
 
 See [OpenAI integration](OPENAI.md) for provider configuration and validation,
 and [Browser autofill](Linen/Web/Autofill/README.md) for form and credential handling.
@@ -161,20 +162,20 @@ and [Browser autofill](Linen/Web/Autofill/README.md) for form and credential han
 
 Shared mutable models use Observation. View-local state is private. A distinct
 screen or independently changing section should be a real `View` type with
-narrow inputs; a computed `some View` property does not create an observation
+narrow inputs. A computed `some View` property does not create an observation
 boundary.
 
 Use the components and metrics in `Linen/UI/Chrome` and
 `Linen/Settings/SettingsPrimitives.swift`. `Theme` owns shared visual tokens.
-User-facing strings remain localizable; protocol values, URLs, model IDs and
-third-party error text remain verbatim.
+User-facing strings stay localizable. Protocol values, URLs, model IDs and
+third-party error text stay verbatim.
 
 ## Persistence
 
 GRDB stores structured browser and agent data. Small preferences use
-`UserDefaults`; provider secrets use Keychain. File-backed models — profiles,
-website permissions, page zoom and the download list — use atomic writes through
-the support layer. A write needed for quit or profile teardown
+`UserDefaults`. Provider secrets use Keychain. File-backed models use atomic
+writes through the support layer. These are profiles, website permissions, page
+zoom and the download list. A write needed for quit or profile teardown
 must be awaited or flushed synchronously before its owner is released.
 
 ## Tests
@@ -191,9 +192,9 @@ Tests use a per-process temporary directory from `AppDatabase.supportDirectory`.
 Profiles, permissions, zoom state and the download list do not access an
 installed copy’s support directory.
 
-`WebViewGate` bounds how many cases hold a live `WKWebView` at once, at half the
-machine’s cores. The `.boundedWebViews` trait takes a slot; apply it to the
-tests that build a view rather than to a whole suite, so the rest do not queue
+`WebViewGate` limits how many cases have a live `WKWebView` at once, to half the
+machine’s cores. The `.boundedWebViews` trait takes a slot. Apply it to the
+tests that build a view, not to a whole suite, so the other tests do not wait
 for a resource they never use.
 
 `Linen.xctestplan` turns on per-test timeouts: 120 seconds by default, 300 at

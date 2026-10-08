@@ -91,8 +91,8 @@ baseline to allow for roughly 50% variation on shared runners. These checks
 detect large regressions rather than small percentage changes. Change a budget
 only with measurements that justify it.
 
-A case that builds a live WebKit view takes `.boundedWebViews`, which holds one
-of a small number of slots — half the machine’s cores. Starting every case
+A case that builds a live WebKit view takes `.boundedWebViews`. The trait takes
+one of a small number of slots, equal to half the machine’s cores. Starting every case
 together exhausts WebContent processes and turns resource pressure into
 unrelated navigation failures. Put the trait on the tests that build a view, not
 on the suite around them, so pure cases do not queue for a resource they never
@@ -100,7 +100,7 @@ use. Add `.serialized` as well when the cases in a suite share state.
 
 `Linen.xctestplan` runs with per-test timeouts: 120 seconds by default, 300 at
 most. A stalled test times out and reports its name without blocking the full run.
-Both frameworks run from this plan, and a new test needs no entry in it — the
+Both frameworks run from this plan. A new test needs no entry in it, because the
 plan lists the target, not its tests.
 
 Tests get their own support directory, so a test can create profiles, write

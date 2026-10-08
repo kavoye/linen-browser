@@ -1,8 +1,8 @@
 # Connect an external assistant
 
 Linen provides a native MCP server for controlling shared browser tabs from an
-external MCP client. Linen must be running. Its built-in assistant does not need
-an API key, a model, or an open conversation.
+external MCP client. Linen must be running. Linen's own assistant does not need
+an API key, a model, or an open conversation for this.
 
 1. In Settings, open **Advanced → External Connections** and enable **MCP server**.
 2. Click **Add** beside your MCP client. Restart the client or reload its MCP
@@ -12,8 +12,8 @@ an API key, a model, or an open conversation.
 4. Have the client call `requestAccess`. Linen comes to the foreground and opens
    an approval prompt for the displayed pages. Choose **Read Only** or
    **Allow Control**.
-   If no shareable webpage is open, the prompt explains how to proceed; open a
-   webpage and have the client request access again.
+   If no shareable webpage is open, the prompt tells you so. Open a webpage and
+   have the client request access again.
 5. The client calls `listTabs`, then `readPage` with a returned `tabID`. Page
    actions use that tab ID, the returned `observationID`, and a numbered `ref`.
 
@@ -46,24 +46,25 @@ locations for these clients:
 The **Copy Configuration** button sits above the client list. Use the
 **… → Choose Configuration…** action beside a client for an existing
 custom profile or another configuration location. Linen does not scan your
-shell aliases or project directories. **… → Show Configuration** reveals the
-selected file in Finder; file paths are kept out of the client rows.
+shell aliases or project directories. **… → Show Configuration** shows the
+selected file in Finder. The client rows do not show file paths.
 
-The **Added** state is read from the saved configuration when this page opens
-and when Linen becomes active again, including entries configured elsewhere.
-These status checks do not modify the client configuration.
+Linen reads the **Added** state from the saved configuration when this page
+opens and when Linen becomes active again. This includes entries configured
+elsewhere. These checks do not change the client configuration.
 
-Setup merges only a `linen` server entry into the chosen configuration. Other
-servers, client settings, and project-specific entries are preserved. An exact
-existing command and argument are left alone, including any disabled state or
-custom client permissions. A different entry named `linen` is a conflict and is
-never silently overwritten. Review it in the client if you move Linen to a new
-location. Setup does not enable MCP tools that the client has disabled.
+Setup merges only a `linen` server entry into the chosen configuration. It keeps
+other servers, client settings, and project-specific entries. If an entry with
+the same command and argument exists, setup leaves it unchanged, including any
+disabled state or custom client permissions. If a different entry named `linen`
+exists, setup reports a conflict and does not overwrite it. Review it in the
+client if you move Linen to a new location. Setup does not enable MCP tools that
+the client has disabled.
 
 Before changing an existing file, Linen saves its exact bytes beside it as
-`<filename>.linen-backup-<unique ID>`. **… → Show Backup** reveals that copy.
-Backups and replacements are readable only by your OS user (`0600`); backups
-may include credentials for your other servers, so keep them private. Setup
+`<filename>.linen-backup-<unique ID>`. **… → Show Backup** shows that copy.
+Only your OS user can read backups and replacements (`0600`). Backups can
+include credentials for your other servers, so keep them private. Setup
 rejects linked, malformed, unsupported, or oversized files and checks for
 concurrent edits before replacing a file atomically. JSON-with-comments files
 can use the manual configuration route instead.
@@ -71,7 +72,7 @@ can use the manual configuration route instead.
 Codex setup uses the installed Codex CLI, including the executable bundled in
 its desktop app, to parse and edit a private temporary copy of its TOML. This
 preserves TOML syntax and comments without maintaining a second parser in
-Linen. The temporary copy is deleted afterward. Setup does not launch a model,
+Linen. Setup deletes the temporary copy afterward. It does not launch a model,
 connect a server, import client history, or grant access to browser tabs.
 
 Configuration formats follow the official documentation for
@@ -82,13 +83,13 @@ Configuration formats follow the official documentation for
 
 Clients with a different settings format need the same command and argument.
 Restart the client's connection after moving the app or enabling the server.
-The server is off until you enable it, then remembers your choice across
-launches and profile changes. Each connection uses the regular window focused
+The server is off until you enable it. After that, it stays on across launches
+and profile changes. Each connection uses the regular window that has focus
 when it connects. Switching focus does not change its tabs or sharing grants.
 Closing that window, switching its profile, or quitting disconnects affected
 clients and clears their grants. The relay reconnects on the next tool call,
-and the client must request fresh sharing approval. Interrupted calls are never
-replayed because an action may already have happened.
+and the client must request sharing approval again. The relay never replays an
+interrupted call, because the action may already have happened.
 
 A private window does not accept new MCP connections. Connections already bound
 to regular windows continue working. Use **Disconnect** beside a connection in
@@ -119,13 +120,13 @@ Advanced settings to revoke that connection immediately.
 | `closeTab` | Close an already shared, unpinned tab. |
 
 This first version covers browser page and tab actions. Assistant conversations,
-background research, the media player, arbitrary JavaScript, screenshots,
+background research, the media player, arbitrary JavaScript, desktop screenshots,
 cookies, credential stores, and filesystem access are not exposed.
 
 Successful page actions return fresh controls and an `observationID`; reuse that result for
 the next action. A partial batch can also return fresh controls while `isError` remains true.
 Check the completed count before continuing. Reads and actions share the same isolated
-page runtime and document-bound references. A stale, replaced, or unobserved target is refused.
+page runtime and document-bound references. Linen refuses a stale, replaced, or unobserved target.
 
 Use `lookingFor` to search beyond the first excerpt, `scope` for a CSS control subtree,
 `viewportOnly` for visible controls, and `textOffset` / `controlOffset` to continue.
@@ -137,8 +138,8 @@ Use screenshots only when text and control state do not answer the task.
 ## Privacy boundaries
 
 - Connecting and discovering tools disclose no tabs or page content. Every
-  connection starts with no grants. The displayed client name is supplied by
-  the client; it is not a verified app identity.
+  connection starts with no grants. The client supplies the name Linen shows.
+  It is not a verified app identity.
 - Access is restricted to the captured tab IDs and their website origins. Other
   tabs, private browsing, internal pages, and denied sites cannot be listed or
   addressed by guessing an ID. Redirecting to another website does not grant
@@ -149,19 +150,19 @@ Use screenshots only when text and control state do not answer the task.
   not change those settings.
 - The existing page driver detects and masks sensitive fields and refuses to
   fill them. Consequential actions use Linen's native confirmation UI. External
-  confirmations do not inherit the assistant's saved action approvals; any
-  remembered approval lasts only for that connection.
+  confirmations do not inherit the assistant's saved action approvals. An
+  approval saved during a connection lasts only for that connection.
 - External page scripts run in WebKit's isolated client world. Observation IDs
   belong to one connection and one document. Another read invalidates the
-  underlying control snapshot. Revocation and navigation are checked again
-  after suspension and before returning page data.
+  underlying control snapshot. Linen checks revocation and navigation again
+  after suspension and before it returns page data.
 - After reading untrusted content, outbound navigation must use an observed
   link, including its query string. The client cannot construct an arbitrary
   address from page content and navigate to it through these tools.
-- External calls are serialized. Starting an in-browser assistant task cancels
-  an active external call. External calls do not enter the assistant's
+- External calls run one at a time. Starting an in-browser assistant task
+  cancels an active external call. External calls do not enter the assistant's
   conversation history. Settings shows connected clients, grant counts, and
-  tool-call counts; page bodies and arguments are not persisted as MCP logs.
+  tool-call counts. Linen does not save page bodies or arguments as MCP logs.
 
 The MCP transport stays on this Mac. Shared page data goes to the connected
 application, which may send it to its own model provider. A local transport does
@@ -176,11 +177,11 @@ initialized on demand, including after a restart; sharing grants and observation
 are never replayed. The official Swift MCP SDK handles protocol initialization,
 tool discovery, calls, and cancellation. No TCP listener or HTTP endpoint is opened.
 The relay exits when its client's stdin closes. Its tool catalog belongs to the
-launched relay version: reload the client connection after an update that changes
+launched relay version. Reload the client connection after an update that changes
 the tools, or once when upgrading from the old relay that exited on browser shutdown.
 
-The socket lives in a directory owned by the current OS user with mode `0700`;
-the socket has mode `0600`. Directory and lock-file symlinks are rejected, and a
+The socket is in a directory owned by the current OS user with mode `0700`.
+The socket has mode `0600`. Directory and lock-file symlinks are rejected, and a
 file lock prevents another Linen process from replacing the live endpoint.
 Message sizes, buffered messages, and concurrent connections are bounded.
 
