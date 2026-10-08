@@ -54,8 +54,9 @@ enum PageDriver {
         else { return "The page changed. Use readPage again." }
         let controls = object["controls"] as? [[String: Any]] ?? []
         let available = max(300, outputBudget.totalCharacters - 650)
-        let text = PageOutputBudget.prefix(object["text"] as? String ?? "", fitting: min(textLength, available / 2))
-        var result = "PAGE TEXT:\n\(text)\n\nCONTROLS:\n"
+        let added = PageOutputBudget.prefix(object["added"] as? String ?? "", fitting: available / 8)
+        let text = PageOutputBudget.prefix(object["text"] as? String ?? "", fitting: min(textLength, available / 2) - PageOutputBudget.cost(added))
+        var result = "PAGE TEXT:\n\(text)\n\n" + (added.isEmpty ? "" : "NEW ON PAGE:\n\(added)\n\n") + "CONTROLS:\n"
         var refs = Set<Int>()
         for control in controls {
             var row = renderControl(control)

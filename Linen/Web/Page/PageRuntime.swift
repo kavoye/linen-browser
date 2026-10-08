@@ -10,6 +10,7 @@ nonisolated enum PageRuntime {
       const refSignatures = new Map();
       const expectedValues = new WeakMap();
       let lastControlQuery = null;
+      let lastParts = null;
       window.__linenRefs = [];
       const parentOf = el => el.parentElement || el.getRootNode()?.host || el.ownerDocument?.defaultView?.frameElement;
 
@@ -171,7 +172,7 @@ nonisolated enum PageRuntime {
         return out;
       };
 
-      const pageText = (viewportOnly = false) => {
+      const pageParts = (viewportOnly = false) => {
         const parts = [];
         const visit = root => {
           if (!root) return;
@@ -194,8 +195,9 @@ nonisolated enum PageRuntime {
           }
         };
         visit(document.body);
-        return norm(parts.join(' '));
+        return parts;
       };
+      const pageText = (viewportOnly = false) => norm(pageParts(viewportOnly).join(' '));
 
       const viewportText = limit => {
         const height = window.innerHeight;
@@ -339,7 +341,10 @@ nonisolated enum PageRuntime {
 
       const observe = (query, textLimit, controlLimit, textOffset, controlOffset, scope, viewportOnly) => {
         const all = collect();
-        const text = pageText(viewportOnly);
+        const parts = pageParts();
+        const text = viewportOnly ? pageText(true) : norm(parts.join(' '));
+        const added = lastParts ? norm(parts.filter(part => !lastParts.has(part)).join(' ')).slice(0, 800) : '';
+        lastParts = new Set(parts);
         const terms = norm(query).toLowerCase().split(/\s+/).filter(Boolean);
         let start = Math.min(Math.max(0, textOffset), text.length);
         if (terms.length && !textOffset) {
@@ -369,7 +374,7 @@ nonisolated enum PageRuntime {
           offset = 0; controlReset = 'out_of_range';
         }
         lastControlQuery = controlQuery;
-        return { text: text.slice(start, end), textTotal: text.length, textStart: start,
+        return { text: text.slice(start, end), textTotal: text.length, textStart: start, added,
           controls: candidates.slice(offset, offset + controlLimit), controlTotal: candidates.length, controlStart: offset,
           controlReset,
           snapshot: window.__linenSnapshot, document: documentID, url: location.href };

@@ -378,6 +378,17 @@ struct PageInteractionTests {
         #expect((await PageDriver.snapshot(view, scope: "article")) == "No element matches that scope.")
     }
 
+    @Test func actionsReportTextTheyRevealed() async {
+        let filler = String(repeating: "<p>Unchanged paragraph of page content.</p>", count: 120)
+        let view = await page(
+            "<button onclick=\"document.body.insertAdjacentHTML('beforeend', '<p>A description of your app.</p>')\">More information</button>\(filler)")
+        let first = await PageDriver.snapshot(view)
+        #expect(!first.contains("NEW ON PAGE:"))
+        let clicked = await PageDriver.click(ref: 1, label: "", in: view)
+        #expect(clicked.contains("NEW ON PAGE:\nA description of your app."), "\(clicked)")
+        #expect(!(await PageDriver.snapshot(view)).contains("NEW ON PAGE:"))
+    }
+
     @Test func unlistedRefsAreNotReportedAsStale() async {
         let view = await page("<nav><a href='#a'>Home</a></nav><main><button>Help</button></main>")
         _ = await PageDriver.snapshot(view, scope: "nav")
