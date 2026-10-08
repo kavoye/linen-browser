@@ -199,11 +199,10 @@ private struct SidePanelStatusMark: View {
 
     var body: some View {
         switch status {
-        case .agent(let dot):
-            AgentStateMarker(
-                isRunning: true,
-                tint: dot == .attention ? Theme.warning : Theme.accent
-            )
+        case .agent(.attention):
+            AgentStateMarker(isRunning: true, tint: Theme.warning)
+        case .agent(.working):
+            ComposingOrb(size: 16)
         case .lyrics:
             Image(systemName: "music.note")
                 .font(.system(size: 9, weight: .black))

@@ -204,10 +204,9 @@ private struct AgentActivityEmptyState: View {
 
     var body: some View {
         VStack(spacing: 9) {
-            Image(systemName: "sparkle")
-                .font(.system(size: 22, weight: .light))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
+            ComposingOrb(size: 34, isAnimating: false)
+                .frame(width: 26, height: 26)
+                .opacity(0.5)
 
             Group {
                 if let siteName {

@@ -5,20 +5,29 @@ import SwiftUI
 
 struct ComposingOrb: View {
     var size: CGFloat = 14
+    var isAnimating = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var motion: OrbMotion
+    @State private var isSettled: Bool
+
+    init(size: CGFloat = 14, isAnimating: Bool = true) {
+        self.size = size
+        self.isAnimating = isAnimating
+        _motion = State(initialValue: OrbMotion(isRunning: isAnimating, at: .now))
+        _isSettled = State(initialValue: !isAnimating)
+    }
 
     var body: some View {
         Group {
-            if reduceMotion {
+            if reduceMotion || isSettled {
                 Canvas { context, canvasSize in
-                    Self.paint(context, side: canvasSize.width, t: 0.6)
+                    Self.paint(context, side: canvasSize.width, phase: OrbMotion.restPhase)
                 }
             } else {
                 TimelineView(.animation) { timeline in
                     Canvas { context, canvasSize in
-                        let t = timeline.date.timeIntervalSinceReferenceDate * Self.speed
-                        Self.paint(context, side: canvasSize.width, t: t)
+                        Self.paint(context, side: canvasSize.width, phase: motion.phase(at: timeline.date))
                     }
                 }
             }
@@ -26,9 +35,19 @@ struct ComposingOrb: View {
         .frame(width: size, height: size)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+        .onChange(of: isAnimating) { _, running in
+            motion = running ? motion.running(at: .now) : motion.braking(at: .now)
+            isSettled = false
+        }
+        .task(id: motion.settlesAt) {
+            guard let settlesAt = motion.settlesAt else { return }
+            try? await Task.sleep(for: .seconds(max(0, settlesAt.timeIntervalSinceNow)))
+            if !Task.isCancelled {
+                isSettled = true
+            }
+        }
     }
 
-    private static let speed = 3.12
     private static let ghostCount = 8
     private static let lanes = 10
     private static let segments = 20
@@ -46,7 +65,7 @@ struct ComposingOrb: View {
         var opacity: Double
     }
 
-    private static func paint(_ context: GraphicsContext, side: Double, t: Double) {
+    private static func paint(_ context: GraphicsContext, side: Double, phase: SIMD2<Double>) {
         let c = side / 2
         let orbR = c * 0.78
         let radiusScale = pow(side / 300, 0.6)
@@ -83,8 +102,8 @@ struct ComposingOrb: View {
             let edge = abs(centered) / halfSpan
             for k in 0..<segments {
                 let a = Double(k) / Double(segments) * 2 * .pi
-                let wobble = 0.16 * sin(a * 3 - t * 1.7 + Double(lane) * 0.22)
-                    + 0.07 * sin(a * 5 + t * 1.1)
+                let wobble = 0.16 * sin(a * 3 - phase.x + Double(lane) * 0.22)
+                    + 0.07 * sin(a * 5 + phase.y)
                 let off = laneOffset + wobble
                 let x = cos(a)
                 let y = cb * sin(a) - sb * off
@@ -114,6 +133,99 @@ struct ComposingOrb: View {
                 )),
                 with: .color(.primary.opacity(dot.opacity))
             )
+        }
+    }
+}
+
+nonisolated struct OrbMotion: Sendable {
+    static let rate = SIMD2<Double>(1.7, 1.1)
+    static let velocity = rate * 3.12
+    static let restPhase = rate * 0.6
+    private static let rampDuration = 0.45
+    private static let minimumBrake = 0.6
+    private static let maximumBrake = 3.0
+
+    private enum Segment: Sendable {
+        case resting(SIMD2<Double>)
+        case running(start: Date, from: SIMD2<Double>, entry: SIMD2<Double>)
+        case braking(start: Date, from: SIMD2<Double>, entry: SIMD2<Double>, distance: SIMD2<Double>, duration: SIMD2<Double>)
+    }
+
+    private var segment: Segment
+
+    init(isRunning: Bool, at date: Date) {
+        segment = isRunning
+            ? .running(start: date, from: Self.restPhase, entry: SIMD2(repeating: 1))
+            : .resting(Self.restPhase)
+    }
+
+    var settlesAt: Date? {
+        guard case .braking(let start, _, _, _, let duration) = segment else { return nil }
+        return start.addingTimeInterval(max(duration.x, duration.y))
+    }
+
+    func phase(at date: Date) -> SIMD2<Double> {
+        state(at: date).phase
+    }
+
+    func running(at date: Date) -> OrbMotion {
+        let now = state(at: date)
+        var next = self
+        next.segment = .running(start: date, from: now.phase, entry: now.speed.clamped(lowerBound: .zero, upperBound: SIMD2(repeating: 1)))
+        return next
+    }
+
+    func braking(at date: Date) -> OrbMotion {
+        let now = state(at: date)
+        var distance = SIMD2<Double>.zero
+        var duration = SIMD2<Double>.zero
+        for i in 0..<2 {
+            let entryVelocity = Self.velocity[i] * max(0, now.speed[i])
+            let lead = entryVelocity * Self.minimumBrake / 2
+            let gap = (Self.restPhase[i] - now.phase[i] - lead).truncatingRemainder(dividingBy: 2 * .pi)
+            distance[i] = lead + (gap < 0 ? gap + 2 * .pi : gap)
+            duration[i] = min(max(2 * distance[i] / max(entryVelocity, 1e-6), Self.minimumBrake), Self.maximumBrake)
+        }
+        var next = self
+        next.segment = .braking(start: date, from: now.phase, entry: now.speed, distance: distance, duration: duration)
+        return next
+    }
+
+    private func state(at date: Date) -> (phase: SIMD2<Double>, speed: SIMD2<Double>) {
+        switch segment {
+        case .resting(let phase):
+            return (phase, .zero)
+        case .running(let start, let from, let entry):
+            let elapsed = max(0, date.timeIntervalSince(start))
+            let ramp = Self.rampDuration
+            var phase = from
+            var speed = SIMD2<Double>(repeating: 1)
+            for i in 0..<2 {
+                let u = entry[i]
+                let travelled: Double = elapsed < ramp
+                    ? u * elapsed + (1 - u) * elapsed * elapsed / (2 * ramp)
+                    : elapsed - (1 - u) * ramp / 2
+                phase[i] += Self.velocity[i] * travelled
+                speed[i] = elapsed < ramp ? u + (1 - u) * elapsed / ramp : 1
+            }
+            return (phase, speed)
+        case .braking(let start, let from, let entry, let distance, let duration):
+            let elapsed = max(0, date.timeIntervalSince(start))
+            var phase = from
+            var speed = SIMD2<Double>.zero
+            for i in 0..<2 {
+                let d = duration[i]
+                let s = min(elapsed / d, 1)
+                let tangent: Double = Self.velocity[i] * max(0, entry[i]) * d
+                let tangentWeight: Double = s * (1 - s) * (1 - s)
+                let distanceWeight: Double = s * s * (3 - 2 * s)
+                phase[i] += tangentWeight * tangent + distanceWeight * distance[i]
+                let tangentSlope: Double = (1 - s) * (1 - 3 * s)
+                let distanceSlope: Double = 6 * s * (1 - s)
+                let slope: Double = tangentSlope * tangent + distanceSlope * distance[i]
+                speed[i] = s < 1 ? slope / d / Self.velocity[i] : 0
+            }
+            return (phase, speed)
         }
     }
 }

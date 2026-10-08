@@ -87,7 +87,12 @@ struct ToolbarButton: View {
 }
 
 struct ToolbarChip: View {
-    let symbol: String
+    enum Icon {
+        case symbol(String)
+        case assistant
+    }
+
+    let icon: Icon
     let label: LocalizedStringResource
     var isDestructive = false
     let action: () -> Void
@@ -95,11 +100,28 @@ struct ToolbarChip: View {
     @Environment(\.isEnabled) private var isEnabled
     @State private var hovering = false
 
+    init(symbol: String, label: LocalizedStringResource, isDestructive: Bool = false, action: @escaping () -> Void) {
+        self.init(icon: .symbol(symbol), label: label, isDestructive: isDestructive, action: action)
+    }
+
+    init(icon: Icon, label: LocalizedStringResource, isDestructive: Bool = false, action: @escaping () -> Void) {
+        self.icon = icon
+        self.label = label
+        self.isDestructive = isDestructive
+        self.action = action
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: symbol)
-                    .font(Theme.Font.caption)
+                switch icon {
+                case .symbol(let symbol):
+                    Image(systemName: symbol)
+                        .font(Theme.Font.caption)
+                case .assistant:
+                    ComposingOrb(size: 16, isAnimating: hovering)
+                        .frame(width: 12, height: 12)
+                }
                 Text(label)
                     .font(Theme.Font.control)
             }
