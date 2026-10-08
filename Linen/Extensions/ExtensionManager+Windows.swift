@@ -19,9 +19,20 @@ extension ExtensionManager {
 
     func registeredWindow(in browser: BrowserModel?) -> ExtensionWindowAdapter? {
         if let browser {
-            return windows[ObjectIdentifier(browser)]
+            return liveWindow(for: browser)
         }
         return preferredWindowAdapter
+    }
+
+    private func liveWindow(for browser: BrowserModel) -> ExtensionWindowAdapter? {
+        let identifier = ObjectIdentifier(browser)
+        guard let window = windows[identifier] else { return nil }
+        guard window.browser === browser else {
+            windows[identifier] = nil
+            windowOrder.removeAll { $0 == identifier }
+            return nil
+        }
+        return window
     }
 
     func owns(_ window: ExtensionWindowAdapter) -> Bool {
@@ -47,7 +58,7 @@ extension ExtensionManager {
     @discardableResult
     func register(browser: BrowserModel, window: NSWindow? = nil) -> ExtensionWindowAdapter {
         let identifier = ObjectIdentifier(browser)
-        if let existing = windows[identifier] {
+        if let existing = liveWindow(for: browser) {
             if let window {
                 existing.nativeWindow = window
             }
@@ -99,7 +110,7 @@ extension ExtensionManager {
 
     func unregister(browser: BrowserModel) {
         let identifier = ObjectIdentifier(browser)
-        guard let window = windows[identifier] else { return }
+        guard let window = liveWindow(for: browser) else { return }
         for tab in browser.tabs {
             _ = adapter(for: tab)
         }
@@ -130,7 +141,7 @@ extension ExtensionManager {
     }
 
     func focus(browser: BrowserModel?) {
-        let window = browser.flatMap { windows[ObjectIdentifier($0)] }
+        let window = browser.flatMap { liveWindow(for: $0) }
         if let window {
             lastFocusedWindow = window
         }
@@ -139,7 +150,7 @@ extension ExtensionManager {
     }
 
     func adapter(for browser: BrowserModel) -> ExtensionWindowAdapter? {
-        windows[ObjectIdentifier(browser)]
+        liveWindow(for: browser)
     }
 
     func didMove(tab: BrowserTab, from source: BrowserModel, to destination: BrowserModel, oldIndex: Int) {

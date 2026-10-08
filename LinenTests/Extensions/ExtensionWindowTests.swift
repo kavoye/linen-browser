@@ -199,6 +199,38 @@ struct ExtensionWindowTests {
         #expect(adapter.browser == nil)
     }
 
+    @Test func aBrowserAtAFreedBrowsersAddressGetsItsOwnWindow() throws {
+        let manager = ExtensionManager()
+        var freed: ObjectIdentifier?
+        weak var released: BrowserModel?
+        do {
+            let browser = BrowserModel(database: .temporary())
+            manager.register(browser: browser)
+            freed = ObjectIdentifier(browser)
+            released = browser
+        }
+        try #require(released == nil)
+
+        var successor: BrowserModel?
+        var discarded: [BrowserModel] = []
+        for _ in 0..<200 {
+            let candidate = BrowserModel(database: .temporary())
+            if ObjectIdentifier(candidate) == freed {
+                successor = candidate
+                break
+            }
+            discarded.append(candidate)
+        }
+        let browser = try #require(successor)
+
+        let window = manager.register(browser: browser)
+        #expect(window.browser === browser)
+        let tab = browser.newTab()
+        #expect(manager.adapter(for: tab).browser === browser)
+        manager.unregister(browser: browser)
+        #expect(manager.windowAdapters.isEmpty)
+    }
+
     @Test func staleToolbarCallsCannotUseAnotherProfilesTabsOrFallbackWindow() async throws {
         let directory = TestFiles.directory
             .appendingPathComponent("linen-extension-toolbar-\(UUID().uuidString)", isDirectory: true)
