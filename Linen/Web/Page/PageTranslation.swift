@@ -322,15 +322,22 @@ nonisolated enum TranslationLanguage {
             }
         }
         let total = votes.values.reduce(0, +)
+        let declared = Locale.Language(identifier: sample.declaredLanguage.trimmingCharacters(in: .whitespaces))
+        let declaredLanguage = declared.languageCode == nil ? nil : declared
         if let best = votes.max(by: { $0.value < $1.value }),
            best.key != .undetermined, total > 0, best.value / total >= 0.6 {
-            return Locale.Language(identifier: best.key.rawValue)
+            let detected = Locale.Language(identifier: best.key.rawValue)
+            if total < 200, let declaredLanguage, !matches(detected, declaredLanguage) {
+                recognizer.reset()
+                recognizer.processString(sample.text)
+                if recognizer.languageHypotheses(withMaximum: 10)[naturalLanguage(declaredLanguage)] ?? 0 >= 0.1 {
+                    return declaredLanguage
+                }
+            }
+            return detected
         }
         guard sample.text.count >= 80 else { return nil }
-        let declared = sample.declaredLanguage.trimmingCharacters(in: .whitespaces)
-        guard !declared.isEmpty else { return nil }
-        let language = Locale.Language(identifier: declared)
-        return language.languageCode == nil ? nil : language
+        return declaredLanguage
     }
 
     static func naturalLanguage(_ language: Locale.Language) -> NLLanguage {

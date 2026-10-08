@@ -196,6 +196,18 @@ struct PageTranslationTests {
         #expect(TranslationLanguage.key(detected) == "en")
     }
 
+    @Test func thinEvidenceDefersToAPlausibleDeclaredLanguage() throws {
+        let loading = PageTranslationSample(
+            declaredLanguage: "en-us",
+            text: "App Store Connect\nCopia: Clipboard Manager\nDistributionAnalyticsTestFlight"
+        )
+        let detected = try #require(TranslationLanguage.detect(loading))
+        #expect(TranslationLanguage.key(detected) == "en")
+
+        let german = PageTranslationSample(declaredLanguage: "en", text: "Startseite\nNachrichten und aktuelle Themen aus Deutschland")
+        #expect(TranslationLanguage.detect(german).map(TranslationLanguage.key) == "de")
+    }
+
     @Test func alreadyTranslatedBlocksAreSkipped() async {
         let skipper = TranslationLanguage.Skipper(source: Locale.Language(identifier: "de"), target: Locale.Language(identifier: "en"))
         let english = await skipper.isAlreadyTarget([.init(node: 0, text: "This paragraph is already written in English.")])
