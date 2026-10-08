@@ -23,7 +23,7 @@ continue browsing yourself.
 <img src="https://img.shields.io/badge/Apple%20silicon-1c1c1e?style=flat-square" alt="Apple silicon">
 <img src="https://img.shields.io/badge/license-Apache%202.0-1c1c1e?style=flat-square" alt="Apache 2.0 license">
 
-![Linen browser screenshot](https://github.com/user-attachments/assets/9ccadd3b-9090-46a1-8ad7-f17d648a60c1)
+![Linen browser screenshot](https://github.com/user-attachments/assets/e6ee3f58-1cfe-4fe6-81d1-bf7f17fd17c7)
 
 </div>
 
@@ -52,6 +52,10 @@ for changes in published versions.
   actions in Agent Activity.
 - Hold Shift while hovering over a link to read a summary, or Shift-click to
   preview the page.
+- Connect GitHub in the side panel to follow pull requests, checks, reviews, and
+  unread GitHub notifications. Save your own search filters. Linen checks for
+  updates while it's open, even without GitHub tabs. Sign-in needs a configured
+  build. See [GitHub setup](CONTRIBUTING.md#github-connection).
 - Save passwords, payment cards, and contact details in Settings › Autofill.
   Unlock saved passwords and cards with Touch ID or your Mac password.
   To sign in with a passkey, follow the macOS sign-in prompt.
@@ -74,10 +78,12 @@ External assistants can access only the tabs you share through Linen's
   Settings › Assistant. The assistant asks before making purchases, sending
   information, or signing in. It cannot fill passwords or card numbers.
   You can fill these with browser autofill.
-- API keys stay in Keychain and are sent only to their provider. Submitted
+- API keys stay in Keychain. Linen sends each key only to its provider. Submitted
   messages, shared page content, and attachments go to the selected model.
 - On-device voice converts speech to text on your Mac. OpenAI dictation and voice
-  conversations send microphone audio to OpenAI.
+  conversations send microphone audio to OpenAI. OpenAI reading aloud sends the
+  text to OpenAI. Each OpenAI voice feature is off until you select it in
+  Settings › Voice.
 - Private browsing does not save history, tabs, or assistant transcripts.
 - Linen blocks known third-party trackers by default. Extensions can block
   additional trackers.
