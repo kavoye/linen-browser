@@ -192,7 +192,7 @@ struct FolderSection: View {
     }
 
     private var contents: AnyView {
-        AnyView(SidebarRows(items: browser.rows(in: folder), depth: depth + 1, context: context))
+        AnyView(SidebarRows(items: browser.rows(in: folder), depth: depth + 1, context: context, parent: folder.id))
     }
 
     private func tapped() {

@@ -4,7 +4,7 @@
 import AppKit
 import SwiftUI
 
-private enum WorkspaceListCoordinateSpace {
+private nonisolated enum WorkspaceListCoordinateSpace {
     static let name = "sidebar-workspace"
 }
 
@@ -86,6 +86,9 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             coordinator: coordinator,
             selection: selection,
             drag: drag,
+            isLeaving: model.isLeaving,
+            incoming: model.incoming,
+            arriving: model.arriving,
             pinsCarried: pinsCarried,
             space: WorkspaceListCoordinateSpace.name,
             frames: frames
@@ -122,7 +125,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             VStack(spacing: 2) {
                 let sections = sections
                 if !sections.kept.isEmpty {
-                    SidebarRows(items: sections.kept, depth: 0, context: context)
+                    SidebarRows(items: sections.kept, depth: 0, context: context, ownsEnd: false)
                     SidebarSectionSeam()
                 }
 
@@ -140,6 +143,16 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         }
         .scrollIndicators(.never)
         .scrollEdgeEffectHidden(true, for: .bottom)
+        .onGeometryChange(for: CGRect.self) { proxy in
+            let frame = proxy.frame(in: .named(WorkspaceListCoordinateSpace.name))
+            let insets = proxy.safeAreaInsets
+            return CGRect(
+                x: frame.minX,
+                y: frame.minY + insets.top,
+                width: frame.width,
+                height: max(0, frame.height - insets.top - insets.bottom)
+            )
+        } action: { model.listViewport = $0 }
         .mask {
             WorkspaceListFadeMask()
         }
@@ -156,7 +169,10 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         }
         .contextMenu { emptySpaceMenu }
         .coordinateSpace(.named(WorkspaceListCoordinateSpace.name))
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { model.listOriginInWindow = $0.origin }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+            model.listOriginInWindow = $0.origin
+            model.listSizeInWindow = $0.size
+        }
         // The gesture belongs to the container. A reorder rebuilds the dragged
         // row, and a rebuilt view never delivers `.onEnded`.
         .gesture(
@@ -191,20 +207,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
     }
 
     private var liveFrames: [SidebarItem: CGRect] {
-        frames.live(
-            tabIDs: Set(browser.tabs.map(\.id)).subtracting(browser.hiddenSidebarTabIDs),
-            folderIDs: Set(browser.folders.map(\.id))
-        )
-        .filter { item, _ in isShowing(item) }
-    }
-
-    private func isShowing(_ item: SidebarItem) -> Bool {
-        var parent = browser.sidebarTree.parent(of: item)
-        while let id = parent {
-            guard browser.folder(id: id)?.isExpanded == true else { return false }
-            parent = browser.sidebarTree.parent(of: .folder(id))
-        }
-        return true
+        frames.visible(in: browser)
     }
 
     private func dragChanged(_ value: DragGesture.Value) {
@@ -232,6 +235,39 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             coordinator.tabPreview.beginSuppression()
         }
         model.drag?.translation = value.translation
+
+        let pointer = NSEvent.mouseLocation
+        if let lifted = model.drag, !coordinator.profiles.isPrivate {
+            model.floatOrigin = CGPoint(
+                x: pointer.x - value.startLocation.x + lifted.origin.minX,
+                y: pointer.y + value.startLocation.y - lifted.origin.minY
+            )
+        }
+        if model.floatOrigin != nil, let window = coordinator.nativeWindow, !window.frame.contains(pointer) {
+            let carriesTabs = model.drag?.covered.contains { item in
+                guard case .tab = item else { return false }
+                return true
+            } == true
+            let leaving = coordinator.aimWindowDrag(at: carriesTabs ? pointer : nil) && carriesTabs
+            if model.isLeaving != leaving {
+                model.isLeaving = leaving
+            }
+            if newFolderDrop.isArmed {
+                newFolderDrop.isArmed = false
+            }
+            if pinDrop.isArmed {
+                pinDrop.isArmed = false
+            }
+            if model.target != nil {
+                model.target = nil
+            }
+            rest()
+            return
+        }
+        coordinator.aimWindowDrag(at: nil)
+        if model.isLeaving {
+            model.isLeaving = false
+        }
 
         let inWindow = CGPoint(x: value.location.x + listOrigin.x, y: value.location.y + listOrigin.y)
         let overButton = newFolderDrop.frame.contains(inWindow)
@@ -272,15 +308,45 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             }
             reopening = []
             coordinator.tabPreview.endSuppression()
+            coordinator.aimWindowDrag(at: nil)
             model.clearDrop()
         }
         guard let drag, !drag.landing else { return }
-        if coordinator.finishWindowDrag(drag.items, at: NSEvent.mouseLocation) {
-            model.drag = nil
+        let lead = drag.lead
+        if let destination = coordinator.finishWindowDrag(drag.items, at: NSEvent.mouseLocation) {
             selection.clear()
+            guard model.floatOrigin != nil, let slot = destination.sidebarDrag.incomingFrame,
+                  destination.sidebarDrag.listViewport.intersects(slot),
+                  let window = destination.nativeWindow
+            else {
+                model.drag = nil
+                return
+            }
+            let arriving = drag.covered
+            let list = destination.sidebarDrag.listOriginInWindow
+            model.chipBrowser = destination.browser
+            destination.sidebarDrag.arriving = arriving
+            withAnimation(.spring(response: 0.24, dampingFraction: 0.85)) {
+                model.drag?.landing = true
+            }
+            model.floatOrigin = CGPoint(
+                x: window.frame.minX + list.x + slot.minX,
+                y: window.frame.maxY - list.y - slot.minY
+            )
+            Task {
+                try? await Task.sleep(for: .milliseconds(240))
+                if destination.sidebarDrag.arriving == arriving {
+                    destination.sidebarDrag.arriving = []
+                }
+                if model.drag?.lead == lead, model.drag?.landing == true {
+                    model.drag = nil
+                }
+            }
             return
         }
-        let lead = drag.lead
+        if model.isLeaving {
+            model.isLeaving = false
+        }
         var settled = false
 
         if model.zone != .none, let id = model.carriedTabID, let tab = browser.tab(id: id) {
@@ -301,6 +367,13 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
 
         withAnimation(.spring(response: 0.24, dampingFraction: 0.85)) {
             model.drag?.landing = true
+        }
+        if model.floatOrigin != nil, let window = coordinator.nativeWindow {
+            let row = model.frames[lead] ?? drag.origin
+            model.floatOrigin = CGPoint(
+                x: window.frame.minX + listOrigin.x + drag.origin.minX,
+                y: window.frame.maxY - listOrigin.y - row.minY
+            )
         }
         Task {
             try? await Task.sleep(for: .milliseconds(240))
@@ -417,10 +490,13 @@ struct SidebarDragOverlay: View {
     let model: SidebarDragModel
 
     @Environment(\.sidebarStyle) private var sidebarStyle
+    @Environment(\.windowColorScheme) private var windowColorScheme
+
+    @State private var float = SidebarDragFloat()
 
     var body: some View {
         GeometryReader { proxy in
-            if let drag = model.drag {
+            if let drag = model.drag, model.floatOrigin == nil {
                 let origin = proxy.frame(in: .global).origin
                 SidebarDragStack(drag: drag, browser: browser)
                     .frame(width: drag.origin.width, height: drag.origin.height)
@@ -432,6 +508,18 @@ struct SidebarDragOverlay: View {
             }
         }
         .allowsHitTesting(false)
+        .onChange(of: model.floatOrigin) { _, topLeft in
+            guard let topLeft, let drag = model.drag else {
+                float.hide()
+                return
+            }
+            float.show(drag.items, at: topLeft, size: drag.origin.size, landing: drag.landing) {
+                SidebarDragFloatContent(model: model, browser: browser)
+                    .environment(\.sidebarStyle, sidebarStyle)
+                    .environment(\.windowColorScheme, windowColorScheme)
+            }
+        }
+        .onDisappear { float.hide() }
     }
 
     private func chipX(_ drag: SidebarDrag) -> CGFloat {
@@ -442,6 +530,21 @@ struct SidebarDragOverlay: View {
     private func chipY(_ drag: SidebarDrag) -> CGFloat {
         guard !drag.landing else { return model.frames[drag.lead]?.minY ?? drag.origin.minY }
         return drag.origin.minY + drag.translation.height
+    }
+}
+
+private struct SidebarDragFloatContent: View {
+    let model: SidebarDragModel
+    let browser: BrowserModel
+
+    @Environment(\.sidebarStyle) private var sidebarStyle
+
+    var body: some View {
+        if let drag = model.drag {
+            SidebarDragStack(drag: drag, browser: model.chipBrowser ?? browser)
+                .frame(width: drag.origin.width, height: drag.origin.height)
+                .scaleEffect(drag.landing ? 1 : SidebarDragGhost.liftScale(style: sidebarStyle))
+        }
     }
 }
 
@@ -467,7 +570,7 @@ struct PaneDragOverlay: View {
     }
 }
 
-private struct SidebarDragStack: View {
+struct SidebarDragStack: View {
     let drag: SidebarDrag
     let browser: BrowserModel
 

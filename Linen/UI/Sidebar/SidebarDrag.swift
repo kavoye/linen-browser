@@ -47,14 +47,34 @@ enum SidebarDragGhost {
     static let chipFillOpacity: Double = 0.55
 }
 
+struct SidebarIncomingDrop: Equatable {
+    var parent: UUID?
+    var before: SidebarItem?
+    var isAimed = false
+}
+
 @MainActor
 @Observable
 final class SidebarDragModel {
-    var drag: SidebarDrag?
+    var drag: SidebarDrag? {
+        didSet {
+            if drag == nil {
+                floatOrigin = nil
+            }
+            if drag == nil || (oldValue?.landing == true && drag?.landing == false) {
+                isLeaving = false
+                chipBrowser = nil
+            }
+        }
+    }
 
     let frames = SidebarFrames()
 
     var listOriginInWindow: CGPoint = .zero
+
+    @ObservationIgnored var listSizeInWindow: CGSize = .zero
+
+    @ObservationIgnored var listViewport: CGRect = .zero
 
     var contentFrameInWindow: CGRect = .zero
 
@@ -88,6 +108,64 @@ final class SidebarDragModel {
         target = next
     }
 
+    var floatOrigin: CGPoint?
+
+    var incoming: SidebarIncomingDrop? {
+        didSet {
+            if incoming == nil {
+                incomingFrame = nil
+            }
+        }
+    }
+
+    @ObservationIgnored var incomingFrame: CGRect?
+
+    func incomingDrop(at screenPoint: NSPoint, in window: NSWindow, browser: BrowserModel) -> SidebarIncomingDrop {
+        let tree = browser.sidebarTree
+        let fallback = SidebarIncomingDrop(
+            parent: nil,
+            before: tree.rows(in: nil).dropFirst(browser.keptRunAtTop().count).first
+        )
+        let point = CGPoint(
+            x: screenPoint.x - window.frame.minX - listOriginInWindow.x,
+            y: window.frame.maxY - screenPoint.y - listOriginInWindow.y
+        )
+        guard CGRect(origin: .zero, size: listSizeInWindow).contains(point),
+              listViewport.contains(point)
+        else { return fallback }
+        if let incoming, incoming.isAimed, let mark = incomingFrame, mark.minY <= point.y, point.y < mark.maxY {
+            return incoming
+        }
+        let slots = frames.visible(in: browser)
+        let onScreen = slots.filter { listViewport.intersects($0.value) }
+        guard let hit = onScreen.first(where: { $0.value.minY <= point.y && point.y < $0.value.maxY }) else {
+            if let lowest = slots.values.map(\.maxY).max(), point.y >= lowest {
+                return SidebarIncomingDrop(parent: nil, before: nil, isAimed: true)
+            }
+            return incoming ?? fallback
+        }
+        let isBefore = SidebarDropGeometry.band(y: point.y, in: hit.value) == .before
+        if !isBefore, case .folder(let id) = hit.key, browser.folder(id: id)?.isExpanded == true {
+            return SidebarIncomingDrop(parent: id, before: tree.rows(in: id).first, isAimed: true)
+        }
+        let parent = tree.parent(of: hit.key)
+        guard !isBefore else { return SidebarIncomingDrop(parent: parent, before: hit.key, isAimed: true) }
+        let siblings = tree.rows(in: parent)
+        let next = siblings.firstIndex(of: hit.key).flatMap { index in
+            siblings[siblings.index(after: index)...].first { item in
+                guard case .tab(let id) = item else { return true }
+                return !browser.hiddenSidebarTabIDs.contains(id)
+            }
+        }
+        return SidebarIncomingDrop(parent: parent, before: next, isAimed: true)
+    }
+
+    var isLeaving = false
+
+    var chipBrowser: BrowserModel?
+
+    var arriving: Set<SidebarItem> = []
+
     func clearDrop() {
         target = nil
         source = .none
@@ -120,6 +198,78 @@ final class SidebarDragModel {
 }
 
 @MainActor
+final class SidebarDragFloat {
+    private static let margin: CGFloat = 28
+
+    private var panel: NSPanel?
+    private var items: [SidebarItem] = []
+    private var isLanding = false
+
+    func show<Content: View>(
+        _ items: [SidebarItem],
+        at topLeft: CGPoint,
+        size: CGSize,
+        landing: Bool,
+        content: () -> Content
+    ) {
+        if items != self.items || (isLanding && !landing) {
+            hide()
+            self.items = items
+        }
+        isLanding = landing
+        let panel = panel ?? makePanel(size: size, content: content())
+        self.panel = panel
+        let origin = NSPoint(x: topLeft.x - Self.margin, y: topLeft.y + Self.margin - panel.frame.height)
+        if landing {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.24
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                panel.animator().setFrame(NSRect(origin: origin, size: panel.frame.size), display: true)
+            }
+        } else {
+            panel.setFrameOrigin(origin)
+        }
+        if !panel.isVisible {
+            panel.orderFrontRegardless()
+        }
+    }
+
+    func hide() {
+        panel?.orderOut(nil)
+        panel = nil
+        items = []
+        isLanding = false
+    }
+
+    private func makePanel(size: CGSize, content: some View) -> NSPanel {
+        let frame = NSRect(
+            x: 0,
+            y: 0,
+            width: size.width + Self.margin * 2,
+            height: size.height + Self.margin * 2
+        )
+        let panel = NSPanel(
+            contentRect: frame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isReleasedWhenClosed = false
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = true
+        panel.level = .floating
+        panel.collectionBehavior = [.transient, .ignoresCycle, .fullScreenAuxiliary]
+        let host = NSHostingView(rootView: content.padding(Self.margin))
+        host.sizingOptions = []
+        host.frame = frame
+        panel.contentView = host
+        return panel
+    }
+}
+
+@MainActor
 final class SidebarFrames {
     private var slots: [SidebarItem: CGRect] = [:]
 
@@ -129,6 +279,21 @@ final class SidebarFrames {
 
     subscript(item: SidebarItem) -> CGRect? {
         slots[item]
+    }
+
+    func visible(in browser: BrowserModel) -> [SidebarItem: CGRect] {
+        live(
+            tabIDs: Set(browser.tabs.map(\.id)).subtracting(browser.hiddenSidebarTabIDs),
+            folderIDs: Set(browser.folders.map(\.id))
+        )
+        .filter { item, _ in
+            var parent = browser.sidebarTree.parent(of: item)
+            while let id = parent {
+                guard browser.folder(id: id)?.isExpanded == true else { return false }
+                parent = browser.sidebarTree.parent(of: .folder(id))
+            }
+            return true
+        }
     }
 
     func live(tabIDs: Set<UUID>, folderIDs: Set<UUID>) -> [SidebarItem: CGRect] {
@@ -148,6 +313,9 @@ struct SidebarRowContext {
     let coordinator: AppCoordinator
     let selection: SidebarSelection
     let drag: SidebarDrag?
+    let isLeaving: Bool
+    let incoming: SidebarIncomingDrop?
+    let arriving: Set<SidebarItem>
     let pinsCarried: Bool
     let space: String
     let frames: SidebarFrames
@@ -157,11 +325,11 @@ struct SidebarRowContext {
     }
 
     func isLifted(_ item: SidebarItem) -> Bool {
-        drag?.items.contains(item) == true
+        drag?.items.contains(item) == true || arriving.contains(item)
     }
 
     func dropMark(_ item: SidebarItem) -> SidebarDropMark.Kind? {
-        guard let lead = drag?.lead, lead == item else { return nil }
+        guard !isLeaving, let lead = drag?.lead, lead == item else { return nil }
         if pinsCarried != browser.isKept(lead) {
             return pinsCarried ? .pin : .unpin
         }
@@ -268,9 +436,19 @@ struct SidebarRows: View {
     let items: [SidebarItem]
     let depth: Int
     let context: SidebarRowContext
+    var parent: UUID?
+    var ownsEnd = true
+
+    private var shown: [SidebarItem] {
+        guard context.isLeaving else { return items }
+        return items.filter { !context.isLifted($0) }
+    }
 
     var body: some View {
-        ForEach(Array(items.enumerated()), id: \.element) { _, item in
+        ForEach(Array(shown.enumerated()), id: \.element) { _, item in
+            if incoming(before: item) {
+                incomingMark
+            }
             row(item)
                 .overlay {
                     if let mark = context.dropMark(item) {
@@ -278,6 +456,22 @@ struct SidebarRows: View {
                     }
                 }
         }
+        if ownsEnd, incoming(before: nil) {
+            incomingMark
+        }
+    }
+
+    private func incoming(before item: SidebarItem?) -> Bool {
+        guard let drop = context.incoming, drop.parent == parent else { return false }
+        return drop.before == item
+    }
+
+    private var incomingMark: some View {
+        SidebarDropMark(kind: .move, isArmed: true)
+            .frame(height: SidebarMetrics.rowHeight)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
+                context.coordinator.sidebarDrag.incomingFrame = $0
+            }
     }
 
     @ViewBuilder
