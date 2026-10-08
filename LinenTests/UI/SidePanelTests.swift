@@ -17,7 +17,7 @@ struct SidePanelTests {
     }
 
     private func scratch() -> UserDefaults {
-        UserDefaults(suiteName: "SidePanelTests-\(UUID().uuidString)")!
+        UserDefaults(suiteName: TestDefaults.name("SidePanelTests"))!
     }
 
     @Test func itStartsClosedWithATabForEveryKind() {

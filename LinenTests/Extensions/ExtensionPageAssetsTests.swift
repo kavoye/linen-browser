@@ -121,7 +121,7 @@ struct ExtensionPageAssetsTests {
         connectable: Bool = false,
         listens: ConnectListener = .onConnect
     ) throws -> URL {
-        let package = FileManager.default.temporaryDirectory
+        let package = TestFiles.directory
             .appendingPathComponent("linen-page-assets-\(UUID().uuidString)", isDirectory: true)
         let web = package.appendingPathComponent("web", isDirectory: true)
         try FileManager.default.createDirectory(at: web, withIntermediateDirectories: true)

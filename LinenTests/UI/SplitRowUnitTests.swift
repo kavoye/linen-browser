@@ -8,6 +8,7 @@ import Testing
 
 /// The sidebar's grid row as one thing: off screen it hovers and clicks as a
 /// unit, on screen its cells answer for themselves.
+@Suite(.boundedWebViews)
 struct SplitRowInteractionTests {
     @Test func aRowOffScreenAnswersAsOneThing() {
         #expect(SplitRowInteraction.mode(isOnScreen: false) == .wholeRow)
@@ -39,12 +40,13 @@ struct SplitRowInteractionTests {
 /// Opening a grid is opening all of its pages: activation must wake every
 /// deferred pane, not only the one the click named.
 @MainActor
+@Suite(.boundedWebViews)
 struct SplitRowActivationTests {
     private func makeModel() -> BrowserModel {
         BrowserModel(
             database: .temporary(),
             sitePermissions: SitePermissions(
-                storageURL: FileManager.default.temporaryDirectory
+                storageURL: TestFiles.directory
                     .appendingPathComponent("SplitRowActivation-\(UUID().uuidString).json")
             )
         )

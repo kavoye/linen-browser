@@ -18,7 +18,7 @@ struct PageActivityMonitorTests {
             configuration: configuration
         )
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("PageActivityPermissions-\(UUID().uuidString).json")
         )
         let tab = BrowserTab(

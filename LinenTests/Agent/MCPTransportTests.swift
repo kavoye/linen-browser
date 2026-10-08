@@ -115,7 +115,7 @@ struct MCPTransportTests {
     }
 
     @Test func enablementSurvivesShutdownAndExplicitDisablePersists() async throws {
-        let name = "linen-mcp-preference-test-\(UUID().uuidString)"
+        let name = TestDefaults.name("linen-mcp-preference-test")
         let defaults = try #require(UserDefaults(suiteName: name))
         let directory = "/tmp/linen-mcp-test-\(UUID().uuidString)"
         defer {

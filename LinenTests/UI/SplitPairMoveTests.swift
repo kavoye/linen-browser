@@ -9,6 +9,7 @@ import Testing
 /// Moving a page of a two-page grid. The regression: the removal that starts
 /// every move dissolved the pair, and the insertion then found no grid to put
 /// the page back into - so picking up either page of a pair destroyed it.
+@Suite(.boundedWebViews)
 struct SplitPairMoveTests {
     private let a = UUID(), b = UUID()
 
@@ -51,12 +52,13 @@ struct SplitPairMoveTests {
 /// The same move as the browser runs it: a pane's grip picked up and put down
 /// inside its own pair must leave the split standing.
 @MainActor
+@Suite(.boundedWebViews)
 struct SplitPairMoveModelTests {
     private func makeModel() -> BrowserModel {
         BrowserModel(
             database: .temporary(),
             sitePermissions: SitePermissions(
-                storageURL: FileManager.default.temporaryDirectory
+                storageURL: TestFiles.directory
                     .appendingPathComponent("SplitPairMove-\(UUID().uuidString).json")
             )
         )

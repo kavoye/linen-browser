@@ -11,12 +11,13 @@ import Testing
 /// the sidebar, a visible pane is never swept, and every way a tab can leave
 /// takes its split with it.
 @MainActor
+@Suite(.boundedWebViews)
 struct SplitViewModelTests {
     private func makeModel() -> BrowserModel {
         BrowserModel(
             database: .temporary(),
             sitePermissions: SitePermissions(
-                storageURL: FileManager.default.temporaryDirectory
+                storageURL: TestFiles.directory
                     .appendingPathComponent("SplitPermissions-\(UUID().uuidString).json")
             )
         )

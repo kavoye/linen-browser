@@ -75,7 +75,7 @@ struct PaymentCardTests {
     }
 
     @Test func readsAnExportedZIPWithoutExtractingItsContents() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let directory = TestFiles.directory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let source = directory.appendingPathComponent("Cartes.json")

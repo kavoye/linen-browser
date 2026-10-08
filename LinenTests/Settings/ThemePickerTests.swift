@@ -8,7 +8,7 @@ import Testing
 
 struct ThemePickerTests {
     @Test func tintDefaultsPreserveOptOutsUntilSettingsAreReset() throws {
-        let name = "TintDefaultsTests.\(UUID().uuidString)"
+        let name = TestDefaults.name("TintDefaultsTests")
         let suite = try #require(UserDefaults(suiteName: name))
         defer { suite.removePersistentDomain(forName: name) }
 
@@ -48,7 +48,7 @@ struct ThemePickerTests {
     }
 
     @Test func choosingAModePersistsIt() throws {
-        let suite = try #require(UserDefaults(suiteName: "ThemePickerTests.\(UUID().uuidString)"))
+        let suite = try #require(UserDefaults(suiteName: TestDefaults.name("ThemePickerTests")))
         defer { suite.removePersistentDomain(forName: suite.description) }
 
         let settings = BrowserSettings(defaults: suite)
@@ -59,7 +59,7 @@ struct ThemePickerTests {
     }
 
     @Test func windowStyleDefaultsToStandardAndPersists() throws {
-        let suite = try #require(UserDefaults(suiteName: "WebsiteColorTests.\(UUID().uuidString)"))
+        let suite = try #require(UserDefaults(suiteName: TestDefaults.name("WebsiteColorTests")))
         defer { suite.removePersistentDomain(forName: suite.description) }
 
         #expect(BrowserSettings(defaults: suite).loomStyle == .standard)
@@ -68,7 +68,7 @@ struct ThemePickerTests {
     }
 
     @Test func websiteTintPersistsIndependentlyOfWindowStyle() throws {
-        let suite = try #require(UserDefaults(suiteName: "WebsiteTintTests.\(UUID().uuidString)"))
+        let suite = try #require(UserDefaults(suiteName: TestDefaults.name("WebsiteTintTests")))
         defer { suite.removePersistentDomain(forName: suite.description) }
 
         let settings = BrowserSettings(defaults: suite)
@@ -81,7 +81,7 @@ struct ThemePickerTests {
     }
 
     @Test func legacyWebsiteTintStyleMigratesToStandardWithTintEnabled() throws {
-        let suite = try #require(UserDefaults(suiteName: "WebsiteTintMigrationTests.\(UUID().uuidString)"))
+        let suite = try #require(UserDefaults(suiteName: TestDefaults.name("WebsiteTintMigrationTests")))
         defer { suite.removePersistentDomain(forName: suite.description) }
         suite.set("websiteTint", forKey: "appearance.loomStyle")
 
@@ -91,7 +91,7 @@ struct ThemePickerTests {
     }
 
     @Test func legacyTintOptOutSurvivesAWindowStyleChange() throws {
-        let name = "LegacyTintOptOutTests.\(UUID().uuidString)"
+        let name = TestDefaults.name("LegacyTintOptOutTests")
         let suite = try #require(UserDefaults(suiteName: name))
         defer { suite.removePersistentDomain(forName: name) }
         suite.set(false, forKey: "appearance.websiteColor")

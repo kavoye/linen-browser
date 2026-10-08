@@ -21,7 +21,7 @@ struct ProfileSwitchTests {
         let file: URL
 
         init() {
-            file = FileManager.default.temporaryDirectory.appendingPathComponent("profile-switch-\(UUID()).json")
+            file = TestFiles.directory.appendingPathComponent("profile-switch-\(UUID()).json")
             let catalog = ProfileStore(file: file)
             work = catalog.add(name: "Work")
             let selection = ProfileStore.selection(profile: .original(), catalog: catalog)

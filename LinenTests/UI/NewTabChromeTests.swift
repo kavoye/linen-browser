@@ -273,7 +273,7 @@ struct NewTabChromeTests {
         let url = URL(string: "https://example.test/titled")!
         tab.loadHTML("<!doctype html><title>Website</title><p>Page</p>", baseURL: url)
         #expect(await settled(tab, at: url))
-        #expect(tab.title == "Website")
+        #expect(await waitUntil { tab.title == "Website" })
         tab.customTitle = "My Page"
 
         _ = try await tab.webView.evaluateJavaScript("document.title = ''")

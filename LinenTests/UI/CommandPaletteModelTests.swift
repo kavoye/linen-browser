@@ -8,6 +8,7 @@ import Testing
 @testable import Linen
 
 @MainActor
+@Suite(.boundedWebViews)
 struct CommandPaletteModelTests {
     @Test func closeWindowCommandKeepsItsOwningWindowAfterFocusChanges() throws {
         let app = BrowserApplication()

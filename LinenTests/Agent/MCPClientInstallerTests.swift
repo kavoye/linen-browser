@@ -239,7 +239,7 @@ struct MCPClientInstallerTests {
     }
 
     private func temporaryDirectory() throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appending(path: "linen-installer-test-\(UUID().uuidString)")
+        let url = TestFiles.directory.appending(path: "linen-installer-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         return url
     }

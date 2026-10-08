@@ -13,7 +13,7 @@ import Testing
 struct TabPopupPolicyTests {
     private func store() -> SitePermissions {
         SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appending(path: "TabPopupPolicyTests-\(UUID().uuidString).json")
         )
     }

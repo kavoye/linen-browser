@@ -11,7 +11,7 @@ import WebKit
 @Suite(.boundedWebViews)
 struct TabRecoveryTests {
     @Test func reloadStartsAnAddressThatHasNotCommitted() async throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("LinenUncommitted-\(UUID().uuidString).html")
         try Data("<title>Loaded</title>".utf8).write(to: url)
         defer { try? FileManager.default.removeItem(at: url) }
@@ -30,7 +30,7 @@ struct TabRecoveryTests {
     }
 
     @Test func restartReplacesOnlyThePageViewAndKeepsItsDataStore() throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("LinenRecovery-\(UUID().uuidString).html")
         try Data("<title>Recovered</title>".utf8).write(to: url)
         defer { try? FileManager.default.removeItem(at: url) }

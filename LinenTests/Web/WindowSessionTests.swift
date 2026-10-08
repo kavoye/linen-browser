@@ -206,7 +206,7 @@ struct WindowSessionTests {
     }
 
     @Test func upgradingAnOldSessionKeepsItsTabsInTheFirstWindow() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("WindowMigration-\(UUID())")
+        let directory = TestFiles.directory.appendingPathComponent("WindowMigration-\(UUID())")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("Linen.sqlite")

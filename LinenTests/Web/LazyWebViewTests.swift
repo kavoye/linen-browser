@@ -12,6 +12,7 @@ import Testing
 /// used to cost fourteen web views before the window could draw, so each of
 /// those sweeps is held to the promise here.
 @MainActor
+@Suite(.boundedWebViews)
 struct LazyWebViewTests {
     private func session(tabs count: Int) -> AppDatabase {
         let database = AppDatabase.temporary()

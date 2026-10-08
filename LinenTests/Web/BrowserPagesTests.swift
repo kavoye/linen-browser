@@ -565,7 +565,7 @@ struct BrowserPagesTests {
 
     @Test func keepingAWebsiteAwakeIsReadBackFromTheSameTab() {
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appending(path: "BrowserPagesTests-\(UUID().uuidString).json")
         )
         let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
@@ -579,7 +579,7 @@ struct BrowserPagesTests {
 
     @Test func aTabWithNoWebsiteCannotBeKeptAwake() {
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appending(path: "BrowserPagesTests-\(UUID().uuidString).json")
         )
         let model = BrowserModel(database: .temporary(), sitePermissions: permissions)
@@ -595,7 +595,7 @@ struct BrowserPagesTests {
 
     private func permissionsFixture() -> SitePermissions {
         SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appending(path: "BrowserPagesTests-\(UUID().uuidString).json")
         )
     }

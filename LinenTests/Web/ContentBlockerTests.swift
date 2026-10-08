@@ -149,8 +149,8 @@ struct ContentBlockerRuleTests {
 @Suite(.serialized)
 struct PrivateContentBlockerTests {
     @Test func privateCompiledRulesAreRemovedWhileTheLiveRuleObjectIsRetained() async throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("private-rules-\(UUID())")
-        let suiteName = "PrivateContentBlockerTests.\(UUID())"
+        let directory = TestFiles.directory.appendingPathComponent("private-rules-\(UUID())")
+        let suiteName = TestDefaults.name("PrivateContentBlockerTests")
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer {
@@ -172,8 +172,8 @@ struct PrivateContentBlockerTests {
     }
 
     @Test func closingDuringCompilationWaitsForPrivateCacheCleanup() async throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("private-rules-\(UUID())")
-        let suiteName = "PrivateContentBlockerTests.\(UUID())"
+        let directory = TestFiles.directory.appendingPathComponent("private-rules-\(UUID())")
+        let suiteName = TestDefaults.name("PrivateContentBlockerTests")
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer {

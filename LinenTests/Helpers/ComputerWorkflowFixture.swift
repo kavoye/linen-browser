@@ -26,7 +26,7 @@ final class ComputerWorkflowFixture {
     }
 
     init(services: AgentToolkit.Services = .live) async throws {
-        folder = FileManager.default.temporaryDirectory.appendingPathComponent("linen-computer-" + UUID().uuidString)
+        folder = TestFiles.directory.appendingPathComponent("linen-computer-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         server = try await HTTPFixtureServer.start(routes: ["/": .html("""
             <!doctype html><body style="margin:0;font-family:system-ui;background:white;color:black">

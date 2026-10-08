@@ -70,7 +70,7 @@ struct SessionRestoreTests {
     /// session it holds reads back as nothing. The schema is declared rather
     /// than migrated to, so opening the database puts back whatever it lacks.
     @Test func openingADatabasePutsBackATableItHasLost() throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SchemaRepair-\(UUID().uuidString).sqlite")
         defer { try? FileManager.default.removeItem(at: url) }
 

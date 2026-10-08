@@ -14,7 +14,7 @@ struct TabAssistantAccessCenterTests {
         privately: Bool = false
     ) -> (TabAssistantAccessCenter, SitePermissions) {
         let store = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("AssistantAccessTests-\(UUID().uuidString).json")
         )
         if policy != .ask {
@@ -195,11 +195,11 @@ struct AgentToolkitAccessTests {
     @Test func profileSwitchUsesOnlyThatProfilesAssistantGrants() {
         let origin = "https://example.com"
         let firstStore = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("ProfileAssistantAccess-A-\(UUID().uuidString).json")
         )
         let secondStore = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("ProfileAssistantAccess-B-\(UUID().uuidString).json")
         )
         firstStore.setAssistantAccess(.control, for: origin)
@@ -284,7 +284,7 @@ struct AgentToolkitAccessTests {
         ])
         let url = try server.url()
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("VisibleNavigation-\(UUID().uuidString).json")
         )
         permissions.setAssistantAccess(.deny, for: SitePermissions.origin(for: url))
@@ -312,7 +312,7 @@ struct AgentToolkitAccessTests {
         ])
         let url = try server.url()
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("SameURLNavigation-\(UUID().uuidString).json")
         )
         permissions.setAssistantAccess(.readOnly, for: SitePermissions.origin(for: url))
@@ -439,7 +439,7 @@ struct AgentToolkitAccessTests {
             "/": .html("<a href=\"\(linkedURL.absoluteString)\">Read article</a>"),
         ])
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("LinkedArticle-\(UUID().uuidString).json")
         )
         permissions.setAssistantAccess(.readOnly, for: SitePermissions.origin(for: linkedURL))
@@ -483,7 +483,9 @@ struct AgentToolkitAccessTests {
             media: MediaCenter(),
             log: ConversationLog(database: .temporary())
         )
-        let output = await toolkit.clickOnPage(ref: 0, label: "Continue")
+        let output = await PageSettle.$navigationGrace.withValue(.seconds(15)) {
+            await toolkit.clickOnPage(ref: 0, label: "Continue")
+        }
 
         #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL))
         #expect(output.contains("moved to another website"))

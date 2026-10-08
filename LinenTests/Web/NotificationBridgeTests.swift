@@ -20,7 +20,7 @@ struct NotificationBridgeTests {
     /// pool is only loaded with scripts once the app has bootstrapped.
     private func page(policy: PermissionPolicy) async -> (BrowserTab, WKWebView) {
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("linen-notify-\(UUID().uuidString).json")
         )
         let tab = BrowserTab(opensBlank: false, sitePermissions: permissions)

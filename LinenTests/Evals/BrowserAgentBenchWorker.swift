@@ -25,7 +25,7 @@ struct BrowserAgentBenchWorker {
     }
 
     private func execute(_ start: BenchStart, client: BenchClient) async throws {
-        let preferences = "Linen.Benchmark.\(UUID().uuidString)"
+        let preferences = TestDefaults.name("Linen.Benchmark")
         let originalDefaults = LLMSettings.defaults
         let defaults = try #require(UserDefaults(suiteName: preferences))
         LLMSettings.defaults = defaults
@@ -40,7 +40,7 @@ struct BrowserAgentBenchWorker {
         let settings = start.config.settings ?? BenchSettings()
         let window = BenchWindow(headless: settings.headless)
         defer { window.close() }
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let folder = TestFiles.directory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let store = WKWebsiteDataStore.nonPersistent()

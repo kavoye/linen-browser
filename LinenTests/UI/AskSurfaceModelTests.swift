@@ -11,6 +11,7 @@ import Testing
 /// cleared. `Omnibox.agentOnlyForTesting` stays pinned so no keystroke can
 /// leave the machine as a completion request.
 @MainActor
+@Suite(.boundedWebViews)
 struct AskSurfaceModelTests {
     @Test(arguments: [AskSurface.Placement.toolbar, .startPage])
     func currentPageCanBeSelectedForAThreePageComparison(placement: AskSurface.Placement) throws {

@@ -101,7 +101,7 @@ struct FaviconLoaderTests {
     }
 
     private func makeDirectory() -> URL {
-        FileManager.default.temporaryDirectory
+        TestFiles.directory
             .appendingPathComponent("linen-favicons-\(UUID().uuidString)", isDirectory: true)
     }
 
@@ -286,7 +286,7 @@ struct FaviconLoaderTests {
 @Suite(.serialized, .boundedWebViews)
 struct FaviconNavigationTests {
     private func makeDirectory() -> URL {
-        FileManager.default.temporaryDirectory
+        TestFiles.directory
             .appendingPathComponent("linen-favicon-nav-\(UUID().uuidString)", isDirectory: true)
     }
 

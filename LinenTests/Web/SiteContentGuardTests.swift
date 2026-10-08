@@ -13,7 +13,7 @@ import WebKit
 /// a website was told.
 @Suite(.serialized, .boundedWebViews)
 final class SiteContentGuardTests {
-    private let defaultsName = "SiteContentGuardTests-" + UUID().uuidString
+    private let defaultsName = TestDefaults.name("SiteContentGuardTests")
     private let settings: BrowserSettings
 
     init() {
@@ -31,7 +31,7 @@ final class SiteContentGuardTests {
 
     private func temporaryPermissions() -> SitePermissions {
         SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appending(path: "SiteContentGuardTests-\(UUID().uuidString).json")
         )
     }

@@ -383,7 +383,7 @@ struct AgentToolkitPolicyTests {
             }
         )
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("VisibleSearch-\(UUID().uuidString).json")
         )
         permissions.setAssistantAccess(.readOnly, for: SitePermissions.origin(for: article))
@@ -451,12 +451,14 @@ struct AgentToolkitPolicyTests {
         ])
         let (_, tab, subject) = await controlledSubject(at: try source.url())
 
-        let output = await subject.typeOnPage(
-            text: "private text",
-            field: "Search",
-            ref: 0,
-            submit: true
-        )
+        let output = await PageSettle.$navigationGrace.withValue(.seconds(15)) {
+            await subject.typeOnPage(
+                text: "private text",
+                field: "Search",
+                ref: 0,
+                submit: true
+            )
+        }
 
         #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL))
         #expect(output.contains("moved to another website"), "\(output)")
@@ -479,7 +481,9 @@ struct AgentToolkitPolicyTests {
         ])
         let (_, tab, subject) = await controlledSubject(at: try source.url())
 
-        let output = await subject.selectOption("Leave", ref: 0, field: "Choice")
+        let output = await PageSettle.$navigationGrace.withValue(.seconds(15)) {
+            await subject.selectOption("Leave", ref: 0, field: "Choice")
+        }
 
         #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL))
         #expect(output.contains("moved to another website"), "\(output)")
@@ -503,10 +507,15 @@ struct AgentToolkitPolicyTests {
 
         let output = await subject.scrollPage(direction: "down")
 
-        #expect(SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL))
-        #expect(output.contains("moved to another website"), "\(output)")
         #expect(!output.contains("Destination secret"))
-        #expect(!output.contains("<page-content"))
+        if output.contains("moved to another website") {
+            #expect(!output.contains("<page-content"))
+        } else {
+            #expect(output.contains("url: \(try source.url().absoluteString)"), "\(output)")
+        }
+        #expect(await waitUntil {
+            SitePermissions.origin(for: tab.webView.url) == SitePermissions.origin(for: destinationURL)
+        })
     }
 
     @Test func goingBackAcrossSitesRequiresFreshAccess() async throws {

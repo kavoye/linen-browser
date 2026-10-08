@@ -156,7 +156,7 @@ struct AttachmentTests {
     }
 
     @Test func pasteImportsFilesWithoutReplacingTheDraft() async throws {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).md")
+        let url = TestFiles.directory.appendingPathComponent("\(UUID()).md")
         try Data("Pasted document".utf8).write(to: url)
         defer { try? FileManager.default.removeItem(at: url) }
         let pasteboard = NSPasteboard.withUniqueName()
@@ -172,7 +172,7 @@ struct AttachmentTests {
     }
 
     @Test func droppingAFileURLImportsItsContents() async throws {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).md")
+        let url = TestFiles.directory.appendingPathComponent("\(UUID()).md")
         try Data("Dropped document".utf8).write(to: url)
         defer { try? FileManager.default.removeItem(at: url) }
         let provider = NSItemProvider(item: url as NSURL, typeIdentifier: UTType.fileURL.identifier)

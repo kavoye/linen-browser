@@ -11,7 +11,7 @@ import Testing
 /// drives the navigation matrix and checks that the destination is the
 /// expected one and that no stale mark survives to light a second row.
 @MainActor
-@Suite(.serialized)
+@Suite(.serialized, .boundedWebViews)
 struct SidebarSelectionInvariantTests {
     private func makeModel() -> BrowserModel {
         BrowserModel(database: .temporary())

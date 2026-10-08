@@ -9,6 +9,7 @@ import Testing
 /// Where a tab sits decides whether it is pinned: the run at the top of the
 /// sidebar is the pinned section, and a tab takes its pin from landing there.
 @MainActor
+@Suite(.boundedWebViews)
 struct PinnedSectionTests {
     private func model() -> BrowserModel {
         BrowserModel(database: .temporary())
@@ -365,6 +366,7 @@ struct PinnedSectionTests {
 /// A name you type stays on the tab until the tab closes, whatever the page
 /// calls itself afterwards.
 @MainActor
+@Suite(.boundedWebViews)
 struct TabRenameTests {
     private func model() -> BrowserModel {
         BrowserModel(database: .temporary())

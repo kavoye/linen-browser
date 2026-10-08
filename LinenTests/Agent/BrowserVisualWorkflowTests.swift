@@ -21,13 +21,15 @@ struct BrowserVisualWorkflowTests {
         let frame = try #require(fixture.toolkit.computerObservation)
         let x = Int(60 * frame.pixels.width / frame.geometry.width)
         let y = Int(110 * frame.pixels.height / frame.geometry.height)
-        let result = await fixture.toolkit.visualAction(name: "clickAtPoint", action: [
-            "type": "click", "button": "left", "x": .integer(Int64(x)), "y": .integer(Int64(y)),
-        ])
+        let result = await AssistantPointerView.$linger.withValue(.seconds(60)) {
+            await fixture.toolkit.visualAction(name: "clickAtPoint", action: [
+                "type": "click", "button": "left", "x": .integer(Int64(x)), "y": .integer(Int64(y)),
+            ])
+        }
 
+        #expect(fixture.tab.webView.subviews.contains { $0.identifier?.rawValue == "assistant-pointer" })
         #expect(result.contains("CONTROL: Browser action completed."))
         #expect(try await fixture.tab.webView.evaluateJavaScript("window.chosen || 0") as? Int == 1)
         #expect(fixture.toolkit.takePendingScreenshot() != nil)
-        #expect(fixture.tab.webView.subviews.contains { $0.identifier?.rawValue == "assistant-pointer" })
     }
 }

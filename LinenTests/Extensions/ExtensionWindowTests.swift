@@ -11,7 +11,7 @@ import WebKit
 @Suite(.serialized, .boundedWebViews)
 struct ExtensionWindowTests {
     private func extensionContext() async throws -> WKWebExtensionContext {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent("linen-extension-windows-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -200,7 +200,7 @@ struct ExtensionWindowTests {
     }
 
     @Test func staleToolbarCallsCannotUseAnotherProfilesTabsOrFallbackWindow() async throws {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent("linen-extension-toolbar-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let library = ExtensionLibrary(baseDirectory: directory)

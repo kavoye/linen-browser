@@ -142,7 +142,7 @@ struct BrowserImportTests {
     }
 
     @Test func readingAnExportGivesTheFolderItsName() throws {
-        let file = FileManager.default.temporaryDirectory
+        let file = TestFiles.directory
             .appending(path: "linen-import-\(UUID().uuidString).html")
         try Data(Self.safariExport.utf8).write(to: file)
         defer { try? FileManager.default.removeItem(at: file) }

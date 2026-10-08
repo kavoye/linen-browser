@@ -82,7 +82,7 @@ struct ContextBudgetTests {
 struct ContextWindowOverrideTests {
     @Test func discoveredLimitsAreScopedToTheModelAndEndpoint() {
         let previous = LLMSettings.defaults
-        let suiteName = UUID().uuidString
+        let suiteName = TestDefaults.name("ContextBudgetTests")
         let defaults = UserDefaults(suiteName: suiteName)!
         LLMSettings.defaults = defaults
         defer {

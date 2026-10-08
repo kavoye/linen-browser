@@ -33,7 +33,7 @@ struct SafariExtensionCatalogTests {
     }
 
     private func sandbox() throws -> URL {
-        let root = FileManager.default.temporaryDirectory
+        let root = TestFiles.directory
             .appending(path: "safari-cat-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root

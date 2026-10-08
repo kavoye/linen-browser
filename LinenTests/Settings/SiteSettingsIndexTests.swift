@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct SiteSettingsIndexTests {
     private func store() -> SitePermissions {
-        let file = URL.temporaryDirectory.appending(path: "SiteSettingsIndexTests-\(UUID().uuidString).json")
+        let file = TestFiles.directory.appending(path: "SiteSettingsIndexTests-\(UUID().uuidString).json")
         return SitePermissions(storageURL: file)
     }
 

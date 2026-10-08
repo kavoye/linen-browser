@@ -9,7 +9,7 @@ import Testing
 @MainActor
 struct ProfileWindowSelectionTests {
     @Test func selectingAProfileAffectsOnlyThatWindow() {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("profiles-\(UUID()).json")
+        let file = TestFiles.directory.appendingPathComponent("profiles-\(UUID()).json")
         let catalog = ProfileStore(file: file)
         defer { try? FileManager.default.removeItem(at: file) }
         let work = catalog.add(name: "Work")
@@ -24,7 +24,7 @@ struct ProfileWindowSelectionTests {
     }
 
     @Test func windowsShareProfileEditsAndLaunchPreference() {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("profiles-\(UUID()).json")
+        let file = TestFiles.directory.appendingPathComponent("profiles-\(UUID()).json")
         let catalog = ProfileStore(file: file)
         defer { try? FileManager.default.removeItem(at: file) }
         let work = catalog.add(name: "Work")
@@ -41,7 +41,7 @@ struct ProfileWindowSelectionTests {
     }
 
     @Test func privateSelectionDoesNotReplaceOtherWindowsOrTheLaunchProfile() {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("profiles-\(UUID()).json")
+        let file = TestFiles.directory.appendingPathComponent("profiles-\(UUID()).json")
         let catalog = ProfileStore(file: file)
         defer { try? FileManager.default.removeItem(at: file) }
         let work = catalog.add(name: "Work")

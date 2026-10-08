@@ -87,7 +87,7 @@ struct OpenAIVoiceTests {
             }
             return data
         }
-        #expect(await waitUntil { transport.requests.count == 1 })
+        try #require(await waitUntil { transport.requests.count == 1 })
         transport.complete(index: 0)
         #expect(try await reader.value == Data([0, 0, 1, 0]))
         let request = try #require(transport.requests.first)
@@ -104,7 +104,7 @@ struct OpenAIVoiceTests {
         let transport = VoiceSpeechFixture()
         let client = OpenAIVoiceClient(transport: transport, settings: .init(), makeSocket: { VoiceSocketFixture() })
         let reader = Task { for try await _ in client.speech("Hello") {} }
-        #expect(await waitUntil { transport.requests.count == 1 })
+        try #require(await waitUntil { transport.requests.count == 1 })
         transport.complete(index: 0, terminal: false)
         await #expect(throws: OpenAIVoiceFailure.interrupted) { try await reader.value }
     }
@@ -114,11 +114,11 @@ struct OpenAIVoiceTests {
         let player = VoicePlaybackFixture()
         let output = OpenAISpeechOutput(client: .init(transport: transport, settings: .init(), makeSocket: { VoiceSocketFixture() }), playback: player)
         output.speak("Old")
-        #expect(await waitUntil { transport.requests.count == 1 })
+        try #require(await waitUntil { transport.requests.count == 1 })
         output.stopSpeaking()
         transport.complete(index: 0)
         output.speak("New")
-        #expect(await waitUntil { transport.requests.count == 2 })
+        try #require(await waitUntil { transport.requests.count == 2 })
         transport.complete(index: 1)
         #expect(await waitUntil { player.finishes == 1 })
         #expect(player.audio == Data([0, 0, 1, 0]))
@@ -135,7 +135,7 @@ struct OpenAIVoiceTests {
         output.isMuted = false
         output.speak("Explicit read aloud")
         output.isMuted = true
-        #expect(await waitUntil { transport.requests.count == 1 })
+        try #require(await waitUntil { transport.requests.count == 1 })
         transport.complete(index: 0)
         #expect(await waitUntil { player.finishes == 1 })
         output.stopSpeaking()

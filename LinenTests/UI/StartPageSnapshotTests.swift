@@ -174,7 +174,7 @@ struct StartPageSnapshotTests {
     }
 
     @Test func startPagePreferencesAreIsolatedBindableAndPersistent() {
-        let suiteName = "StartPageSnapshotTests-\(UUID().uuidString)"
+        let suiteName = TestDefaults.name("StartPageSnapshotTests")
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 

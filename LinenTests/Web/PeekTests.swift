@@ -9,6 +9,7 @@ import Testing
 
 /// A peeked page is a tab no list holds until you keep it.
 @MainActor
+@Suite(.boundedWebViews)
 struct PeekTests {
     private func model() -> BrowserModel {
         BrowserModel(database: .temporary())
@@ -186,6 +187,7 @@ struct PeekTests {
 }
 
 @MainActor
+@Suite(.boundedWebViews)
 struct LinkIntentTests {
     @Test func shiftReadsAsAPeek() {
         #expect(LinkIntent.of(.shift) == .peek)

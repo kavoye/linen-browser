@@ -86,7 +86,7 @@ struct AutofillContactTests {
     }
 
     @Test func contactPreferencePersistsAndFollowsProfileSwitches() throws {
-        let names = (0..<3).map { "ContactPreferenceTests.\(UUID().uuidString).\($0)" }
+        let names = (0..<3).map { _ in TestDefaults.name("ContactPreferenceTests") }
         defer { names.forEach { UserDefaults.standard.removePersistentDomain(forName: $0) } }
         let app = try #require(UserDefaults(suiteName: names[0]))
         let first = try #require(UserDefaults(suiteName: names[1]))

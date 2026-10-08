@@ -12,6 +12,7 @@ import Testing
 /// happens, and the second relaunch, where a session is written back from
 /// tabs that were themselves restored.
 @MainActor
+@Suite(.boundedWebViews)
 struct SessionWriterTests {
     private func reopen(_ database: AppDatabase) -> BrowserModel {
         let model = BrowserModel(database: database)
@@ -149,6 +150,7 @@ struct SessionWriterTests {
 /// One copy of Linen owns the session file. A second copy — a debug build
 /// beside the installed app, or the app that hosts these tests — used to open
 /// the same database and write its own idea of the tabs over it.
+@Suite(.boundedWebViews)
 struct SessionOwnershipTests {
     @Test func theAppThatHostsTheseTestsKeepsNothing() {
         #expect(!AppDatabase.ownsSession)
@@ -156,7 +158,7 @@ struct SessionOwnershipTests {
     }
 
     @Test func onlyOneHolderAtATime() throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SessionLock-\(UUID().uuidString).lock")
         defer { try? FileManager.default.removeItem(at: url) }
 

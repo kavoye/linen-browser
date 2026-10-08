@@ -31,7 +31,9 @@ nonisolated enum PageComputerFailure: String, Error {
 }
 
 @MainActor
-private final class AssistantPointerView: NSView {
+final class AssistantPointerView: NSView {
+    @TaskLocal static var linger: Duration = .seconds(2)
+
     var hideTask: Task<Void, Never>?
 
     override var isFlipped: Bool {
@@ -403,8 +405,9 @@ extension PageDriver {
                 pointer.animator().setFrameOrigin(destination)
             }
         }
+        let linger = AssistantPointerView.linger
         pointer.hideTask = Task { [weak pointer] in
-            try? await Task.sleep(for: .seconds(2))
+            try? await Task.sleep(for: linger)
             guard !Task.isCancelled else { return }
             pointer?.removeFromSuperview()
         }

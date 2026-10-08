@@ -10,8 +10,8 @@ import Testing
 @Suite(.serialized)
 struct AssistantToolSettingsTests {
     @Test func profileModelChoicesAndToolSettingsRemainIndependent() throws {
-        let firstName = "model-profile-first-\(UUID())"
-        let secondName = "model-profile-second-\(UUID())"
+        let firstName = TestDefaults.name("model-profile-first")
+        let secondName = TestDefaults.name("model-profile-second")
         let firstDefaults = try #require(UserDefaults(suiteName: firstName))
         let secondDefaults = try #require(UserDefaults(suiteName: secondName))
         defer {

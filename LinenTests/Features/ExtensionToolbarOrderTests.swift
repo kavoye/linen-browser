@@ -14,7 +14,7 @@ struct ExtensionToolbarOrderTests {
     /// Each test gets its own directory, so nothing here touches the real
     /// library in Application Support.
     private func makeLibrary() -> (ExtensionLibrary, URL) {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent("linen-extensions-\(UUID().uuidString)", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return (ExtensionLibrary(baseDirectory: directory), directory)

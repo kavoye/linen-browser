@@ -20,7 +20,7 @@ struct PrivateBrowsingTests {
 
     private func makePermissions() -> SitePermissions {
         SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("PrivateBrowsingPermissions-\(UUID().uuidString).json")
         )
     }
@@ -249,7 +249,7 @@ struct PrivateBrowsingTests {
     /// private model handed a database with a file refuses it. Nothing can be
     /// restored out of the file, and nothing private can be written into it.
     @Test func aPrivateModelRefusesADatabaseThatHasAFile() throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("PrivateRefusal-\(UUID().uuidString).sqlite")
         defer { try? FileManager.default.removeItem(at: url) }
         let onDisk = AppDatabase(at: url)
@@ -273,7 +273,7 @@ struct PrivateBrowsingTests {
     }
 
     @Test func temporaryDatabasesKnowTheyAreEphemeralAndFilesKnowTheyAreNot() {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("Ephemerality-\(UUID().uuidString).sqlite")
         defer { try? FileManager.default.removeItem(at: url) }
 
@@ -284,7 +284,7 @@ struct PrivateBrowsingTests {
     /// The session object is the container; it must be impossible to build
     /// one around stores that would outlive it.
     @Test func aPrivateSessionRefusesPersistentStores() {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SessionRefusal-\(UUID().uuidString).sqlite")
         defer { try? FileManager.default.removeItem(at: url) }
 
@@ -432,7 +432,7 @@ struct PrivateBrowsingTests {
 
     @Test func privateAnswersStayOutOfTheStore() {
         let store = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("linen-perms-\(UUID().uuidString).json")
         )
         let center = TabPermissionCenter(store: store)
@@ -459,7 +459,7 @@ struct PrivateBrowsingTests {
 struct PageZoomStoreTests {
     private func makeStore() -> PageZoomStore {
         PageZoomStore(
-            file: FileManager.default.temporaryDirectory
+            file: TestFiles.directory
                 .appendingPathComponent("linen-zoom-\(UUID().uuidString).json")
         )
     }
@@ -525,7 +525,7 @@ struct WebViewPoolPrivacyTests {
 @MainActor
 struct PrivateFaviconTests {
     private func makeDirectory() -> URL {
-        FileManager.default.temporaryDirectory
+        TestFiles.directory
             .appendingPathComponent("linen-private-favicons-\(UUID().uuidString)", isDirectory: true)
     }
 

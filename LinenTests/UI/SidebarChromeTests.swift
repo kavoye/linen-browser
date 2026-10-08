@@ -168,7 +168,7 @@ struct SidebarSleepIndicatorTests {
         let model = BrowserModel(
             database: .temporary(),
             sitePermissions: SitePermissions(
-                storageURL: FileManager.default.temporaryDirectory
+                storageURL: TestFiles.directory
                     .appendingPathComponent("SidebarSleep-\(UUID().uuidString).json")
             )
         )
@@ -277,7 +277,7 @@ struct SidebarDragGhostTests {
 @MainActor
 struct SidebarIconsOnlyMenuTests {
     private func makeLayout() -> (SidebarLayout, UserDefaults, String) {
-        let suite = "SidebarIconsOnlyMenuTests-\(UUID().uuidString)"
+        let suite = TestDefaults.name("SidebarIconsOnlyMenuTests")
         let defaults = UserDefaults(suiteName: suite)!
         return (SidebarLayout(defaults: defaults), defaults, suite)
     }
@@ -414,7 +414,7 @@ struct SplitFoldCommitTests {
         let model = BrowserModel(
             database: .temporary(),
             sitePermissions: SitePermissions(
-                storageURL: FileManager.default.temporaryDirectory
+                storageURL: TestFiles.directory
                     .appendingPathComponent("SplitFoldCommit-\(UUID().uuidString).json")
             )
         )

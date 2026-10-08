@@ -9,6 +9,7 @@ import Testing
 /// A pinned tab is the one you meant to keep, so a new tab opens under it
 /// rather than pushing it down the list.
 @MainActor
+@Suite(.boundedWebViews)
 struct KeptTabOrderTests {
     private func model() -> BrowserModel {
         BrowserModel(database: .temporary())

@@ -7,12 +7,13 @@ import Testing
 @testable import Linen
 
 @MainActor
+@Suite(.boundedWebViews)
 struct AskContextTests {
     private func makeModel() -> BrowserModel {
         BrowserModel(
             database: .temporary(),
             sitePermissions: SitePermissions(
-                storageURL: FileManager.default.temporaryDirectory
+                storageURL: TestFiles.directory
                     .appendingPathComponent("AskContext-\(UUID().uuidString).json")
             )
         )

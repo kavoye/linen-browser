@@ -13,11 +13,11 @@ struct ExternalAppPermissionTests {
     private let origin = "https://slack.com"
 
     private func store() -> SitePermissions {
-        SitePermissions(storageURL: .temporaryDirectory.appending(path: "ExternalAppTests-\(UUID().uuidString).json"))
+        SitePermissions(storageURL: TestFiles.directory.appending(path: "ExternalAppTests-\(UUID().uuidString).json"))
     }
 
     @Test func aSavedChoiceSurvivesReloadAndCanBeRevoked() async {
-        let file = URL.temporaryDirectory.appending(path: "ExternalAppTests-\(UUID().uuidString).json")
+        let file = TestFiles.directory.appending(path: "ExternalAppTests-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: file) }
         let permissions = SitePermissions(storageURL: file)
         permissions.allowExternalApp(slack, for: origin)
@@ -60,7 +60,7 @@ struct ExternalAppPermissionTests {
     }
 
     @Test func oldPermissionFilesStillLoad() throws {
-        let file = URL.temporaryDirectory.appending(path: "ExternalAppTests-\(UUID().uuidString).json")
+        let file = TestFiles.directory.appending(path: "ExternalAppTests-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: file) }
         try Data("{\"assistantAccess\":{\"https://slack.com\":\"control\"}}".utf8).write(to: file)
         let permissions = SitePermissions(storageURL: file)
@@ -75,7 +75,7 @@ struct ExternalAppConfirmationTests {
     private func withOpening(
         _ body: (TabExternalAppPolicy, SitePermissions, URL) async throws -> Void
     ) async rethrows {
-        let store = SitePermissions(storageURL: .temporaryDirectory.appending(path: "ExternalAppTests-\(UUID().uuidString).json"))
+        let store = SitePermissions(storageURL: TestFiles.directory.appending(path: "ExternalAppTests-\(UUID().uuidString).json"))
         ExternalApp.resolverForTesting = { _ in
             .init(url: URL(filePath: "/Applications/Slack.app"), name: "Slack", bundleIdentifier: "com.tinyspeck.slackmacgap")
         }

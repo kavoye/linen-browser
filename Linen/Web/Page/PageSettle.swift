@@ -7,7 +7,7 @@ import WebKit
 @MainActor
 enum PageSettle {
     static let loadCeiling: Duration = .seconds(12)
-    static let navigationGrace: Duration = .milliseconds(400)
+    @TaskLocal static var navigationGrace: Duration = .milliseconds(400)
     @TaskLocal static var interactionObserver: (@MainActor @Sendable () -> Void)?
 
     @discardableResult

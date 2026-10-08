@@ -10,8 +10,8 @@ import Testing
 @Suite(.serialized)
 struct AgentTurnModelTests {
     @Test func simultaneousTurnsKeepTheirModelSettingsAndActionApprovals() async throws {
-        let firstName = "agent-profile-first-\(UUID())"
-        let secondName = "agent-profile-second-\(UUID())"
+        let firstName = TestDefaults.name("agent-profile-first")
+        let secondName = TestDefaults.name("agent-profile-second")
         let firstDefaults = try #require(UserDefaults(suiteName: firstName))
         let secondDefaults = try #require(UserDefaults(suiteName: secondName))
         defer {

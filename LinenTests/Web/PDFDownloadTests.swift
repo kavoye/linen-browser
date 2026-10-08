@@ -21,7 +21,7 @@ struct PDFDownloadTests {
     private let bytes = Data("PDF document with edits".utf8)
 
     private func directory() throws -> URL {
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let folder = TestFiles.directory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder
     }

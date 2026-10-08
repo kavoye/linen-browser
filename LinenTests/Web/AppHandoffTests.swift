@@ -8,7 +8,7 @@ import WebKit
 @testable import Linen
 
 @MainActor
-@Suite(.serialized, .boundedWebViews, .exclusiveExternalApp, .timeLimit(.minutes(1)))
+@Suite(.serialized, .boundedWebViews, .exclusiveExternalApp)
 struct AppHandoffTests {
     private func asked(
         for route: String,

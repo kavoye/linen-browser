@@ -39,7 +39,7 @@ struct ScratchWakeTests {
         let a = try server.url("/a")
         let b = try server.url("/b")
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("Wake-\(UUID().uuidString).json")
         )
         let model = BrowserModel(database: .temporary(), sitePermissions: permissions)

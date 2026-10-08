@@ -9,7 +9,7 @@ import WebKit
 
 struct ExtensionShimsTests {
     private func scratchPackage(manifest: [String: Any]) throws -> URL {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let data = try JSONSerialization.data(withJSONObject: manifest)

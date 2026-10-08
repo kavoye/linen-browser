@@ -7,7 +7,7 @@ import Testing
 @testable import Linen
 
 private func temporaryStore() -> SitePermissions {
-    let url = FileManager.default.temporaryDirectory
+    let url = TestFiles.directory
         .appendingPathComponent("SitePermissionsTests-\(UUID().uuidString).json")
     return SitePermissions(storageURL: url)
 }
@@ -108,7 +108,7 @@ struct SitePermissionsStoreTests {
     /// has to allow again. The fixture is written by the store and then
     /// re-keyed, so it is in whatever shape `Snapshot` encodes.
     @Test func bareHostRecordsMigrateToHTTPS() async throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SitePermissionsMigration-\(UUID().uuidString).json")
 
         let writer = SitePermissions(storageURL: url)
@@ -127,7 +127,7 @@ struct SitePermissionsStoreTests {
     }
 
     @Test func filesFromBeforeAssistantAccessStillLoad() throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SitePermissionsLegacy-\(UUID().uuidString).json")
         let json = """
             {"defaults":[],"records":{"https://example.com":["camera","allow"]}}
@@ -140,7 +140,7 @@ struct SitePermissionsStoreTests {
     }
 
     @Test func assistantAccessSurvivesRelaunch() async throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SitePermissionsAssistant-\(UUID().uuidString).json")
         let writer = SitePermissions(storageURL: url)
         writer.setAssistantAccess(.control, for: "https://example.com")
@@ -151,7 +151,7 @@ struct SitePermissionsStoreTests {
     }
 
     @Test func alwaysActiveSurvivesRelaunch() async throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SitePermissionsAlwaysActive-\(UUID().uuidString).json")
         let writer = SitePermissions(storageURL: url)
         writer.setKeepsActive(true, for: "HTTPS://Example.COM.")
@@ -163,7 +163,7 @@ struct SitePermissionsStoreTests {
     }
 
     @Test func noAutomaticPictureSurvivesRelaunch() async throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SitePermissionsAutomaticPicture-\(UUID().uuidString).json")
         let writer = SitePermissions(storageURL: url)
         writer.setAllowsAutomaticPicture(false, for: "HTTPS://Example.COM.")
@@ -221,7 +221,7 @@ struct SitePermissionsStoreTests {
     }
 
     @Test func mediaAnswersSurviveRelaunch() async throws {
-        let url = FileManager.default.temporaryDirectory
+        let url = TestFiles.directory
             .appendingPathComponent("SitePermissionsMedia-\(UUID().uuidString).json")
         let writer = SitePermissions(storageURL: url)
         writer.setAutoplay(.silent, for: "HTTPS://Example.COM.")

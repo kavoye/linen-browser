@@ -14,7 +14,7 @@ struct BrowserSmokeTests {
 
     private func permissions(_ name: String) -> SitePermissions {
         SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("\(name)-\(UUID().uuidString).json")
         )
     }
@@ -40,7 +40,7 @@ struct BrowserSmokeTests {
         let firstURL = try server.url("/first")
         let secondURL = try server.url("/second")
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("BrowserSmoke-\(UUID().uuidString).json")
         )
         let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)
@@ -64,7 +64,9 @@ struct BrowserSmokeTests {
         #expect(observation.contains("First page"))
         #expect(observation.contains(secondURL.absoluteString))
 
-        let click = await toolkit.clickOnPage(ref: 0, label: "Next page")
+        let click = await PageSettle.$navigationGrace.withValue(.seconds(15)) {
+            await toolkit.clickOnPage(ref: 0, label: "Next page")
+        }
         #expect(click.contains("Second page"))
         #expect(await waitUntil { tab.urlString == secondURL.absoluteString && tab.canGoBack })
         #expect(await waitUntil { tab.title == "Second fixture" })
@@ -135,7 +137,7 @@ struct BrowserSmokeTests {
         let server = try await HTTPFixtureServer.start(routes: [
             "/file": .download(payload, filename: "fixture.txt"),
         ])
-        let folder = FileManager.default.temporaryDirectory
+        let folder = TestFiles.directory
             .appendingPathComponent("linen-download-smoke-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -214,7 +216,7 @@ struct BrowserSmokeTests {
     }
 
     @Test func extensionEnablementLoadsAndUnloadsItsWebKitContext() async throws {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent("linen-extension-smoke-\(UUID().uuidString)", isDirectory: true)
         let id = "smoke-extension"
         let package = directory.appendingPathComponent(id, isDirectory: true)

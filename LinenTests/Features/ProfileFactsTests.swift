@@ -15,7 +15,7 @@ import Testing
 @MainActor
 struct ProfileFactsTests {
     private func sandbox() -> URL {
-        let root = URL(filePath: NSTemporaryDirectory())
+        let root = TestFiles.directory
             .appending(path: "facts-\(UUID().uuidString)", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         return root
@@ -103,7 +103,7 @@ struct ProfileFactsTests {
 @MainActor
 struct ProfileLastUsedTests {
     private func makeStore() -> (ProfileStore, URL) {
-        let file = URL(filePath: NSTemporaryDirectory())
+        let file = TestFiles.directory
             .appending(path: "profiles-\(UUID().uuidString).json")
         return (ProfileStore(file: file), file)
     }

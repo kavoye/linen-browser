@@ -76,7 +76,7 @@ struct AgentActivityScopeTests {
     }
 
     private func scratch() -> UserDefaults {
-        UserDefaults(suiteName: "AgentAttentionTests-\(UUID().uuidString)")!
+        UserDefaults(suiteName: TestDefaults.name("AgentAttentionTests"))!
     }
 
     @Test func aFailedTurnRaisesTheFailureCount() {

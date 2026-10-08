@@ -52,7 +52,7 @@ struct NativeMessagingTests {
     // MARK: - A host that answers
 
     @Test func aHostRepliesToWhatTheBridgeSends() async throws {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -192,7 +192,7 @@ struct NativeMessagingTests {
     }
 
     @Test func locateSkipsAManifestWhoseBinaryIsMissing() throws {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -220,7 +220,7 @@ struct NativeMessagingTests {
     }
 
     @Test func aPackageManifestNamesItsGeckoID() throws {
-        let package = FileManager.default.temporaryDirectory
+        let package = TestFiles.directory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: package) }
@@ -238,7 +238,7 @@ struct NativeMessagingTests {
     }
 
     @Test func locateFindsAManifestPointingAtARealBinary() throws {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }

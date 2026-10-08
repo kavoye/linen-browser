@@ -12,7 +12,7 @@ import WebKit
 struct ProfileHandoffTests {
     private func makePermissions() -> SitePermissions {
         SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("ProfileHandoffPermissions-\(UUID().uuidString).json")
         )
     }

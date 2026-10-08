@@ -19,7 +19,7 @@ struct TabDiscardTests {
 
     private func makePermissions() -> SitePermissions {
         SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("TabDiscardPermissions-\(UUID().uuidString).json")
         )
     }

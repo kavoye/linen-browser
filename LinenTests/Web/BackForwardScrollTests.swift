@@ -53,7 +53,7 @@ struct BackForwardScrollTests {
             other = try #require(components.url)
         }
         let permissions = SitePermissions(
-            storageURL: FileManager.default.temporaryDirectory
+            storageURL: TestFiles.directory
                 .appendingPathComponent("BackForwardScroll-\(UUID().uuidString).json")
         )
         let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)

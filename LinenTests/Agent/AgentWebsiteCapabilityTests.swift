@@ -13,7 +13,7 @@ import WebKit
 struct AgentWebsiteCapabilityTests {
     @Test(arguments: [false, true])
     func uploadUsesOnlyFilesReturnedByTheChooser(cancelled: Bool) async throws {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("linen-upload-\(UUID().uuidString).txt")
+        let file = TestFiles.directory.appendingPathComponent("linen-upload-\(UUID().uuidString).txt")
         try Data("A user-selected document".utf8).write(to: file)
         defer { try? FileManager.default.removeItem(at: file) }
         var services = AgentToolkit.Services.live

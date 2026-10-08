@@ -13,7 +13,7 @@ struct JSONFileStoreTests {
     }
 
     private func scratch() -> URL {
-        FileManager.default.temporaryDirectory
+        TestFiles.directory
             .appending(path: "JSONFileStoreTests-\(UUID().uuidString)", directoryHint: .isDirectory)
     }
 

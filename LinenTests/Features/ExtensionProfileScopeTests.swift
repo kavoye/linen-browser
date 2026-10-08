@@ -10,7 +10,7 @@ import WebKit
 @MainActor
 struct ExtensionProfileScopeTests {
     private func makeDirectory() -> URL {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent("linen-ext-scope-\(UUID().uuidString)", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory

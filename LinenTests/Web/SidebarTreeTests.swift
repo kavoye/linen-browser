@@ -286,7 +286,7 @@ struct SidebarTreeTests {
 @MainActor
 struct SidebarDragTests {
     private func layout() -> SidebarLayout {
-        let defaults = UserDefaults(suiteName: "linen.tests.sidebar.\(UUID().uuidString)")!
+        let defaults = UserDefaults(suiteName: TestDefaults.name("linen.tests.sidebar"))!
         return SidebarLayout(defaults: defaults)
     }
 

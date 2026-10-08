@@ -10,7 +10,7 @@ import Testing
 @Suite(.serialized)
 struct ProfileSettingsTests {
     private func suite() throws -> UserDefaults {
-        try #require(UserDefaults(suiteName: "ProfileSettingsTests.\(UUID().uuidString)"))
+        try #require(UserDefaults(suiteName: TestDefaults.name("ProfileSettingsTests")))
     }
 
     private func forget(_ suite: UserDefaults) {

@@ -8,7 +8,7 @@ import Testing
 
 struct ExtensionCompatibilityTests {
     private func makePackage(manifest: String, scripts: [String: String] = [:]) throws -> URL {
-        let package = FileManager.default.temporaryDirectory
+        let package = TestFiles.directory
             .appendingPathComponent("compat-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
         try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))

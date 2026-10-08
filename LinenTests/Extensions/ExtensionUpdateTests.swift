@@ -11,7 +11,7 @@ struct ExtensionUpdateTests {
     private let key = "extensions.lastUpdateCheck"
 
     private func scratchDefaults() -> UserDefaults {
-        let suite = "com.kavoye.Linen.tests.\(UUID().uuidString)"
+        let suite = TestDefaults.name("com.kavoye.Linen.tests")
         return UserDefaults(suiteName: suite) ?? .standard
     }
 

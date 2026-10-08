@@ -54,7 +54,7 @@ struct BrowserProfileContextTests {
     }
 
     @Test func memoryOnlySettingsNeverLoadOrOverwriteSavedSiteData() async throws {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("permissions-\(UUID()).json")
+        let file = TestFiles.directory.appendingPathComponent("permissions-\(UUID()).json")
         let saved = Data("existing profile data".utf8)
         try saved.write(to: file)
         defer { try? FileManager.default.removeItem(at: file) }

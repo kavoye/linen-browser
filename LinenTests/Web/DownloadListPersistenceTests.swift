@@ -11,7 +11,7 @@ import Testing
 @MainActor
 struct DownloadListPersistenceTests {
     private func scratchFile() -> URL {
-        FileManager.default.temporaryDirectory
+        TestFiles.directory
             .appendingPathComponent("linen-downloads-\(UUID().uuidString).json")
     }
 

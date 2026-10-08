@@ -12,7 +12,7 @@ import Testing
 @MainActor
 struct ProfileTests {
     private func makeStore() -> (ProfileStore, URL) {
-        let file = URL(filePath: NSTemporaryDirectory())
+        let file = TestFiles.directory
             .appending(path: "profiles-\(UUID().uuidString).json")
         return (ProfileStore(file: file), file)
     }
@@ -319,7 +319,7 @@ struct ProfileTests {
 
     /// An unreadable file is a first launch, not a crash.
     @Test func aCorruptFileReadsAsAFirstLaunch() throws {
-        let file = URL(filePath: NSTemporaryDirectory())
+        let file = TestFiles.directory
             .appending(path: "profiles-\(UUID().uuidString).json")
         try "not json".write(to: file, atomically: true, encoding: .utf8)
 

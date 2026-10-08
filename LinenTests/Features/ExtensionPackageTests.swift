@@ -11,7 +11,7 @@ import Testing
 @MainActor
 struct ExtensionPackageTests {
     private func makeLibrary() -> (ExtensionLibrary, URL) {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = TestFiles.directory
             .appendingPathComponent("linen-packages-\(UUID().uuidString)", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return (ExtensionLibrary(baseDirectory: directory), directory)
@@ -21,7 +21,7 @@ struct ExtensionPackageTests {
     /// Chrome Web Store serves one: everything at the root of the archive.
     private func makePackage(version: String, extra: String? = nil) throws -> Data {
         let files = FileManager.default
-        let scratch = files.temporaryDirectory
+        let scratch = TestFiles.directory
             .appendingPathComponent("linen-fixture-\(UUID().uuidString)", isDirectory: true)
         let contents = scratch.appendingPathComponent("contents", isDirectory: true)
         try files.createDirectory(at: contents, withIntermediateDirectories: true)
