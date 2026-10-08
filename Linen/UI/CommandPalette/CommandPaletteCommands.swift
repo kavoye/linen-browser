@@ -13,6 +13,8 @@ struct CommandPaletteContext {
     var canGoForward = false
     var isLoading = false
     var isZoomed = false
+    var isTranslated = false
+    var canTranslate = false
     var canInspect = false
     var isShowingPin = false
     var isAwayFromPin = false
@@ -72,6 +74,7 @@ enum CommandPaletteAction: String, CaseIterable {
     case zoomIn
     case zoomOut
     case actualSize
+    case translatePage
     case showWebInspector
 
     case splitRight
@@ -517,6 +520,14 @@ enum CommandPaletteCatalog {
                     isAvailable: context.isZoomed
                 ),
                 make(
+                    .translatePage,
+                    group: .page,
+                    title: translationTitle,
+                    symbol: "translate",
+                    aliases: ["translate", "language", "view original"],
+                    isAvailable: context.canTranslate
+                ),
+                make(
                     .showWebInspector,
                     group: .page,
                     title: "Show Web Inspector",
@@ -526,6 +537,10 @@ enum CommandPaletteCatalog {
                     isAvailable: context.canInspect
                 ),
             ]
+        }
+
+        private var translationTitle: LocalizedStringResource {
+            context.isTranslated ? "View Original" : "Translate Page"
         }
 
         var split: [CommandPaletteCommand] {

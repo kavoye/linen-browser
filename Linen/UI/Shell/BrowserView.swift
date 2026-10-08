@@ -230,6 +230,7 @@ struct BrowserView: View {
         .onChange(of: ObjectIdentifier(browser.context)) { _, _ in
             coordinator.settingsWorkspace.adoptProfile(coordinator: coordinator)
         }
+        .modifier(TranslationDownloadHost(downloads: coordinator.translationDownloads))
         .environment(\.chromeIsLight, scheme == .light)
         .environment(\.chromeWash, .of(nil, isLight: scheme == .light))
         .animation(chromeMotion, value: sidebar.isVisible)

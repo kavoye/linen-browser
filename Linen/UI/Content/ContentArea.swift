@@ -202,6 +202,9 @@ private struct ActiveWebSurface: View {
             }
             .onChange(of: tab.reader.isActive) { _, isActive in
                 tab.find.pageChanged()
+                if !isActive {
+                    tab.retranslateShownSurface()
+                }
             }
             .overlay(alignment: .bottomLeading) {
                 LinkPreview(

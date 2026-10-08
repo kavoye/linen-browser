@@ -104,6 +104,7 @@ final class AppCoordinator {
     let linkPeek = LinkPeek()
     let peek = PeekPanel()
     let sidebarDrag = SidebarDragModel()
+    let translationDownloads = TranslationDownloads()
     @ObservationIgnored private(set) lazy var settingsWorkspace: SettingsWorkspace = {
         let workspace = SettingsWorkspace(coordinator: self)
         workspace.onRoute = { [weak self] category in

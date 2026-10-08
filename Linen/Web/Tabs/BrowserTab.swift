@@ -198,6 +198,7 @@ final class BrowserTab: Identifiable {
             }
         }
     }
+    let translation = PageTranslation()
 
     let isPrivate: Bool
     let context: BrowserProfileContext
@@ -569,6 +570,7 @@ final class BrowserTab: Identifiable {
         measureBandUnderBar()
         invalidateSessionState()
         readerPageMoved(from: previous)
+        translationPageMoved()
         onSameDocumentNavigation?()
     }
 
@@ -602,6 +604,10 @@ final class BrowserTab: Identifiable {
         isShown = nil
         onLocationRevoked = nil
         navigationDelegate = nil
+        if translation.isActive, let liveView {
+            translation.showOriginal(in: liveView)
+        }
+        translation.documentChanged()
         guard let view = liveView else { return }
         view.navigationDelegate = nil
         view.uiDelegate = nil
@@ -679,6 +685,7 @@ final class BrowserTab: Identifiable {
     func noteDocumentChanged() {
         lastReportedScrollY = 0
         lastReportedScrollURL = nil
+        translation.documentChanged()
         if isShowingRealPage {
             find.pageChanged()
         }

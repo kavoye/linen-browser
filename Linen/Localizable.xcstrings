@@ -856,6 +856,9 @@
     "Always ask the assistant" : {
       "comment" : "Title of the Settings switch that sends anything you type in the address bar to the assistant instead of the search engine. \"Always\" is about typed questions only — a link or a web address still opens as usual, which the caption underneath says. The feature is called the assistant throughout, never \"AI\". Sentence case, no final full stop."
     },
+    "Always Translate %@" : {
+      "comment" : "Checkmark item in the address bar’s translation menu. %@ is a language name, for example Japanese."
+    },
     "An HTML file from another browser." : {
       "comment" : "Caption under the Bookmarks row on the last onboarding screen. It names the file the user picks. It must stay on one line, so it is shorter than its twin on the General settings page."
     },
@@ -3670,6 +3673,9 @@
     "posts or sends something in your name" : {
       "comment" : "Clause that completes the sentence This … and usually can’t be undone. in the dialog asking the user to approve an action the assistant wants to take. Lowercase, third person singular; the implied subject is the action, and in your name means as though the user had done it."
     },
+    "Preferred Languages…" : {
+      "comment" : "Item in the address bar’s translation menu. Opens Language & Region in System Settings."
+    },
     "Preparing attachments…" : {
 
     },
@@ -5299,6 +5305,12 @@
     "trackers allowed" : {
       "comment" : "Fragment in the one-line summary under a website, meaning tracker blocking is switched off there. Lower case: joined with other fragments."
     },
+    "Translate Page" : {
+      "comment" : "Menu item, command and tooltip that translates the current webpage."
+    },
+    "Translate to %@" : {
+      "comment" : "Item in the address bar’s translation menu. %@ is a language name, for example English."
+    },
     "Transparency" : {
 
     },
@@ -5553,6 +5565,9 @@
     },
     "View on GitHub" : {
       "comment" : "Button in the release notes sheet that opens the release page in a browser. View is a verb; GitHub is a product name — leave as is."
+    },
+    "View Original" : {
+      "comment" : "Menu item and command that restores the current webpage to its original language."
     },
     "View the installed version and check for updates." : {
       "comment" : "Caption describing the Software update section in the Settings search results. A sentence fragment naming what the section reports."

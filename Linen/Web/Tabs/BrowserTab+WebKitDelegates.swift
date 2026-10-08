@@ -491,6 +491,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab.refreshPageColor(from: webView)
         tab.restoreScrollOffsetIfNeeded()
         tab.probeReader()
+        tab.offerTranslation()
         tab.onNavigationFinished?(wasRestore || tab.isShowingError)
     }
 

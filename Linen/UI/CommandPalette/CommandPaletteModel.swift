@@ -608,6 +608,8 @@ final class CommandPaletteModel {
             canGoForward: page?.canGoForward ?? false,
             isLoading: page?.isLoading ?? false,
             isZoomed: page?.isZoomed ?? false,
+            isTranslated: page?.translation.isActive ?? false,
+            canTranslate: page?.canToggleTranslation ?? false,
             canInspect: page != nil && browser.context.settings.webInspectorEnabled,
             isShowingPin: tab?.isShowingPin ?? false,
             isAwayFromPin: tab?.isAwayFromPin ?? false,
@@ -713,6 +715,10 @@ final class CommandPaletteModel {
             coordinator.copyCurrentURL()
         case .printPage:
             coordinator.printActivePage()
+        case .translatePage:
+            if let page {
+                coordinator.toggleTranslation(page)
+            }
         case .splitRight:
             coordinator.splitActiveTab(axis: .sideBySide)
         case .splitDown:

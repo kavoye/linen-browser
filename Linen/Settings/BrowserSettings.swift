@@ -58,6 +58,8 @@ final class BrowserSettings {
         static let startPageOrder = "startPage.order"
         static let startPageHidden = "startPage.hidden"
         static let startPageHiddenSites = "startPage.hiddenSites"
+        static let translationTarget = "translation.target"
+        static let alwaysTranslate = "translation.always"
     }
 
     static let sessionKeys: [String] = [
@@ -148,6 +150,10 @@ final class BrowserSettings {
             webInspectorEnabled = source.webInspectorEnabled
         case Key.updateChannel:
             updateChannel = source.updateChannel
+        case Key.translationTarget:
+            translationTargetID = source.translationTargetID
+        case Key.alwaysTranslate:
+            alwaysTranslatedLanguages = source.alwaysTranslatedLanguages
         default:
             break
         }
@@ -468,6 +474,44 @@ final class BrowserSettings {
         }
     }
 
+    // MARK: - Translation
+
+    var translationTargetID: String {
+        didSet {
+            guard translationTargetID != oldValue else { return }
+            write(translationTargetID.isEmpty ? nil : translationTargetID, forKey: Key.translationTarget)
+        }
+    }
+
+    var translationTarget: Locale.Language {
+        get {
+            translationTargetID.isEmpty
+                ? TranslationLanguage.preferred
+                : Locale.Language(identifier: translationTargetID)
+        }
+        set { translationTargetID = TranslationLanguage.key(newValue) }
+    }
+
+    private(set) var alwaysTranslatedLanguages: Set<String> = [] {
+        didSet {
+            guard alwaysTranslatedLanguages != oldValue else { return }
+            write(alwaysTranslatedLanguages.sorted(), forKey: Key.alwaysTranslate)
+        }
+    }
+
+    func alwaysTranslates(_ language: Locale.Language) -> Bool {
+        alwaysTranslatedLanguages.contains(TranslationLanguage.key(language))
+    }
+
+    func setAlwaysTranslates(_ always: Bool, _ language: Locale.Language) {
+        let key = TranslationLanguage.key(language)
+        if always {
+            alwaysTranslatedLanguages.insert(key)
+        } else {
+            alwaysTranslatedLanguages.remove(key)
+        }
+    }
+
     // MARK: - Start page
 
     var startPageOrder: [StartPageSection] {
@@ -632,6 +676,8 @@ final class BrowserSettings {
             .flatMap(UserAgentMode.init(rawValue:)) ?? .safari
         customUserAgent = string(Key.customUserAgent) ?? ""
         webInspectorEnabled = object(Key.webInspector) as? Bool ?? true
+        translationTargetID = string(Key.translationTarget) ?? ""
+        alwaysTranslatedLanguages = Set(stringArray(Key.alwaysTranslate) ?? [])
 
         startPageOrder = Self.resolveOrder(stringArray(Key.startPageOrder))
         hiddenStartPageSections = Set(
@@ -743,6 +789,8 @@ final class BrowserSettings {
         userAgentMode = .safari
         customUserAgent = ""
         webInspectorEnabled = true
+        translationTargetID = ""
+        alwaysTranslatedLanguages = []
         startPageOrder = StartPageSection.allCases
         hiddenStartPageSections = []
         hiddenFrequentHosts = []

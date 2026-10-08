@@ -205,6 +205,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(.separator())
         menu.addItem(command("Show Reader", #selector(toggleReader), key: "r", modifiers: [.command, .option]))
         menu.addItem(.separator())
+        menu.addItem(command("Translate Page", #selector(toggleTranslation)))
+        menu.addItem(.separator())
         menu.addItem(chain(
             "Enter Full Screen",
             #selector(NSWindow.toggleFullScreen(_:)),
@@ -465,6 +467,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func zoomOut() {
         coordinator.pageCommandTab?.zoomOut()
     }
+    @objc private func toggleTranslation() {
+        guard let tab = coordinator.pageCommandTab else { return }
+        coordinator.toggleTranslation(tab)
+    }
 
     private var activeWebView: WKWebView? {
         coordinator.pageCommandTab?.webView
@@ -515,6 +521,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
                   let id = coordinator.browser.activeTabID
             else { return false }
             return split.sibling(of: id) != nil
+        case #selector(toggleTranslation):
+            let translationTitle: LocalizedStringResource = coordinator.pageCommandTab?.translation.isActive == true
+                ? "View Original"
+                : "Translate Page"
+            menuItem.title = String(localized: translationTitle)
+            return coordinator.pageCommandTab?.canToggleTranslation ?? false
         case #selector(toggleSplitAxis):
             let axisTitle: LocalizedStringResource = coordinator.browser.activeSplit?.axis == .stacked
                 ? "Place Side by Side"
