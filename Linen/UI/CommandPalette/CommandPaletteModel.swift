@@ -608,6 +608,7 @@ final class CommandPaletteModel {
             canGoForward: page?.canGoForward ?? false,
             isLoading: page?.isLoading ?? false,
             isZoomed: page?.isZoomed ?? false,
+            canInspect: page != nil && browser.context.settings.webInspectorEnabled,
             isShowingPin: tab?.isShowingPin ?? false,
             isAwayFromPin: tab?.isAwayFromPin ?? false,
             canReopenClosedTab: browser.canReopenClosedTab,
@@ -703,32 +704,15 @@ final class CommandPaletteModel {
             if let index = CommandPaletteAction.indexedTabs.firstIndex(of: action) {
                 browser.activateTab(at: index)
             }
-        case .reload:
-            page?.reload()
-        case .hardReload:
-            page?.webView.reloadFromOrigin()
-        case .stopLoading:
-            page?.stopLoading()
-        case .goBack:
-            page?.goBack()
-        case .goForward:
-            page?.goForward()
-        case .find:
-            page?.find.open()
-        case .findNext:
-            page?.find.findNext(backwards: false)
-        case .findPrevious:
-            page?.find.findNext(backwards: true)
+        case .reload, .hardReload, .stopLoading, .goBack, .goForward, .find, .findNext, .findPrevious,
+             .zoomIn, .zoomOut, .actualSize, .showWebInspector:
+            if let page {
+                perform(action, on: page)
+            }
         case .copyLink:
             coordinator.copyCurrentURL()
         case .printPage:
             coordinator.printActivePage()
-        case .zoomIn:
-            page?.zoomIn()
-        case .zoomOut:
-            page?.zoomOut()
-        case .actualSize:
-            page?.resetZoom()
         case .splitRight:
             coordinator.splitActiveTab(axis: .sideBySide)
         case .splitDown:
@@ -775,6 +759,37 @@ final class CommandPaletteModel {
             NSApp.orderFrontStandardAboutPanel(nil)
         case .quitLinen:
             NSApp.terminate(nil)
+        }
+    }
+
+    private func perform(_ action: CommandPaletteAction, on page: BrowserTab) {
+        switch action {
+        case .reload:
+            page.reload()
+        case .hardReload:
+            page.webView.reloadFromOrigin()
+        case .stopLoading:
+            page.stopLoading()
+        case .goBack:
+            page.goBack()
+        case .goForward:
+            page.goForward()
+        case .find:
+            page.find.open()
+        case .findNext:
+            page.find.findNext(backwards: false)
+        case .findPrevious:
+            page.find.findNext(backwards: true)
+        case .zoomIn:
+            page.zoomIn()
+        case .zoomOut:
+            page.zoomOut()
+        case .actualSize:
+            page.resetZoom()
+        case .showWebInspector:
+            page.showWebInspector()
+        default:
+            break
         }
     }
 }

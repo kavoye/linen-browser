@@ -4544,6 +4544,9 @@
     "Show video in the player" : {
       "comment" : "Title of the only row on the Experiments settings page, and the title of that same row in Settings search. It turns on the picture inside the media player in the sidebar."
     },
+    "Show Web Inspector" : {
+
+    },
     "Show what went wrong" : {
       "comment" : "Tooltip on the warning button beside an extension that reported problems; pressing it opens a panel listing them. Show is a verb."
     },

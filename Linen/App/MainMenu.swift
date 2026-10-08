@@ -221,6 +221,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         ))
         menu.addItem(.separator())
         let developer = NSMenu()
+        developer.addItem(command(
+            "Show Web Inspector",
+            #selector(showWebInspector),
+            key: "i",
+            modifiers: [.command, .option]
+        ))
         developer.addItem(command("Restart Page", #selector(restartPage)))
         menu.addItem(submenu(developer, titled: "Developer"))
         return menu
@@ -355,6 +361,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func hardReload() {
         activeWebView?.reloadFromOrigin()
     }
+    @objc private func showWebInspector() {
+        coordinator.pageCommandTab?.showWebInspector()
+    }
+
     @objc private func restartPage() {
         coordinator.pageCommandTab?.restartPage()
     }
@@ -469,6 +479,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         case #selector(copyPageURL):
             guard let tab = coordinator.pageCommandTab else { return false }
             return coordinator.linkURL(for: tab) != nil
+        case #selector(showWebInspector):
+            return coordinator.pageCommandTab != nil && coordinator.settings.webInspectorEnabled
         case #selector(restartPage):
             guard let tab = coordinator.pageCommandTab else { return false }
             return tab.extensionBaseURL == nil

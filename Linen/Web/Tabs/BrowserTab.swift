@@ -492,6 +492,16 @@ final class BrowserTab: Identifiable {
         }
     }
 
+    func showWebInspector() {
+        let accessor = NSSelectorFromString("_inspector")
+        let show = NSSelectorFromString("show")
+        guard webView.responds(to: accessor),
+              let inspector = webView.perform(accessor)?.takeUnretainedValue() as? NSObject,
+              inspector.responds(to: show)
+        else { return }
+        inspector.perform(show)
+    }
+
     /// Replace an unresponsive WebKit view without closing the tab or its data store.
     func restartPage() {
         guard !isClosed, extensionBaseURL == nil,
