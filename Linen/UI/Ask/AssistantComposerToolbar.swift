@@ -113,6 +113,7 @@ private struct AssistantAttachmentButton: View {
             Image(systemName: "plus")
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(hovering ? .primary : .secondary)
+                .hoverLift(hovering)
                 .frame(height: 28)
                 .contentShape(Rectangle())
         }

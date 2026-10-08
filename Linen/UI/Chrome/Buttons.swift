@@ -17,21 +17,29 @@ struct QuietIconButton: View {
         if let tint {
             return AnyShapeStyle(tint)
         }
-        return isOn ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
+        return isOn || hovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
     }
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(Theme.Font.rowTitle)
+                .hoverLift(hovering)
                 .frame(width: 28, height: 28)
-                .hoverBackground(isActive: isOn || hovering, tint: tint, in: Circle())
+                .hoverBackground(isActive: isOn, tint: tint, in: Circle())
         }
         .buttonStyle(.plain)
         .foregroundStyle(ink)
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
         .help(help)
+    }
+}
+
+extension View {
+    func hoverLift(_ isActive: Bool) -> some View {
+        scaleEffect(isActive ? 1.08 : 1)
+            .animation(Theme.Motion.quick, value: isActive)
     }
 }
 

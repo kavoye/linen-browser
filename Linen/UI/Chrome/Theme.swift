@@ -21,6 +21,7 @@ enum Theme {
     )
 
     static let accent = Color.blue
+    static let metaInk = Color.primary.opacity(0.5)
     static let thinkingMax = adaptive(
         dark: NSColor(red: 0.77, green: 0.64, blue: 1.00, alpha: 1),
         light: NSColor(red: 0.38, green: 0.12, blue: 0.62, alpha: 1)

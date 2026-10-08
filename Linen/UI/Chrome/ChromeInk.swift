@@ -253,6 +253,7 @@ struct ChromeIcon: View {
     var tint: Color?
     var extent: CGFloat?
     var help: String = ""
+    var glyphOffset: CGSize = .zero
     let action: () -> Void
 
     @State private var hovering = false
@@ -280,8 +281,10 @@ struct ChromeIcon: View {
             Image(systemName: symbol)
                 .font(.system(size: size, weight: weight))
                 .foregroundStyle(style)
+                .offset(glyphOffset)
+                .hoverLift(hovering && isEnabled)
                 .frame(width: side, height: side)
-                .hoverBackground(isActive: hovering)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)

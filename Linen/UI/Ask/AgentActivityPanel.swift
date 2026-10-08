@@ -411,7 +411,7 @@ private struct ChatUserMessage: View {
                 } else {
                     Text(verbatim: when)
                         .font(Theme.Font.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.metaInk)
                         .padding(.trailing, 4)
                 }
             }
@@ -508,12 +508,11 @@ private struct ChatTurnFooter: View {
                 Text(verbatim: label)
                     .font(Theme.Font.caption)
                     .monospacedDigit()
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Theme.metaInk)
             }
 
             if stepCount > 0 || hasDetails {
                 StepsToggle(count: stepCount, hasDetails: hasDetails, isShown: stepsAreShown, action: onToggleSteps)
-                    .foregroundStyle(.tertiary)
             }
 
             if showsActions && !isThinking {
@@ -550,8 +549,9 @@ private struct StepsToggle: View {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .bold))
                     .rotationEffect(.degrees(isShown ? 0 : -90))
+                    .hoverLift(hovering)
             }
-            .foregroundStyle(hovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+            .foregroundStyle(hovering ? Color.primary : Theme.metaInk)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -597,7 +597,8 @@ private struct ChatAction: View {
             Image(systemName: symbol)
                 .font(.system(size: 11, weight: .regular))
                 .imageScale(.small)
-                .foregroundStyle(hovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+                .foregroundStyle(hovering ? Color.primary : Theme.metaInk)
+                .hoverLift(hovering)
                 .frame(width: Metrics.action, height: Metrics.action)
                 .contentShape(Rectangle())
         }

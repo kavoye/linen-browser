@@ -643,8 +643,9 @@ private struct LyricsGlyph: View {
         Image(systemName: symbol)
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.white.opacity(hovering ? 0.95 : 0.55))
+            .hoverLift(hovering)
             .frame(width: 22, height: 22)
-            .hoverBackground(isActive: hovering)
+            .contentShape(Rectangle())
             .environment(\.chromeIsLight, false)
             .environment(\.chromeWash, .of(nil, isLight: false))
     }

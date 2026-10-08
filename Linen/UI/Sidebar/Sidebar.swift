@@ -463,7 +463,7 @@ struct SidebarDownloadsButton: View {
             VStack(spacing: isRunning ? 3 : 0) {
                 Image(systemName: "arrow.down")
                     .font(Theme.Font.rowTitle)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(hovering ? .primary : .secondary)
 
                 Capsule()
                     .fill(Theme.Wash.strong)
@@ -480,8 +480,8 @@ struct SidebarDownloadsButton: View {
                     .opacity(isRunning ? 1 : 0)
                     .frame(height: isRunning ? 2 : 0)
             }
+            .hoverLift(hovering)
             .frame(width: 28, height: 28)
-            .hoverBackground(isActive: hovering)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

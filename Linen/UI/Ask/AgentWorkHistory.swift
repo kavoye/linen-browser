@@ -63,6 +63,7 @@ private struct AgentReasoningSummary: View {
     let summaries: [String]
 
     @State private var isExpanded = false
+    @State private var hovering = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -77,10 +78,14 @@ private struct AgentReasoningSummary: View {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 8, weight: .bold))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .hoverLift(hovering)
                 }
+                .foregroundStyle(hovering ? .primary : .secondary)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .animation(Theme.Motion.quick, value: hovering)
             .accessibilityValue(isExpanded ? Text("Expanded") : Text("Collapsed"))
 
             if isExpanded {
@@ -99,6 +104,5 @@ private struct AgentReasoningSummary: View {
         }
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 8)
     }
 }

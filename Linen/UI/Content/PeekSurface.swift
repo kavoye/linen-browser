@@ -188,6 +188,7 @@ private struct PeekControl: View {
                     Circle().strokeBorder(.white.opacity(hovering ? 0.28 : 0.1), lineWidth: 0.5)
                 }
                 .contentShape(Circle())
+                .hoverLift(hovering)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

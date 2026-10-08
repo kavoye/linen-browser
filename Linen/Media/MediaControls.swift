@@ -478,8 +478,9 @@ struct MediaButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .semibold))
+                .hoverLift(hovering)
                 .frame(width: (size * 1.5).rounded(), height: (size * 1.5).rounded())
-                .hoverBackground(isActive: hovering)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .foregroundStyle(tint ?? (hovering ? Color.primary : Color.secondary))
