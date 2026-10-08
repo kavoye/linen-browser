@@ -367,6 +367,17 @@ struct PageInteractionTests {
         #expect(collected == description)
     }
 
+    @Test func scopeCoversEveryMatchingElement() async {
+        let view = await page(
+            "<input type='hidden' name='token'><button>Outside</button><section><input aria-label='First'></section><section><textarea aria-label='Second'></textarea></section>")
+        let sections = await PageDriver.snapshot(view, scope: "section")
+        #expect(sections.contains("\"First\"") && sections.contains("\"Second\""), "\(sections)")
+        #expect(!sections.contains("button \"Outside\""))
+        let fields = await PageDriver.snapshot(view, scope: "textarea, input")
+        #expect(fields.contains("\"First\"") && fields.contains("\"Second\""), "\(fields)")
+        #expect((await PageDriver.snapshot(view, scope: "article")) == "No element matches that scope.")
+    }
+
     @Test func sensitiveEditableTextIsRedactedAndCannotBeOverwritten() async {
         let view = await page("<div contenteditable='true' aria-label='Recovery phrase'>hidden-recovery-words</div>")
         let output = await PageDriver.snapshot(view)

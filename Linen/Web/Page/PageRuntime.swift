@@ -38,11 +38,6 @@ nonisolated enum PageRuntime {
         return rect.bottom > 0 && rect.top < view.innerHeight && rect.right > 0 && rect.left < view.innerWidth
           && (!view.frameElement || inViewport(view.frameElement));
       };
-      const within = (root, el) => {
-        for (let node = el; node; node = parentOf(node)) if (node === root) return true;
-        return false;
-      };
-
       const disabled = el => {
         for (let node = el; node; node = parentOf(node)) {
           if (node.getAttribute('aria-disabled') === 'true') return true;
@@ -355,10 +350,11 @@ nonisolated enum PageRuntime {
         if (start > 0 && /[\uDC00-\uDFFF]/.test(text[start] || '')) start++;
         let end = Math.min(text.length, start + textLimit);
         if (end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1] || '')) end--;
-        let root = null;
-        if (scope) { try { root = document.querySelector(scope); } catch (e) {} }
-        if (scope && !root) return { error: 'No element matches that scope.' };
-        const candidates = all.filter(c => (!root || within(root, window.__linenRefs[c.r - 1])) && (!viewportOnly || c.vp));
+        let roots = null;
+        if (scope) { try { roots = new Set(document.querySelectorAll(scope)); } catch (e) {} }
+        if (scope && !roots?.size) return { error: 'No element matches that scope.' };
+        const inScope = el => { for (let node = el; node; node = parentOf(node)) if (roots.has(node)) return true; return false; };
+        const candidates = all.filter(c => (!roots || inScope(window.__linenRefs[c.r - 1])) && (!viewportOnly || c.vp));
         const availabilityOrder = (a, b) => Number(b.vp) - Number(a.vp) || Number(!!a.d) - Number(!!b.d);
         if (terms.length) candidates.sort((a, b) => {
           const score = c => terms.reduce((n, t) => n + (c.l.toLowerCase().includes(t) ? 10 : 0), 0);
