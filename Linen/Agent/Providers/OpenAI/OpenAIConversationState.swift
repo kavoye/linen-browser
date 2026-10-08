@@ -78,7 +78,7 @@ nonisolated struct OpenAIConversationState: Codable, Equatable, Sendable {
 
     static func items(_ entry: Transcript.Entry) throws -> [OpenAIJSON] {
         switch entry {
-        case .instructions:
+        case .instructions, .reasoning:
             return []
         case .prompt(let value):
             return [["role": "user", "content": .array(content(value.segments))]]

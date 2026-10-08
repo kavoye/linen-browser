@@ -640,6 +640,8 @@ final class AnyLanguageModelAgent: AgentRunner {
                 }.count
             case .response(let value):
                 prose += text(in: value.segments).count
+            case .reasoning(let value):
+                prose += text(in: value.segments).count
             case .toolCalls(let calls):
                 machine += calls.reduce(0) { partial, call in
                     partial + call.toolName.count + call.arguments.jsonString.count

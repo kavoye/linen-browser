@@ -99,7 +99,7 @@ struct AgentContextCompactor {
     private func evidence(in transcript: Transcript) -> [Evidence] {
         transcript.flatMap { entry -> [Evidence] in
             switch entry {
-            case .instructions:
+            case .instructions, .reasoning:
                 return []
             case .prompt(let value):
                 return [Evidence(role: "user", text: text(value.segments))]
