@@ -28,6 +28,45 @@ enum ConfirmAlert {
         return response == .alertFirstButtonReturn
     }
 
+    enum FolderDeletion {
+        case keepTabs
+        case closeTabs
+    }
+
+    static func deleteFolder(named name: String, tabCount: Int) async -> FolderDeletion? {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Delete “\(name)”?")
+        if tabCount == 0 {
+            alert.informativeText = String(localized: "The folder is empty.")
+        } else {
+            alert.informativeText = String(localized: "This folder has \(tabCount) tabs.")
+        }
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: String(localized: "Delete Folder")).hasDestructiveAction = true
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        if tabCount > 0 {
+            alert.showsSuppressionButton = true
+            if tabCount == 1 {
+                alert.suppressionButton?.title = String(localized: "Close this tab too")
+            } else {
+                alert.suppressionButton?.title = String(localized: "Close these tabs too")
+            }
+            alert.suppressionButton?.state = .off
+        }
+
+        let response: NSApplication.ModalResponse
+        if let window = NSApp.keyWindow {
+            response = await withCheckedContinuation { continuation in
+                alert.beginSheetModal(for: window) { continuation.resume(returning: $0) }
+            }
+        } else {
+            response = alert.runModal()
+        }
+
+        guard response == .alertFirstButtonReturn else { return nil }
+        return alert.suppressionButton?.state == .on ? .closeTabs : .keepTabs
+    }
+
     static func organize(folders: [(name: String, count: Int)]) async -> Bool {
         let alert = NSAlert()
         alert.messageText = String(localized: "Organize your tabs into folders?")

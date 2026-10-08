@@ -270,20 +270,16 @@ private enum FolderContextMenu {
             symbol: "trash",
             action: { [weak browser, weak folder] in
                 guard let browser, let folder else { return }
-                let kept = browser.allTabs(in: folder).count
-                let detail: LocalizedStringResource = switch kept {
-                case 0:
-                    "The folder is empty."
-                default:
-                    "Its \(kept) tabs stay in the sidebar."
-                }
+                let count = browser.allTabs(in: folder).count
                 Task {
-                    guard await ConfirmAlert.destructive(
-                        "Delete “\(folder.name)”?",
-                        detail: detail,
-                        verb: "Delete Folder"
-                    ) else { return }
-                    browser.deleteFolder(folder)
+                    switch await ConfirmAlert.deleteFolder(named: folder.name, tabCount: count) {
+                    case .keepTabs:
+                        browser.deleteFolder(folder)
+                    case .closeTabs:
+                        browser.close([.folder(folder.id)])
+                    case nil:
+                        break
+                    }
                 }
             }
         ))

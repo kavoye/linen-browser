@@ -1496,11 +1496,17 @@
     "Close These Tabs" : {
       "comment" : "Destructive context-menu command on a sidebar row that holds two to four pages shown at once; it closes all of them. Title Case."
     },
+    "Close these tabs too" : {
+      "comment" : "Checkbox in the delete-folder alert, shown when the folder holds more than one tab. When on, deleting the folder also closes those tabs. Sentence case, no period."
+    },
     "Close This Page" : {
       "comment" : "Destructive context-menu command on a page shown beside another; it closes that page's tab. Title Case. This distinguishes it from Close Other Page directly below it."
     },
     "Close this pinned tab?" : {
       "comment" : "Title of the alert shown when ⌘W would close a tab that carries a pin. The pin lives on the tab, so both go. Sentence case, question mark."
+    },
+    "Close this tab too" : {
+      "comment" : "Checkbox in the delete-folder alert, shown when the folder holds exactly one tab. When on, deleting the folder also closes that tab. Sentence case, no period."
     },
     "Close Window" : {
       "comment" : "Standard macOS File menu item that closes the window. Use the system's own wording. Title Case."
@@ -2512,29 +2518,6 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "Its %lld pages of history, tabs, and sign-ins are removed from this Mac. Downloaded files stay in the Downloads folder."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Its %lld tabs stay in the sidebar." : {
-      "comment" : "Reassuring detail line of that same delete-folder alert; %lld is how many tabs the folder holds. “Its” refers to the folder, and the point is that the tabs are not closed — they move back out into the sidebar list. Full sentence with a period.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Its %lld tab stays in the sidebar."
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Its %lld tabs stay in the sidebar."
                 }
               }
             }
@@ -5115,6 +5098,29 @@
     },
     "This file type isn’t supported. Attach an image, PDF, RTF, or text file." : {
 
+    },
+    "This folder has %lld tabs." : {
+      "comment" : "Detail line of the delete-folder alert; %lld is how many tabs the folder holds. States the count only; the checkbox below decides whether those tabs close. Full sentence with a period.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This folder has %lld tab."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "This folder has %lld tabs."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "This image couldn’t be prepared." : {
 
