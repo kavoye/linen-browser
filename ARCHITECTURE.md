@@ -199,6 +199,6 @@ for a resource they never use.
 `Linen.xctestplan` turns on per-test timeouts: 120 seconds by default, 300 at
 most. A stalled test times out and reports its name without blocking the full run.
 
-CI runs the full suite with code coverage and rejects app-target coverage below
-the repository floor. See [CONTRIBUTING.md](CONTRIBUTING.md) for the change
-checklist.
+CI runs the full suite without code coverage. To measure coverage, run
+`Tools/check-coverage.sh` on a local result bundle. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the change checklist.

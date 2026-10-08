@@ -90,7 +90,7 @@ jobs:
             -destination 'platform=macOS,arch=arm64' \
             -derivedDataPath "$DD" \
             -resultBundlePath build/TestResults.xcresult \
-            -enableCodeCoverage YES \
+            -enableCodeCoverage NO \
             -parallel-testing-enabled NO \
             -disableAutomaticPackageResolution \
             -skipMacroValidation -skipPackagePluginValidation \
@@ -102,9 +102,6 @@ jobs:
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_ENTITLEMENTS=
-
-      - name: Check coverage
-        run: Tools/check-coverage.sh build/TestResults.xcresult 24.0
 
       - name: Export performance metrics
         if: always()

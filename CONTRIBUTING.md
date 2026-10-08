@@ -79,14 +79,12 @@ identify a real format, service, import source, or compatibility contract.
 - Do not hide a persistent failure with `withKnownIssue`. Either make the test
   deterministic or keep the unsupported check out of the automated suite.
 
-Run the full suite before opening a pull request. CI also measures app-target
-line coverage and rejects regressions below the repository floor. CI runs
+Run the full suite before opening a pull request. CI runs
 `Tools/check-format.sh`, which fails on SwiftLint violations (`brew install
 swiftlint` to run it locally). The configuration is `.swiftlint.yml`. Put a
 switch case’s body on the line after the label. Do not write a declaration or
-control-flow body inside single-line braces; short closures, `guard … else
-{ return }` and accessor lists (`{ get set }`) stay inline. Coverage thresholds
-do not replace meaningful assertions. CI also checks the
+control-flow body inside single-line braces. Short closures, `guard … else
+{ return }` and accessor lists (`{ get set }`) stay inline. CI also checks the
 blank-tab, tab-switching, command-palette, Start Page and Ask surface budgets in
 `Tools/check-performance.sh`. Each budget is about twice the measured
 baseline to allow for roughly 50% variation on shared runners. These checks
