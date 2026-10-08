@@ -30,20 +30,28 @@ extension PageDriver {
               role: el.getAttribute('role'), expanded: el.getAttribute('aria-expanded'),
               checked: el.checked ?? el.getAttribute('aria-checked'),
               bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } };
+            const cost = value => new TextEncoder().encode(JSON.stringify(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')).length;
+            const budget = \(max(500, outputBudget.totalCharacters - 400));
+            const text = el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' && !['checkbox','radio'].includes(el.type) ? el.value
+              : el.isContentEditable ? el.innerText : null;
             if (R.isSensitiveField(el)) result.value = '(hidden)';
             else if (el.tagName === 'INPUT') {
               result.type = el.type;
-              if (['range','color','date','datetime-local','time','month','week','number'].includes(el.type)) result.value = el.value;
               result.min = el.min.slice(0, 100); result.max = el.max.slice(0, 100);
               result.step = el.step.slice(0, 100); result.placeholder = el.placeholder.slice(0, 200);
             }
-            else if (el.options) {
+            if (text !== null && !R.isSensitiveField(el)) {
+              result.value = text.slice(\(start));
+              result.valueLength = text.length;
+              while (result.value.length > 1 && cost(result) > budget) result.value = result.value.slice(0, Math.ceil(result.value.length * 0.9));
+              if (\(start) + result.value.length < text.length) result.nextOffset = \(start) + result.value.length;
+            }
+            else if (el.options && !R.isSensitiveField(el)) {
               result.options = Array.from(el.options).slice(\(start), \(start + 12)).map(o => ({
                 label: R.norm(o.text).slice(0, 100), value: o.value.slice(0, 100),
                 disabled: o.disabled || !!o.closest('optgroup[disabled]'), selected: o.selected }));
               result.totalOptions = el.options.length;
-              const cost = value => new TextEncoder().encode(JSON.stringify(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')).length;
-              while (result.options.length > 1 && cost(result) > \(max(500, outputBudget.totalCharacters - 400))) result.options.pop();
+              while (result.options.length > 1 && cost(result) > budget) result.options.pop();
               if (\(start) + result.options.length < el.options.length) result.nextOffset = \(start) + result.options.length;
             }
             return JSON.stringify(result);

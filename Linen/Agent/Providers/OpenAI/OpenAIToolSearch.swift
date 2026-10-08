@@ -15,7 +15,7 @@ nonisolated enum OpenAIToolSearch {
               functions: ["searchWeb", "navigate", "readPage", "readArticle", "goBack"]),
         .init(name: "browser_interaction", description: "Click page controls, fill forms, select options, set checkboxes, scroll, hover, and press keys.",
               functions: ["clickOnPage", "typeOnPage", "fillFields", "selectOption", "setChecked", "scrollPage", "hoverOnPage", "pressKey"]),
-        .init(name: "browser_observation", description: "Inspect control state and dropdown options, wait for page changes, or capture the page viewport.",
+        .init(name: "browser_observation", description: "Inspect control state, full field values and dropdown options, wait for page changes, or capture the page viewport.",
               functions: ["inspectControl", "waitForPage", "screenshotPage"]),
         .init(name: "browser_visual", description: "Move, click, double-click, type, or dispatch drag events using screenshot coordinates.",
               functions: ["movePointer", "clickAtPoint", "typeAtPointer", "doubleClickAtPoint", "dragOnPage"]),

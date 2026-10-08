@@ -172,7 +172,7 @@ enum AgentInstructions {
         The batch returns verified refs, individual failures and fresh controls. Continue only with unfinished supported fields. \
         Copy the complete observationID exactly, never abbreviate it. Reuse returned observations without another read.
         - Use lookingFor, scope, viewportOnly, and continuation offsets to read only needed content. Use \
-        inspectControl for dropdown options, setChecked for an explicit checked state, waitForPage for \
+        inspectControl for full field values and dropdown options, setChecked for an explicit checked state, waitForPage for \
         asynchronous changes, and screenshotPage when visual layout matters. If a visible control has no \
         usable ref, use screenshot pixel coordinates with movePointer or clickAtPoint. The browser shows \
         the assistant pointer before acting. Use typeAtPointer after a visual click focuses an editable field. \

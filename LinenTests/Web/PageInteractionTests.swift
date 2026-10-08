@@ -345,6 +345,28 @@ struct PageInteractionTests {
         #expect(data.base64EncodedString().utf8.count < MCPMessageFramer.maximumBytes - 30_000)
     }
 
+    @Test func longFieldValuesAreFlaggedAndInspectableInFull() async {
+        let keywords = "browser,tabs,privacy,ad blocker,split view,picture in picture,reader,lyrics,safari alternative"
+        let description = String(repeating: "Line of description text.\n", count: 400)
+        let view = await page(
+            "<input aria-label='Keywords' value='\(keywords)'><textarea aria-label='Description'>\(description)</textarea>")
+        let output = await PageDriver.snapshot(view)
+        #expect(output.contains("field \"Keywords\" = \"\(keywords)\""), "\(output)")
+        #expect(output.contains("(truncated; inspectControl for the full value)"))
+        let inspected = await PageDriver.inspectControl(ref: 1, in: view)
+        #expect(inspected.contains("\"value\":\"\(keywords)\""), "\(inspected)")
+        var collected = ""
+        var offset = 0
+        for _ in 0..<10 {
+            let part = await PageDriver.inspectControl(ref: 2, offset: offset, in: view)
+            let json = try? JSONSerialization.jsonObject(with: Data(part.split(separator: "\n")[1].utf8)) as? [String: Any]
+            collected += json?["value"] as? String ?? ""
+            guard let next = json?["nextOffset"] as? Int else { break }
+            offset = next
+        }
+        #expect(collected == description)
+    }
+
     @Test func sensitiveEditableTextIsRedactedAndCannotBeOverwritten() async {
         let view = await page("<div contenteditable='true' aria-label='Recovery phrase'>hidden-recovery-words</div>")
         let output = await PageDriver.snapshot(view)

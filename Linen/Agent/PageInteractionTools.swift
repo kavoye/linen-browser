@@ -40,7 +40,7 @@ nonisolated struct PressKeyTool: Tool {
 
 nonisolated struct InspectControlTool: Tool {
     let name = "inspectControl"
-    let description = "Inspect a control's state, bounds, and dropdown options. Use offset to continue the option list."
+    let description = "Inspect a control's state, bounds, full field value, and dropdown options. Use offset to continue a long value or the option list."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?

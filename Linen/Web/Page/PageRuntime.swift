@@ -150,7 +150,8 @@ nonisolated enum PageRuntime {
               entry.s = 1;
               entry.f = v ? 1 : 0;
             } else if (v) {
-              entry.v = v.slice(0, 30);
+              entry.v = v.slice(0, 100);
+              if (v.length > 100) entry.vt = 1;
             }
           }
           if (kind === 'select') {
@@ -158,7 +159,7 @@ nonisolated enum PageRuntime {
               entry.s = 1;
               entry.f = el.value ? 1 : 0;
             } else {
-              entry.v = el.selectedIndex >= 0 ? norm(el.options[el.selectedIndex].text).slice(0, 30) : '';
+              entry.v = el.selectedIndex >= 0 ? norm(el.options[el.selectedIndex].text).slice(0, 100) : '';
               entry.o = Array.from(el.options).slice(0, 3).map(o => norm(o.text).slice(0, 45));
               entry.oc = el.options.length;
             }

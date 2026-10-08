@@ -148,6 +148,7 @@ enum PageDriver {
                 line += (control["f"] as? Int == 1) ? " = (filled, hidden)" : " = (empty)"
             } else if let value = control["v"] as? String {
                 line += " = \"\(value)\""
+                if control["vt"] as? Int == 1 { line += " (truncated; inspectControl for the full value)" }
             }
         case "select":
             if control["s"] as? Int == 1 {

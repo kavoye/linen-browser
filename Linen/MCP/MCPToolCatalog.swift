@@ -163,9 +163,9 @@ nonisolated enum MCPToolCatalog {
                                          description: "One to 32 controls with ref, value, and select. Use true/false for checked states, #RRGGBB for colors, and numbers for ranges."),
             ]),
         Entry(
-            name: "inspectControl", description: "Inspect control state and up to twelve dropdown options.",
+            name: "inspectControl", description: "Inspect control state, the full field value, and up to twelve dropdown options.",
             parameters: [
-                tab, snapshot, ref, Parameter(name: "offset", type: "integer", description: "Option continuation offset.", required: false, minimum: 0),
+                tab, snapshot, ref, Parameter(name: "offset", type: "integer", description: "Value or option continuation offset.", required: false, minimum: 0),
             ], readOnly: true),
         Entry(
             name: "setChecked", description: "Set a checkbox, switch, or radio to the requested state.",
