@@ -13,12 +13,14 @@ extension AppCoordinator {
             settings.showsLyrics
         case .github:
             settings.showsGitHub
+        case .watches:
+            !browser.context.pageWatches.watches.isEmpty
         }
     }
 
     func setAdded(_ isAdded: Bool, _ kind: SidePanelKind) {
         switch kind {
-        case .activity:
+        case .activity, .watches:
             return
         case .lyrics:
             settings.showsLyrics = isAdded
@@ -99,6 +101,8 @@ struct SidePanelSurface: View {
             LyricsSurface(coordinator: coordinator)
         case .github:
             GitHubPanelSurface(browser: browser, coordinator: coordinator)
+        case .watches:
+            WatchesPanelSurface(center: browser.context.pageWatches, coordinator: coordinator)
         case nil:
             Spacer(minLength: 0)
         }

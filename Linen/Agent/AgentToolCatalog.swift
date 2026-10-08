@@ -172,6 +172,27 @@ nonisolated enum AgentToolCatalog {
             category: .media,
             isCore: false
         ),
+        AgentToolDescriptor(
+            id: "watchPage",
+            title: "Watch Pages",
+            summary: "Check a page on a schedule and notify you when it changes.",
+            category: .research,
+            isCore: false
+        ),
+        AgentToolDescriptor(
+            id: "listWatches",
+            title: "List Watched Pages",
+            summary: "See which pages are being watched.",
+            category: .research,
+            isCore: false
+        ),
+        AgentToolDescriptor(
+            id: "stopWatch",
+            title: "Stop Watching",
+            summary: "Stop checking a watched page.",
+            category: .research,
+            isCore: false
+        ),
     ]
 
     static func descriptors(in category: AgentToolDescriptor.Category) -> [AgentToolDescriptor] {

@@ -37,6 +37,22 @@ struct AgentTaskLedgerTests {
         ledger.outcomes[0].blocker = "The user needs to sign in"
         #expect(ledger.completion == .blocked)
     }
+
+    @Test func aStartedWatchProvesItsOutcome() {
+        var ledger = AgentTaskLedger()
+        _ = ledger.add(id: "watch", requirement: "Tell me when the form changes")
+        _ = ledger.add(id: "other", requirement: "Something else")
+        ledger.outcomes[1].evidence = .init(url: "https://example.com", observationID: "a", matchedText: "Done", actionRevision: 0)
+        ledger.outcomes[0].blocker = "Can't verify a background watch"
+        #expect(ledger.completion == .blocked)
+
+        let confirmed = ledger.confirm(id: "watch", url: "https://forms.example", proof: "Watch started")
+        #expect(confirmed)
+        #expect(ledger.outcomes[0].blocker == nil)
+        #expect(ledger.completion == .verified)
+        let unknown = ledger.confirm(id: "missing", url: "https://forms.example", proof: "Watch started")
+        #expect(!unknown)
+    }
 }
 
 @MainActor

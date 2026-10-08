@@ -61,5 +61,14 @@ extension AgentToolkit {
         static let playVideo = "Find a video by topic and play it in a background tab."
         static let closeVideo = "Pause the video and close the media player. Keep its tab open."
         static let controlMedia = "Use pip to enter Picture in Picture, or exitPip to leave it."
+        static let watchPage = """
+            Check a page in the background on a schedule and notify the person once when it shows \
+            what they are waiting for, like a price drop, a restock or a finished build. Use this \
+            only when the person asks to be told later. Open the page first; the watch reads it \
+            signed in as the person, from their own browser. If you recorded an outcome for \
+            the watch, pass its outcomeID: a started watch is its proof, so never verify or block it.
+            """
+        static let listWatches = "List the pages being watched, with what each watch is waiting for."
+        static let stopWatch = "Stop watching a page, by watch ID or part of its title, address or condition."
     }
 }

@@ -58,6 +58,7 @@ struct AgentToolkitPolicyTests {
             "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
             "typeAtPointer", "hoverOnPage", "pressKey",
             "playVideo", "closeVideo", "controlMedia",
+            "watchPage", "listWatches", "stopWatch",
         ])
     }
 
@@ -91,6 +92,9 @@ struct AgentToolkitPolicyTests {
             ("playVideo", { await subject.playVideo(topic: "music") }),
             ("closeVideo", { subject.closeVideo() }),
             ("controlMedia", { subject.controlMedia(action: "pip") }),
+            ("watchPage", { await subject.watchPage(condition: "back in stock", everyMinutes: 60) }),
+            ("listWatches", { subject.listWatches() }),
+            ("stopWatch", { subject.stopWatch(matching: "") }),
         ]
 
         for (name, operation) in operations {

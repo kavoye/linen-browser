@@ -47,6 +47,7 @@ final class BrowserProfileContext {
     lazy var history = HistoryStore(database: database)
     lazy var tabArchive = TabArchive(database: database)
     lazy var conversationLog = ConversationLog(database: database)
+    lazy var pageWatches = PageWatchCenter.live(for: self)
     lazy var extensions = ExtensionManager(profile: profile, dataStore: dataStore)
     lazy var github = GitHubPanelModel(
         profileID: profile.id,

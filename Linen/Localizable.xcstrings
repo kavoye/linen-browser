@@ -1524,6 +1524,9 @@
     "cheapest" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the least expensive to use. Lowercase superlative, and the space is very tight."
     },
+    "Check a page on a schedule and notify you when it changes." : {
+      "comment" : "Settings > Intelligence: caption for the Watch Pages assistant tool."
+    },
     "Check activity" : {
 
     },
@@ -1541,6 +1544,9 @@
     },
     "Check for Updates…" : {
 
+    },
+    "Check Now" : {
+      "comment" : "Watches tab: context menu item that checks the watched page right away."
     },
     "Check the details and try again." : {
 
@@ -2465,6 +2471,20 @@
     "European models, with small and fast tiers." : {
       "comment" : "One-line description of the Mistral provider in the provider list in Settings, also shown in that row's tooltip. “Tiers” means the sizes of model the vendor offers."
     },
+    "Every %@" : {
+      "comment" : "Watches tab: check schedule before the first check. %@ is a duration, e.g. “1 hour”."
+    },
+    "Every %@ · Checked %@" : {
+      "comment" : "Watches tab: check schedule and last check. First %@ is a duration, e.g. “1 hour”; second is a relative time, e.g. “5 minutes ago”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Every %1$@ · Checked %2$@"
+          }
+        }
+      }
+    },
     "Every provider you’ve set up." : {
 
     },
@@ -3170,6 +3190,9 @@
     "Linen can’t confirm that this certificate belongs to %@. Somebody may be impersonating the website." : {
 
     },
+    "Linen can’t read this page anymore, so it stopped watching it." : {
+      "comment" : "Notification body when a watched page failed to load three times in a row and the watch ended."
+    },
     "Linen chooses these models unless you enter different IDs for your API setup." : {
 
     },
@@ -3221,6 +3244,9 @@
     "Linen sends the access token to your OpenAI provider. The refresh token stays in your Keychain, and Linen sends it only to the authorization server." : {
 
     },
+    "Linen stopped watching this page after 30 days." : {
+      "comment" : "Notification body when a page watch ends because it reached its 30-day limit."
+    },
     "Linen stores saved details on this Mac." : {
 
     },
@@ -3244,6 +3270,9 @@
     },
     "List Tabs" : {
 
+    },
+    "List Watched Pages" : {
+      "comment" : "Settings > Intelligence: name of the assistant tool that lists watched pages. Also its activity step title."
     },
     "Listen" : {
       "comment" : "Reader view toolbar button that starts reading the article aloud."
@@ -4185,6 +4214,9 @@
     },
     "Pages" : {
       "comment" : "Heading over the group of Settings pages matched by a search, shown beside a separate group of individual settings. Plural noun meaning the pages of the Settings window. Narrow column, keep it short."
+    },
+    "Pages the assistant checks for you." : {
+      "comment" : "Side Panel: description of the Watches tab."
     },
     "Parts of this page aren’t encrypted" : {
       "comment" : "Label for the address bar's warning glyph on a mixed-content page: the page is served over https but pulls some content over http. Sentence case, no final period; keep the curly apostrophe."
@@ -5148,6 +5180,9 @@
     "See the titles of every tab in the window." : {
 
     },
+    "See which pages are being watched." : {
+      "comment" : "Settings > Intelligence: caption for the List Watched Pages assistant tool."
+    },
     "See your location" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
     },
@@ -5601,6 +5636,9 @@
     "Stop and Run" : {
       "comment" : "Tooltip on the microphone button while it is listening: one click ends the utterance and sends what was heard to the assistant. Two verbs on one control, Title Case; alternates with “Click to Talk”."
     },
+    "Stop checking a watched page." : {
+      "comment" : "Settings > Intelligence: caption for the Stop Watching assistant tool."
+    },
     "Stop Listening" : {
       "comment" : "Command that turns the microphone off. The same command reads “Start Listening” while it is off. Title Case."
     },
@@ -5615,6 +5653,12 @@
     },
     "Stop the reply and speak" : {
 
+    },
+    "Stop Watching" : {
+      "comment" : "Ends a page watch. Settings > Intelligence: name of the assistant tool. Watches tab: the stop button and context menu item."
+    },
+    "Stop watching page" : {
+      "comment" : "Assistant activity step title, shown while the assistant ends a page watch."
     },
     "Stop windows a website opens on its own." : {
 
@@ -5902,6 +5946,9 @@
     },
     "The page changed before the assistant could use it." : {
 
+    },
+    "The page changed." : {
+      "comment" : "Notification body when a watched page changed and the model gave no summary of the change."
     },
     "The page couldn’t be saved." : {
       "comment" : "Message of the warning shown when the web archive file could not be written. The reason supplied by macOS follows below it. Curly apostrophe."
@@ -6502,6 +6549,9 @@
     "Waiting for %@" : {
       "comment" : "Watches tab: what a watch waits for. %@ is the person's own words, e.g. “price below $50”."
     },
+    "Waiting for any change" : {
+      "comment" : "Watches tab: a watch with no condition, which notifies on any change to the page."
+    },
     "Waiting for approval…" : {
 
     },
@@ -6519,6 +6569,15 @@
     },
     "Watch every network request the browser makes" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Watch means observe. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
+    },
+    "Watch page" : {
+      "comment" : "Assistant activity step title, shown while the assistant sets up a page watch."
+    },
+    "Watch Pages" : {
+      "comment" : "Settings > Intelligence: name of the assistant tool that checks a page on a schedule and sends a notification when it changes."
+    },
+    "Watches" : {
+      "comment" : "Side Panel tab that lists the web pages the assistant checks on a schedule."
     },
     "Weather this weekend" : {
 

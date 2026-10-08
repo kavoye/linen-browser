@@ -92,6 +92,9 @@ struct AgentToolsTests {
             "playVideo",
             "closeVideo",
             "controlMedia",
+            "watchPage",
+            "listWatches",
+            "stopWatch",
         ])
     }
 

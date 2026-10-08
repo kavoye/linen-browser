@@ -12,6 +12,7 @@ nonisolated enum AgentDiagnosticPrivacy {
         "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome", "doubleClickAtPoint", "dragOnPage",
         "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
         "readArticle",
+        "watchPage", "listWatches", "stopWatch",
     ]
 
     static func tool(_ name: String) -> String {
@@ -74,6 +75,9 @@ nonisolated enum AgentDiagnosticPrivacy {
         "playVideo": String(localized: "Control media"),
         "closeVideo": String(localized: "Control media"),
         "controlMedia": String(localized: "Control media"),
+        "watchPage": String(localized: "Watch page"),
+        "listWatches": String(localized: "List Watched Pages"),
+        "stopWatch": String(localized: "Stop watching page"),
     ]
 
     static func title(for tool: String) -> String {

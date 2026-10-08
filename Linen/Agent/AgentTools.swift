@@ -394,6 +394,61 @@ nonisolated struct ControlMediaTool: Tool {
     }
 }
 
+nonisolated struct WatchPageTool: Tool {
+    let name = "watchPage"
+    let description = AgentToolkit.Descriptions.watchPage
+    let toolkit: AgentToolkit
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Page ID or title. Omit for the active tab.")
+        var page: String?
+        @Guide(description: "What the person is waiting for, in their words, like \"price below $50\" or \"back in stock\". Empty for any change.")
+        var condition: String
+        @Guide(description: "Minutes between checks, from 5 to 1440. Use 60 unless the person asks.")
+        var everyMinutes: Int
+        @Guide(description: "The recorded outcome this watch fulfils, if any.")
+        var outcomeID: String?
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.withPageContext(page: arguments.page, observationID: nil) {
+            await toolkit.watchPage(
+                condition: arguments.condition, everyMinutes: arguments.everyMinutes, outcomeID: arguments.outcomeID
+            )
+        }
+    }
+}
+
+nonisolated struct ListWatchesTool: Tool {
+    let name = "listWatches"
+    let description = AgentToolkit.Descriptions.listWatches
+    let toolkit: AgentToolkit
+
+    @Generable
+    struct Arguments {}
+
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.listWatches()
+    }
+}
+
+nonisolated struct StopWatchTool: Tool {
+    let name = "stopWatch"
+    let description = AgentToolkit.Descriptions.stopWatch
+    let toolkit: AgentToolkit
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Watch ID, or part of the page title, address or condition")
+        var reference: String
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.stopWatch(matching: arguments.reference)
+    }
+}
+
 nonisolated enum AgentToolTier: Hashable, Sendable {
     case core
     case full
@@ -452,6 +507,9 @@ func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any 
             PlayVideoTool(toolkit: toolkit),
             CloseVideoTool(toolkit: toolkit),
             ControlMediaTool(toolkit: toolkit),
+            WatchPageTool(toolkit: toolkit),
+            ListWatchesTool(toolkit: toolkit),
+            StopWatchTool(toolkit: toolkit),
         ]
     }
 }

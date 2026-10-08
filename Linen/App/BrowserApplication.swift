@@ -69,6 +69,7 @@ final class BrowserApplication {
         let catalog = ProfileStore.shared
         for profile in catalog.profiles {
             let context = BrowserProfileContext.shared(for: profile)
+            context.pageWatches.resume()
             for saved in BrowserModel.savedWindows(in: context.database).reversed() {
                 var id = saved.id
                 if id == BrowserModel.legacyWindowID || windows.contains(where: { $0.windowID == id }) {
@@ -176,6 +177,18 @@ final class BrowserApplication {
         target.openFromAnotherApp(urls)
     }
 
+    func openWatchedPage(_ url: URL, profileID: UUID) {
+        guard isReady,
+              let profile = ProfileStore.shared.profiles.first(where: { $0.id == profileID })
+        else {
+            openFromAnotherApp([url])
+            return
+        }
+        let target = windows.last { $0.profiles.current.id == profileID }
+            ?? newWindow(profile: profile)
+        target.openFromAnotherApp([url])
+    }
+
     var canReopenWindow: Bool {
         mostRecentlyClosedWindow() != nil
     }
@@ -214,6 +227,9 @@ final class BrowserApplication {
             self?.coordinator(for: webView)?.browser.tabs.first { $0.isMaterialised && $0.webView === webView }
         }
         NotificationBridge.shared.tabResolver = GeolocationBridge.shared.tabResolver
+        NotificationBridge.shared.openWatchedPage = { [weak self] url, profileID in
+            self?.openWatchedPage(url, profileID: profileID)
+        }
         TabWebView.refreshHoverShield = { [weak self] in
             self?.windows.forEach { $0.applyHoverShield() }
         }

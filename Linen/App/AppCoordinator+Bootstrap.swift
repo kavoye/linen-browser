@@ -319,6 +319,10 @@ extension AppCoordinator {
         applyPictureLending()
         sidePanel.setAvailable(settings.showsLyrics, for: .lyrics)
         sidePanel.setAvailable(settings.showsGitHub, for: .github)
+        context.pageWatches.onAvailabilityChange = { hasWatches in
+            targets().forEach { $0.sidePanel.setAvailable(hasWatches, for: .watches) }
+        }
+        sidePanel.setAvailable(!context.pageWatches.watches.isEmpty, for: .watches)
         updateWindowAppearance()
         browser.downloads.webViewProvider = {
             let windows = targets()

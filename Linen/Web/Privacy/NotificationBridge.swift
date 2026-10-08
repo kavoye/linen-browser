@@ -14,6 +14,10 @@ final class NotificationBridge: NSObject {
 
     var tabResolver: ((WKWebView) -> BrowserTab?)?
     var linkOpener: ((URL, UUID?) -> Void)?
+    var openWatchedPage: ((URL, UUID) -> Void)?
+
+    private static let watchedURLKey = "linen.watch.url"
+    private static let watchedProfileKey = "linen.watch.profile"
 
     private override init() {
         super.init()
@@ -164,6 +168,33 @@ final class NotificationBridge: NSObject {
             try? await center.add(request)
         }
     }
+
+    // MARK: - Page watches
+
+    func requestAlerts() async -> Bool {
+        (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
+    }
+
+    func announce(_ watch: PageWatch, _ notice: PageWatchCenter.Notice, profileID: UUID) {
+        let content = UNMutableNotificationContent()
+        content.title = watch.title.isEmpty ? watch.place : watch.title
+        content.subtitle = watch.place
+        switch notice {
+        case .met(let message):
+            content.body = message
+            content.sound = .default
+        case .unreachable:
+            content.body = String(localized: "Linen can’t read this page anymore, so it stopped watching it.")
+        case .expired:
+            content.body = String(localized: "Linen stopped watching this page after 30 days.")
+        }
+        content.userInfo = [
+            Self.watchedURLKey: watch.url.absoluteString,
+            Self.watchedProfileKey: profileID.uuidString,
+        ]
+        let request = UNNotificationRequest(identifier: watch.id.uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
 }
 
 // MARK: - WKScriptMessageHandler
@@ -196,6 +227,13 @@ extension NotificationBridge: UNUserNotificationCenterDelegate {
     ) async {
         NSApp.activate()
         let info = response.notification.request.content.userInfo
+        if response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+           let address = info[Self.watchedURLKey] as? String,
+           let url = URL(string: address),
+           let profileID = (info[Self.watchedProfileKey] as? String).flatMap(UUID.init(uuidString:)) {
+            openWatchedPage?(url, profileID)
+            return
+        }
         if let link = (info["link"] as? String).flatMap(URL.init(string:)) {
             linkOpener?(link, (info["profile"] as? String).flatMap(UUID.init(uuidString:)))
         }

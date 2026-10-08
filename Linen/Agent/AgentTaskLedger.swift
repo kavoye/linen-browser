@@ -50,6 +50,16 @@ nonisolated struct AgentTaskLedger: Codable, Equatable, Sendable {
         return true
     }
 
+    mutating func confirm(id: String, url: String, proof: String) -> Bool {
+        guard let index = outcomes.firstIndex(where: { $0.id == id }) else { return false }
+        outcomes[index].evidence = Evidence(url: url, observationID: proof, matchedText: proof, actionRevision: actionRevision)
+        outcomes[index].blocker = nil
+        if completion == .verified {
+            pendingAction = nil
+        }
+        return true
+    }
+
     mutating func beginAction(_ name: String) {
         actionRevision += 1
         pendingAction = name

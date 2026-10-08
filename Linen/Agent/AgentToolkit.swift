@@ -559,6 +559,10 @@ final class AgentToolkit {
 
     // MARK: - Helpers
 
+    var browserContext: BrowserProfileContext {
+        browser.context
+    }
+
     var targetWebView: WKWebView? {
         if let page = Self.requestedPage, !page.isEmpty {
             return pageSurface(named: page)

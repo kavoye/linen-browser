@@ -8,6 +8,7 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
     case activity
     case lyrics
     case github
+    case watches
 
     var title: LocalizedStringResource {
         switch self {
@@ -17,6 +18,8 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
             "Lyrics"
         case .github:
             "GitHub"
+        case .watches:
+            "Watches"
         }
     }
 
@@ -28,6 +31,8 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
             .symbol("quote.bubble")
         case .github:
             .asset("GitHubMark")
+        case .watches:
+            .symbol("eye")
         }
     }
 
@@ -43,11 +48,13 @@ nonisolated enum SidePanelKind: String, CaseIterable, Sendable {
             "Lyrics that follow the song, from LRCLIB."
         case .github:
             "Your pull requests and notifications."
+        case .watches:
+            "Pages the assistant checks for you."
         }
     }
 
     var isRemovable: Bool {
-        self != .activity
+        self != .activity && self != .watches
     }
 
     var usesImmersiveBackdrop: Bool {

@@ -121,12 +121,16 @@ struct SidePanelTests {
 
     // MARK: - A kind turned off
 
+    @Test func onlyTheAssistantAndWatchesCannotBeRemoved() {
+        #expect(SidePanelKind.allCases.filter { !$0.isRemovable } == [.activity, .watches])
+    }
+
     @Test func aKindTurnedOffHasNoTabAtAll() {
         let panel = panel()
 
         panel.setAvailable(false, for: .lyrics)
 
-        #expect(panel.tabs.map(\.kind) == [.activity])
+        #expect(panel.tabs.map(\.kind) == [.activity, .github, .watches])
     }
 
     @Test func turningOffTheTabYouAreLookingAtStepsToTheNextOne() {
