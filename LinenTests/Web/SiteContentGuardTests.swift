@@ -142,6 +142,43 @@ final class SiteContentGuardTests {
     }
 
     /// A website's own answer outranks the setting every other website is under.
+    @Test func aPlayerKeptOffThePageIsStoppedToo() async {
+        settings.autoplay = .block
+
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
+        await playOffThePage(in: view)
+
+        #expect(await waitUntil { await self.pauses(in: view) == 1 })
+    }
+
+    @Test func aPlayerKeptOffThePageThatThePersonStartedPlays() async {
+        settings.autoplay = .block
+
+        let view = await page(guardedBy: SiteContentGuard(permissions: temporaryPermissions(), settings: settings))
+        await playOffThePage(in: view, startedByHand: true)
+
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(await pauses(in: view) == 0)
+    }
+
+    private func playOffThePage(in view: TabWebView, startedByHand: Bool = false) async {
+        _ = try? await view.evaluateJavaScript(
+            """
+            (() => {
+              Object.defineProperty(navigator, 'userActivation', {
+                configurable: true,
+                get() { return { hasBeenActive: \(startedByHand), isActive: \(startedByHand) }; }
+              });
+              const audio = document.createElement('audio');
+              window.__pauses = 0;
+              audio.pause = () => { window.__pauses += 1; };
+              audio.play().catch(() => {});
+              return true;
+            })()
+            """
+        )
+    }
+
     @Test func aWebsiteWithItsOwnAnswerIsNotUnderTheSetting() async throws {
         settings.autoplay = .allow
 

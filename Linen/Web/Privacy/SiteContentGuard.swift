@@ -94,6 +94,17 @@ final class SiteContentGuard: NSObject, WKScriptMessageHandlerWithReply {
         }
       };
       document.addEventListener('play', guard, true);
+      const watched = new WeakSet();
+      const nativePlay = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        if (!this.isConnected && !watched.has(this)) {
+          watched.add(this);
+          this.addEventListener('play', (event) => {
+            if (!this.isConnected) guard(event);
+          });
+        }
+        return nativePlay.apply(this, arguments);
+      };
 
       const release = () => {
         for (const media of state.held) {
