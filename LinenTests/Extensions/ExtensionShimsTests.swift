@@ -121,6 +121,85 @@ struct ExtensionShimsTests {
         let manifest = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect((manifest["commands"] as? NSDictionary) == commands as NSDictionary)
     }
+
+    private func write(_ text: String, to path: String, in package: URL) throws {
+        let url = package.appendingPathComponent(path)
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try text.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    private func contents(_ path: String, in package: URL) throws -> String {
+        try String(contentsOf: package.appendingPathComponent(path), encoding: .utf8)
+    }
+
+    @Test func aServiceWorkerStartsWithTheStandInsOnce() throws {
+        let package = try scratchPackage(manifest: [
+            "manifest_version": 3,
+            "background": ["service_worker": "sw.js"],
+        ])
+        defer { try? FileManager.default.removeItem(at: package) }
+        let worker = "chrome.runtime.onConnect.addListener(() => {});\n"
+        try write(worker, to: "sw.js", in: package)
+
+        #expect(ExtensionShims.ensureGapsApplied(at: package))
+        let once = try contents("sw.js", in: package)
+        #expect(once.hasPrefix(ExtensionShims.gapsSource))
+        #expect(once.hasSuffix(worker))
+
+        #expect(ExtensionShims.ensureGapsApplied(at: package))
+        #expect(try contents("sw.js", in: package) == once)
+        #expect(try scripts(at: package).isEmpty)
+    }
+
+    @Test func popupAndOptionsPagesLoadTheStandInsBeforeTheirOwnScripts() throws {
+        let package = try scratchPackage(manifest: [
+            "manifest_version": 3,
+            "action": ["default_popup": "popup/index.html"],
+            "options_ui": ["page": "/options.html"],
+        ])
+        defer { try? FileManager.default.removeItem(at: package) }
+        try write(
+            "<!doctype html><html><head><title>Popup</title><script src=\"popup.js\"></script></head></html>",
+            to: "popup/index.html", in: package
+        )
+        try write(
+            "<!doctype html><body><header>Options</header><script src=\"options.js\"></script></body>",
+            to: "options.html", in: package
+        )
+        let tag = "<script src=\"/\(ExtensionShims.gapsFileName)\"></script>"
+
+        #expect(ExtensionShims.ensureGapsApplied(at: package))
+        #expect(try contents("popup/index.html", in: package).contains("<head>" + tag + "<title>"))
+        #expect(try contents("options.html", in: package).contains("</header>" + tag + "<script src=\"options.js\">"))
+        #expect(try contents(ExtensionShims.gapsFileName, in: package) == ExtensionShims.gapsSource)
+
+        #expect(ExtensionShims.ensureGapsApplied(at: package))
+        #expect(try contents("popup/index.html", in: package).components(separatedBy: tag).count == 2)
+        #expect(try contents("options.html", in: package).components(separatedBy: tag).count == 2)
+    }
+
+    @Test func pathsThatLeaveThePackageAreLeftAlone() throws {
+        let outside = "\(UUID().uuidString).js"
+        let package = try scratchPackage(manifest: [
+            "manifest_version": 3,
+            "background": ["service_worker": "../\(outside)"],
+            "options_page": "../\(outside)",
+        ])
+        let escaped = package.deletingLastPathComponent().appendingPathComponent(outside)
+        defer {
+            try? FileManager.default.removeItem(at: package)
+            try? FileManager.default.removeItem(at: escaped)
+        }
+        try "untouched".write(to: escaped, atomically: true, encoding: .utf8)
+
+        #expect(!ExtensionShims.ensureGapsApplied(at: package))
+        #expect(try String(contentsOf: escaped, encoding: .utf8) == "untouched")
+        let gaps = package.appendingPathComponent(ExtensionShims.gapsFileName)
+        #expect(!FileManager.default.fileExists(atPath: gaps.path))
+    }
 }
 
 @MainActor
@@ -228,5 +307,30 @@ struct ExtensionShimRuntimeTests {
         #expect(result["hasPath"] as? Bool == false)
         #expect(result["samePixels"] as? Bool == true)
         #expect(result["failure"] as? String == "Unknown tab")
+    }
+
+    @Test func missingChromeAPIsGetInertStandInsAndNativeOnesStay() async throws {
+        let result = try await run(setup: """
+        const native = { addListener() {}, removeListener() {}, hasListener: () => true };
+        const nativePrivacy = { services: { passwordSavingEnabled: {} } };
+        const chrome = { webNavigation: { onCompleted: native, onTabReplaced: native } };
+        const browser = { privacy: nativePrivacy, webNavigation: {} };
+        """, body: """
+        const listener = () => {};
+        chrome.webNavigation.onHistoryStateUpdated.addListener(listener);
+        browser.webNavigation.onTabReplaced.addListener(listener);
+        return {
+            savingSettingOffered: Boolean(chrome.privacy.services.passwordSavingEnabled),
+            historyHeard: chrome.webNavigation.onHistoryStateUpdated.hasListener(listener),
+            completedKept: chrome.webNavigation.onCompleted === native,
+            replacedKept: chrome.webNavigation.onTabReplaced === native,
+            privacyKept: browser.privacy === nativePrivacy
+        };
+        """)
+        #expect(result["savingSettingOffered"] as? Bool == false)
+        #expect(result["historyHeard"] as? Bool == false)
+        #expect(result["completedKept"] as? Bool == true)
+        #expect(result["replacedKept"] as? Bool == true)
+        #expect(result["privacyKept"] as? Bool == true)
     }
 }
