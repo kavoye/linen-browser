@@ -5,26 +5,32 @@ import AppKit
 import SwiftUI
 
 struct CommandPalette: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+    let containerSize: CGSize
+    let dismiss: () -> Void
+
+    @State private var model: CommandPaletteModel?
+
+    var body: some View {
+        if let model {
+            CommandPalettePanel(model: model, containerSize: containerSize)
+        } else {
+            Color.clear
+                .onAppear {
+                    model = CommandPaletteModel(browser: browser, coordinator: coordinator, dismiss: dismiss)
+                }
+        }
+    }
+}
+
+private struct CommandPalettePanel: View {
+    let model: CommandPaletteModel
     let containerSize: CGSize
 
-    @State private var model: CommandPaletteModel
     @State private var shortcutMonitor: Any?
     @State private var focused = false
     @State private var optionHeld = false
-
-    init(
-        browser: BrowserModel,
-        coordinator: AppCoordinator,
-        containerSize: CGSize,
-        dismiss: @escaping () -> Void
-    ) {
-        self.containerSize = containerSize
-        _model = State(initialValue: CommandPaletteModel(
-            browser: browser,
-            coordinator: coordinator,
-            dismiss: dismiss
-        ))
-    }
 
     var body: some View {
         @Bindable var model = model
@@ -74,8 +80,6 @@ struct CommandPalette: View {
             watchForShortcuts(model: model)
         }
         .task {
-            focused = true
-            try? await Task.sleep(for: .milliseconds(120))
             focused = true
         }
         .onDisappear {

@@ -21,6 +21,14 @@ struct CommandPaletteField: View {
 
     @State private var closeHovering = false
 
+    private let closeHelp = Text("Close (esc)")
+    private let closeLabel = Text("Close")
+    private let clearLabel = Text("Clear")
+
+    private var closes: Bool {
+        query.isEmpty && searchSite == nil
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
@@ -67,7 +75,7 @@ struct CommandPaletteField: View {
             }
 
             Button {
-                if query.isEmpty && searchSite == nil {
+                if closes {
                     onDismiss()
                 } else {
                     query = ""
@@ -76,17 +84,49 @@ struct CommandPaletteField: View {
                     focused = true
                 }
             } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 15))
+                CommandPaletteClearGlyph(clears: !closes)
                     .foregroundStyle(closeHovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-                    .contentShape(Circle())
+                    .frame(width: 20, height: 18)
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .onHover { closeHovering = $0 }
-            .help(query.isEmpty && searchSite == nil ? Text("Close (esc)") : Text("Clear"))
-            .accessibilityLabel(query.isEmpty && searchSite == nil ? Text("Close") : Text("Clear"))
+            .help(closes ? closeHelp : clearLabel)
+            .accessibilityLabel(closes ? closeLabel : clearLabel)
         }
         .padding(.horizontal, 20)
+    }
+}
+
+/// xmark.circle.fill and delete.left.fill draw different X's, so swapping them
+/// shifts the X by a fraction of a pixel that no offset fixes. One cut-out keeps it still.
+private nonisolated struct CommandPaletteClearGlyph: Shape {
+    var clears: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let center = CGPoint(x: rect.minX + 11, y: rect.midY)
+        var outline = Path()
+        if clears {
+            let top = center.y - 7.45, bottom = center.y + 7.45
+            let tip = CGPoint(x: center.x - 10.55, y: center.y)
+            let shoulder = center.x - 3.7, right = center.x + 7.08
+            outline.move(to: CGPoint(x: (tip.x + shoulder) / 2, y: (tip.y + top) / 2))
+            outline.addArc(tangent1End: CGPoint(x: shoulder, y: top), tangent2End: CGPoint(x: right, y: top), radius: 1.5)
+            outline.addArc(tangent1End: CGPoint(x: right, y: top), tangent2End: CGPoint(x: right, y: bottom), radius: 2.75)
+            outline.addArc(tangent1End: CGPoint(x: right, y: bottom), tangent2End: CGPoint(x: shoulder, y: bottom), radius: 2.75)
+            outline.addArc(tangent1End: CGPoint(x: shoulder, y: bottom), tangent2End: tip, radius: 1.5)
+            outline.addArc(tangent1End: tip, tangent2End: CGPoint(x: shoulder, y: top), radius: 1)
+            outline.closeSubpath()
+        } else {
+            outline.addEllipse(in: CGRect(x: center.x - 7.94, y: center.y - 7.94, width: 15.88, height: 15.88))
+        }
+        let arm = 2.7
+        var cross = Path()
+        cross.move(to: CGPoint(x: center.x - arm, y: center.y - arm))
+        cross.addLine(to: CGPoint(x: center.x + arm, y: center.y + arm))
+        cross.move(to: CGPoint(x: center.x + arm, y: center.y - arm))
+        cross.addLine(to: CGPoint(x: center.x - arm, y: center.y + arm))
+        return outline.subtracting(cross.strokedPath(StrokeStyle(lineWidth: 1.2, lineCap: .round)))
     }
 }
 

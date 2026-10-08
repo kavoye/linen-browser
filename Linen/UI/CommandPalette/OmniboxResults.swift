@@ -12,6 +12,14 @@ struct OmniboxList: View {
         var rowHeight: CGFloat {
             self == .compact ? 28 : 40
         }
+
+        var hintStyle: HierarchicalShapeStyle {
+            self == .compact ? .quaternary : .tertiary
+        }
+
+        var detailStyle: HierarchicalShapeStyle {
+            self == .compact ? .tertiary : .secondary
+        }
         var stackedRowHeight: CGFloat {
             self == .compact ? 40 : 50
         }
@@ -124,7 +132,7 @@ struct OmniboxList: View {
                     Spacer(minLength: 8)
                     Text(verbatim: section.hint)
                         .font(.system(size: density == .compact ? 10 : 11))
-                        .foregroundStyle(.quaternary)
+                        .foregroundStyle(density.hintStyle)
                         .accessibilityHidden(true)
                 }
             }
@@ -259,7 +267,7 @@ private struct OmniboxRow: View {
                 if !presentation.detail.isEmpty {
                     Text(verbatim: presentation.detail)
                         .font(.system(size: density.detailSize))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(density.detailStyle)
                         .lineLimit(1)
                 }
             }
