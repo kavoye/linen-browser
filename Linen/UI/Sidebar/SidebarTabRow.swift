@@ -439,7 +439,7 @@ struct PinBadge: View {
     }
 
     var body: some View {
-        if let tab, hasPage {
+        if let tab, hasPage, !tab.isShowingSystemPage {
             ChromeIcon(
                 symbol: symbol(for: tab),
                 weight: .semibold,

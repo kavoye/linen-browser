@@ -215,8 +215,12 @@ struct AskRestingLine: View {
                     .font(.system(size: placement.textSize))
                     .foregroundStyle(.tertiary)
 
-            case .address(let host):
-                if let symbol = security.symbol {
+            case .address(let host, let pageSymbol):
+                if let pageSymbol {
+                    Image(systemName: pageSymbol)
+                        .font(.system(size: placement.textSize - 1, weight: .medium))
+                        .foregroundStyle(.secondary)
+                } else if let symbol = security.symbol {
                     Image(systemName: symbol)
                         .font(.system(size: 9.5, weight: .medium))
                         .foregroundStyle(security.tint)

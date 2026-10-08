@@ -122,7 +122,7 @@ enum AskRestingContent: Equatable {
     case notice(String)
     case status(String)
     case placeholder(String)
-    case address(String)
+    case address(String, symbol: String? = nil)
 
     var isCentred: Bool {
         switch self {
@@ -176,7 +176,15 @@ enum AskRestingContent: Equatable {
         }
         guard mirrorsPageURL, !isFocused else { return nil }
         let address = displayAddress(for: currentURL)
-        return address.isEmpty ? .placeholder(placeholder) : .address(address)
+        return address.isEmpty ? .placeholder(placeholder) : .address(address, symbol: systemSymbol(for: currentURL))
+    }
+
+    static func systemSymbol(for value: String) -> String? {
+        let url = URL(string: value)
+        if SystemPages.isStart(url) {
+            return SystemPages.startSymbol
+        }
+        return BrowserTab.InternalPage(url: url)?.symbol
     }
 
     static func displayAddress(for value: String) -> String {
