@@ -423,10 +423,17 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.browser.cycleTab(forward: false)
     }
     @objc private func switchToNextTab() {
-        coordinator.browser.switchTab(forward: true, asTap: coordinator.isControlTap)
+        switchTab(forward: true)
     }
     @objc private func switchToPreviousTab() {
-        coordinator.browser.switchTab(forward: false)
+        switchTab(forward: false)
+    }
+    private func switchTab(forward: Bool) {
+        coordinator.shiftStep.cancel()
+        coordinator.browser.switchTab(forward: forward)
+        if !NSEvent.modifierFlags.contains(.control) {
+            coordinator.browser.endTabSwitching()
+        }
     }
     @objc private func showTabAtIndex(_ sender: NSMenuItem) {
         coordinator.browser.activateTab(at: sender.tag)

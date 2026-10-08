@@ -221,6 +221,7 @@ final class BrowserModel {
     var recentlyActive: [UUID] = []
 
     var switcherRecency: [UUID]?
+    var switcherSelection: UUID?
 
     private func noteActivation(_ id: UUID) {
         recentlyActive.removeAll { $0 == id }

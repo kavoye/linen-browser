@@ -3,12 +3,20 @@
 
 import Foundation
 
-enum ModifierTap {
-    static let window: TimeInterval = 0.12
+struct ShiftStep {
+    private var isPending = false
 
-    static func isTap(downAt: TimeInterval?, now: TimeInterval) -> Bool {
-        guard let downAt else { return false }
-        return now - downAt < window
+    mutating func shiftDown(whileSwitching: Bool) {
+        isPending = whileSwitching
+    }
+
+    mutating func shiftUp() -> Bool {
+        defer { isPending = false }
+        return isPending
+    }
+
+    mutating func cancel() {
+        isPending = false
     }
 }
 
@@ -21,27 +29,46 @@ extension BrowserModel {
         switcherRecency != nil
     }
 
-    func switchTab(forward: Bool, asTap: Bool = false) {
+    var switcherTabs: [BrowserTab] {
+        guard let switcherRecency else { return [] }
+        var order = switcherRecency.compactMap { tabsByID[$0] }
+        if let active = activeTab {
+            order.removeAll { $0 === active }
+            order.insert(active, at: 0)
+        }
+        let listed = Set(order.map(\.id))
+        return order + tabs.filter { !listed.contains($0.id) }
+    }
+
+    func switchTab(forward: Bool) {
         guard tabs.count > 1 else { return }
-        let isFirstStep = !isSwitchingTabs
-        if isFirstStep {
+        if !isSwitchingTabs {
             switcherRecency = recentlyActive
+            activeTab?.refreshPreview()
         }
-        if isFirstStep, forward, asTap,
-           let previous = previouslyActiveTabID, let tab = tabsByID[previous] {
-            activate(tab)
-            return
-        }
-        cycleTab(forward: forward)
+        let order = switcherTabs
+        let current = order.firstIndex { $0.id == switcherSelection } ?? 0
+        let next = (current + (forward ? 1 : -1) + order.count) % order.count
+        switcherSelection = order[next].id
     }
 
     func endTabSwitching() {
-        guard let recency = switcherRecency else { return }
+        guard isSwitchingTabs else { return }
+        let chosen = switcherSelection.flatMap { tabsByID[$0] }
+        cancelTabSwitching()
+        if let chosen, chosen !== activeTab {
+            activate(chosen)
+        }
+    }
+
+    func endTabSwitching(choosing id: UUID) {
+        guard isSwitchingTabs else { return }
+        switcherSelection = id
+        endTabSwitching()
+    }
+
+    func cancelTabSwitching() {
         switcherRecency = nil
-        guard let landed = activeTabID else { return }
-        var restored = recency
-        restored.removeAll { $0 == landed }
-        restored.insert(landed, at: 0)
-        recentlyActive = restored
+        switcherSelection = nil
     }
 }

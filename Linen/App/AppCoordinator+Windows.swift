@@ -94,7 +94,6 @@ extension AppCoordinator {
     func windowDidResignKey() {
         extensions.focus(browser: nil)
         activation.setSuspended(true)
-        controlDownAt = nil
         browser.endTabSwitching()
         tabPreview.dismiss()
     }

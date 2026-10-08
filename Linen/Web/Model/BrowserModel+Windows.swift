@@ -25,7 +25,7 @@ extension BrowserModel {
         source.storedTree = source.reconciledTree().removing([.tab(tab.id)])
         source.tabs.remove(at: oldIndex)
         source.recentlyActive.removeAll { $0 == tab.id }
-        source.switcherRecency = nil
+        source.cancelTabSwitching()
         if source.paneInAir == tab.id {
             source.paneInAir = nil
         }

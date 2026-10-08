@@ -338,7 +338,7 @@ extension AppCoordinator {
         tabSwitchMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
             MainActor.assumeIsolated {
                 guard let self, self.isKeyWindow else { return }
-                self.controlChanged(isDown: event.modifierFlags.contains(.control), at: event.timestamp)
+                self.tabSwitchModifiersChanged(event)
                 self.noteLinkModifiers(event.modifierFlags)
             }
             return event
@@ -349,8 +349,23 @@ extension AppCoordinator {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.controlChanged(isDown: false, at: ProcessInfo.processInfo.systemUptime)
+                self?.browser.endTabSwitching()
             }
+        }
+    }
+
+    private func tabSwitchModifiersChanged(_ event: NSEvent) {
+        let flags = event.modifierFlags
+        guard flags.contains(.control) else {
+            shiftStep.cancel()
+            browser.endTabSwitching()
+            return
+        }
+        guard event.keyCode == 56 || event.keyCode == 60 else { return }
+        if flags.contains(.shift) {
+            shiftStep.shiftDown(whileSwitching: browser.isSwitchingTabs)
+        } else if shiftStep.shiftUp(), browser.isSwitchingTabs {
+            browser.switchTab(forward: false)
         }
     }
 
@@ -358,17 +373,6 @@ extension AppCoordinator {
         let wanted = flags.intersection([.command, .shift])
         guard wanted != linkModifiers else { return }
         linkModifiers = wanted
-    }
-
-    private func controlChanged(isDown: Bool, at timestamp: TimeInterval) {
-        guard isDown else {
-            controlDownAt = nil
-            browser.endTabSwitching()
-            return
-        }
-        if controlDownAt == nil {
-            controlDownAt = timestamp
-        }
     }
 
     private func installEscapeHandler() {
@@ -384,6 +388,18 @@ extension AppCoordinator {
 
     private func handleKey(_ event: NSEvent) -> Bool {
         guard isKeyWindow else { return false }
+        if browser.isSwitchingTabs {
+            switch event.keyCode {
+            case 53:
+                browser.cancelTabSwitching()
+                return true
+            case 36, 76:
+                browser.endTabSwitching()
+                return true
+            default:
+                break
+            }
+        }
         if let responder = nativeWindow?.firstResponder, responder is NSText {
             return false
         }

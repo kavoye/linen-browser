@@ -14,84 +14,6 @@ struct TabSwitcherTests {
         BrowserModel(database: .temporary())
     }
 
-    // MARK: - Holding the modifier
-
-    @Test func holdingAndSteppingGoesToTheTabBelow() {
-        let model = makeModel()
-        _ = model.newTab()
-        let below = model.newTab()
-        let start = model.newTab()
-        let elsewhere = model.newTab()
-        model.activate(elsewhere)
-        model.activate(start)
-
-        model.switchTab(forward: true)
-        model.endTabSwitching()
-
-        #expect(model.activeTab === below)
-    }
-
-    @Test func holdingAndSteppingBackGoesToTheTabAbove() {
-        let model = makeModel()
-        _ = model.newTab()
-        let start = model.newTab()
-        let above = model.newTab()
-        let elsewhere = model.newTab()
-        model.activate(elsewhere)
-        model.activate(start)
-
-        model.switchTab(forward: false)
-        model.endTabSwitching()
-
-        #expect(model.activeTab === above)
-    }
-
-    @Test func everyStepOfAHoldMovesOneRowFurther() {
-        let model = makeModel()
-        _ = model.newTab()
-        let third = model.newTab()
-        let second = model.newTab()
-        let start = model.newTab()
-
-        model.switchTab(forward: true)
-        #expect(model.activeTab === second)
-
-        model.switchTab(forward: true)
-        #expect(model.activeTab === third)
-
-        model.endTabSwitching()
-        _ = start
-    }
-
-    @Test func aHoldNeverDetoursThroughTheTabYouCameFrom() {
-        let model = makeModel()
-        _ = model.newTab()
-        let below = model.newTab()
-        let start = model.newTab()
-        let elsewhere = model.newTab()
-        model.activate(elsewhere)
-        model.activate(start)
-
-        model.switchTab(forward: true, asTap: false)
-
-        #expect(model.activeTab === below)
-        #expect(model.activeTab !== elsewhere)
-        model.endTabSwitching()
-    }
-
-    @Test func theWalkWrapsPastTheEndOfTheList() {
-        let model = makeModel()
-        let bottom = model.newTab()
-        _ = model.newTab()
-        let top = model.newTab()
-        model.activate(bottom)
-
-        model.switchTab(forward: true)
-        model.endTabSwitching()
-
-        #expect(model.activeTab === top)
-    }
-
     // MARK: - A quick tap
 
     @Test func aTapGoesToTheTabYouCameFrom() {
@@ -103,7 +25,7 @@ struct TabSwitcherTests {
         model.activate(previous)
         model.activate(start)
 
-        model.switchTab(forward: true, asTap: true)
+        model.switchTab(forward: true)
         model.endTabSwitching()
 
         #expect(model.activeTab === previous)
@@ -118,56 +40,119 @@ struct TabSwitcherTests {
         model.activate(previous)
         model.activate(start)
 
-        model.switchTab(forward: true, asTap: true)
+        model.switchTab(forward: true)
         model.endTabSwitching()
-        model.switchTab(forward: true, asTap: true)
+        model.switchTab(forward: true)
         model.endTabSwitching()
 
         #expect(model.activeTab === start)
-    }
-
-    @Test func aTapWithNoHistoryFallsBackToTheTabBelow() {
-        let model = makeModel()
-        let below = model.newTab()
-        let start = model.newTab()
-        model.recentlyActive = [start.id]
-
-        model.switchTab(forward: true, asTap: true)
-        model.endTabSwitching()
-
-        #expect(model.activeTab === below)
     }
 
     @Test func aTapOnALoneTabChangesNothing() {
         let model = makeModel()
         let only = model.newTab()
 
-        model.switchTab(forward: true, asTap: true)
+        model.switchTab(forward: true)
         model.endTabSwitching()
 
         #expect(model.activeTab === only)
+        #expect(!model.isSwitchingTabs)
     }
 
-    /// The tap is only the opening move; a hold that carries on steps down from where it landed.
-    @Test func steppingOnAfterATapCarriesOnBelowWhereItLanded() {
+    // MARK: - Holding the modifier
+
+    @Test func everyStepOfAHoldGoesOneTabFurtherBack() {
         let model = makeModel()
-        let under = model.newTab()
+        let oldest = model.newTab()
+        let older = model.newTab()
         let previous = model.newTab()
-        _ = model.newTab()
         let start = model.newTab()
-        model.activate(previous)
-        model.activate(start)
 
-        model.switchTab(forward: true, asTap: true)
-        #expect(model.activeTab === previous)
+        model.switchTab(forward: true)
+        #expect(model.switcherSelection == previous.id)
 
-        model.switchTab(forward: true, asTap: true)
+        model.switchTab(forward: true)
+        #expect(model.switcherSelection == older.id)
+
+        model.switchTab(forward: true)
+        #expect(model.switcherSelection == oldest.id)
+
+        model.switchTab(forward: true)
+        #expect(model.switcherSelection == start.id)
+        model.endTabSwitching()
+    }
+
+    @Test func steppingBackFirstReachesTheLeastRecentTab() {
+        let model = makeModel()
+        let oldest = model.newTab()
+        _ = model.newTab()
+        _ = model.newTab()
+
+        model.switchTab(forward: false)
         model.endTabSwitching()
 
-        #expect(model.activeTab === under)
+        #expect(model.activeTab === oldest)
     }
 
-    // MARK: - What the walk leaves behind
+    @Test func theActiveTabStaysUntilTheModifierIsReleased() {
+        let model = makeModel()
+        _ = model.newTab()
+        _ = model.newTab()
+        let start = model.newTab()
+
+        model.switchTab(forward: true)
+        model.switchTab(forward: true)
+
+        #expect(model.activeTab === start)
+        model.endTabSwitching()
+        #expect(model.activeTab !== start)
+    }
+
+    @Test func theOrderFollowsRecencyNotTheSidebar() {
+        let model = makeModel()
+        let first = model.newTab()
+        let second = model.newTab()
+        let third = model.newTab()
+        model.activate(first)
+        model.activate(third)
+
+        model.switchTab(forward: true)
+
+        #expect(model.switcherTabs.map(\.id) == [third.id, first.id, second.id])
+        model.endTabSwitching()
+        #expect(model.activeTab === first)
+    }
+
+    @Test func tabsNeverVisitedFollowInSidebarOrder() {
+        let model = makeModel()
+        let first = model.newTab()
+        _ = model.newTab()
+        _ = model.newTab()
+        model.activate(first)
+        model.recentlyActive = [first.id]
+
+        model.switchTab(forward: true)
+
+        #expect(model.switcherTabs.map(\.id) == [first.id] + model.tabs.map(\.id).filter { $0 != first.id })
+        #expect(model.switcherSelection == model.tabs.first { $0 !== first }?.id)
+        model.cancelTabSwitching()
+    }
+
+    // MARK: - Leaving the switcher
+
+    @Test func cancellingKeepsTheTabYouStartedOn() {
+        let model = makeModel()
+        _ = model.newTab()
+        _ = model.newTab()
+        let start = model.newTab()
+
+        model.switchTab(forward: true)
+        model.cancelTabSwitching()
+        model.endTabSwitching()
+
+        #expect(model.activeTab === start)
+        #expect(!model.isSwitchingTabs)
+    }
 
     @Test func onlyTheTabYouLandOnCountsAsRecent() {
         let model = makeModel()
@@ -196,26 +181,53 @@ struct TabSwitcherTests {
         model.endTabSwitching()
         #expect(model.activeTab === third)
 
-        model.switchTab(forward: true, asTap: true)
+        model.switchTab(forward: true)
         model.endTabSwitching()
 
         #expect(model.activeTab === start)
     }
 
-    // MARK: - Telling a tap from a hold
+    // MARK: - Which cards fit
 
-    @Test func aChordPressedRightAfterTheModifierIsATap() {
-        #expect(ModifierTap.isTap(downAt: 10, now: 10.02))
-        #expect(ModifierTap.isTap(downAt: 10, now: 10.11))
+    @Test func everyCardShowsWhenThereIsRoom() {
+        #expect(TabSwitcherOverlay.window(count: 4, selected: 3, fitting: 7) == 0..<4)
     }
 
-    @Test func aPressAfterTheModifierHasSettledIsAHold() {
-        #expect(!ModifierTap.isTap(downAt: 10, now: 10.13))
-        #expect(!ModifierTap.isTap(downAt: 10, now: 10.3))
-        #expect(!ModifierTap.isTap(downAt: 10, now: 12))
+    @Test func theSelectionStaysNearTheMiddleOfALongRow() {
+        #expect(TabSwitcherOverlay.window(count: 12, selected: 0, fitting: 5) == 0..<5)
+        #expect(TabSwitcherOverlay.window(count: 12, selected: 6, fitting: 5) == 4..<9)
+        #expect(TabSwitcherOverlay.window(count: 12, selected: 11, fitting: 5) == 7..<12)
     }
 
-    @Test func aPressWithTheModifierUpIsNeverATap() {
-        #expect(!ModifierTap.isTap(downAt: nil, now: 10))
+    // MARK: - Shift steps back
+
+    @Test func aShiftTapDuringAHoldStepsBack() {
+        var step = ShiftStep()
+        step.shiftDown(whileSwitching: true)
+        let stepped = step.shiftUp()
+        #expect(stepped)
+    }
+
+    @Test func shiftAloneDoesNotOpenTheSwitcher() {
+        var step = ShiftStep()
+        step.shiftDown(whileSwitching: false)
+        let stepped = step.shiftUp()
+        #expect(!stepped)
+    }
+
+    @Test func shiftWithTabStepsOnlyOnce() {
+        var step = ShiftStep()
+        step.shiftDown(whileSwitching: true)
+        step.cancel()
+        let stepped = step.shiftUp()
+        #expect(!stepped)
+    }
+
+    @Test func aShiftTapCountsOnlyOnce() {
+        var step = ShiftStep()
+        step.shiftDown(whileSwitching: true)
+        _ = step.shiftUp()
+        let stepped = step.shiftUp()
+        #expect(!stepped)
     }
 }

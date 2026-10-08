@@ -157,6 +157,11 @@ struct BrowserView: View {
             PaneDragOverlay(browser: browser, model: coordinator.sidebarDrag)
                 .environment(\.windowColorScheme, loomScheme)
 
+            if browser.isSwitchingTabs {
+                TabSwitcherOverlay(browser: browser)
+                    .environment(\.colorScheme, loomScheme)
+            }
+
             if !sidebar.isShowing {
                 Color.clear
                     .frame(width: 10)

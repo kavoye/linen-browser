@@ -394,14 +394,8 @@ final class AppCoordinator {
     // MARK: - Tab switching
 
     var tabSwitchMonitor: Any?
+    @ObservationIgnored var shiftStep = ShiftStep()
     var resignActiveObserver: NSObjectProtocol?
-
-    var controlDownAt: TimeInterval?
-
-    var isControlTap: Bool {
-        let now = NSApp.currentEvent?.timestamp ?? ProcessInfo.processInfo.systemUptime
-        return ModifierTap.isTap(downAt: controlDownAt, now: now)
-    }
 
     // MARK: - Profiles
 
