@@ -138,6 +138,8 @@ final class AppCoordinator {
     @ObservationIgnored var conversationSpaceID: UUID?
     let voiceInput: VoiceInputModel
     let speech: ProviderSpeechOutput
+    let readerSpeech = ReaderVoice()
+    let readerListener: ReaderListener
     @ObservationIgnored var voiceConfigurationID: String?
     @ObservationIgnored var remoteToolConfigurationID: String?
     @ObservationIgnored var voicePreparation: Task<Void, Never>?
@@ -195,6 +197,7 @@ final class AppCoordinator {
 
         voiceInput = VoiceInputModel()
         speech = ProviderSpeechOutput()
+        readerListener = ReaderListener(output: readerSpeech)
         agentTurns = AgentTurnModel(
             browser: browser,
             log: browser.context.conversationLog,
@@ -209,10 +212,12 @@ final class AppCoordinator {
         speech.onSpeakingChange = { [weak self] speaking in
             self?.isAgentSpeaking = speaking
         }
+        connectReaderListener()
         voiceInput.onWillBegin = { [weak self] in
             guard let self else { return }
             endVoiceConversation()
             speech.stopSpeaking()
+            readerListener.stop()
             agentTurns.cancel()
         }
         voiceInput.onFailure = { [weak self] failure in
@@ -486,8 +491,8 @@ final class AppCoordinator {
     }
 
     func printActivePage() {
-        guard let webView = pageCommandTab?.webView else { return }
-        PagePrinting.begin(for: webView)
+        guard let tab = pageCommandTab else { return }
+        PagePrinting.begin(for: tab.reader.presentedView ?? tab.webView)
     }
 
     func toggleFullScreen() {

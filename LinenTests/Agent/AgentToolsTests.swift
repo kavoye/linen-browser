@@ -73,6 +73,7 @@ struct AgentToolsTests {
             "switchTab",
             "closeTab",
             "readPage",
+            "readArticle",
             "clickOnPage",
             "typeOnPage",
             "fillFields",

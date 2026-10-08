@@ -51,7 +51,7 @@ struct AgentToolkitPolicyTests {
 
         #expect(names == [
             "askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome",
-            "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
+            "searchWeb", "navigate", "readPage", "readArticle", "clickOnPage", "typeOnPage",
             "scrollPage", "goBack", "newTab", "listTabs", "switchTab", "closeTab",
             "selectOption", "fillFields", "inspectControl", "setChecked", "waitForPage",
             "screenshotPage", "movePointer", "clickAtPoint", "doubleClickAtPoint", "dragOnPage",
@@ -66,7 +66,7 @@ struct AgentToolkitPolicyTests {
 
         #expect(names == [
             "askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome",
-            "searchWeb", "navigate", "readPage", "clickOnPage", "typeOnPage",
+            "searchWeb", "navigate", "readPage", "readArticle", "clickOnPage", "typeOnPage",
             "scrollPage", "goBack",
         ])
     }
@@ -82,6 +82,7 @@ struct AgentToolkitPolicyTests {
             ("switchTab", { subject.switchTab(matching: "example") }),
             ("closeTab", { subject.closeTab(matching: nil) }),
             ("readPage", { await subject.readPage() }),
+            ("readArticle", { await subject.readArticle() }),
             ("clickOnPage", { await subject.clickOnPage(ref: 1, label: "") }),
             ("typeOnPage", { await subject.typeOnPage(text: "x", field: "q", ref: 0, submit: false) }),
             ("selectOption", { await subject.selectOption("One", ref: 1, field: "") }),
@@ -122,6 +123,7 @@ struct AgentToolkitPolicyTests {
         #expect(subject.switchTab(matching: "missing").contains("no tabs"))
         #expect(subject.closeTab(matching: nil).contains("no tabs"))
         #expect((await subject.readPage()).contains("No tab"))
+        #expect((await subject.readArticle()).contains("No tab"))
         #expect((await subject.clickOnPage(ref: 1, label: "")).contains("No tab"))
         #expect((await subject.typeOnPage(text: "x", field: "q", ref: 0, submit: false)).contains("No tab"))
         #expect((await subject.selectOption("One", ref: 1, field: "")).contains("No tab"))
@@ -217,6 +219,7 @@ struct AgentToolkitPolicyTests {
         }
 
         #expect((await subject(policy: .deny).readPage()).contains("access is off"))
+        #expect((await subject(policy: .deny).readArticle()).contains("access is off"))
 
         let controls: [(String, (AgentToolkit) async -> String)] = [
             ("clickOnPage", { await $0.clickOnPage(ref: 1, label: "") }),
@@ -246,6 +249,7 @@ struct AgentToolkitPolicyTests {
         subject.beginTask(AgentTaskContext(id: UUID(), tabID: taskTab.id))
         let operations: [(String, () async -> String)] = [
             ("readPage", { await subject.readPage() }),
+            ("readArticle", { await subject.readArticle() }),
             ("clickOnPage", { await subject.clickOnPage(ref: 1, label: "") }),
             ("typeOnPage", { await subject.typeOnPage(text: "x", field: "q", ref: 0, submit: false) }),
             ("selectOption", { await subject.selectOption("One", ref: 1, field: "") }),

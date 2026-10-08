@@ -158,6 +158,24 @@ nonisolated struct ReadPageTool: Tool {
     }
 }
 
+nonisolated struct ReadArticleTool: Tool {
+    let name = "readArticle"
+    let description = AgentToolkit.Descriptions.readArticle
+    let toolkit: AgentToolkit
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Page ID, title, site, or split position. Empty for the active tab.")
+        var page: String
+        @Guide(description: "Continuation offset for article text; omit for the start.")
+        var textOffset: Int?
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        await toolkit.readArticle(page: arguments.page, textOffset: arguments.textOffset ?? 0)
+    }
+}
+
 nonisolated struct ClickOnPageTool: Tool {
     let name = "clickOnPage"
     let description = AgentToolkit.Descriptions.clickOnPage
@@ -398,6 +416,7 @@ func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any 
         WebSearchTool(toolkit: toolkit),
         NavigateTool(toolkit: toolkit),
         ReadPageTool(toolkit: toolkit),
+        ReadArticleTool(toolkit: toolkit),
         ClickOnPageTool(toolkit: toolkit),
         TypeOnPageTool(toolkit: toolkit),
         ScrollPageTool(toolkit: toolkit),

@@ -203,6 +203,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(hidden(command("Zoom In", #selector(zoomIn), key: "=")))
         menu.addItem(command("Zoom Out", #selector(zoomOut), key: "-"))
         menu.addItem(.separator())
+        menu.addItem(command("Show Reader", #selector(toggleReader), key: "r", modifiers: [.command, .option]))
+        menu.addItem(.separator())
         menu.addItem(chain(
             "Enter Full Screen",
             #selector(NSWindow.toggleFullScreen(_:)),
@@ -406,6 +408,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.closeOtherPanes()
     }
 
+    @objc private func toggleReader() {
+        coordinator.toggleReader()
+    }
+
     @objc private func openFind() {
         coordinator.pageCommandTab?.find.open()
     }
@@ -531,6 +537,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
                 ? "Hide Sidebar" : "Show Sidebar"
             menuItem.title = String(localized: sidebarTitle)
             return true
+        case #selector(toggleReader):
+            let readerTitle: LocalizedStringResource = coordinator.readerTab?.reader.isActive == true
+                ? "Hide Reader"
+                : "Show Reader"
+            menuItem.title = String(localized: readerTitle)
+            return coordinator.readerTab?.reader.isAvailable ?? false
         case #selector(toggleSidePanel):
             let sidePanelTitle: LocalizedStringResource = coordinator.sidePanel.isVisible
                 ? "Hide Side Panel"

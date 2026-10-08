@@ -32,19 +32,34 @@ extension BrowserTab {
 
     var isZoomed: Bool {
         _ = zoomChanges
+        if reader.isActive {
+            return !ReaderAppearance.shared.isDefaultSize
+        }
         return abs(webView.pageZoom - context.settings.pageZoom) > 0.005
             || abs(webView.magnification - 1) > 0.005
     }
 
     func zoomIn() {
+        if reader.isActive {
+            ReaderAppearance.shared.grow()
+            return
+        }
         setPageZoom(webView.pageZoom + TabWebView.zoomStep)
     }
 
     func zoomOut() {
+        if reader.isActive {
+            ReaderAppearance.shared.shrink()
+            return
+        }
         setPageZoom(webView.pageZoom - TabWebView.zoomStep)
     }
 
     func resetZoom() {
+        if reader.isActive {
+            ReaderAppearance.shared.resetSize()
+            return
+        }
         webView.magnification = 1
         webView.pageZoom = context.settings.pageZoom
         zoomDidChange()

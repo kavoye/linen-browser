@@ -58,6 +58,8 @@ final class BrowserModel {
                 noteActivation(activeTabID)
             }
             let previous = oldValue.flatMap { id in tabs.first { $0.id == id } }
+            previous?.isFrontmost = false
+            activeTab?.isFrontmost = true
             refreshTopBarCoverage()
             if previous.map({ !isVisibleInSplit($0) }) ?? false {
                 previous?.refreshPreview()

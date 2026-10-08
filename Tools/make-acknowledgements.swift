@@ -165,7 +165,8 @@ struct Vendor {
 }
 
 let vendored = [
-    Vendor(name: "thinking-orbs", version: "0.3.1", url: "https://github.com/Jakubantalik/thinking-orbs")
+    Vendor(name: "readability", version: "0.6.0", url: "https://github.com/mozilla/readability"),
+    Vendor(name: "thinking-orbs", version: "0.3.1", url: "https://github.com/Jakubantalik/thinking-orbs"),
 ]
 
 let vendoredPackages: [Package] = vendored.map { vendor in

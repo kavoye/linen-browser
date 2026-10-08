@@ -190,6 +190,14 @@ final class BrowserTab: Identifiable {
     let permissions: TabPermissionCenter
     let assistantAccess: TabAssistantAccessCenter
     let find = FindSession()
+    let reader = ReaderSession()
+    @ObservationIgnored var isFrontmost = false {
+        didSet {
+            if isFrontmost, !oldValue {
+                probeReader()
+            }
+        }
+    }
 
     let isPrivate: Bool
     let context: BrowserProfileContext
@@ -248,7 +256,11 @@ final class BrowserTab: Identifiable {
         if let liveView {
             adopt(liveView)
         }
-        find.driver = .webKit { [weak self] in self?.webView }
+        find.driver = .webKit { [weak self] in self?.reader.presentedView ?? self?.webView }
+        reader.driver = .webKit { [weak self] in
+            guard let self, isMaterialised else { return nil }
+            return webView
+        }
         if opensStartPage {
             permitSystemPage(SystemPages.start)
             webView.load(URLRequest(url: SystemPages.start))
@@ -556,6 +568,7 @@ final class BrowserTab: Identifiable {
         refreshFavicon()
         measureBandUnderBar()
         invalidateSessionState()
+        readerPageMoved(from: previous)
         onSameDocumentNavigation?()
     }
 
@@ -569,6 +582,7 @@ final class BrowserTab: Identifiable {
     func detach() {
         guard !isClosed else { return }
         isClosed = true
+        reader.close()
         onNavigationStarted = nil
         onNavigationFinished = nil
         onNavigationOutsideExtension = nil

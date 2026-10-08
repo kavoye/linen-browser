@@ -11,6 +11,7 @@ nonisolated enum AgentDiagnosticPrivacy {
         "inspectControl", "setChecked", "waitForPage", "screenshotPage", "movePointer", "clickAtPoint", "typeAtPointer", "hoverOnPage", "pressKey",
         "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome", "doubleClickAtPoint", "dragOnPage",
         "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
+        "readArticle",
     ]
 
     static func tool(_ name: String) -> String {
@@ -47,6 +48,7 @@ nonisolated enum AgentDiagnosticPrivacy {
         "chooseFilesOnPage": String(localized: "Choose Files to Upload"),
         "inspectDownloads": String(localized: "Check Downloads"),
         "readPage": String(localized: "Read page"),
+        "readArticle": String(localized: "Read article"),
         "searchWeb": String(localized: "Search web"),
         "navigate": String(localized: "Open Page"),
         "typeOnPage": String(localized: "Fill field"),

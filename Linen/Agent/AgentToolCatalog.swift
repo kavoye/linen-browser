@@ -64,6 +64,13 @@ nonisolated enum AgentToolCatalog {
             isCore: true
         ),
         AgentToolDescriptor(
+            id: "readArticle",
+            title: "Read Articles",
+            summary: "Read just the main text of an article.",
+            category: .research,
+            isCore: true
+        ),
+        AgentToolDescriptor(
             id: "goBack",
             title: "Go Back",
             summary: "Return to the previous page.",

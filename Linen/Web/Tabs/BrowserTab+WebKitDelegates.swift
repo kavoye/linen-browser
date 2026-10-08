@@ -461,6 +461,8 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             tab?.provisionalNavigation = nil
         }
         tab?.noteDocumentChanged()
+        tab?.reader.pageChanged()
+        tab?.probeReader()
         tab?.noteHoveredLink(nil)
         tab?.clearPageActivity()
         if let tab, tab.isShowingRealPage, !tab.hasPresentedContent {
@@ -488,6 +490,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab.releasePageColorHold()
         tab.refreshPageColor(from: webView)
         tab.restoreScrollOffsetIfNeeded()
+        tab.probeReader()
         tab.onNavigationFinished?(wasRestore || tab.isShowingError)
     }
 

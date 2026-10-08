@@ -315,6 +315,9 @@
         }
       }
     },
+    "%lld min read" : {
+      "comment" : "Reader view: estimated reading time under the article title. %lld is a number of minutes."
+    },
     "%lld models" : {
       "comment" : "Status line for a local model provider (Ollama, LM Studio) in Settings > Provider, saying how many models it serves. %lld is that count. Shown in a narrow row, so keep it short.",
       "localizations" : {
@@ -2231,6 +2234,9 @@
     "Folder name" : {
       "comment" : "Placeholder in the inline rename field on a sidebar folder row. Sentence case, and very narrow — the field is only as wide as a sidebar row."
     },
+    "Font" : {
+      "comment" : "Reader view appearance popover: label for the typeface picker."
+    },
     "For example, speak slowly or keep replies brief." : {
 
     },
@@ -2305,6 +2311,12 @@
     },
     "Hide Player" : {
       "comment" : "Tooltip on the small media button in the sidebar while the floating player is pulled out; clicking puts the player away again. Title Case."
+    },
+    "Hide Reader" : {
+      "comment" : "View menu item. Closes the clean article view and shows the original web page."
+    },
+    "Hide Reader (⌥⌘R)" : {
+      "comment" : "Tooltip on the reader button in the address field and the Done button in reader view, with its keyboard shortcut."
     },
     "Hide Side Panel" : {
       "comment" : "Tooltip on the ✕ at the right of the side panel’s tab strip. It takes the whole panel off screen and keeps its tabs for next time. “Side Panel” is the right-hand one; the left is the Sidebar. Title Case."
@@ -2720,6 +2732,9 @@
     "List Tabs" : {
 
     },
+    "Listen" : {
+      "comment" : "Reader view toolbar button that starts reading the article aloud."
+    },
     "Listening…" : {
       "comment" : "Line shown in the address field while the microphone is on and nothing has been heard yet; the user's own words replace it as they speak. Real ellipsis character (…) — keep it, not three periods."
     },
@@ -2794,6 +2809,12 @@
           }
         }
       }
+    },
+    "Make text bigger" : {
+      "comment" : "Reader view appearance popover: increase the text size."
+    },
+    "Make text smaller" : {
+      "comment" : "Reader view appearance popover: reduce the text size."
     },
     "Manage profiles" : {
       "comment" : "Subtitle under the open profile's name at the top of the Settings sidebar, saying that clicking it opens the Profiles page. A profile is a separate set of cookies, history and tabs. Sentence case, no final full stop, and short enough for a narrow sidebar."
@@ -3063,6 +3084,9 @@
     },
     "Next (⌘G)" : {
       "comment" : "Tooltip on the down-chevron in the find bar, which moves to the next match on the page. ⌘G is the keyboard shortcut — keyboard symbols, keep exactly, including the parentheses."
+    },
+    "Next paragraph" : {
+      "comment" : "Tooltip in reader view while reading aloud: skip to the next paragraph."
     },
     "Next Track" : {
 
@@ -3688,6 +3712,9 @@
     "previous flagship" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the vendor’s previous top model. Lowercase, and the space is very tight."
     },
+    "Previous paragraph" : {
+      "comment" : "Tooltip in reader view while reading aloud: go back one paragraph."
+    },
     "Previous Track" : {
 
     },
@@ -3754,6 +3781,12 @@
     "Read and change your data on:" : {
       "comment" : "Heading line above a bulleted list of website names in the extension install confirmation dialog. The trailing colon is part of the string and must stay, since the hostnames follow directly beneath it."
     },
+    "Read article" : {
+      "comment" : "Agent activity log title for the tool that reads just the main article of a page."
+    },
+    "Read Articles" : {
+      "comment" : "Settings, assistant tools: name of the tool that reads just the main article of a page."
+    },
     "Read control state and dropdown options." : {
 
     },
@@ -3762,6 +3795,9 @@
     },
     "Read Embedded Pages" : {
 
+    },
+    "Read just the main text of an article." : {
+      "comment" : "Settings, assistant tools: description of the Read Articles tool."
     },
     "Read Only" : {
 
@@ -3780,6 +3816,12 @@
     },
     "Read this answer aloud" : {
 
+    },
+    "Read this article aloud" : {
+      "comment" : "Tooltip on the Listen button in reader view."
+    },
+    "Read this article aloud. Uses your OpenAI API key." : {
+      "comment" : "Tooltip on Reader’s Listen button when reading aloud uses OpenAI, which is billed."
     },
     "Read your browsing history" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
@@ -4026,6 +4068,9 @@
     },
     "Reset to Default" : {
       "comment" : "Tooltip on the small arrow button that puts a keyboard shortcut back to the one the app ships with. Default is a noun here, meaning the original value."
+    },
+    "Reset to Defaults" : {
+      "comment" : "Reader view appearance popover: restores the default text size, font and theme."
     },
     "Reset website" : {
 
@@ -4374,6 +4419,9 @@
     "Send…" : {
 
     },
+    "Sepia" : {
+      "comment" : "Reader view color theme with warm, paper-colored background."
+    },
     "Server address" : {
 
     },
@@ -4502,6 +4550,12 @@
     },
     "Show Previous Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘[ and ⌃⇧Tab, which switches to the tab before the current one. Title Case and established platform terminology."
+    },
+    "Show Reader" : {
+      "comment" : "View menu item. Shows the current web page as a clean article without ads or navigation."
+    },
+    "Show Reader (⌥⌘R)" : {
+      "comment" : "Tooltip on the reader button in the address field, with its keyboard shortcut."
     },
     "Show save prompts again on websites you excluded." : {
 
@@ -4735,6 +4789,9 @@
     "Street address" : {
 
     },
+    "Style" : {
+      "comment" : "Voice settings row title for how the OpenAI voice speaks."
+    },
     "Suggested" : {
       "comment" : "Heading over the group of recommended models at the top of the model pop-up menu. Adjective describing the models below it."
     },
@@ -4824,6 +4881,9 @@
     },
     "Teal" : {
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
+    },
+    "Text appearance" : {
+      "comment" : "Tooltip on the reader view button that opens font, text size and theme options."
     },
     "Text Size" : {
       "comment" : "Tooltip on the aA button at the top of the lyrics view. Its menu sets how large the words are. Title Case."

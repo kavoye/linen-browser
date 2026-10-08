@@ -202,6 +202,10 @@ enum ChromeBand {
     static func pageColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
         guard !coordinator.isShowingSettings, !showsStartPage(browser: browser) else { return nil }
         guard browser.activeSplit == nil else { return nil }
+        if let tab = browser.activeTab, tab.reader.isActive {
+            let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return ReaderAppearance.background(for: ReaderAppearance.shared.resolvedPalette(isDark: isDark))
+        }
         return browser.activeTab?.pageColor
     }
 

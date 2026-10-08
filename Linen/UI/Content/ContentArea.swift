@@ -34,7 +34,10 @@ struct ContentArea: View {
         }
         .onAppear {
             pull.webViewProvider = { browser.activeTab?.webView }
-            pull.isCovered = { coordinator.isPaletteOpen || coordinator.onboarding.isPresented }
+            pull.isCovered = {
+                coordinator.isPaletteOpen || coordinator.onboarding.isPresented
+                    || browser.activeTab?.reader.isActive == true
+            }
             pull.onChange = { state, animation in
                 if let animation {
                     withAnimation(animation) { pullState = state }
@@ -55,7 +58,7 @@ struct ContentArea: View {
     private var pullsAWebPage: Bool {
         guard !coordinator.isShowingSettings else { return false }
         guard let tab = browser.activeTab else { return false }
-        return tab.internalPage == nil && !showStartPage && browser.activeSplit == nil
+        return tab.internalPage == nil && !showStartPage && browser.activeSplit == nil && !tab.reader.isActive
     }
 
     private var landing: SplitDropPlan.Target? {
@@ -193,6 +196,12 @@ private struct ActiveWebSurface: View {
                     Theme.windowBackground
                         .transition(.identity)
                 }
+            }
+            .overlay {
+                ReaderPresenter(tab: tab, listener: coordinator.readerListener, readsWithOpenAI: coordinator.readsWithOpenAI)
+            }
+            .onChange(of: tab.reader.isActive) { _, isActive in
+                tab.find.pageChanged()
             }
             .overlay(alignment: .bottomLeading) {
                 LinkPreview(

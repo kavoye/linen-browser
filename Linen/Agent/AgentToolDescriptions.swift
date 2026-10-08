@@ -34,6 +34,10 @@ extension AgentToolkit {
             Actions return fresh observations; read again when stale or missing needed content. \
             Control offsets are list positions, not [ref] numbers. Start at 0 when changing the query, scope, or viewport filter.
             """
+        static let readArticle = """
+            Read only the main article of a page, without navigation, ads, or controls. Much shorter than readPage. \
+            Use it to read, summarize, or quote articles, posts, and documentation. Returns NO ARTICLE when the page has none.
+            """
         static let clickOnPage = """
             Click a control by its [ref], or by its label when no ref is available. The browser asks \
             before payments, money transfers, account deletion, or posting as the user. Stop if the \

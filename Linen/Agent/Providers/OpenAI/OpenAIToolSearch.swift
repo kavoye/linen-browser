@@ -11,8 +11,8 @@ nonisolated enum OpenAIToolSearch {
     }
 
     private static let groups: [Group] = [
-        .init(name: "browser_research", description: "Search the web, open websites, read page text and controls, and go back.",
-              functions: ["searchWeb", "navigate", "readPage", "goBack"]),
+        .init(name: "browser_research", description: "Search the web, open websites, read page text and controls or just the article, and go back.",
+              functions: ["searchWeb", "navigate", "readPage", "readArticle", "goBack"]),
         .init(name: "browser_interaction", description: "Click page controls, fill forms, select options, set checkboxes, scroll, hover, and press keys.",
               functions: ["clickOnPage", "typeOnPage", "fillFields", "selectOption", "setChecked", "scrollPage", "hoverOnPage", "pressKey"]),
         .init(name: "browser_observation", description: "Inspect control state and dropdown options, wait for page changes, or capture the page viewport.",
