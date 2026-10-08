@@ -119,7 +119,7 @@ extension PageDriver {
         return "Timed out waiting for \(condition).\n" + (await PageAutomationGuard.withCurrentDocument(in: view) { await snapshot(view, lookingFor: value) })
     }
 
-    static func screenshot(in view: WKWebView) async -> Data? {
+    static func screenshot(in view: WKWebView, maximumBytes: Int = 150_000) async -> Data? {
         guard PageAutomationGuard.allowsExecution else { return nil }
         let document = view.url
         let safetyCheck = scripted(
@@ -131,11 +131,35 @@ extension PageDriver {
         guard safe?["safe"] as? Bool == true else { return nil }
         let config = WKSnapshotConfiguration()
         config.snapshotWidth = NSNumber(value: min(1280, max(1, view.bounds.width)))
-        guard let image = try? await view.takeSnapshot(configuration: config), PageAutomationGuard.allowsExecution, view.url == document,
-            let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff)
+        guard let image = try? await view.takeSnapshot(configuration: config), PageAutomationGuard.allowsExecution, view.url == document
         else { return nil }
         let after = await evaluateJSON(safetyCheck, in: view)
         guard after?["safe"] as? Bool == true, after?["document"] as? String == safe?["document"] as? String else { return nil }
-        return bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.8])
+        return jpeg(image, fitting: maximumBytes)
+    }
+
+    static func jpeg(_ image: NSImage, fitting maximumBytes: Int) -> Data? {
+        var size = NSSize(width: image.size.width.rounded(), height: image.size.height.rounded())
+        while size.width >= 64, size.height >= 64 {
+            guard let bitmap = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8,
+                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+                let context = NSGraphicsContext(bitmapImageRep: bitmap)
+            else { return nil }
+            bitmap.size = size
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = context
+            NSColor.white.setFill()
+            NSRect(origin: .zero, size: size).fill()
+            image.draw(in: NSRect(origin: .zero, size: size))
+            NSGraphicsContext.restoreGraphicsState()
+            for quality in [0.8, 0.6, 0.4] {
+                if let data = bitmap.representation(using: .jpeg, properties: [.compressionFactor: quality]), data.count <= maximumBytes {
+                    return data
+                }
+            }
+            size = NSSize(width: (size.width * 0.75).rounded(), height: (size.height * 0.75).rounded())
+        }
+        return nil
     }
 }

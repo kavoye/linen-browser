@@ -325,6 +325,26 @@ struct PageInteractionTests {
         #expect(await PageDriver.screenshot(in: view) == nil)
     }
 
+    @Test func screenshotsShrinkToFitTheMessageLimit() throws {
+        let size = NSSize(width: 2560, height: 1600)
+        let image = NSImage(size: size, flipped: false) { rect in
+            var generator = SystemRandomNumberGenerator()
+            for x in stride(from: 0, to: Int(rect.width), by: 4) {
+                for y in stride(from: 0, to: Int(rect.height), by: 4) {
+                    NSColor(
+                        red: .random(in: 0...1, using: &generator), green: .random(in: 0...1, using: &generator),
+                        blue: .random(in: 0...1, using: &generator), alpha: 1
+                    ).setFill()
+                    NSRect(x: x, y: y, width: 4, height: 4).fill()
+                }
+            }
+            return true
+        }
+        let data = try #require(PageDriver.jpeg(image, fitting: 150_000))
+        #expect(data.count <= 150_000)
+        #expect(data.base64EncodedString().utf8.count < MCPMessageFramer.maximumBytes - 30_000)
+    }
+
     @Test func sensitiveEditableTextIsRedactedAndCannotBeOverwritten() async {
         let view = await page("<div contenteditable='true' aria-label='Recovery phrase'>hidden-recovery-words</div>")
         let output = await PageDriver.snapshot(view)
