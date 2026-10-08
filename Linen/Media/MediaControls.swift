@@ -425,6 +425,10 @@ struct MediaSlider: View {
         min(max(dragged ?? value, 0), 1)
     }
 
+    private var isActive: Bool {
+        hovering || dragged != nil
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let width = max(proxy.size.width, 1)
@@ -432,17 +436,10 @@ struct MediaSlider: View {
                 Capsule()
                     .fill(Theme.Wash.strong)
                 Capsule()
-                    .fill(hovering || dragged != nil ? Theme.accent : Theme.Wash.scrim)
+                    .fill(isActive ? Color.primary.opacity(0.8) : Theme.Wash.scrim)
                     .frame(width: shown * width)
             }
-            .frame(height: height)
-            .overlay(alignment: .leading) {
-                Circle()
-                    .fill(Theme.accent)
-                    .frame(width: height * 2.6, height: height * 2.6)
-                    .offset(x: shown * width - height * 1.3)
-                    .opacity(hovering || dragged != nil ? 1 : 0)
-            }
+            .frame(height: isActive ? height + 2 : height)
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
             .gesture(
@@ -460,7 +457,7 @@ struct MediaSlider: View {
             )
         }
         .frame(height: max(height * 3, 10))
-        .animation(Theme.Motion.quick, value: hovering)
+        .animation(Theme.Motion.quick, value: isActive)
         .onHover { hovering = $0 }
     }
 }
@@ -486,5 +483,83 @@ struct MediaButton: View {
         .foregroundStyle(tint ?? (hovering ? Color.primary : Color.secondary))
         .onHover { hovering = $0 }
         .help(Text(help))
+    }
+}
+
+struct MarqueeText: View {
+    let text: String
+    let font: Font
+    let width: CGFloat
+    var isMoving = true
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var textWidth: CGFloat = 0
+    @State private var start = Date()
+
+    private static let gap: CGFloat = 36
+    private static let speed: CGFloat = 24
+    private static let rest: Double = 2.5
+    private static let fade: CGFloat = 12
+
+    private var overflows: Bool {
+        textWidth > width + 0.5
+    }
+
+    var body: some View {
+        Group {
+            if overflows, isMoving, !reduceMotion {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                    let shift = offset(at: context.date)
+                    HStack(spacing: Self.gap) {
+                        label
+                        label
+                    }
+                    .offset(x: -shift)
+                    .frame(width: width, alignment: .leading)
+                    .mask { edgeFade(leading: min(shift, Self.fade)) }
+                }
+            } else {
+                Text(verbatim: text)
+                    .font(font)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+        .frame(width: width, alignment: .leading)
+        .clipped()
+        .background(alignment: .leading) {
+            label
+                .hidden()
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { textWidth = $0 }
+        }
+        .onChange(of: text) { start = .now }
+        .onChange(of: isMoving) { start = .now }
+        .accessibilityElement()
+        .accessibilityLabel(Text(verbatim: text))
+    }
+
+    private func edgeFade(leading: CGFloat) -> some View {
+        HStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: leading)
+            Rectangle()
+            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: Self.fade)
+        }
+    }
+
+    private var label: some View {
+        Text(verbatim: text)
+            .font(font)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    private func offset(at date: Date) -> CGFloat {
+        let travel = textWidth + Self.gap
+        let cycle = Self.rest + Double(travel / Self.speed)
+        let elapsed = date.timeIntervalSince(start).truncatingRemainder(dividingBy: cycle)
+        guard elapsed > Self.rest else { return 0 }
+        return CGFloat(elapsed - Self.rest) * Self.speed
     }
 }

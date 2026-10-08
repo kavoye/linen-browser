@@ -249,7 +249,7 @@ private struct GroupFace: View {
     }
 }
 
-private struct TabFaviconMark: View {
+struct TabFaviconMark: View {
     let tab: BrowserTab
 
     var body: some View {

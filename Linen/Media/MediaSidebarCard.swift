@@ -54,13 +54,55 @@ struct MediaSidebarCard: View {
     }
 
     private var title: some View {
-        Text(verbatim: media.model.title)
-            .font(titleFont)
-            .lineLimit(1)
-            .truncationMode(.tail)
+        HStack(spacing: Self.markGap) {
+            sourceMark
+            MarqueeText(
+                text: media.model.title,
+                font: titleFont,
+                width: max(20, titleWidth - Self.markSize - Self.markGap),
+                isMoving: media.model.isPlaying
+            )
             .foregroundStyle(.secondary)
-            .frame(width: titleWidth, alignment: .leading)
             .mask(alignment: .leading) { titleMask }
+        }
+    }
+
+    private static let markSize: CGFloat = 16
+    private static let markGap: CGFloat = 6
+
+    private var dockedTab: BrowserTab? {
+        guard let tabID = media.controlledTabID else { return nil }
+        return coordinator.browser.tabs.first { $0.id == tabID }
+    }
+
+    @ViewBuilder private var sourceMark: some View {
+        let shape = RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+        Group {
+            if media.model.pictureWebView == nil, let artwork = media.model.artworkURL {
+                AsyncImage(url: artwork) { phase in
+                    if case let .success(image) = phase {
+                        image.resizable().scaledToFill()
+                    } else {
+                        faviconMark
+                    }
+                }
+                .clipShape(shape)
+            } else {
+                faviconMark
+            }
+        }
+        .frame(width: Self.markSize, height: Self.markSize)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder private var faviconMark: some View {
+        if let tab = dockedTab {
+            TabFaviconMark(tab: tab)
+        } else {
+            Image(systemName: "music.note")
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
+        }
     }
 
     @ViewBuilder private var pickerButton: some View {
