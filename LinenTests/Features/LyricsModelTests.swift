@@ -134,13 +134,23 @@ struct LyricsModelTests {
 
         await model.load(signature(isLive: true))
 
-        #expect(model.phase == .idle)
+        #expect(model.phase == .live, "a stream is playing, so it is not “Nothing is playing”")
     }
 
     @Test func aTrackOfUnknownLengthWaitsForOne() async {
         let model = LyricsModel(source: StubCatalog(best: match()), defaults: scratchDefaults())
 
         await model.load(signature(seconds: 0))
+
+        #expect(model.phase == .looking, "a track still filling in is not “Nothing is playing”")
+    }
+
+    @Test func noTabMeansNothingIsPlaying() async {
+        let model = LyricsModel(source: StubCatalog(best: match()), defaults: scratchDefaults())
+        var empty = signature(title: "", seconds: 0)
+        empty.tabID = nil
+
+        await model.load(empty)
 
         #expect(model.phase == .idle)
     }

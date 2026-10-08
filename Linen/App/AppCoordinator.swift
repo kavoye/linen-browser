@@ -467,6 +467,7 @@ final class AppCoordinator {
     var mediaClaim = 0
     var playedPages: [UUID: String] = [:]
     var lyricsPinnedTabID: UUID?
+    var lyricsHeldTabID: UUID?
 
     var linkModifiers: NSEvent.ModifierFlags = []
 

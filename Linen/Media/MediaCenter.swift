@@ -942,9 +942,10 @@ enum MediaRoster {
         pinned: UUID?,
         active: UUID?,
         docked: UUID?,
+        held: UUID? = nil,
         candidates: [UUID]
     ) -> UUID? {
-        for choice in [pinned, active, docked] {
+        for choice in [pinned, active, held, docked] {
             if let choice, candidates.contains(choice) {
                 return choice
             }

@@ -45,26 +45,6 @@ struct LyricsMetricsTests {
         #expect(LyricsMetrics.fade(atDistance: 1) < 0.5)
     }
 
-    @Test func aWordLightsUpAcrossItsOwnWindow() {
-        let word = LyricsWord(text: "one", start: 10, end: 11)
-
-        #expect(LyricsMetrics.sungShare(of: word, at: 9) == 0)
-        #expect(LyricsMetrics.sungShare(of: word, at: 12) == 1)
-        #expect(abs(LyricsMetrics.sungShare(of: word, at: 10.5) - 0.5) < 0.000_001)
-    }
-
-    @Test func anUnsungWordIsStillLegible() {
-        #expect(LyricsMetrics.wordOpacity(0) == LyricsMetrics.dimmestWord)
-        #expect(LyricsMetrics.wordOpacity(1) == 1)
-        #expect(LyricsMetrics.dimmestWord > LyricsMetrics.fade(atDistance: 1))
-    }
-
-    @Test func aWordOfNoLengthIsAlreadySung() {
-        let word = LyricsWord(text: "one", start: 10, end: 10)
-
-        #expect(LyricsMetrics.sungShare(of: word, at: 10) == 1)
-    }
-
     @Test func theDotsFillOneAfterAnotherAcrossTheGap() {
         #expect(LyricsMetrics.dotFill(0, progress: 0) == 0)
         #expect(LyricsMetrics.dotFill(0, progress: 0.34) == 1)
@@ -74,7 +54,7 @@ struct LyricsMetricsTests {
     }
 
     @Test func gapProgressIsClampedToTheGap() {
-        let line = LyricsLine(id: 0, start: 10, end: 20, text: "", words: [])
+        let line = LyricsLine(id: 0, start: 10, end: 20, text: "")
 
         #expect(LyricsMetrics.gapProgress(line, at: 5) == 0)
         #expect(LyricsMetrics.gapProgress(line, at: 15) == 0.5)

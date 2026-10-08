@@ -184,12 +184,14 @@ struct MediaRosterTests {
         pinned: UUID? = nil,
         active: UUID? = nil,
         docked: UUID? = nil,
+        held: UUID? = nil,
         candidates: [UUID]
     ) -> UUID? {
         MediaRoster.lyricsOwner(
             pinned: pinned,
             active: active,
             docked: docked,
+            held: held,
             candidates: candidates
         )
     }
@@ -209,6 +211,14 @@ struct MediaRosterTests {
 
     @Test func aPinOnATabThatStoppedFallsBackRatherThanEmptying() {
         #expect(owner(pinned: c, active: a, docked: b, candidates: [a, b]) == a)
+    }
+
+    @Test func theTabYouJustLeftKeepsTheWordsUntilTheDockTakesIt() {
+        #expect(owner(active: c, held: a, candidates: [a, b]) == a)
+        #expect(owner(active: c, docked: b, held: a, candidates: [a, b]) == a,
+                "the dock moving on its way to that tab must not flash another song")
+        #expect(owner(active: c, docked: b, held: a, candidates: [b]) == b)
+        #expect(owner(active: b, held: a, candidates: [a, b]) == b)
     }
 
     @Test func nothingEligibleMeansNoWords() {

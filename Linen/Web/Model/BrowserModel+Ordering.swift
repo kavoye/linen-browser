@@ -296,15 +296,6 @@ extension BrowserModel {
             ?? above.first
     }
 
-    static func isPlayingMedia(_ webView: WKWebView) async -> Bool {
-        let script = """
-        !!Array.from(document.querySelectorAll('video, audio'))
-            .find(m => !m.paused && !m.ended && m.currentTime > 0
-                       && !m.muted && m.volume > 0)
-        """
-        return (try? await webView.evaluateJavaScript(script)) as? Bool ?? false
-    }
-
     func closeOthers(_ kept: BrowserTab) {
         for tab in tabs.reversed() where tab !== kept {
             close(tab)

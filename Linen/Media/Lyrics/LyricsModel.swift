@@ -18,6 +18,10 @@ nonisolated struct LyricsSignature: Equatable, Sendable {
     var isPlayable: Bool {
         isEnabled && !isPrivate && tabID != nil && !isLive && !title.isEmpty && seconds > 0
     }
+
+    var isSettling: Bool {
+        isEnabled && !isPrivate && tabID != nil && !isLive && !isPlayable
+    }
 }
 
 nonisolated enum LyricsPhase: Equatable {
@@ -27,6 +31,7 @@ nonisolated enum LyricsPhase: Equatable {
     case words(LyricsTrack)
     case instrumental
     case missing
+    case live
 }
 
 @MainActor
@@ -167,7 +172,11 @@ final class LyricsModel {
             return
         }
         guard next.isPlayable else {
-            phase = .idle
+            if next.isLive, next.isEnabled, !next.isPrivate, next.tabID != nil {
+                phase = .live
+            } else {
+                phase = next.isSettling ? .looking : .idle
+            }
             Pipeline.log.notice("""
             lyrics: nothing to look up — tab \(next.tabID != nil), title \(!next.title.isEmpty),             seconds \(next.seconds), live \(next.isLive), private \(next.isPrivate)
             """)

@@ -40,7 +40,6 @@ nonisolated enum LyricsTextSize: String, CaseIterable, Sendable {
 nonisolated enum LyricsMetrics {
     static let focus: CGFloat = 0.42
     static let widestColumn: CGFloat = 760
-    static let dimmestWord: Double = 0.58
     static let holdAfterScrolling: Double = 4
 
     static func fontSize(forWidth width: CGFloat, scale: CGFloat = 1) -> CGFloat {
@@ -71,18 +70,6 @@ nonisolated enum LyricsMetrics {
         }
     }
 
-    static func sungShare(of word: LyricsWord, at time: Double) -> Double {
-        guard time < word.end else { return 1 }
-        guard time > word.start else { return 0 }
-        let span = word.end - word.start
-        guard span > 0 else { return 1 }
-        return eased((time - word.start) / span)
-    }
-
-    static func wordOpacity(_ share: Double) -> Double {
-        dimmestWord + (1 - dimmestWord) * share
-    }
-
     static func gapProgress(_ line: LyricsLine, at time: Double) -> Double {
         let span = line.duration
         guard span > 0 else { return 0 }
@@ -94,10 +81,5 @@ nonisolated enum LyricsMetrics {
         let share = 1 / Double(count)
         let local = (progress - Double(index) * share) / share
         return min(max(local, 0), 1)
-    }
-
-    private static func eased(_ value: Double) -> Double {
-        let clamped = min(max(value, 0), 1)
-        return clamped * clamped * (3 - 2 * clamped)
     }
 }

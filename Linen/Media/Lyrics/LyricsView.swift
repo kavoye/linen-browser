@@ -59,6 +59,7 @@ struct LyricsSurface: View {
             isDocked: coordinator.isLyricsSourceDocked,
             isOnScreen: isOnScreen
         )
+        let lookup = LyricsLookup(signature: signature, isOnScreen: isOnScreen)
         LyricsBoard(
             lyrics: lyrics,
             title: title,
@@ -70,9 +71,9 @@ struct LyricsSurface: View {
             onChoose: coordinator.pinLyrics(to:),
             onSeek: seek(to:)
         )
-        .task(id: LyricsLookup(signature: signature, isOnScreen: isOnScreen)) {
-            guard isOnScreen else { return }
-            await lyrics.load(signature)
+        .task(id: lookup) {
+            guard lookup.isOnScreen else { return }
+            await lyrics.load(lookup.signature)
         }
         .task(id: watch) { coordinator.watchForLyrics(watching) }
         .onChange(of: model.currentTime, initial: true) { follow() }
@@ -105,6 +106,10 @@ private struct LyricsWatch: Equatable {
     var tabID: UUID?
     var isDocked: Bool
     var isOnScreen: Bool
+}
+
+private enum LyricsStageKind {
+    case idle, off, looking, words, instrumental, missing, live
 }
 
 private struct LyricsLookup: Equatable {
@@ -158,6 +163,7 @@ struct LyricsBoard: View {
 
     @State private var containerSize: CGSize = .zero
     @State private var sourceAnchor = MenuAnchorBox()
+    @State private var stageOpacity: Double = 1
 
     private var fontSize: CGFloat {
         LyricsMetrics.fontSize(forWidth: containerSize.width, scale: lyrics.textSize.scale)
@@ -167,10 +173,35 @@ struct LyricsBoard: View {
         VStack(spacing: 0) {
             header
             stage
+                .opacity(stageOpacity)
             footer
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { containerSize = $0 }
-        .colorScheme(.dark)
+        .onChange(of: stageKind) { _, kind in
+            guard kind != .looking else { return }
+            stageOpacity = 0
+            withAnimation(.easeOut(duration: 0.22)) { stageOpacity = 1 }
+        }
+        .environment(\.colorScheme, .dark)
+    }
+
+    private var stageKind: LyricsStageKind {
+        switch lyrics.phase {
+        case .idle:
+            .idle
+        case .off:
+            .off
+        case .looking:
+            .looking
+        case .words:
+            .words
+        case .instrumental:
+            .instrumental
+        case .missing:
+            .missing
+        case .live:
+            .live
+        }
     }
 
     // MARK: - Header
@@ -315,9 +346,16 @@ struct LyricsBoard: View {
                 caption: "Turn them on in Settings › General."
             )
         case .looking:
-            PanelNotice(symbol: nil, title: "Looking for lyrics…")
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .instrumental:
             PanelNotice(symbol: "music.quarternote.3", title: "Instrumental")
+        case .live:
+            PanelNotice(
+                symbol: "dot.radiowaves.left.and.right",
+                title: "Live stream",
+                caption: "Lyrics aren’t available for live streams."
+            )
         case .missing:
             PanelNotice(
                 symbol: "text.magnifyingglass",
@@ -490,31 +528,11 @@ private struct LyricsLineRow: View {
                 fontSize: fontSize,
                 elapsed: elapsed
             )
-        } else if distance == 0 {
-            TimelineView(.animation(paused: !isPlaying)) { _ in
-                sung(at: elapsed())
-                    .font(.system(size: fontSize, weight: .bold))
-            }
         } else {
             Text(verbatim: line.text)
                 .font(.system(size: fontSize, weight: .bold))
                 .foregroundStyle(.white.opacity(LyricsMetrics.fade(atDistance: distance)))
         }
-    }
-
-    private func sung(at time: Double) -> Text {
-        guard !line.words.isEmpty else { return Text(verbatim: line.text) }
-
-        let last = line.words.count - 1
-        var built = AttributedString()
-        for (index, word) in line.words.enumerated() {
-            var run = AttributedString(index == last ? word.text : word.text + " ")
-            run.foregroundColor = .white.opacity(
-                LyricsMetrics.wordOpacity(LyricsMetrics.sungShare(of: word, at: time))
-            )
-            built += run
-        }
-        return Text(built)
     }
 }
 

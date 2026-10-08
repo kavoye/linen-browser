@@ -16,6 +16,9 @@ extension AppCoordinator {
 
         if let newTab, media.controlledTabID == newTab.id {
             media.releaseControl()
+            if sidePanel.isShowing(.lyrics), lyricsTab?.id == newTab.id {
+                watchForLyrics(newTab)
+            }
             dockSuccessor(to: newTab.id)
         }
         if let previousTab, browser.isVisibleInSplit(previousTab) {
@@ -27,10 +30,15 @@ extension AppCoordinator {
         }
 
         guard let previousTab, previousTab.id != newTab?.id else { return }
+        lyricsHeldTabID = previousTab.id
         Task { [weak self] in
+            defer {
+                if self?.lyricsHeldTabID == previousTab.id {
+                    self?.lyricsHeldTabID = nil
+                }
+            }
             guard let self,
-                  !isClosed, !previousTab.isClosed,
-                  await BrowserModel.isPlayingMedia(previousTab.webView),
+                  !isClosed, !previousTab.isClosed, previousTab.isPlayingAudio,
                   !isClosed, browser.tabs.contains(where: { $0 === previousTab }),
                   claim == mediaClaim,
                   browser.activeTabID != previousTab.id,
@@ -257,6 +265,7 @@ extension AppCoordinator {
             pinned: lyricsPinnedTabID,
             active: browser.activeTabID,
             docked: media.controlledTabID,
+            held: lyricsHeldTabID,
             candidates: candidates.map(\.id)
         ) else { return nil }
         return candidates.first { $0.id == id }

@@ -2743,6 +2743,9 @@
     "Live" : {
       "comment" : "Badge beside the play button in the media dock for a live stream, which has no timeline to scrub — the red-dot “live” of web video players. Also serves as the badge's accessibility label. Adjective, extremely tight."
     },
+    "Live stream" : {
+
+    },
     "Load a model, then start the local server from LM Studio’s Developer tab." : {
       "comment" : "Setup hint shown under the LM Studio provider in Settings > Provider. “LM Studio” is the app's name and “Developer” is a tab inside it — leave both as is. Two imperatives; curly apostrophe."
     },
@@ -2773,9 +2776,6 @@
     "Look things up with the search engine." : {
       "comment" : "Caption for the Search the Web tool in assistant settings."
     },
-    "Looking for lyrics…" : {
-      "comment" : "Shown with a spinner in the lyrics view while the words are being looked up. Present participle with a real ellipsis."
-    },
     "Looking for related tabs…" : {
 
     },
@@ -2790,6 +2790,9 @@
     },
     "Lyrics are off" : {
       "comment" : "Title shown in the middle of the Lyrics panel when the setting is off. A statement of fact, sentence case with no final full stop, as empty-state titles are."
+    },
+    "Lyrics aren’t available for live streams." : {
+
     },
     "Lyrics from LRCLIB" : {
       "comment" : "Credit line at the foot of the lyrics view, naming the website the words came from. LRCLIB is a name and is never translated. Not a sentence; very small type."

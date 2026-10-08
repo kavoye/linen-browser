@@ -74,36 +74,6 @@ struct LyricsParsingTests {
         #expect(lines.map(\.text) == ["one", "two"])
     }
 
-    // MARK: - Word timing
-
-    @Test func wordsShareTheLineAndKeepItsOrder() {
-        let words = LyricsParser.words(in: "one two three", from: 10, before: 14)
-
-        #expect(words.map(\.text) == ["one", "two", "three"])
-        #expect(words[0].start == 10)
-        for pair in zip(words, words.dropFirst()) {
-            #expect(abs(pair.0.end - pair.1.start) < 0.000_001)
-        }
-    }
-
-    @Test func aLongerWordHoldsTheHighlightLonger() {
-        let words = LyricsParser.words(in: "a everlasting", from: 0, before: 4)
-
-        #expect(words[1].end - words[1].start > words[0].end - words[0].start)
-    }
-
-    @Test func wordsStopSweepingWellBeforeALongInstrumentalTail() {
-        let words = LyricsParser.words(in: "two words", from: 0, before: 40)
-
-        #expect(words.last!.end < 4)
-    }
-
-    @Test func wordsNeverRunPastAVeryShortLine() {
-        let words = LyricsParser.words(in: "a whole lot of words here", from: 0, before: 0.4)
-
-        #expect(words.last!.end <= 0.4001)
-    }
-
     // MARK: - Finding the line
 
     @Test func theActiveLineIsTheLastOneAlreadyStarted() {

@@ -3,18 +3,11 @@
 
 import Foundation
 
-nonisolated struct LyricsWord: Equatable, Sendable {
-    let text: String
-    let start: Double
-    let end: Double
-}
-
 nonisolated struct LyricsLine: Identifiable, Equatable, Sendable {
     let id: Int
     let start: Double
     let end: Double
     let text: String
-    let words: [LyricsWord]
 
     var isGap: Bool {
         text.isEmpty
@@ -91,36 +84,8 @@ nonisolated enum LyricsParser {
 
         return kept.enumerated().map { index, row in
             let next = index + 1 < kept.count ? kept[index + 1].time : max(duration, row.time + 4)
-            let end = max(next, row.time)
-            return LyricsLine(
-                id: index,
-                start: row.time,
-                end: end,
-                text: row.text,
-                words: words(in: row.text, from: row.time, before: end)
-            )
+            return LyricsLine(id: index, start: row.time, end: max(next, row.time), text: row.text)
         }
-    }
-
-    static func words(in text: String, from start: Double, before end: Double) -> [LyricsWord] {
-        let tokens = text.split(separator: " ").map(String.init)
-        guard !tokens.isEmpty else { return [] }
-
-        let room = max(end - start, 0.001)
-        let natural = 0.3 * Double(tokens.count) + 0.035 * Double(text.count)
-        let span = min(room, max(natural, min(room, 0.8)))
-        let weights = tokens.map { Double($0.count) + 1 }
-        let total = weights.reduce(0, +)
-
-        var cursor = start
-        var built: [LyricsWord] = []
-        built.reserveCapacity(tokens.count)
-        for (token, weight) in zip(tokens, weights) {
-            let next = cursor + span * (weight / total)
-            built.append(LyricsWord(text: token, start: cursor, end: next))
-            cursor = next
-        }
-        return built
     }
 
     static func index(at time: Double, in lines: [LyricsLine]) -> Int? {
