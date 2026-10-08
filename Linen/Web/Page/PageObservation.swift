@@ -66,6 +66,7 @@ extension PageDriver {
         let deadline = ContinuousClock.now + .seconds(1)
         var previousBounds: [Double]?
         var lastError = "The control did not become stable. Read the page again."
+        var samples = 0
         repeat {
             guard await validateObservation(in: view, ref: ref) else { return staleMessage }
             let result = await evaluateJSON(
@@ -92,8 +93,9 @@ extension PageDriver {
                 }
                 previousBounds = bounds
             }
+            samples += 1
             try? await Task.sleep(for: .milliseconds(40))
-        } while ContinuousClock.now < deadline
+        } while ContinuousClock.now < deadline || samples < 3
         return lastError
     }
 }

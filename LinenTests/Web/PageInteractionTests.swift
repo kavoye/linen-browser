@@ -93,6 +93,18 @@ struct PageInteractionTests {
         #expect((await PageDriver.click(ref: 1, label: "", in: view)).hasPrefix("Clicked"))
     }
 
+    @Test func aStillControlOnABusyPageIsClicked() async {
+        let view = await page(
+            """
+            <button onclick='window.hit=true'>Busy target</button>
+            <script>setInterval(() => { const end = performance.now() + 700; while (performance.now() < end) {} }, 0)</script>
+            """)
+        _ = await PageDriver.snapshot(view)
+        let output = await PageDriver.click(ref: 1, label: "", in: view)
+        #expect(output.hasPrefix("Clicked"))
+        #expect(await js(view, "window.hit") as? Bool == true)
+    }
+
     @Test func enterHandledByPageSubmitsExactlyOnce() async {
         let view = await page(
             """
