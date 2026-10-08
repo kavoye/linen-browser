@@ -39,8 +39,6 @@ final class MediaModel {
     }
 }
 
-/// Page messages report presentation changes; WebKit also reports page teardown.
-/// Only page messages imply a user request without a separate return callback.
 enum PictureSource {
     case page
     case webKit
@@ -59,7 +57,6 @@ final class MediaCenter {
     let model = MediaModel()
     let watched = MediaModel()
 
-    /// Disabling the dock leaves `watched` active so lyrics can still follow the current tab.
     var isEnabled = true {
         didSet {
             guard !isEnabled else { return }
@@ -67,7 +64,6 @@ final class MediaCenter {
         }
     }
 
-    /// Disable video in the card when automatic Picture in Picture uses the floating window.
     var lendsPicture = true {
         didSet {
             guard !lendsPicture else { return }
@@ -419,8 +415,6 @@ final class MediaCenter {
         nativePiPView === webView
     }
 
-    /// Only toggle when WebKit confirms PiP is active. Otherwise request inline playback
-    /// explicitly, so stale state cannot accidentally start PiP.
     func exitPictureInPicture(for webView: WKWebView) {
         guard nativePiPView === webView else { return }
         returnAskedAt = Date()
@@ -434,7 +428,6 @@ final class MediaCenter {
         setPictureInPicture(false, for: webView, source: .webKit)
     }
 
-    /// Off-screen web views need the synthesized gesture fallback.
     func togglePictureInPicture(for webView: WKWebView) {
         guard nativePiPView !== webView else {
             exitPictureInPicture(for: webView)
@@ -495,8 +488,6 @@ final class MediaCenter {
         onPictureOutChanged?(webView, false)
     }
 
-    /// Ignore return callbacks during the initial PiP transition. WebKit sends them
-    /// while entering PiP too, before the user has requested a return.
     func notePictureReturnAsk(for webView: WKWebView) -> Bool {
         guard nativePiPView === webView else { return false }
         if let wentOut = pictureWentOutAt,
@@ -516,8 +507,6 @@ final class MediaCenter {
         setPictureInPicture(message == "picture-in-picture", for: webView, source: .page)
     }
 
-    /// Track PiP independently of the dock, using both WebKit delegate callbacks
-    /// and presentation-mode messages from the page.
     func setPictureInPicture(_ isNative: Bool, for webView: WKWebView, source: PictureSource) {
         if webView === controlledWebView {
             model.isInNativePiP = isNative
@@ -906,7 +895,6 @@ enum MediaRoster {
         )
     }
 
-    /// Keep lyrics visible after the current page pauses or mutes.
     static func isLyricsSource(
         isPlayingAudio: Bool,
         hasPlayed: Bool,

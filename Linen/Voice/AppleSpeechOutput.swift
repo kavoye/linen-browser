@@ -15,7 +15,7 @@ final class AppleSpeechVoiceCatalog {
         self.loadVoices = loadVoices
     }
 
-    /// Call from synchronous app launch: Apple's voice lookup forces a sync
+    /// Call from synchronous app launch: the system voice lookup forces a sync
     /// operation internally and warns when entered from a Swift task.
     func prepare() {
         guard !isPrepared else { return }

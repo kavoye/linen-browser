@@ -264,8 +264,6 @@ struct DetailRow<Content: View>: View {
     private var caption: Text?
     var layout: Layout = .trailing
     var isMuted = false
-    /// `nil` lets the controls keep their own width, for a row that carries
-    /// more than one of them.
     var controlWidth: CGFloat? = SettingsMetrics.controlWidth
 
     @ViewBuilder let content: Content

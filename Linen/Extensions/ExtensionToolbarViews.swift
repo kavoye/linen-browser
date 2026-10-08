@@ -72,8 +72,6 @@ struct ExtensionActionsCluster: View {
         }
         .coordinateSpace(.named(Self.space))
         .holdsWindowStillOnHover()
-        // The gesture belongs to the container. A reorder rebuilds the dragged
-        // button, and a rebuilt view never delivers `.onEnded`.
         .gesture(
             DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
                 .onChanged(dragChanged)

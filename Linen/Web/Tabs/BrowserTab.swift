@@ -578,7 +578,6 @@ final class BrowserTab: Identifiable {
 
     private func pageDidChangeInPlace(_ webView: WKWebView) {
         let previous = urlString
-        // The start page is a surface over the tab, not a place it went.
         if !SystemPages.isStart(webView.url) {
             permissions.pageChanged(url: webView.url)
             assistantAccess.pageChanged(url: webView.url)

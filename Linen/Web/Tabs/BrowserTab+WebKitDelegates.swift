@@ -480,7 +480,6 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab.refreshChrome()
         tab.invalidateSessionState()
         guard tab.isShowingRealPage else {
-            // Nothing to record, but the session still moved.
             tab.onNavigationFinished?(true)
             return
         }

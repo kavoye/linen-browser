@@ -5,12 +5,9 @@ import AppKit
 import SwiftUI
 
 enum LoomChrome {
-    /// The inset shared by chrome-owned surfaces.
     nonisolated static let canvasInset: CGFloat = 6
     nonisolated static let resizeGrabWidth: CGFloat = 8
 
-    /// Visually balances sidebar rows against the canvas gutter without
-    /// changing the resize handle's position inside that gutter.
     nonisolated static var sidebarContentBalanceOffset: CGFloat {
         canvasInset / 2
     }
@@ -33,9 +30,6 @@ enum LoomChrome {
             return neutral(isLight: fallbackIsLight)
         }
 
-        // A real page chooses the chrome's tonal family too. In particular,
-        // black and grey headers carry useful appearance information; treating
-        // them as "no colour" leaves a light Loom around dark sites.
         let isLight = PageInk.isLight(color, scheme: scheme)
         let neutral = neutral(isLight: isLight)
 
@@ -59,8 +53,6 @@ enum LoomChrome {
     }
 }
 
-/// The shared visible affordance for every resize gutter. The surrounding
-/// handle owns the larger interaction target; this view only draws the pill.
 struct LoomResizePill: View {
     let axis: Axis
     let isVisible: Bool
@@ -90,8 +82,6 @@ struct LoomResizePill: View {
     }
 }
 
-/// Resolves every horizontal shell measurement from the same inputs. The
-/// browser, panel, and resize gutters should never each infer these offsets.
 nonisolated struct LoomShellGeometry {
     let containerWidth: CGFloat
     let sidebarWidth: CGFloat
@@ -108,14 +98,11 @@ nonisolated struct LoomShellGeometry {
         )
     }
 
-    /// Additional room reserved by the page canvas. The top bar never reads
-    /// this value, so opening the panel cannot change toolbar geometry.
     var canvasTrailingInset: CGFloat {
         guard isPanelVisible, !isPanelExpanded else { return 0 }
         return panelWidth + LoomChrome.canvasInset
     }
 
-    /// Leading edge for a resize hit target centred in the canvas gutter.
     var sidebarResizeLeading: CGFloat {
         sidebarWidth + (LoomChrome.canvasInset - LoomChrome.resizeGrabWidth) / 2
     }
@@ -128,8 +115,6 @@ nonisolated struct LoomShellGeometry {
         isPanelVisible && isPanelExpanded
     }
 
-    /// Leading edge for a resize target centred between the page canvas and
-    /// the side panel. It is window-owned, so neither surface shifts around it.
     var panelResizeLeading: CGFloat {
         containerWidth
             - panelWidth
@@ -274,7 +259,6 @@ private struct LoomTransparentBackdrop: View {
     }
 }
 
-/// Shared panel fill for the side panel, internal pages, and Settings.
 struct LoomPanelFill<S: Shape>: View {
     let shape: S
     var isVisible = true

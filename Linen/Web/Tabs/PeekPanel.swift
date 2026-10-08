@@ -11,15 +11,10 @@ final class PeekPanel {
     private(set) var tab: BrowserTab?
     @ObservationIgnored private var departures: [UUID: (tab: BrowserTab, task: Task<Void, Never>)] = [:]
 
-    /// The tab the peek was opened from. It stays with that page, so leaving
-    /// for another tab hides the panel rather than closing it.
     private(set) var ownerID: UUID?
 
-    /// Where the link was clicked, in the content area's own points.
     private(set) var origin: CGPoint = .zero
 
-    /// A peek that is kept hands its page to the window behind it, so the
-    /// panel must not shrink away empty.
     private(set) var isQuiet = false
     private(set) var isCollapsed = false
 
@@ -59,7 +54,6 @@ final class PeekPanel {
         return held
     }
 
-    /// Keep the page alive while the panel shrinks back into its link.
     @discardableResult
     func dismiss(using browser: BrowserModel, clock: any Clock<Duration> = ContinuousClock()) -> Bool {
         guard let held = take() else { return false }
@@ -76,7 +70,6 @@ final class PeekPanel {
         return true
     }
 
-    /// Profile and window teardown must also detach pages still animating out.
     func dismissImmediately(using browser: BrowserModel) {
         let held = take(quietly: true)
         let pending = Array(departures.values)

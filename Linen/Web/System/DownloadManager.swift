@@ -92,8 +92,6 @@ final class DownloadManager: NSObject {
         return AppDatabase.supportDirectory.appendingPathComponent("Downloads.json")
     }
 
-    /// A ceiling the list is not meant to reach: what it keeps is decided by
-    /// `DownloadRetention`, and this only stops a runaway file.
     private static let capacity = 1000
 
     func apply(_ retention: DownloadRetention, now: Date = Date()) {
