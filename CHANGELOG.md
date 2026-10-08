@@ -1,5 +1,107 @@
 # Changelog
 
+## 0.8.0
+
+### New
+
+- **Multiple windows.** Open more than one browser window. Linen restores your
+  windows after relaunch. Move tabs between windows of the same profile
+  without reloading them.
+- **Open links in a new window.** Choose Open Link in New Window from a link's
+  context menu. Hold Option to open the link in a new private window. Press
+  ⇧⌘N to open a private window. Closing it ends that private session.
+- **Settings for each profile.** Each profile keeps its own assistant settings,
+  approvals, and website settings.
+- **Side Panel.** The Side Panel holds the assistant and the integrations you
+  add. Choose the add button to add Lyrics or GitHub, and Control-click a tab
+  to remove it. Press ⌥⌘S to show or hide the Side Panel.
+- **GitHub integration.** Connect GitHub to review pull requests in the Side
+  Panel. See review requests, mentions, and your pull requests in one inbox.
+  Filter and sort pull requests, and open one to see its checks, reviews,
+  comments, and files.
+- **GitHub notifications and previews.** Get notified when your pull requests
+  get reviews, comments, or check results. Hover over a pull request tab to
+  see its status, or Shift-click a pull request link to peek at it.
+- **Search GitHub from the address bar.** Type "github" and press Tab to search
+  pull requests. Ask the assistant to explain a pull request or a failing
+  check.
+- **Reader.** Linen now has Reader. It shows just the main text of an article.
+  Choose the font, style, and text size, and have the article read aloud.
+  Press ⌥⌘R to show or hide Reader.
+- **Page translation.** Translate a page on this Mac. Choose Translate Page from
+  the View menu, and choose View Original to switch back. You can always
+  translate a language.
+- **Page watches.** Ask the assistant to watch a page. Linen checks the page on
+  a schedule and notifies you when it changes. Apple Intelligence compares the
+  page on your Mac, so page content stays on your Mac. See and stop watched
+  pages in the Side Panel.
+- **Tab archiving.** Archive tabs you haven't used. Choose a time in Settings >
+  General. Pinned tabs stay open, and you can find archived tabs with ⌘K.
+- **Site search in the command palette.** Type a name such as YouTube, Reddit,
+  GitHub, or Amazon, then press Tab. Press Return to open results in a new
+  tab, or Option-Return to open them in the current tab.
+- **Handoff.** Continue the current tab on iPhone or iPad. Private tabs are not
+  shared.
+- **Voice settings.** Voice settings have their own page. Recognize speech and
+  read answers aloud with this Mac at no cost or with OpenAI. You can also
+  have every answer read aloud automatically.
+- **Tab switcher previews.** Press Control-Tab to see previews of your recent
+  tabs while you switch.
+- **Web Inspector shortcut.** Choose View > Developer > Show Web Inspector, or
+  press ⌥⌘I.
+- **Track controls.** The media card has Previous Track and Next Track buttons.
+
+### Improved
+
+- **Permission to open apps.** Websites ask before they open another app. Allow
+  an app once or always for a website, and change your choice in website
+  settings.
+- **Better form filling.** The assistant can fill up to 32 form controls at
+  once, including dates, colors, sliders, checkboxes, and radio buttons. It
+  reports the fields it could not fill.
+- **Rate limit recovery.** When a provider's rate limit is reached, the
+  assistant waits and tries again. If the limit continues, your progress is
+  saved so you can continue later.
+- **Clearer assistant pauses.** Pause messages say why the task stopped and what
+  to do next.
+- **Questions stay in their space.** Assistant questions appear only in the
+  space where you started the request.
+- **Less background work.** Idle media players, hidden pages, and lyrics no
+  longer update, and external assistant connections no longer check for
+  messages while idle.
+- **PDF downloads.** PDFs open in Linen are saved through Downloads.
+- **Better tab titles.** Tabs show PDF filenames, and pages without a title get
+  a better name.
+- **Solid Side Panel.** Turn on Solid background in Appearance settings to show
+  the Side Panel without transparency.
+- **Folder deletion.** When you delete a folder, you can close its tabs too.
+- **Split view by drag.** Drag a tab onto the page to open it in split view.
+- **Codex setup.** Codex setup finds the Codex CLI included with the Codex app.
+
+### Fixed
+
+- **Scroll position.** Restored pages keep their scroll position.
+- **Command palette shortcuts.** Editing shortcuts work with Caps Lock on and
+  with keyboard layouts that change letters while Command is held.
+- **Autofill placement.** Autofill suggestions no longer appear in the wrong
+  place when a field moves after it gets focus.
+- **Assistant key presses.** The assistant no longer reports a key press as
+  failed when the page handles the key.
+- **MCP connections.** External assistants that send experimental MCP
+  capabilities can connect.
+- **Local website icons.** Website icons load for local development servers.
+- **Sidebar drop targets.** Drop targets stay visible on light websites.
+- **Folder previews.** Folder preview icons are easier to see in Dark Mode.
+- **Dock menu titles.** Page titles in the Dock menu are limited to 40
+  characters.
+
+### Removed
+
+- **Show lyrics setting.** Add Lyrics to the Side Panel instead.
+- **⌥⌘A and ⌥⌘Y shortcuts.** Press ⌥⌘S to show the Side Panel.
+- **Recent downloads list.** The list is no longer in Downloads settings.
+  Choose Open downloads to see your downloads.
+
 ## 0.7.1
 
 ### New
