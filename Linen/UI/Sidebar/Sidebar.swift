@@ -40,13 +40,7 @@ struct Sidebar: View {
 
     private var inkIsLight: Bool {
         if !coordinator.isShowingSettings {
-            return PageInk.isLight(
-                LoomChrome.sampledColor(
-                    ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
-                    scheme: scheme
-                ),
-                scheme: scheme
-            )
+            return ChromeBand.loomIsLight(browser: browser, coordinator: coordinator, scheme: scheme)
         }
         guard wearsBand else { return scheme == .light }
         return PageInk.isLight(

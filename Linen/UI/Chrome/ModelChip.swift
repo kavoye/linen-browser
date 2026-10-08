@@ -42,6 +42,7 @@ struct ModelChip: View {
             .help("Change the model or reasoning level")
             .popover(isPresented: $isPresenting, arrowEdge: .top) {
                 EnginePopover(coordinator: coordinator) { isPresenting = false }
+                    .chromePopoverAppearance()
             }
         } else {
             chip

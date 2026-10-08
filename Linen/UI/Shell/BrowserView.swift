@@ -33,6 +33,8 @@ struct BrowserView: View {
     }
 
     var body: some View {
+        let loom = ChromeBand.loomWash(browser: browser, coordinator: coordinator, scheme: scheme)
+        let loomScheme: ColorScheme = loom.isLight ? .light : .dark
         let width = sidebar.openWidth(in: containerWidth)
         let roomBesideSidebar = containerWidth - (sidebar.isVisible ? width : 0)
         let isExpanded = showsPanel && panel.isExpanded
@@ -144,13 +146,16 @@ struct BrowserView: View {
                 model: coordinator.tabPreview,
                 sidebarEdge: sidebar.isShowing ? width : 0
             )
+            .environment(\.colorScheme, loomScheme)
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
+                .environment(\.windowColorScheme, loomScheme)
 
             DownloadFlightLayer(flights: coordinator.downloadFlights)
                 .environment(\.sidebarStyle, sidebar.style)
 
             PaneDragOverlay(browser: browser, model: coordinator.sidebarDrag)
+                .environment(\.windowColorScheme, loomScheme)
 
             if !sidebar.isShowing {
                 Color.clear
@@ -175,6 +180,9 @@ struct BrowserView: View {
                             coordinator.closePalette()
                         }
                         .id(coordinator.paletteToken)
+                        .environment(\.chromeIsLight, loom.isLight)
+                        .environment(\.chromeWash, loom)
+                        .environment(\.colorScheme, loomScheme)
                     }
                     .frame(width: proxy.size.width, height: proxy.size.height)
                 }
@@ -191,6 +199,9 @@ struct BrowserView: View {
                         ProfileSwitcher(coordinator: coordinator) {
                             coordinator.isProfileSwitcherOpen = false
                         }
+                        .environment(\.chromeIsLight, loom.isLight)
+                        .environment(\.chromeWash, loom)
+                        .environment(\.colorScheme, loomScheme)
                         .padding(.leading, anchor.minX)
                         .padding(.bottom, max(0, proxy.size.height - anchor.minY + 6))
                     }

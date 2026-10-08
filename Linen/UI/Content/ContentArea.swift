@@ -12,6 +12,7 @@ struct ContentArea: View {
 
     @State private var pull = PullToRefreshMonitor()
     @State private var pullState = PullState.idle
+    @Environment(\.colorScheme) private var scheme
 
     private var showStartPage: Bool {
         ChromeBand.showsStartPage(browser: browser)
@@ -108,7 +109,8 @@ struct ContentArea: View {
             if let landing {
                 SplitLandingSlot(
                     outcome: .arrives,
-                    topInset: 0
+                    topInset: 0,
+                    ground: showStartPage ? nil : browser.activeTab?.canvasColor
                 )
                 .frame(width: landing.slot.width, height: landing.slot.height)
                 .offset(x: landing.slot.minX, y: landing.slot.minY)
@@ -120,6 +122,10 @@ struct ContentArea: View {
                 HStack {
                     Spacer()
                     FindBar(session: tab.find)
+                        .environment(
+                            \.colorScheme,
+                            ChromeBand.loomIsLight(browser: browser, coordinator: coordinator, scheme: scheme) ? .light : .dark
+                        )
                 }
                 .id(tab.id)
                 .padding(.top, 10)
@@ -196,7 +202,7 @@ private struct ActiveWebSurface: View {
                 )
             }
             .overlay {
-                LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id)
+                LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id, ground: tab.canvasColor)
             }
     }
 }

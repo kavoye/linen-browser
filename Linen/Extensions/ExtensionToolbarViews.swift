@@ -376,11 +376,7 @@ private struct ExtensionOverflowList: View {
             Theme.windowBackground.opacity(reduceTransparency ? 1 : 0.94)
                 .ignoresSafeArea()
         }
-        .environment(\.colorScheme, macScheme)
-    }
-
-    private var macScheme: ColorScheme {
-        NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .dark : .light
+        .chromePopoverAppearance()
     }
 }
 

@@ -39,7 +39,7 @@ private struct TabAutofillSaveBadge: View {
                     session.isPopoverPresented = false
                 }
                 .id(offer.id)
-                .environment(\.colorScheme, NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light)
+                .chromePopoverAppearance()
                 .onDisappear {
                     if let pendingReview, session.current?.id == pendingReview.id {
                         reviewing = pendingReview

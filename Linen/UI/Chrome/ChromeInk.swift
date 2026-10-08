@@ -374,6 +374,25 @@ struct ChromeWash: Equatable {
     }
 }
 
+private struct ChromePopoverAppearance: ViewModifier {
+    let scheme: ColorScheme?
+
+    @Environment(\.chromeIsLight) private var chromeIsLight
+
+    func body(content: Content) -> some View {
+        let resolved = scheme ?? (chromeIsLight ? .light : .dark)
+        content
+            .environment(\.colorScheme, resolved)
+            .preferredColorScheme(resolved)
+    }
+}
+
+extension View {
+    func chromePopoverAppearance(_ scheme: ColorScheme? = nil) -> some View {
+        modifier(ChromePopoverAppearance(scheme: scheme))
+    }
+}
+
 extension EnvironmentValues {
     @Entry var chromeWash: ChromeWash = .neutral
 

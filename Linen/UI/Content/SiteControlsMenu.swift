@@ -16,7 +16,6 @@ struct SiteControlsMenu: View {
     @State private var isPresented = false
     @Environment(\.chromeIsLight) private var chromeIsLight
     @Environment(\.chromeIconExtent) private var extent
-    @Environment(\.windowColorScheme) private var windowColorScheme
 
     private var tab: BrowserTab? {
         browser.activeTab
@@ -44,7 +43,7 @@ struct SiteControlsMenu: View {
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
             if let tab {
                 SiteControlsPanel(browser: browser, tab: tab)
-                    .environment(\.colorScheme, windowColorScheme)
+                    .chromePopoverAppearance()
             }
         }
         .help("Website Settings")
@@ -379,6 +378,7 @@ private struct SitePermissionsMenu: View {
         .onHover { isHovering = $0 }
         .popover(isPresented: $isPresented, arrowEdge: .trailing) {
             SitePermissionsPanel(tab: tab)
+                .chromePopoverAppearance()
         }
     }
 }
@@ -443,6 +443,7 @@ private struct TrackerInfoButton: View {
         .help("About Tracker Blocking")
         .popover(isPresented: $isPresented, arrowEdge: .trailing) {
             TrackerInfoPopover(tab: tab, isBlocking: isBlocking)
+                .chromePopoverAppearance()
         }
     }
 }

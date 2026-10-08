@@ -190,6 +190,15 @@ enum ChromeBand {
         return pageColor(browser: browser, coordinator: coordinator)
     }
 
+    static func loomIsLight(browser: BrowserModel, coordinator: AppCoordinator, scheme: ColorScheme) -> Bool {
+        loomWash(browser: browser, coordinator: coordinator, scheme: scheme).isLight
+    }
+
+    static func loomWash(browser: BrowserModel, coordinator: AppCoordinator, scheme: ColorScheme) -> ChromeWash {
+        let color = LoomChrome.sampledColor(measuredColor(browser: browser, coordinator: coordinator), scheme: scheme)
+        return .of(color, isLight: PageInk.isLight(color, scheme: scheme))
+    }
+
     static func pageColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
         guard !coordinator.isShowingSettings, !showsStartPage(browser: browser) else { return nil }
         guard browser.activeSplit == nil else { return nil }

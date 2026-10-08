@@ -7,8 +7,10 @@ import SwiftUI
 struct LinkPeekOverlay: View {
     let peek: LinkPeek
     let tabID: UUID
+    let ground: NSColor?
 
     @State private var cardSize: CGSize = .zero
+    @Environment(\.colorScheme) private var scheme
 
     private static let gap: CGFloat = 18
     private static let margin: CGFloat = 12
@@ -24,6 +26,7 @@ struct LinkPeekOverlay: View {
                         .onTapGesture { peek.dismiss() }
                 }
                 LinkPeekCard(shown: shown, isHeld: peek.isHeld) { peek.dismiss() }
+                    .environment(\.colorScheme, PageInk.isLight(ground, scheme: scheme) ? .light : .dark)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { cardSize = $0 }
                     .offset(
                         x: horizontal(for: shown.anchor, in: proxy.size),

@@ -22,12 +22,6 @@ private struct TabPermissionBadge: View {
         tab.permissions
     }
 
-    static var windowScheme: ColorScheme {
-        NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? .dark
-            : .light
-    }
-
     var body: some View {
         let face = center.badge
         Group {
@@ -54,7 +48,7 @@ private struct TabPermissionBadge: View {
             arrowEdge: .bottom
         ) {
             PermissionPopover(tab: tab)
-                .environment(\.colorScheme, Self.windowScheme)
+                .chromePopoverAppearance()
         }
         .onDisappear {
             center.isPopoverPresented = false

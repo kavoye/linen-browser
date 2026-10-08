@@ -84,6 +84,14 @@ custom_rules:
       - comment
       - doccomment
       - string
+  color_scheme_modifier:
+    name: "Color scheme modifier"
+    message: "Use .environment(\\.colorScheme, …). colorScheme(_:) is deprecated, and preferredColorScheme(_:) changes the whole window"
+    regex: '\.colorScheme\('
+    excluded_match_kinds:
+      - comment
+      - doccomment
+      - string
   pooled_web_view_configuration:
     name: "Pooled web view configuration"
     message: "Use WebViewPool.makeConfiguration(). A fresh configuration owns a process pool, and WebKit crashes on the display-link thread when that pool dies"

@@ -107,6 +107,29 @@ struct ChromeWashTests {
         }
     }
 
+    @Test func theLoomWashFollowsThePageNotTheMac() {
+        let coordinator = AppCoordinator()
+        coordinator.settings.matchesWebsiteColor = true
+        let tab = coordinator.browser.newTab()
+        tab.urlString = "https://example.com"
+        let loom = { (scheme: ColorScheme) in
+            ChromeBand.loomWash(browser: coordinator.browser, coordinator: coordinator, scheme: scheme)
+        }
+
+        tab.pageColor = NSColor(srgbRed: 0.98, green: 0.98, blue: 0.98, alpha: 1)
+        #expect(loom(.dark).isLight)
+        #expect(loom(.dark).luminance > 0.5)
+        #expect(ChromeBand.loomIsLight(browser: coordinator.browser, coordinator: coordinator, scheme: .dark))
+
+        tab.pageColor = NSColor(srgbRed: 0.04, green: 0.04, blue: 0.05, alpha: 1)
+        #expect(!loom(.light).isLight)
+        #expect(loom(.light).luminance < 0.5)
+
+        coordinator.settings.matchesWebsiteColor = false
+        #expect(!loom(.dark).isLight)
+        #expect(loom(.light).isLight)
+    }
+
     @Test func aWashWithNothingMeasuredFallsBackToTheScheme() {
         #expect(ChromeWash.of(nil, isLight: false).luminance < 0.5)
         #expect(ChromeWash.of(nil, isLight: true).luminance > 0.5)

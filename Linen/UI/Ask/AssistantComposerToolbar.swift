@@ -153,6 +153,7 @@ private struct ComposerPicker<Label: View>: View {
         .help(help)
         .popover(isPresented: $isPresenting, arrowEdge: .bottom) {
             EnginePopover(coordinator: coordinator, sections: sections) { isPresenting = false }
+                .chromePopoverAppearance()
         }
     }
 }

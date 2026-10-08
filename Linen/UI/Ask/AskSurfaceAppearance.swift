@@ -166,6 +166,8 @@ struct AskRestingLine: View {
     let content: AskRestingContent
     let security: PageSecurity
 
+    @Environment(\.chromeIsLight) private var chromeIsLight
+
     var body: some View {
         HStack(spacing: 5) {
             switch content {
@@ -221,7 +223,7 @@ struct AskRestingLine: View {
                 }
                 Text(verbatim: host)
                     .font(.system(size: placement.textSize))
-                    .foregroundStyle(security == .insecure ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight))
                     .lineLimit(1)
                     .truncationMode(.tail)
             }

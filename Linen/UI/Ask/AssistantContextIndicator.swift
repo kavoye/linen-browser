@@ -123,6 +123,7 @@ struct AssistantContextIndicator: View {
             .padding(.vertical, 14)
             .fixedSize()
             .onHover { isHoveringPopover = $0 }
+            .chromePopoverAppearance()
         }
     }
 

@@ -157,7 +157,8 @@ struct SplitSurface: View {
             if let aimed {
                 SplitLandingSlot(
                     outcome: outcome(of: aimed),
-                    topInset: 0
+                    topInset: 0,
+                    ground: panes.first { $0.id == aimed.anchor }?.canvasColor
                 )
                 .frame(width: aimed.slot.width, height: aimed.slot.height)
                 .offset(x: aimed.slot.minX, y: aimed.slot.minY)
@@ -361,7 +362,7 @@ private struct WebPane: View {
                 }
             }
             .overlay {
-                LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id)
+                LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id, ground: tab.canvasColor)
             }
     }
 }
@@ -375,6 +376,9 @@ struct SplitLandingSlot: View {
 
     let outcome: Outcome
     var topInset: CGFloat = 0
+    var ground: NSColor?
+
+    @Environment(\.colorScheme) private var scheme
 
     static let inset: CGFloat = 6
 
@@ -408,6 +412,7 @@ struct SplitLandingSlot: View {
             .padding(Self.inset)
             .padding(.top, topInset)
             .allowsHitTesting(false)
+            .environment(\.colorScheme, PageInk.isLight(ground, scheme: scheme) ? .light : .dark)
     }
 }
 
