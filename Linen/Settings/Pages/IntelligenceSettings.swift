@@ -330,7 +330,7 @@ private struct ProviderPage: View {
                     RowSeparator()
                     DetailRow(
                         title: "Context window",
-                        caption: "Reported by \(provider.name) for the selected model."
+                        caption: "\(provider.name) reports this for the selected model."
                     ) {
                         Text("\(window.formatted()) tokens")
                             .font(Theme.Font.control)
@@ -403,7 +403,7 @@ private struct ProviderPage: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Its name and URL are removed. The server itself isn’t affected.")
+            Text("Linen removes the endpoint’s name and URL. Nothing changes on the server.")
         }
     }
 }
@@ -485,10 +485,10 @@ private struct RemoveKeyButton: View {
             "Remove the \(model.subject.name) key?",
             isPresented: $confirming
         ) {
-            Button("Remove key", role: .destructive) { model.removeKey() }
+            Button("Remove Key", role: .destructive) { model.removeKey() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Deletes the key from Keychain. Add a new key to use \(model.subject.name) again.")
+            Text("Linen deletes the key from your Keychain. To use \(model.subject.name) again, add a new key.")
         }
     }
 }
@@ -509,7 +509,7 @@ private struct AddProviderPage: View {
             SettingsSection(
                 title: "Needs an API key",
                 symbol: "key",
-                footnote: "Keys are saved to your Keychain."
+                footnote: "Linen saves keys in your Keychain."
             ) {
                 ForEach(Array(model.unconnectedKeyed.enumerated()), id: \.element.id) { index, provider in
                     if index > 0 {
@@ -795,7 +795,7 @@ private struct CustomProviderEditor: View {
 
         SettingsPageHeader(
             title: isEditing ? "Edit endpoint" : "Custom endpoint",
-            caption: "Connect any server that uses the OpenAI chat API, usually a base URL ending in /v1."
+            caption: "Connect any server that uses the OpenAI chat API. Its base URL usually ends in /v1."
         )
 
         SettingsCard {
@@ -867,7 +867,7 @@ private struct AgentToolsPage: View {
 
         SettingsPageHeader(
             title: "Tools",
-            caption: "Choose which tools \(model.subject.name) can use. Tools use part of the context window."
+            caption: "Each tool you turn on uses part of the context window."
         )
 
         if let warning = model.toolWarning {
@@ -904,7 +904,7 @@ private struct AgentToolsPage: View {
 
     @ViewBuilder private var resetButton: some View {
         if model.toolWarning != nil {
-            SettingsButton(title: "Use recommended", tint: Theme.warning) {
+            SettingsButton(title: "Use Recommended", tint: Theme.warning) {
                 model.resetToolsToRecommended()
             }
         } else if !model.isUsingRecommendedTools {
@@ -954,7 +954,7 @@ private struct AssistantExecutionSettings: View {
 
     var body: some View {
         SettingsSection(title: "Long tasks", symbol: "arrow.trianglehead.2.clockwise") {
-            DetailRow(title: "Pause after", caption: "By default, the assistant works until it finishes. Set a limit to pause and resume with Continue. The final summary may use one more request.") {
+            DetailRow(title: "Pause after", caption: "Stop a long task after this many model requests. Click Continue to resume it.") {
                 Picker("Model requests", selection: $requestLimit) {
                     Text("No limit").tag(0)
                     Text("100 requests").tag(100)

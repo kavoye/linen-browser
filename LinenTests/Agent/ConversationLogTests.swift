@@ -372,7 +372,7 @@ struct ConversationLogTests {
         #expect(restored.links.isEmpty)
         #expect(restored.detail == nil)
         // Order is a column, not an accident of how rows came back.
-        #expect(trace.steps.map(\.title) == ["Search web", "Open page"])
+        #expect(trace.steps.map(\.title) == ["Search web", "Open Page"])
     }
 
     @Test func clearingLeavesNoStepsBehind() throws {

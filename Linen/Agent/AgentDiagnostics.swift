@@ -48,7 +48,7 @@ nonisolated enum AgentDiagnosticPrivacy {
         "inspectDownloads": String(localized: "Check Downloads"),
         "readPage": String(localized: "Read page"),
         "searchWeb": String(localized: "Search web"),
-        "navigate": String(localized: "Open page"),
+        "navigate": String(localized: "Open Page"),
         "typeOnPage": String(localized: "Fill field"),
         "fillFields": String(localized: "Fill fields"),
         "clickOnPage": String(localized: "Click control"),

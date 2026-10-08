@@ -147,7 +147,7 @@ final class AutofillSaveSession: NSObject {
                 dismiss(offer)
             }
         } catch {
-            if self.profileID == profileID && current?.id == offer.id { self.error = String(localized: "Couldn’t remember this choice. Try again.") }
+            if self.profileID == profileID && current?.id == offer.id { self.error = String(localized: "Couldn’t save this choice. Try again.") }
         }
     }
 

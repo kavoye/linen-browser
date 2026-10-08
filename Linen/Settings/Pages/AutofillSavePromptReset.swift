@@ -11,7 +11,7 @@ struct AutofillSavePromptReset: View {
 
     var body: some View {
         SettingsCard {
-            DetailRow(title: "Save suggestions", caption: "Restore prompts on excluded sites.") {
+            DetailRow(title: "Save suggestions", caption: "Show save prompts again on websites you excluded.") {
                 SettingsButton(title: "Reset") {
                     isBusy = true
                     Task {

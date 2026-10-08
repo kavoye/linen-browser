@@ -55,19 +55,19 @@ nonisolated struct OpenAIFailure: LocalizedError, Sendable {
     var errorDescription: String? {
         switch kind {
         case .configuration:
-            "The OpenAI configuration is invalid. Review the provider settings."
+            "The OpenAI settings aren’t valid. Check them in Assistant settings."
         case .http:
-            "OpenAI could not complete the request. Check the provider settings and try again."
+            "OpenAI couldn’t complete the request. Check the provider settings and try again."
         case .invalidResponse:
-            "OpenAI returned a response Linen could not process."
+            "Linen couldn’t read the response from OpenAI."
         case .incomplete:
-            "OpenAI stopped before completing the response. Your confirmed progress is saved."
+            "OpenAI stopped before finishing the response. Your progress is saved."
         case .streamInterrupted:
-            "The OpenAI connection ended before the response completed."
+            "The connection to OpenAI ended before the response finished."
         case .contextLimit:
-            "The OpenAI conversation needs compaction before continuing."
+            "The OpenAI conversation is too long to continue."
         case .unsupportedAction:
-            "OpenAI requested an action that this version of Linen cannot execute."
+            "OpenAI asked for an action this version of Linen can’t do."
         }
     }
 }

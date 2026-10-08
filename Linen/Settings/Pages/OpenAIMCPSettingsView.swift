@@ -115,10 +115,10 @@ struct OpenAIMCPSettingsView: View {
                         }
                     }
                     if useOAuth {
-                        Text("Access tokens are sent to your configured OpenAI provider. Refresh tokens stay in Keychain and are sent only to the authorization server.")
+                        Text("Linen sends the access token to your OpenAI provider. The refresh token stays in your Keychain, and Linen sends it only to the authorization server.")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Text("Authorization tokens are stored in Keychain and sent to your configured OpenAI provider for the MCP connection.")
+                        Text("Linen saves the token in your Keychain and sends it to your OpenAI provider for this connection.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     if let error {

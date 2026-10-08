@@ -46,7 +46,7 @@ struct AdvancedSettings: View {
 
             DetailRow(
                 title: "Certificate exceptions",
-                caption: "Continue past a certificate macOS rejects. Linen forgets the exception when you quit."
+                caption: "Continue past a certificate macOS rejects. Linen removes the exception when you quit."
             ) {
                 SettingsToggle($settings.allowsCertificateExceptions)
             }

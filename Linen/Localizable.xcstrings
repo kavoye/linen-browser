@@ -93,6 +93,9 @@
     "%@ out" : {
       "comment" : "The other half of the same footer line in the agent activity column: %@ is an abbreviated count of tokens the model produced, and “out” is the short form of “returned”. Must balance the “%@ in” string beside it; extremely tight."
     },
+    "%@ reports this for the selected model." : {
+
+    },
     "%@ Suggestions" : {
       "comment" : "Section heading over the search-engine completions in the address bar results list and in the ⌘K palette. %@ is the name of the chosen search engine (DuckDuckGo, Google, Bing…) — a product name, never translated. Title Case."
     },
@@ -622,9 +625,6 @@
     "Access token or no sign-in" : {
 
     },
-    "Access tokens are sent to your configured OpenAI provider. Refresh tokens stay in Keychain and are sent only to the authorization server." : {
-
-    },
     "Access your saved contacts in Linen." : {
 
     },
@@ -762,6 +762,9 @@
     },
     "AI replies can be wrong. Check important info." : {
       "comment" : "AI disclosure pinned at the foot of the agent activity column. Must stay short enough to fit one line at the column’s minimum width."
+    },
+    "AI replies can be wrong. Check important information." : {
+
     },
     "AI reply: %@" : {
 
@@ -1017,9 +1020,6 @@
     "Authorization server" : {
 
     },
-    "Authorization tokens are stored in Keychain and sent to your configured OpenAI provider for the MCP connection." : {
-
-    },
     "Auto" : {
       "comment" : "Theme choice that automatically follows the Mac’s Light or Dark appearance. A short label beneath a visual preview."
     },
@@ -1152,9 +1152,6 @@
     "Browsing history" : {
       "comment" : "Name of one of the three kinds of data listed with tick boxes on the Privacy settings page. A noun phrase at the head of a row; a separate lowercase variant exists for use inside sentences, so this one may take the language's normal capitalization."
     },
-    "By default, the assistant works until it finishes. Set a limit to pause and resume with Continue. The final summary may use one more request." : {
-
-    },
     "cached files" : {
       "comment" : "Lowercase name of one kind of browsing data, inserted mid-sentence into the confirmation before clearing, which reads roughly: browsing history and cached files will be cleared for the last hour. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Cached files is a separate string."
     },
@@ -1192,9 +1189,6 @@
 
     },
     "Card number" : {
-
-    },
-    "Cards are encrypted in Keychain." : {
 
     },
     "Certificate exceptions" : {
@@ -1355,9 +1349,6 @@
     },
     "Choose Which Tab to Control" : {
       "comment" : "Tooltip on the media dock title while more than one tab is playing; the title opens a menu that lists those tabs so the user can pick which one the transport drives. Title Case, narrow dock."
-    },
-    "Choose which tools %@ can use. Tools use part of the context window." : {
-      "comment" : "Caption under the Tools page title. %@ is the provider name."
     },
     "Choose…" : {
       "comment" : "Button on the Downloads settings page that opens the macOS panel for picking the download folder. A verb, with a real ellipsis (…) promising a panel."
@@ -1559,8 +1550,8 @@
     "Connect an external assistant to tabs you choose." : {
 
     },
-    "Connect any server that uses the OpenAI chat API, usually a base URL ending in /v1." : {
-      "comment" : "Caption under the Custom endpoint heading in Settings > Provider. “OpenAI” is a vendor name and “/v1” is a literal URL path — leave both exactly as they are."
+    "Connect any server that uses the OpenAI chat API. Its base URL usually ends in /v1." : {
+
     },
     "Connect external assistants to tabs you choose. Private tabs are never shared." : {
       "comment" : "MCP settings: private browsing pauses access without changing the saved enabled preference."
@@ -1607,7 +1598,7 @@
     "Continue only if you expected this — a development server, or a proxy your organization runs. The exception lasts until you quit." : {
 
     },
-    "Continue past a certificate macOS rejects. Linen forgets the exception when you quit." : {
+    "Continue past a certificate macOS rejects. Linen removes the exception when you quit." : {
 
     },
     "Control media" : {
@@ -1703,9 +1694,6 @@
     "Couldn’t read these saved details. No data was overwritten." : {
 
     },
-    "Couldn’t remember this choice. Try again." : {
-
-    },
     "Couldn’t remove this address. Try again." : {
 
     },
@@ -1716,6 +1704,9 @@
 
     },
     "Couldn’t save these details. Try again." : {
+
+    },
+    "Couldn’t save this choice. Try again." : {
 
     },
     "Couldn’t start the MCP server. Another copy of Linen may be using the connection." : {
@@ -1795,9 +1786,6 @@
     },
     "Delete profile…" : {
 
-    },
-    "Deletes the key from Keychain. Add a new key to use %@ again." : {
-      "comment" : "Explanatory text in the confirmation sheet for removing a stored API key. %@ is the provider’s name, e.g. OpenAI. “Keychain” is the macOS password store — use Apple’s own name for it."
     },
     "Deleting this profile removes its tabs, history, and sign-ins from this Mac. Downloads stay in the Downloads folder." : {
 
@@ -1921,7 +1909,7 @@
     "Drag to resize · double-click to reset" : {
       "comment" : "Tooltip on the draggable edge between the sidebar and the page. Two hints for the same edge, separated by an interpunct; “double-click” is the mouse gesture. Sentence case, no final period."
     },
-    "Drop the page here" : {
+    "Drop here to open in split view" : {
       "comment" : "Caption in the empty region that opens when a page is dragged over the window; the pages already open have moved aside to make it. It names what a release there does. Sentence case, no final period."
     },
     "Duplicate Tab" : {
@@ -1931,6 +1919,9 @@
 
     },
     "Each tab has a separate chat with access to its page. Type @ to include another tab." : {
+
+    },
+    "Each tool you turn on uses part of the context window." : {
 
     },
     "Edit" : {
@@ -2480,9 +2471,6 @@
     "Issued to: %@" : {
 
     },
-    "It is removed from every profile, along with its settings and data." : {
-      "comment" : "Message in the dialog that confirms removing an extension, warning that the removal is not limited to the profile the person is in. Full sentence."
-    },
     "Its %lld pages of history are removed, along with the start page tiles. Other profiles are not affected." : {
       "comment" : "Message in the dialog that confirms clearing one profile’s history. %lld is the number of pages in that profile’s history.",
       "extractionState" : "stale",
@@ -2554,9 +2542,6 @@
         }
       }
     },
-    "Its name and URL are removed. The server itself isn’t affected." : {
-
-    },
     "JavaScript" : {
       "comment" : "Title of the switch on the Websites settings page, and the title of that same row in Settings search. Name of the technology — leave as is."
     },
@@ -2598,9 +2583,6 @@
     },
     "Key saved" : {
       "comment" : "Settings → Assistant. Shown under a provider name when its API key is in the Keychain."
-    },
-    "Keys are saved to your Keychain." : {
-      "comment" : "Settings → Assistant → Add a provider. Footnote under the providers that need an API key. “Keychain” is the macOS password store — use Apple’s own name for it."
     },
     "Label (for example, Home)" : {
 
@@ -2695,6 +2677,12 @@
     "Linen couldn’t unlock or save your cards in Keychain. Try again in a signed build." : {
 
     },
+    "Linen deletes the key from your Keychain. To use %@ again, add a new key." : {
+
+    },
+    "Linen encrypts saved cards in your Keychain." : {
+
+    },
     "Linen encrypts saved contacts. Imported copies don’t sync." : {
 
     },
@@ -2713,7 +2701,19 @@
     "Linen manages model, input, instructions, tools, output limits, storage, service tier, and continuation fields. Use the controls for these settings." : {
 
     },
+    "Linen removes the endpoint’s name and URL. Nothing changes on the server." : {
+
+    },
     "Linen saves chat history on this Mac. Your messages are still sent to OpenAI to generate replies." : {
+
+    },
+    "Linen saves keys in your Keychain." : {
+
+    },
+    "Linen saves the token in your Keychain and sends it to your OpenAI provider for this connection." : {
+
+    },
+    "Linen sends the access token to your OpenAI provider. The refresh token stays in your Keychain, and Linen sends it only to the authorization server." : {
 
     },
     "Linen stores saved details on this Mac." : {
@@ -3387,8 +3387,8 @@
     "Open Location…" : {
       "comment" : "Menu bar command under File that puts the cursor in the address bar; shortcut ⌘L. Title Case and a real ellipsis character. Use established platform terminology."
     },
-    "Open page" : {
-
+    "Open Page" : {
+      "comment" : "Watches tab context menu item and tooltip that opens the watched page in a new tab. Also the assistant activity step title while it opens a page."
     },
     "Open profile" : {
 
@@ -3552,13 +3552,13 @@
     "Paused" : {
 
     },
-    "Paused at your request limit. Your progress is saved; choose Continue to keep going." : {
+    "Paused at the request limit you set. Choose Continue to keep going." : {
 
     },
-    "Paused because the conversation couldn’t be compacted safely. Your progress is saved." : {
+    "Paused because the conversation is too long. Your progress is saved." : {
 
     },
-    "Paused because the last actions weren’t making progress. Your progress is saved; check the page, then choose Continue." : {
+    "Paused because the same actions kept repeating or failing. Check the page, then choose Continue." : {
 
     },
     "Pay with iPhone" : {
@@ -3669,9 +3669,6 @@
     "Press a shortcut. Press Escape to cancel." : {
       "comment" : "Instruction shown under the keyboard-shortcut field while it is listening for a keystroke. Escape is the name of the key — use the name printed on keyboards in the target language."
     },
-    "Press Tab to search this site" : {
-      "comment" : "Accessibility hint for the command palette's site search suggestion. Tab is the keyboard key."
-    },
     "Press buttons and follow links." : {
       "comment" : "Caption for the Click tool in assistant settings."
     },
@@ -3683,6 +3680,9 @@
     },
     "Press shortcut" : {
       "comment" : "Placeholder inside the keyboard-shortcut field while it is waiting for a keystroke. Press is a verb. Very tight space — the field is only as wide as a couple of key caps."
+    },
+    "Press Tab to search this site" : {
+      "comment" : "Accessibility hint for the command palette's site search suggestion. Tab is the keyboard key."
     },
     "Preview" : {
       "comment" : "One choice in the Update channel menu in Settings > About: builds made from the newest change, before a release. A noun. Its twin is “Release”. One word, it sits in a narrow menu."
@@ -3945,7 +3945,7 @@
     "Remove from List" : {
       "comment" : "Tooltip on the close button of a download row, on the start page and in the Downloads view. It forgets the row only — the downloaded file stays on disk — so avoid a verb that sounds like deleting the file. Title Case."
     },
-    "Remove key" : {
+    "Remove Key" : {
 
     },
     "Remove Password" : {
@@ -3993,14 +3993,8 @@
     "Replace %@ key" : {
       "comment" : "Heading of the small popover where an API key is typed, shown when a key is already stored. %@ is the provider’s brand name, for example OpenAI, Anthropic or Ollama — leave the inserted name as is. Key means API key."
     },
-    "Replies are generated by AI and can contain mistakes. Check important info." : {
-      "comment" : "AI disclosure shown under the provider card in Settings. Keep the tone plain and factual."
-    },
     "Reply length" : {
 
-    },
-    "Reported by %@ for the selected model." : {
-      "comment" : "Caption under the Context window row. %@ is the provider name, e.g. Ollama."
     },
     "Request Tab Access" : {
       "comment" : "Activity title for an external connection requesting access to the visible tabs."
@@ -4075,9 +4069,6 @@
           }
         }
       }
-    },
-    "Restore prompts on excluded sites." : {
-
     },
     "Result" : {
 
@@ -4523,6 +4514,9 @@
     "Show Previous Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘[ and ⌃⇧Tab, which switches to the tab before the current one. Title Case and established platform terminology."
     },
+    "Show save prompts again on websites you excluded." : {
+
+    },
     "Show Side Panel" : {
 
     },
@@ -4588,9 +4582,6 @@
     },
     "sing along with the track" : {
       "comment" : "Second line of the Show Lyrics row in the command palette, under the command name. A fragment, not a sentence: lower case and no final full stop, as every palette caption is."
-    },
-    "Sites get an address only when you choose it." : {
-
     },
     "Skip" : {
 
@@ -4700,6 +4691,9 @@
     "Stop" : {
       "comment" : "Serves two places: the menu bar command under View that stops the page loading, shortcut ⌘., and the tooltip on the small cross that cancels a download in progress. Imperative verb in both."
     },
+    "Stop a long task after this many model requests. Click Continue to resume it." : {
+
+    },
     "Stop and Run" : {
       "comment" : "Tooltip on the microphone button while it is listening: one click ends the utterance and sends what was heard to the assistant. Two verbs on one control, Title Case; alternates with “Click to Talk”."
     },
@@ -4731,7 +4725,7 @@
         }
       }
     },
-    "Stopped. Your progress is saved; choose Continue to resume." : {
+    "Stopped. Choose Continue to resume." : {
 
     },
     "Stored on this Mac" : {
@@ -4851,6 +4845,9 @@
     "The assistant can use tools from connected MCP services. Linen asks you to approve each tool call." : {
 
     },
+    "The assistant hasn’t confirmed the result yet. Choose Continue to check it." : {
+
+    },
     "The assistant may do these without asking: %@. Change this in Assistant settings." : {
       "comment" : "Note on a website's page when the assistant holds standing permission there. %@ is a list of action kinds already worded and joined, for example purchases and money transfers. Assistant is the name of a Settings page."
     },
@@ -4912,6 +4909,9 @@
     "The downloaded file is not a supported extension package" : {
       "comment" : "Error shown when an extension install fails because the downloaded file is not in the expected format. No final full stop."
     },
+    "The extension and its settings and data are removed from every profile." : {
+      "comment" : "Message in the dialog that confirms removing an extension, warning that the removal is not limited to the profile the person is in. Full sentence."
+    },
     "The extension package failed signature verification" : {
       "comment" : "Error shown when an extension install fails because its cryptographic signature did not check out. No final full stop."
     },
@@ -4966,13 +4966,10 @@
     "The model provider’s rate limit was reached. Waiting before retrying." : {
 
     },
-    "The model provider’s rate limit was reached. Your progress is saved; wait a moment, then choose Continue." : {
-
-    },
     "The model request failed temporarily. Retrying without repeating browser actions." : {
 
     },
-    "The model request failed. Your progress is saved; choose Continue to retry." : {
+    "The model request failed. Choose Continue to try again." : {
 
     },
     "The model returned an empty response. Try again or choose another model." : {
@@ -5005,9 +5002,6 @@
     "The remote tool request could not be verified. No approval was sent." : {
 
     },
-    "The requested result has not been verified. Progress is saved; choose Continue to check it." : {
-
-    },
     "The server accepted the connection but never replied." : {
       "comment" : "Explanation on the error page shown when a website timed out, below the headline."
     },
@@ -5022,9 +5016,6 @@
     },
     "The tab returns to this address." : {
       "comment" : "Body of the sheet that edits a pinned page. It says what the address below is for. One sentence."
-    },
-    "The task needs your help. Unfinished outcomes and progress are saved." : {
-
     },
     "The text in this form was written by AI, not by you. Publishing it puts AI-generated text out under your name." : {
 
@@ -5171,6 +5162,9 @@
 
     },
     "This server did not provide valid OAuth discovery information. Enter the connection details manually." : {
+
+    },
+    "This task needs your help before it can go on. Your progress is saved." : {
 
     },
     "This website can open this app without asking." : {
@@ -5407,7 +5401,7 @@
     "Use keyboard controls on a page." : {
 
     },
-    "Use recommended" : {
+    "Use Recommended" : {
 
     },
     "Use the current website’s color in the toolbar and sidebar." : {
@@ -5563,6 +5557,9 @@
     "Websites appear here after you grant or deny permission." : {
       "comment" : "Guidance under No websites yet, explaining that the list fills itself as websites ask for the permission. Third person plural."
     },
+    "Websites get an address only when you choose one." : {
+
+    },
     "Websites the assistant may act on without asking." : {
       "comment" : "Settings search caption for the Assistant permissions section."
     },
@@ -5654,6 +5651,9 @@
 
     },
     "You’re talking to AI. " : {
+
+    },
+    "You’ve reached the model provider’s rate limit. Wait a moment, then choose Continue." : {
 
     },
     "Your extension handles password autofill." : {

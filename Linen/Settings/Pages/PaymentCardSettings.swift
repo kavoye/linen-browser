@@ -25,7 +25,7 @@ struct PaymentCardSettings: View {
         .disabled(model.profileID == Profile.privateID)
         .settingsAnchor("autofill.cards")
         AutofillSavePromptReset(kind: .card, profileID: model.profileID)
-        SettingsSection(title: "Saved cards", symbol: "creditcard", footnote: "Cards are encrypted in Keychain.", accessory: {
+        SettingsSection(title: "Saved cards", symbol: "creditcard", footnote: "Linen encrypts saved cards in your Keychain.", accessory: {
             SettingsButton(title: "Add Card", symbol: "plus") { showsAddCard = true }
                 .disabled(model.cards == nil || model.isBusy)
         }, content: {

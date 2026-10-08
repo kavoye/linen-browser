@@ -381,7 +381,7 @@ struct SplitLandingSlot: View {
     private var caption: LocalizedStringResource {
         switch outcome {
         case .arrives:
-            "Drop the page here"
+            "Drop here to open in split view"
         case .replaces:
             "Take this page’s place"
         case .exchanges:

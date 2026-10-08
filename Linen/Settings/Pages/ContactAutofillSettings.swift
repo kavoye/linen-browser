@@ -117,7 +117,7 @@ private struct ContactEditorSheet: View {
                 }
                 .textFieldStyle(.roundedBorder)
             }
-            Text("Sites get an address only when you choose it.")
+            Text("Websites get an address only when you choose one.")
                 .lineLimit(1)
                 .font(Theme.Font.caption).foregroundStyle(.secondary)
             if let error {

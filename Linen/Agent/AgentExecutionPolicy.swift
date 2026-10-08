@@ -36,21 +36,21 @@ nonisolated enum AgentStopReason: String, Codable, Sendable {
     var message: String {
         switch self {
         case .verificationRequired:
-            String(localized: "The requested result has not been verified. Progress is saved; choose Continue to check it.")
+            String(localized: "The assistant hasn’t confirmed the result yet. Choose Continue to check it.")
         case .blocked:
-            String(localized: "The task needs your help. Unfinished outcomes and progress are saved.")
+            String(localized: "This task needs your help before it can go on. Your progress is saved.")
         case .requestLimit:
-            String(localized: "Paused at your request limit. Your progress is saved; choose Continue to keep going.")
+            String(localized: "Paused at the request limit you set. Choose Continue to keep going.")
         case .noProgress:
-            String(localized: "Paused because the last actions weren’t making progress. Your progress is saved; check the page, then choose Continue.")
+            String(localized: "Paused because the same actions kept repeating or failing. Check the page, then choose Continue.")
         case .contextLimit:
-            String(localized: "Paused because the conversation couldn’t be compacted safely. Your progress is saved.")
+            String(localized: "Paused because the conversation is too long. Your progress is saved.")
         case .rateLimited:
-            String(localized: "The model provider’s rate limit was reached. Your progress is saved; wait a moment, then choose Continue.")
+            String(localized: "You’ve reached the model provider’s rate limit. Wait a moment, then choose Continue.")
         case .providerError:
-            String(localized: "The model request failed. Your progress is saved; choose Continue to retry.")
+            String(localized: "The model request failed. Choose Continue to try again.")
         case .interrupted:
-            String(localized: "Stopped. Your progress is saved; choose Continue to resume.")
+            String(localized: "Stopped. Choose Continue to resume.")
         }
     }
 }

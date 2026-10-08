@@ -904,7 +904,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         let name = installed.first { $0.id == id }?.displayName ?? id
         let alert = NSAlert()
         alert.messageText = String(localized: "Remove “\(name)”?")
-        alert.informativeText = String(localized: "It is removed from every profile, along with its settings and data.")
+        alert.informativeText = String(localized: "The extension and its settings and data are removed from every profile.")
         if let icon = loadedIcon(for: id, size: 64) {
             alert.icon = icon
         }
