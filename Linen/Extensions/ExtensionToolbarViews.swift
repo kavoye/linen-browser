@@ -23,7 +23,7 @@ struct ExtensionActionsCluster: View {
     @State private var showingOverflow = false
 
     private nonisolated static let space = "extension-cluster"
-    private static let slot: CGFloat = 32
+    private static let slot: CGFloat = 36
 
     private var pinned: [InstalledExtension] {
         manager.pinnedExtensions
@@ -45,7 +45,7 @@ struct ExtensionActionsCluster: View {
     }
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 6) {
             ForEach(visible) { record in
                 ExtensionActionButton(
                     manager: manager,
