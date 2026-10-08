@@ -24,6 +24,7 @@ final class BrowserTab: Identifiable {
         set { pageTitle = newValue }
     }
     var urlString = ""
+    @ObservationIgnored var lastActiveAt = Date()
     var isLoading = false
     var isShowingError = false
     var favicon: NSImage?

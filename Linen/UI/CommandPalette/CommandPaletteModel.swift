@@ -103,6 +103,7 @@ struct CommandPaletteActions {
     var openCurrent: (URL) -> Void = { _ in }
     var ask: (String) -> Void = { _ in }
     var switchTo: (BrowserTab) -> Void = { _ in }
+    var restore: (TabArchive.Entry) -> Void = { _ in }
     var mention: (BrowserTab) -> Void = { _ in }
     var openNew: (URL) -> Void = { _ in }
     var perform: (CommandPaletteAction) -> Void = { _ in }
@@ -147,6 +148,7 @@ enum CommandPaletteProjection {
         context: CommandPaletteContext = CommandPaletteContext(),
         history: HistoryStore,
         tabs: [BrowserTab],
+        archived: [TabArchive.Entry] = [],
         mentions: [MentionChip] = [],
         activeTabID: UUID? = nil,
         recentTabIDs: [UUID] = [],
@@ -242,6 +244,17 @@ enum CommandPaletteProjection {
             Omnibox.tabsSection(query: needle, tabs: tabs, limit: 4, switchTo: actions.switchTo),
             floor: 2,
             quota: 4
+        ))
+        slots.append(CommandPaletteBudget.Slot(
+            Omnibox.archivedSection(
+                query: needle,
+                entries: archived,
+                excluding: Set(tabs.map(\.urlString)),
+                limit: 3,
+                restore: actions.restore
+            ),
+            floor: 1,
+            quota: 3
         ))
         slots.append(CommandPaletteBudget.Slot(
             Omnibox.historySection(
@@ -583,6 +596,7 @@ final class CommandPaletteModel {
             context: context,
             history: browser.history,
             tabs: browser.tabs,
+            archived: browser.tabArchive.entries,
             mentions: mentionChips,
             activeTabID: browser.activeTab?.id,
             recentTabIDs: browser.recentlyActive,
@@ -632,6 +646,7 @@ final class CommandPaletteModel {
             openCurrent: { [weak self] url in self?.openCurrent(url) },
             ask: { [weak self] prompt in self?.ask(prompt) },
             switchTo: { [weak self] tab in self?.switchTo(tab) },
+            restore: { [weak self] entry in self?.restore(entry) },
             mention: { [weak self] tab in self?.mention(tab) },
             openNew: { [weak self] url in self?.openNew(url) },
             perform: { [weak self] action in self?.perform(action) }
@@ -655,6 +670,11 @@ final class CommandPaletteModel {
 
     private func switchTo(_ tab: BrowserTab) {
         coordinator.openTab(tab)
+        dismiss()
+    }
+
+    private func restore(_ entry: TabArchive.Entry) {
+        browser.restore(entry)
         dismiss()
     }
 

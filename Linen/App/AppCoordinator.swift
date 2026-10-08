@@ -154,6 +154,7 @@ final class AppCoordinator {
     let attention = AgentAttention()
     #endif
     let memoryPressure = MemoryPressureMonitor()
+    let archiveSweeper = TabArchiveSweeper()
     private var host: BrowserHost?
     var mainMenu: MainMenu?
 

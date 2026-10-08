@@ -192,8 +192,10 @@ enum BrowsingData {
         if kinds.contains(.history) {
             if range == .everything {
                 history.clear()
+                context.tabArchive.clear()
             } else {
                 history.removeEntries(since: range.since)
+                context.tabArchive.removeEntries(since: range.since)
             }
             agent?.clearAll()
         }

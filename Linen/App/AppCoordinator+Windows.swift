@@ -152,6 +152,7 @@ extension AppCoordinator {
         voicePreparation = nil
         activation.stop()
         memoryPressure.stop()
+        archiveSweeper.stop()
         media.releaseControl()
         media.stopWatching()
         downloadFlights.stopWatching()

@@ -933,6 +933,15 @@
     "Apply" : {
       "comment" : "Button beside the field where a model identifier is typed by hand in Settings > Provider. A verb (a command)."
     },
+    "Archive tabs after" : {
+      "comment" : "Title of a row in the Tabs section of General settings. A pop-up menu completes it: “Archive tabs after 12 hours”, “… a day”, “… a week”, or Never."
+    },
+    "Archived" : {
+      "comment" : "Marks a command palette result as a tab that Linen closed automatically and kept in the archive. Follows the website name, e.g. “example.com • Archived”."
+    },
+    "Archived Tabs" : {
+      "comment" : "Heading of the command palette section that lists tabs Linen closed automatically. Choosing one opens it again."
+    },
     "ask" : {
       "comment" : "Hint word printed beside a key cap under the address field — “⌘ ↩ ask” beside the Return hint, and “↩ ask” when the line starts with @ or when the browser is set to agent-only input. It means: send this to the assistant. One lowercase verb, tiny type."
     },
@@ -4527,6 +4536,54 @@
     "Settings…" : {
       "comment" : "Menu bar command in the application menu that opens the Settings window, shortcut ⌘,. Title Case with a real ellipsis. Use Apple’s own wording for the system Settings command."
     },
+    "settings.archiveTabs.day" : {
+      "comment" : "Option in the “Archive tabs after” pop-up menu in General settings; it completes “Archive tabs after …”.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A day"
+          }
+        }
+      }
+    },
+    "settings.archiveTabs.never" : {
+      "comment" : "Option in the “Archive tabs after” pop-up menu in General settings: tabs are never archived automatically.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Never"
+          }
+        }
+      }
+    },
+    "settings.archiveTabs.twelveHours" : {
+      "comment" : "Option in the “Archive tabs after” pop-up menu in General settings; it completes “Archive tabs after …”.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "12 hours"
+          }
+        }
+      }
+    },
+    "settings.archiveTabs.week" : {
+      "comment" : "Option in the “Archive tabs after” pop-up menu in General settings; it completes “Archive tabs after …”.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A week"
+          }
+        }
+      }
+    },
     "Setup Options for %@" : {
       "comment" : "MCP client setup accessibility label. The placeholder is the client app name."
     },
@@ -5478,6 +5535,9 @@
     },
     "Unpin Tab" : {
       "comment" : "Command that takes the pin off a tab, which then drops out of the pinned rows. Four surfaces share it: the context menu of a pinned tab row, the minus button on that row, the toolbar button while the pinned page is on screen, and the search palette. Title Case."
+    },
+    "Unpinned tabs you haven’t used close automatically. Find them again with ⌘K." : {
+      "comment" : "Caption under “Archive tabs after” in General settings. ⌘K opens the command palette."
     },
     "Unsupported CRX container version %lld" : {
       "comment" : "Error shown when an extension package uses a file format version the app cannot read. %lld is the version number found in the file. CRX is the name of Chrome’s extension package format — leave as is. No final full stop."

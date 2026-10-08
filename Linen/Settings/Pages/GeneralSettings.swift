@@ -37,6 +37,19 @@ struct GeneralSettings: View {
                 SettingsToggle($settings.sleepsInactiveTabs)
             }
             .settingsAnchor("general.sleepTabs")
+
+            RowSeparator()
+
+            DetailRow(
+                title: "Archive tabs after",
+                caption: "Unpinned tabs you haven’t used close automatically. Find them again with ⌘K."
+            ) {
+                SettingsMenu(
+                    options: TabArchiveDelay.allCases.map { .init(value: $0, label: String(localized: $0.label)) },
+                    selection: $settings.archiveTabsAfter
+                )
+            }
+            .settingsAnchor("general.archiveTabs")
         }
 
         SettingsSection(title: "Default browser", symbol: "arrow.up.forward.app") {

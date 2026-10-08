@@ -18,6 +18,7 @@ final class BrowserModel {
     var folders: [TabFolder] = []
     var storedTree = SidebarTree()
     var history: HistoryStore
+    var tabArchive: TabArchive
     var sitePermissions: SitePermissions
     var downloads: DownloadManager
     private let webViewFactory: (@MainActor () -> WKWebView)?
@@ -43,6 +44,11 @@ final class BrowserModel {
         } else {
             self.history = HistoryStore(database: selectedDatabase)
         }
+        if let context, (context.database.writer as AnyObject) === (selectedDatabase.writer as AnyObject) {
+            tabArchive = context.tabArchive
+        } else {
+            tabArchive = TabArchive(database: selectedDatabase)
+        }
         self.sitePermissions = sitePermissions ?? context?.sitePermissions ?? .shared
         self.downloads = downloads ?? context?.downloads ?? DownloadManager()
         self.opensPrivately = context?.profile.isPrivate ?? false
@@ -54,6 +60,7 @@ final class BrowserModel {
         didSet {
             guard oldValue != activeTabID else { return }
             sidebarSelection.dropMarks()
+            noteUse(of: [oldValue, activeTabID])
             if let activeTabID {
                 noteActivation(activeTabID)
             }

@@ -41,6 +41,10 @@ extension AppCoordinator {
         }
         browser.ensureActiveTab()
         retainAgentMemory()
+        archiveSweeper.onSweep = { [weak self] in
+            self?.browser.archiveStaleTabs()
+        }
+        archiveSweeper.start()
         timing.mark("session")
         wireMedia()
         browser.onSpaceAnchorChanged = { [weak self] from, to in
@@ -272,6 +276,9 @@ extension AppCoordinator {
         }
         settings.onLyricsChanged = { isOn in
             targets().forEach { $0.sidePanel.setAvailable(isOn, for: .lyrics) }
+        }
+        settings.onArchiveTabsAfterChanged = { _ in
+            targets().forEach { $0.browser.archiveStaleTabs() }
         }
         media.isEnabled = settings.showsMediaPlayer
         applyPictureLending()

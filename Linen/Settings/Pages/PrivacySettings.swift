@@ -85,6 +85,7 @@ struct PrivacySettings: View {
                         set: { retention in
                             settings.historyRetention = retention
                             coordinator.browser.history.prune(retention: retention)
+                            coordinator.browser.tabArchive.prune(retention: retention)
                         }
                     )
                 )

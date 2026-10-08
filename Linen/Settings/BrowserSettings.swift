@@ -24,6 +24,7 @@ final class BrowserSettings {
         static let transparency = "appearance.transparency"
         static let pageZoom = "content.defaultZoom"
         static let sleepsInactiveTabs = "tabs.sleep"
+        static let archiveTabsAfter = "tabs.archive"
         static let linkPreview = "content.linkPreview"
         static let linkPeek = "content.linkPeek"
         static let searchEngine = "search.engine"
@@ -83,6 +84,7 @@ final class BrowserSettings {
     @ObservationIgnored var onMediaPlayerChanged: ((Bool) -> Void)?
     @ObservationIgnored var onAutomaticPictureInPictureChanged: ((Bool) -> Void)?
     @ObservationIgnored var onVideoInPlayerChanged: ((Bool) -> Void)?
+    @ObservationIgnored var onArchiveTabsAfterChanged: ((TabArchiveDelay) -> Void)?
 
     private func store(for key: String) -> UserDefaults {
         Self.sessionKeySet.contains(key) ? sessionDefaults : appDefaults
@@ -136,6 +138,8 @@ final class BrowserSettings {
             pageZoom = source.pageZoom
         case Key.sleepsInactiveTabs:
             sleepsInactiveTabs = source.sleepsInactiveTabs
+        case Key.archiveTabsAfter:
+            archiveTabsAfter = source.archiveTabsAfter
         case Key.downloadFolder:
             downloadFolder = source.downloadFolder
         case Key.askWhereToSave:
@@ -252,6 +256,14 @@ final class BrowserSettings {
         didSet {
             guard sleepsInactiveTabs != oldValue else { return }
             write(sleepsInactiveTabs, forKey: Key.sleepsInactiveTabs)
+        }
+    }
+
+    var archiveTabsAfter: TabArchiveDelay {
+        didSet {
+            guard archiveTabsAfter != oldValue else { return }
+            write(archiveTabsAfter.rawValue, forKey: Key.archiveTabsAfter)
+            onArchiveTabsAfterChanged?(archiveTabsAfter)
         }
     }
 
@@ -635,6 +647,8 @@ final class BrowserSettings {
         refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? true
         hasSolidSidePanel = object(Key.solidSidePanel) as? Bool ?? false
         sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false
+        archiveTabsAfter = string(Key.archiveTabsAfter)
+            .flatMap(TabArchiveDelay.init(rawValue:)) ?? .never
         showsLinkPreview = object(Key.linkPreview) as? Bool ?? true
         peeksAtLinks = object(Key.linkPeek) as? Bool ?? true
         automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
@@ -878,6 +892,43 @@ enum UpdateChannel: String, CaseIterable, Identifiable {
             "Linen updates when a version is ready for everyone."
         case .preview:
             "Linen updates to preview builds, ahead of the release."
+        }
+    }
+}
+
+enum TabArchiveDelay: String, CaseIterable, Identifiable {
+    case twelveHours
+    case day
+    case week
+    case never
+
+    var id: String {
+        rawValue
+    }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .twelveHours:
+            LocalizedStringResource("settings.archiveTabs.twelveHours", defaultValue: "12 hours")
+        case .day:
+            LocalizedStringResource("settings.archiveTabs.day", defaultValue: "A day")
+        case .week:
+            LocalizedStringResource("settings.archiveTabs.week", defaultValue: "A week")
+        case .never:
+            LocalizedStringResource("settings.archiveTabs.never", defaultValue: "Never")
+        }
+    }
+
+    var interval: TimeInterval? {
+        switch self {
+        case .twelveHours:
+            12 * 3600
+        case .day:
+            86_400
+        case .week:
+            7 * 86_400
+        case .never:
+            nil
         }
     }
 }

@@ -31,6 +31,7 @@ struct OmniboxItem: Identifiable {
         case phrase
         case history
         case tab
+        case archived
         case ask
         case action
     }
@@ -91,6 +92,8 @@ extension OmniboxItem.Kind {
             "clock"
         case .tab:
             "rectangle.on.rectangle"
+        case .archived:
+            "archivebox"
         case .ask:
             "sparkle"
         case .action:
@@ -100,7 +103,7 @@ extension OmniboxItem.Kind {
 
     var stacksDetail: Bool {
         switch self {
-        case .history, .tab:
+        case .history, .tab, .archived:
             true
         case .go, .search, .newTab, .phrase, .ask, .action:
             false
@@ -304,6 +307,42 @@ enum Omnibox {
 
         guard !items.isEmpty else { return nil }
         return OmniboxSection(id: "tabs", title: String(localized: "Switch to Tab"), items: items)
+    }
+
+    static func archivedSection(
+        query: String,
+        entries: [TabArchive.Entry],
+        excluding openURLs: Set<String> = [],
+        limit: Int,
+        restore: @escaping (TabArchive.Entry) -> Void
+    ) -> OmniboxSection? {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, limit > 0 else { return nil }
+        let needle = query.lowercased()
+
+        let matching = entries.filter {
+            !openURLs.contains($0.url)
+                && ($0.title.lowercased().contains(needle) || $0.url.lowercased().contains(needle))
+        }
+        let items: [OmniboxItem] = mostRelevant(matching, for: query, limit: limit) {
+            ($0.title, URL(string: $0.url)?.displayAddress ?? $0.url, 0)
+        }
+        .map { entry in
+            let host = URL(string: entry.url)?.displayHost
+            return OmniboxItem(
+                id: "omnibox-archived-\(entry.id)",
+                kind: .archived,
+                title: entry.title,
+                detail: [host, String(localized: "Archived")].compactMap { $0 }.joined(separator: " • "),
+                iconHost: host,
+                completionText: entry.url
+            ) {
+                restore(entry)
+            }
+        }
+
+        guard !items.isEmpty else { return nil }
+        return OmniboxSection(id: "archived", title: String(localized: "Archived Tabs"), items: items)
     }
 
     static func relevance(title: String, address: String, for query: String) -> Int {

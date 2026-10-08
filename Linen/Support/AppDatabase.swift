@@ -146,11 +146,18 @@ struct AppDatabase: Sendable {
             t.column("pinnedTitle", .text)
             t.column("internalPage", .text)
             t.column("isActive", .boolean).notNull().defaults(to: false)
+            t.column("lastActiveAt", .datetime)
         }
 
-        if try !db.columns(in: "sessionTab").contains(where: { $0.name == "customTitle" }) {
+        let tabColumns = try db.columns(in: "sessionTab").map(\.name)
+        if !tabColumns.contains("customTitle") {
             try db.alter(table: "sessionTab") { t in
                 t.add(column: "customTitle", .text)
+            }
+        }
+        if !tabColumns.contains("lastActiveAt") {
+            try db.alter(table: "sessionTab") { t in
+                t.add(column: "lastActiveAt", .datetime)
             }
         }
 
@@ -234,6 +241,16 @@ struct AppDatabase: Sendable {
 
         try defineSessionSplits(in: db)
         try defineWindowSessions(in: db)
+        try defineTabArchive(in: db)
+    }
+
+    private nonisolated static func defineTabArchive(in db: Database) throws {
+        try db.create(table: "archivedTab", options: .ifNotExists) { t in
+            t.primaryKey("id", .blob)
+            t.column("title", .text).notNull()
+            t.column("url", .text).notNull().indexed()
+            t.column("archivedAt", .datetime).notNull().indexed()
+        }
     }
 
     private nonisolated static func defineSessionSplits(in db: Database) throws {

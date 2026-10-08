@@ -184,7 +184,7 @@ struct OmniboxRowPresentation {
             detail = String(localized: "Search in current tab")
         case .history:
             detail = "\(item.detail) · \(String(localized: "Open in current tab"))"
-        case .newTab, .tab, .ask, .action:
+        case .newTab, .tab, .archived, .ask, .action:
             symbol = item.symbol
             detail = item.detail
             replacesFavicon = false

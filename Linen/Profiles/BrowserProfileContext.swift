@@ -44,6 +44,7 @@ final class BrowserProfileContext {
         persists: !profile.isPrivate && !AppDatabase.isRunningTests && AppDatabase.ownsSession
     )
     lazy var history = HistoryStore(database: database)
+    lazy var tabArchive = TabArchive(database: database)
     lazy var conversationLog = ConversationLog(database: database)
     lazy var extensions = ExtensionManager(profile: profile, dataStore: dataStore)
 

@@ -90,6 +90,7 @@ extension BrowserModel {
         var pinnedTitle: String?
         var internalPage: BrowserTab.InternalPage?
         var isActive: Bool
+        var lastActiveAt: Date?
     }
 
     private nonisolated struct FolderRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -265,7 +266,8 @@ extension BrowserModel {
                 pinnedURL: tab.pinnedURL,
                 pinnedTitle: tab.pinnedTitle.isEmpty ? nil : tab.pinnedTitle,
                 internalPage: tab.internalPage,
-                isActive: tab.id == activeTabID
+                isActive: tab.id == activeTabID,
+                lastActiveAt: tab.lastActiveAt
             )
         }
         writtenStateGeneration = writtenStateGeneration.filter { id, _ in
@@ -351,8 +353,8 @@ extension BrowserModel {
                 sql: """
                     INSERT INTO sessionTab
                         (id, windowID, title, customTitle, url, state, pinnedURL, pinnedTitle,
-                         internalPage, isActive)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         internalPage, isActive, lastActiveAt)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         windowID = excluded.windowID,
                         title = excluded.title,
@@ -362,12 +364,13 @@ extension BrowserModel {
                         pinnedURL = excluded.pinnedURL,
                         pinnedTitle = excluded.pinnedTitle,
                         internalPage = excluded.internalPage,
-                        isActive = excluded.isActive
+                        isActive = excluded.isActive,
+                        lastActiveAt = excluded.lastActiveAt
                     """,
                 arguments: [
                     tab.id, tab.windowID, tab.title, tab.customTitle, tab.url, tab.state,
                     tab.pinnedURL, tab.pinnedTitle,
-                    tab.internalPage?.rawValue, tab.isActive,
+                    tab.internalPage?.rawValue, tab.isActive, tab.lastActiveAt,
                 ]
             )
         }
@@ -421,7 +424,8 @@ extension BrowserModel {
             (
                 tabs: try TabRecord.filter(belongsToWindow).fetchAll(db),
                 folders: try FolderRecord.filter(belongsToWindow).fetchAll(db),
-                items: try ItemRecord.filter(belongsToWindow).order(Column("position")).fetchAll(db)
+                items: try ItemRecord.filter(belongsToWindow).order(Column("position")).fetchAll(db),
+                savedAt: try Date.fetchOne(db, sql: "SELECT lastActiveAt FROM sessionWindow WHERE id = ?", arguments: [windowID])
             )
         }
         guard let stored, !stored.tabs.isEmpty else { return }
@@ -449,6 +453,8 @@ extension BrowserModel {
             ordered.append(record)
         }
 
+        let now = Date()
+        let closedFor = stored.savedAt.map { max(now.timeIntervalSince($0), 0) } ?? 0
         let activeIndex = ordered.firstIndex { $0.isActive } ?? 0
         let activeID = ordered[activeIndex].id
         let grids = Self.grids(from: storedTrees) + Self.grids(fromFlat: storedPanes)
@@ -472,6 +478,7 @@ extension BrowserModel {
             tab.urlString = restoredURL.map(\.absoluteString) ?? record.url
             tab.pinnedURL = record.pinnedURL
             tab.pinnedTitle = record.pinnedTitle ?? ""
+            tab.lastActiveAt = record.lastActiveAt.map { min($0 + closedFor, now) } ?? now
             tab.deferRestore(state: record.state, url: restoredURL)
             if let host = URL(string: record.url)?.host() {
                 dressRow(tab, fromHost: host)
@@ -618,10 +625,13 @@ extension BrowserModel {
         opensPrivately = privately
         if (context.database.writer as AnyObject) === (self.database.writer as AnyObject) {
             history = context.history
+            tabArchive = context.tabArchive
             downloads = context.downloads
         } else {
             history = HistoryStore(database: self.database)
+            tabArchive = TabArchive(database: self.database)
         }
         history.prune(retention: context.settings.historyRetention)
+        tabArchive.prune(retention: context.settings.historyRetention)
     }
 }
