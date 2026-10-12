@@ -1982,6 +1982,9 @@
     "Cookies and site data" : {
       "comment" : "Name of one of the three kinds of data listed with tick boxes on the Privacy settings page. A noun phrase at the head of a row; a separate lowercase variant exists for use inside sentences."
     },
+    "Copied to the clipboard" : {
+      "comment" : "Confirmation shown for a moment on the External connections settings page after the user copies the connection details."
+    },
     "Copy" : {
       "comment" : "Standard macOS Edit menu item. Use the system's own wording. A verb."
     },

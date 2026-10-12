@@ -29,10 +29,7 @@ struct MCPSettingsPage: View {
         }
 
         SettingsSection(title: "Clients", symbol: "app.connected.to.app.below.fill", accessory: {
-            SettingsButton(title: "Copy configuration") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(server.configuration, forType: .string)
-            }
+            CopyConfigurationButton(configuration: server.configuration)
         }) {
             MCPClientSetupRows()
         }
@@ -46,6 +43,35 @@ struct MCPSettingsPage: View {
                     MCPConnectionRow(session: session) { server.disconnect(session.id) }
                 }
             }
+        }
+    }
+}
+
+private struct CopyConfigurationButton: View {
+    let configuration: String
+
+    @State private var showing = false
+
+    var body: some View {
+        SettingsButton(title: "Copy configuration") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(configuration, forType: .string)
+            showing = true
+        }
+        .popover(isPresented: $showing, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Copied to the clipboard")
+                    .font(Theme.Font.label)
+                    .foregroundStyle(.secondary)
+                ScrollView {
+                    Text(verbatim: configuration)
+                        .font(Theme.Font.monoCaption)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(16)
+            .frame(width: 420, height: 260)
         }
     }
 }
