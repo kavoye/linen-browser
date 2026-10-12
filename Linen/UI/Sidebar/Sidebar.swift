@@ -39,6 +39,15 @@ struct Sidebar: View {
     }
 
     private var inkIsLight: Bool {
+        Self.inkIsLight(browser: browser, coordinator: coordinator, scheme: scheme, wearsBand: wearsBand)
+    }
+
+    static func inkIsLight(
+        browser: BrowserModel,
+        coordinator: AppCoordinator,
+        scheme: ColorScheme,
+        wearsBand: Bool
+    ) -> Bool {
         if !coordinator.isShowingSettings {
             return ChromeBand.loomIsLight(browser: browser, coordinator: coordinator, scheme: scheme)
         }
@@ -303,8 +312,15 @@ struct SidebarVisibilityToggle: View {
         )
     }
 
+    private var sitsOnSidebar: Bool {
+        sidebar.isShowing && sidebar.style != .icons
+    }
+
     private var barIsLight: Bool {
-        PageInk.isLight(
+        if sitsOnSidebar {
+            return Sidebar.inkIsLight(browser: browser, coordinator: coordinator, scheme: scheme, wearsBand: false)
+        }
+        return PageInk.isLight(
             LoomChrome.sampledColor(
                 ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
                 scheme: scheme
@@ -319,6 +335,7 @@ struct SidebarVisibilityToggle: View {
             enabled: true,
             isOn: sidebar.isVisible,
             highlightsWhenOn: false,
+            quiet: sitsOnSidebar,
             help: String(localized: label)
         ) {
             sidebar.toggleVisible()

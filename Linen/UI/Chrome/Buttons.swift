@@ -48,12 +48,21 @@ struct ToolbarButton: View {
     let enabled: Bool
     var isOn = false
     var highlightsWhenOn = true
+    var quiet = false
     var help: String = ""
     var heldMenu: (() -> NSMenu?)?
     let action: () -> Void
 
     @State private var hovering = false
     @Environment(\.chromeIsLight) private var chromeIsLight
+
+    private var ink: AnyShapeStyle {
+        let lit = hovering || (isOn && highlightsWhenOn)
+        if quiet {
+            return lit ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
+        }
+        return ChromeInk.glyph(onLight: chromeIsLight, enabled: enabled, hovering: lit)
+    }
 
     var body: some View {
         Button(action: action) {
@@ -65,13 +74,7 @@ struct ToolbarButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .foregroundStyle(
-            ChromeInk.glyph(
-                onLight: chromeIsLight,
-                enabled: enabled,
-                hovering: hovering || (isOn && highlightsWhenOn)
-            )
-        )
+        .foregroundStyle(ink)
         .disabled(!enabled)
         .accessibilityAddTraits(isOn ? .isSelected : [])
         .onHover { hovering = $0 }
