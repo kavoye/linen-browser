@@ -405,11 +405,17 @@ extension BrowserModel {
         createFolder(named: name, containing: tabs.map { .tab($0.id) })
     }
 
+    static let autoNameMinimumTabs = 4
+
     func autoName(_ folder: TabFolder) {
-        guard folder.name == Self.defaultFolderName, FolderNamer.isAvailable else { return }
+        guard folder.name == Self.defaultFolderName, !folder.isNaming, FolderNamer.isAvailable else { return }
         let titles = tabs(in: folder).map(\.title)
+        guard titles.count >= Self.autoNameMinimumTabs else { return }
+        folder.isNaming = true
         Task { [weak self, weak folder] in
-            guard let suggestion = await FolderNamer.suggestName(forTitles: titles) else { return }
+            let suggestion = await FolderNamer.suggestName(forTitles: titles)
+            folder?.isNaming = false
+            guard let suggestion else { return }
             guard let self, let folder,
                   folders.contains(where: { $0 === folder }),
                   folder.name == Self.defaultFolderName

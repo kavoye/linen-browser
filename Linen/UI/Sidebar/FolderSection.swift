@@ -71,14 +71,19 @@ struct FolderSection: View {
 
         VStack(spacing: 1) {
             HStack(spacing: 7) {
-                Image(systemName: audible == nil
-                    ? (folder.isExpanded ? "folder" : "folder.fill")
-                    : "speaker.wave.2.fill")
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(folder.color.tint)
-                    .contentTransition(.symbolEffect(.replace))
-                    .animation(Theme.Motion.settle, value: audible?.id)
-                    .help(audible.map { Text("“\($0.title)” is playing") } ?? Text(verbatim: ""))
+                if folder.isNaming {
+                    ComposingOrb(size: 12)
+                        .frame(width: 15)
+                } else {
+                    Image(systemName: audible == nil
+                        ? (folder.isExpanded ? "folder" : "folder.fill")
+                        : "speaker.wave.2.fill")
+                        .font(Theme.Font.caption)
+                        .foregroundStyle(folder.color.tint)
+                        .contentTransition(.symbolEffect(.replace))
+                        .animation(Theme.Motion.settle, value: audible?.id)
+                        .help(audible.map { Text("“\($0.title)” is playing") } ?? Text(verbatim: ""))
+                }
 
                 if sidebarStyle == .icons {
                     EmptyView()

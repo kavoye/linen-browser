@@ -27,6 +27,7 @@ final class TabFolder: Identifiable {
     var name: String
     var color = TabFolderColor.gray
     var isExpanded = true
+    var isNaming = false
 
     init(name: String) {
         self.name = name
