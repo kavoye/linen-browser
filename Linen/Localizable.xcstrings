@@ -2899,6 +2899,9 @@
     "Icons only" : {
       "comment" : "Title of the switch on the Appearance settings page that narrows the sidebar to favicons alone, and the title of that same row in Settings search. Sentence case."
     },
+    "Icons Only" : {
+      "comment" : "Checkmark item in the right-click menu of the sidebar toggle button; switches the sidebar to its narrow favicons-without-titles look. The same choice Settings calls “Icons only”. Title Case."
+    },
     "If no panel appeared, set it in System Settings under Desktop & Dock." : {
       "comment" : "Footnote shown after the app has asked to become the default browser. macOS, System Settings and Desktop & Dock are Apple’s names for the system, its settings app and one of its panes — use Apple’s own translations, since the user has to find them on screen. Panel means the confirmation window macOS puts up."
     },
@@ -6395,9 +6398,6 @@
     },
     "Use HTTPS to encrypt your API key. HTTP is allowed only for localhost." : {
       "comment" : "Error under the field where a user-added endpoint address is typed, shown when a remote address uses an insecure protocol. https, http and localhost are technical terms and must stay exactly as they are, including their lowercase spelling. In the clear means unencrypted."
-    },
-    "Use Icons Only" : {
-      "comment" : "Checkmark item in the right-click menu of the sidebar toggle button; switches the sidebar to its narrow favicons-without-titles look. The same choice Settings calls “Icons only”. Title Case."
     },
     "Use keyboard controls on a page." : {
 

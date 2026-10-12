@@ -128,6 +128,7 @@ struct CopyCatalogTests {
         "reset settings", "show lyrics", "show sidebar", "software update",
         "start page", "remove extension", "sign in", "extension options",
         "clear list", "pop-up windows", "check for updates", "speak answers automatically",
+        "icons only",
     ]
 
     /// Two keys that differ only in case are one label about to fork - the

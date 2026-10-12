@@ -405,7 +405,7 @@ struct SidebarStyleMenuItems: View {
             get: { sidebar.isIconsOnly },
             set: { sidebar.setIconsOnly($0) }
         )) {
-            Text("Use Icons Only")
+            Text("Icons Only")
         }
     }
 }
