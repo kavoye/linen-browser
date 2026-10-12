@@ -21,11 +21,18 @@ struct PaymentCardSettings: View {
             DetailRow(title: "Save and fill payment cards", caption: "Offer to save new cards at checkout.") {
                 SettingsToggle($settings.fillsPaymentCards)
             }
+            .disabled(model.profileID == Profile.privateID)
+            .settingsAnchor("autofill.cards")
+
+            RowSeparator()
+
+            DetailRow(title: "Pay with iPhone", caption: "Show a code to scan with iPhone at checkout.") {
+                Text("Website support required").foregroundStyle(.secondary).font(Theme.Font.caption)
+            }
+            .settingsAnchor("autofill.applePay")
         }
-        .disabled(model.profileID == Profile.privateID)
-        .settingsAnchor("autofill.cards")
         AutofillSavePromptReset(kind: .card, profileID: model.profileID)
-        SettingsSection(title: "Saved cards", symbol: "creditcard", footnote: "Linen encrypts saved cards in your Keychain.", accessory: {
+        SettingsSection(title: "Saved cards", symbol: "creditcard", accessory: {
             SettingsButton(title: "Add Card", symbol: "plus") { showsAddCard = true }
                 .disabled(model.cards == nil || model.isBusy)
         }, content: {
@@ -55,12 +62,6 @@ struct PaymentCardSettings: View {
             }
             AutofillPageStatus(isBusy: model.isBusy, error: model.error, kind: .card)
         })
-        SettingsSection(title: "Apple Pay", symbol: "apple.logo") {
-            DetailRow(title: "Pay with iPhone", caption: "Scan a code to pay with iPhone.") {
-                Text("Website support required").foregroundStyle(.secondary).font(Theme.Font.caption)
-            }
-        }
-        .settingsAnchor("autofill.applePay")
         .task { await model.unlock() }
         .onDisappear(perform: lock)
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.sessionDidResignActiveNotification)) { _ in

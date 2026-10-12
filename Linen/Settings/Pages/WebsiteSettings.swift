@@ -90,7 +90,7 @@ struct WebsiteSettings: View {
     private var overview: some View {
         SettingsPageHeader(
             title: "Websites",
-            caption: "Set defaults for websites and review the settings you changed."
+            caption: "Choose how websites behave by default. Websites with custom settings are listed below."
         )
 
         SettingsCard {
@@ -136,11 +136,11 @@ struct WebsiteSettings: View {
         }
         .settingsAnchor("websites.permissions")
 
-        SettingsSection(title: "Websites you’ve changed", symbol: "list.bullet", isLongList: true) {
+        SettingsSection(title: "Custom settings", symbol: "slider.horizontal.3", isLongList: true) {
             if entries.isEmpty {
                 SettingsEmptyState(
                     symbol: "globe",
-                    title: "No website settings changed",
+                    title: "No custom settings",
                     caption: "Use Website Settings in the toolbar to change a website’s settings."
                 )
             } else {

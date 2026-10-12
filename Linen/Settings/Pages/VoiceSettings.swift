@@ -39,9 +39,7 @@ struct VoiceSettings: View {
             OpenAIKeyNotice(onOpenAssistant: onOpenAssistant)
         }
 
-        SettingsSection(title: "Dictation", symbol: "mic", accessory: {
-            VoiceCostBadge(isBilled: coordinator.dictatesWithOpenAI)
-        }) {
+        SettingsSection(title: "Dictation", symbol: "mic") {
             OptionList(
                 options: [
                     .init(value: VoiceEngine.device, label: "On this Mac",
@@ -78,8 +76,7 @@ struct VoiceSettings: View {
         SettingsSection(
             title: "Reading aloud",
             symbol: "speaker.wave.2",
-            footnote: "Reader uses the same voice. To add better voices to this Mac, download them in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech).",
-            accessory: { VoiceCostBadge(isBilled: coordinator.readsWithOpenAI) }
+            footnote: "Reader uses the same voice. To add better voices to this Mac, download them in [System Settings](x-apple.systempreferences:com.apple.preference.universalaccess?TextToSpeech)."
         ) {
             DetailRow(title: "Speak answers automatically", caption: "Read each answer aloud when it finishes.") {
                 SettingsToggle($preferences.speaksAnswers)
@@ -125,11 +122,7 @@ struct VoiceSettings: View {
             }
         }
 
-        SettingsSection(title: "Conversation", symbol: "waveform", accessory: {
-            if conversationIsOn {
-                VoiceCostBadge(isBilled: true)
-            }
-        }) {
+        SettingsSection(title: "Conversation", symbol: "waveform") {
             DetailRow(
                 title: "Voice conversation",
                 caption: "Talk back and forth with the assistant. Billed for each minute a conversation is open."
@@ -220,25 +213,6 @@ struct VoiceSettings: View {
             OpenAISettingsStore.save(stored, providerID: providerID)
             coordinator.configureVoice()
         })
-    }
-}
-
-private struct VoiceCostBadge: View {
-    let isBilled: Bool
-
-    var body: some View {
-        HStack(spacing: 6) {
-            if isBilled {
-                StatusDot(.attention)
-                Text("OpenAI · Billed")
-            } else {
-                StatusDot(.ready)
-                Text("Free")
-            }
-        }
-        .font(Theme.Font.label)
-        .foregroundStyle(.secondary)
-        .fixedSize()
     }
 }
 

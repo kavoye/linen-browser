@@ -50,8 +50,8 @@ struct AdvancedSettings: View {
             RowSeparator()
 
             DetailRow(
-                title: "Certificate exceptions",
-                caption: "Continue past a certificate macOS rejects. Linen removes the exception when you quit."
+                title: "Allow untrusted certificates",
+                caption: "Open a website even if its certificate isn’t trusted. Linen forgets your choice when you quit."
             ) {
                 SettingsToggle($settings.allowsCertificateExceptions)
             }
@@ -73,7 +73,7 @@ struct AdvancedSettings: View {
 
             DetailRow(
                 title: "User agent",
-                caption: "Changing this can break websites."
+                caption: "Some websites may not work with a custom user agent."
             ) {
                 SegmentedControl(
                     items: UserAgentMode.allCases.map { .init(value: $0, label: $0.label) },
@@ -113,8 +113,11 @@ struct AdvancedSettings: View {
             }
         }
 
-        SettingsSection(title: "Reset", symbol: "arrow.counterclockwise") {
-            DetailRow(title: "Reset settings") {
+        SettingsCard {
+            DetailRow(
+                title: "Reset settings",
+                caption: "Put appearance, search, privacy, websites, and downloads back to their defaults."
+            ) {
                 SettingsButton(title: "Reset…", isDestructive: true) {
                     confirmingReset = true
                 }

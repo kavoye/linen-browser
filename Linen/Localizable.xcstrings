@@ -952,9 +952,6 @@
     "Address and search" : {
       "comment" : "Accessibility label for the combined address and search field in the browser toolbar. Keep it short and name both functions."
     },
-    "Address bar" : {
-      "comment" : "Heading of the Search settings group holding the switch that redirects typed questions to the assistant. Names the field at the top of the browser window. A noun."
-    },
     "Address from Contacts" : {
 
     },
@@ -1032,6 +1029,9 @@
     },
     "Allow Once" : {
       "comment" : "Button granting a permission for this visit only: on the permission badge in the toolbar and in the alert asking whether the assistant may click something. It means allow this one time, not permanently. Title Case."
+    },
+    "Allow untrusted certificates" : {
+      "comment" : "Title of the row on the Advanced settings page, and its Settings search entry, for continuing to a website whose certificate macOS rejects. Sentence case."
     },
     "Allowed tools" : {
 
@@ -1130,9 +1130,6 @@
     },
     "Apple Intelligence unavailable, using OpenAI" : {
       "comment" : "Status message shown when the on-device model cannot answer and Linen falls back to OpenAI. Both are product/vendor names — leave as is."
-    },
-    "Apple Pay" : {
-
     },
     "Apply" : {
       "comment" : "Button beside the field where a model identifier is typed by hand in Settings > Provider. A verb (a command)."
@@ -1491,9 +1488,6 @@
     "Card number" : {
 
     },
-    "Certificate exceptions" : {
-
-    },
     "Change the keyboard shortcut" : {
       "comment" : "Tooltip on the shortcut recorder in Settings > Voice while it is idle; pressing it starts listening for a new key combination."
     },
@@ -1517,9 +1511,6 @@
     },
     "Changes requested by %@" : {
       "comment" : "GitHub pull request checklist. %@ is a list of usernames."
-    },
-    "Changing this can break websites." : {
-      "comment" : "Caption under the User agent row on the Advanced settings page, beside a segmented control offering the system agent, Linen's own, or a custom one. One short sentence; the row title already says what it is."
     },
     "cheapest" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the least expensive to use. Lowercase superlative, and the space is very tight."
@@ -1638,6 +1629,9 @@
     "Choose how Linen listens and speaks. Voices on this Mac are free. OpenAI voices are billed to your API key." : {
       "comment" : "Voice settings page caption."
     },
+    "Choose how websites behave by default. Websites with custom settings are listed below." : {
+      "comment" : "Caption under the Websites settings page title. The list it mentions is the Custom settings section further down the page."
+    },
     "Choose short, medium, or long replies." : {
 
     },
@@ -1706,6 +1700,9 @@
     },
     "Clear cookies, site data, and cached files when you quit Linen." : {
 
+    },
+    "Clear download list" : {
+      "comment" : "Title of the Downloads settings row that chooses when finished downloads leave the list, and its Settings search entry. Only the list is cleared; the files stay on disk. Sentence case."
     },
     "Clear History" : {
       "comment" : "Button that confirms clearing one profile’s history."
@@ -1958,9 +1955,6 @@
     "Continue only if you expected this — a development server, or a proxy your organization runs. The exception lasts until you quit." : {
 
     },
-    "Continue past a certificate macOS rejects. Linen removes the exception when you quit." : {
-
-    },
     "Continue to GitHub" : {
 
     },
@@ -2135,6 +2129,9 @@
     "Custom endpoint" : {
       "comment" : "Heading of the Settings page for adding your own model server; it reads “Edit endpoint” when an existing one is being changed. Sentence case."
     },
+    "Custom settings" : {
+      "comment" : "Title of the Websites settings section that lists websites with their own settings, and its Settings search entry. Sentence case."
+    },
     "Customize Start Page" : {
       "comment" : "Tooltip on the Edit button in the bottom corner of the start page. Title case, no final period."
     },
@@ -2158,6 +2155,9 @@
     },
     "Default browser" : {
       "comment" : "Heading of the section on the General settings page about which app opens links, and the title of that same row in Settings search. Sentence case; “default” is an adjective."
+    },
+    "Default web browser" : {
+      "comment" : "Title of the General settings row that shows whether Linen is the Mac’s default web browser, and its Settings search entry. Sentence case."
     },
     "Delete" : {
       "comment" : "Standard macOS Edit menu item that deletes the selection. Use the system's own wording. A verb."
@@ -2263,9 +2263,6 @@
     },
     "Downloaded %@" : {
       "comment" : "Brief notice shown when a download finishes. %@ is the file's name. A past participle describing what happened, not a command."
-    },
-    "Downloaded files aren’t deleted." : {
-
     },
     "Downloading update" : {
       "comment" : "Status line in the update row on the About settings page while a release is being fetched."
@@ -2584,11 +2581,17 @@
     "Feature flags" : {
 
     },
+    "Features" : {
+      "comment" : "Section title on the Feature flags settings page; it lists experimental WebKit features. Title of a list, one word."
+    },
     "File" : {
       "comment" : "Title of the File menu in the menu bar. Use the standard macOS wording."
     },
     "Files" : {
 
+    },
+    "Files you downloaded stay on your Mac." : {
+      "comment" : "Caption under the Clear download list row in Downloads settings. Clearing the list never deletes the files."
     },
     "Fill field" : {
 
@@ -2676,9 +2679,6 @@
     },
     "Forward 15 seconds" : {
       "comment" : "Tooltip on the skip-forward button in the media player docked at the foot of the sidebar. The player jumps ahead exactly fifteen seconds; keep the number. “Forward” is directional, not the browser's Forward command."
-    },
-    "Free" : {
-      "comment" : "Badge on a Voice settings section header: this feature runs on this Mac at no cost."
     },
     "Frees up space. Pages load more slowly the next time." : {
       "comment" : "Caption under Cached files on the Privacy settings page. Only the next visit to a website is slower."
@@ -3208,23 +3208,8 @@
     "Linen deletes the key from your Keychain. To use %@ again, add a new key." : {
 
     },
-    "Linen encrypts saved cards in your Keychain." : {
-
-    },
-    "Linen encrypts saved contacts. Imported copies don’t sync." : {
-
-    },
-    "Linen encrypts saved passwords. macOS manages passkeys." : {
-
-    },
     "Linen is using %@ instead." : {
       "comment" : "Settings → Assistant. %@ is the provider name of the stand-in, e.g. \"Apple Intelligence\". Caption shown when the chosen provider is not ready and another one serves replies. Linen is the application name and is never translated."
-    },
-    "Linen is your default browser." : {
-      "comment" : "Caption under the Open links from other apps row, shown once Linen is the default browser. The alternative caption, shown while it is not, is Linen isn’t your default browser. Linen is the application name and is never translated."
-    },
-    "Linen isn’t your default browser." : {
-
     },
     "Linen manages model, input, instructions, tools, output limits, storage, service tier, and continuation fields. Use the controls for these settings." : {
 
@@ -3233,9 +3218,6 @@
 
     },
     "Linen saves chat history on this Mac. Your messages are still sent to OpenAI to generate replies." : {
-
-    },
-    "Linen saves keys in your Keychain." : {
 
     },
     "Linen saves the token in your Keychain and sends it to your OpenAI provider for this connection." : {
@@ -3264,6 +3246,12 @@
     },
     "Links Copied" : {
       "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
+    },
+    "Links from other apps open in another browser." : {
+      "comment" : "Caption under the Default web browser row in General settings when another app is the default browser."
+    },
+    "Links from other apps open in Linen." : {
+      "comment" : "Caption under the Default web browser row in General settings when Linen is the default browser."
     },
     "List Embedded Pages" : {
 
@@ -3756,6 +3744,9 @@
     "No context to compact" : {
 
     },
+    "No custom settings" : {
+      "comment" : "Empty-state title in the Custom settings section of Websites settings, shown when no website has its own settings."
+    },
     "No data stored" : {
       "comment" : "Shown under “Size on disk” when a profile is holding nothing."
     },
@@ -3767,6 +3758,9 @@
     },
     "No extensions yet." : {
       "comment" : "Caption under the Extensions settings title when neither Linen nor any app on the Mac supplies an extension."
+    },
+    "No features match your search." : {
+      "comment" : "Empty-state caption on the Feature flags settings page when the search finds no WebKit feature."
     },
     "No history" : {
       "comment" : "Shown under “History” when a profile has visited no pages."
@@ -3873,9 +3867,6 @@
     "No website may ask." : {
       "comment" : "Description of the Deny option for a permission's default, meaning requests are refused without the person seeing them."
     },
-    "No website settings changed" : {
-
-    },
     "No website stores data on this Mac." : {
       "comment" : "Guidance under No website data. Singular no website rather than a count of zero, which reads as a measurement failure. Website is one word."
     },
@@ -3917,9 +3908,6 @@
     },
     "Nothing is playing" : {
       "comment" : "Title of the empty state in the lyrics view when the media player holds no track. Sentence case with no final full stop."
-    },
-    "Nothing matches that." : {
-
     },
     "Nothing matches." : {
       "comment" : "Shown in the Settings sidebar when a search finds no settings and no pages."
@@ -3965,9 +3953,6 @@
     },
     "On Device" : {
       "comment" : "Chip above the Apple Intelligence card on the model-choice onboarding screen, saying where that model runs. It pairs with “API key required” on the card beside it: both state a plain fact about the choice rather than recommending it. Title Case, and only a few characters wide."
-    },
-    "On launch" : {
-
     },
     "On the Page" : {
       "comment" : "Section title on the Tools settings page: tools that act on the current web page."
@@ -4020,6 +4005,9 @@
     "Open a webpage in Linen, then ask %@ to try again." : {
 
     },
+    "Open a website even if its certificate isn’t trusted. Linen forgets your choice when you quit." : {
+      "comment" : "Caption under the Allow untrusted certificates row in Advanced settings, and its Settings search description. Full sentences."
+    },
     "Open and Share" : {
       "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
     },
@@ -4028,6 +4016,9 @@
     },
     "Open Assistant…" : {
       "comment" : "Button that opens the Assistant settings page."
+    },
+    "Open at launch" : {
+      "comment" : "Title of the Profiles settings row that chooses which profile opens when Linen starts, and its Settings search entry. Sentence case."
     },
     "Open Beside Current Page" : {
       "comment" : "Context-menu command on a sidebar row that shows that tab next to the page already open, as two panes. Title Case. Current page means the one on screen now."
@@ -4071,9 +4062,6 @@
     "Open Link in Peek" : {
       "comment" : "Command in the context menu of a link on a web page, beside Open Link in New Tab. It opens the link in a Peek, the panel a Shift-click opens over the page — the same thing, without the keyboard. Title Case."
     },
-    "Open links from other apps" : {
-      "comment" : "Title of the Settings row that makes Linen the default browser. Open is a verb and links is its object: the row is about which app opens links clicked in other applications. Sentence case."
-    },
     "Open links from other apps in Linen." : {
 
     },
@@ -4082,9 +4070,6 @@
     },
     "Open Page" : {
       "comment" : "Watches tab context menu item and tooltip that opens the watched page in a new tab. Also the assistant activity step title while it opens a page."
-    },
-    "Open profile" : {
-
     },
     "Open source packages used by Linen." : {
 
@@ -4121,9 +4106,6 @@
     },
     "OpenAI" : {
 
-    },
-    "OpenAI · Billed" : {
-      "comment" : "Badge on a Voice settings section header: this feature uses OpenAI and is billed to the user’s API key."
     },
     "OpenAI compatible" : {
       "comment" : "Small tag beside a user-added endpoint in Settings, naming which API dialect the server speaks. OpenAI is a vendor name — leave as is; only the word compatible is translatable. Very tight space."
@@ -4489,7 +4471,7 @@
       "comment" : "Title of the Voice settings row for the key held down while speaking, and the same wording in the Settings search index. The established name for hold-to-speak; sentence case."
     },
     "Put appearance, search, privacy, websites, and downloads back to their defaults." : {
-      "comment" : "Description of the Reset settings row, shown only in the Settings search results. The five nouns name Settings pages, so translate them the same way their page titles are translated. Imperative with a final full stop."
+      "comment" : "Description of the Reset settings row, shown under the row on the Advanced page and in the Settings search results. The five nouns name Settings pages, so translate them the same way their page titles are translated. Imperative with a final full stop."
     },
     "Qualifier" : {
       "comment" : "Button in the GitHub filter editor that opens a menu of GitHub search terms to add. Use the term GitHub uses in its search documentation for your language."
@@ -4732,9 +4714,6 @@
 
     },
     "Remove connection" : {
-
-    },
-    "Remove download list items" : {
 
     },
     "Remove Endpoint" : {
@@ -5090,9 +5069,6 @@
     "Saved website permissions" : {
       "comment" : "Heading of the list of websites that have already been allowed or denied one permission — camera, microphone, location or notifications. Answered refers to answering the website's request. Curly apostrophe."
     },
-    "Scan a code to pay with iPhone." : {
-
-    },
     "Scopes, separated by spaces" : {
 
     },
@@ -5119,6 +5095,9 @@
     },
     "Search Everything…" : {
       "comment" : "Menu bar command under File, shortcut ⌘K, which opens the command palette that searches tabs, history and settings at once. Title Case with a real ellipsis, which promises that something opens."
+    },
+    "Search features" : {
+      "comment" : "Placeholder of the search field on the Feature flags settings page, which filters experimental WebKit features."
     },
     "Search history" : {
       "comment" : "Placeholder in the search field of the History view. “Search” is the verb and “history” its object. Sentence case, narrow field."
@@ -5246,9 +5225,6 @@
     "Set checked state" : {
 
     },
-    "Set defaults for websites and review the settings you changed." : {
-
-    },
     "Set how fast OpenAI reads answers aloud." : {
       "comment" : "Settings search result detail for the OpenAI reading speed."
     },
@@ -5336,8 +5312,8 @@
     "Show %@ on the toolbar" : {
       "comment" : "Tooltip on the Pin button in the extensions overflow popover. %@ is the extension’s own display name, taken from the extension’s manifest — it is not translated. Show is a verb, and toolbar is the row of buttons at the top of the window."
     },
-    "Show a link’s address at the bottom of the page when you point at it." : {
-
+    "Show a code to scan with iPhone at checkout." : {
+      "comment" : "Caption under the Pay with iPhone row in Payment cards settings, and its Settings search description. The iPhone scans the code to pay with Apple Pay."
     },
     "Show All" : {
       "comment" : "Serves two places at once: the standard macOS application-menu command that unhides all applications, and a button at the end of the start page’s history list that reveals the full list. Use Apple’s own wording for the system command, since that is the one users recognise. Title Case, Show is a verb."
@@ -5377,9 +5353,6 @@
     },
     "Show Less" : {
       "comment" : "GitHub pull request detail: collapses the description."
-    },
-    "Show link address" : {
-
     },
     "Show Lyrics" : {
       "comment" : "Tooltip on the lyrics button in the media player while the lyrics are hidden. Pairs with “Hide Lyrics”. Title Case."
@@ -5429,14 +5402,14 @@
     "Show Sidebar" : {
       "comment" : "Menu bar command under View, shortcut ⌃⌘S, which reveals the tab sidebar. The same item reads Hide Sidebar when the sidebar is already showing, so the two should stay parallel. Title Case, Show is a verb."
     },
+    "Show status bar" : {
+      "comment" : "Title of the General settings switch that shows a link’s address at the bottom of the window on hover, and its Settings search entry. Sentence case."
+    },
     "Show Tab %lld" : {
       "comment" : "Hidden menu commands under Window bound to ⌘1 through ⌘8. %lld is the tab’s position in the row, a number from 1 to 8. Title Case and established platform terminology."
     },
     "Show Team Names…" : {
       "comment" : "GitHub pull request checklist button. Reconnects GitHub with permission to read organization teams."
-    },
-    "Show the side panel without transparency." : {
-      "comment" : "Settings > Appearance > Side Panel: caption for the Solid background toggle."
     },
     "Show Video" : {
       "comment" : "Tooltip on the same eye button once the picture is hidden; it brings the picture back. Title Case, narrow dock."
@@ -5450,14 +5423,14 @@
     "Show what went wrong" : {
       "comment" : "Tooltip on the warning button beside an extension that reported problems; pressing it opens a panel listing them. Show is a verb."
     },
+    "Shows where a link goes at the bottom of the window." : {
+      "comment" : "Caption under the Show status bar switch in General settings, and its Settings search description."
+    },
     "Side by side" : {
 
     },
-    "Side Panel" : {
-      "comment" : "Settings > Appearance: section title for the panel on the right side of the window (Assistant, Lyrics, GitHub, Watches)."
-    },
-    "Sidebar" : {
-      "comment" : "Title of the Appearance settings section for the tab sidebar. A noun heading beside an icon."
+    "Sidebars" : {
+      "comment" : "Section title on the Appearance settings page that groups the sidebar and side panel options. Plural because it covers both."
     },
     "Sign in" : {
 
@@ -5528,14 +5501,17 @@
     "Software updates can fail when Linen runs from another folder. Linen will move itself to Applications and reopen." : {
       "comment" : "Body of that alert, for a copy that can be moved — usually one sitting in the Downloads folder. The second sentence promises what the default button does. Use the system name of the Applications folder."
     },
-    "Solid background" : {
-      "comment" : "Settings > Appearance > Side Panel: toggle that replaces the side panel’s transparent glass with a solid color."
+    "Solid side panel" : {
+      "comment" : "Title of the Appearance settings switch that removes transparency from the side panel, and its Settings search entry. Sentence case."
     },
     "Some extension features aren’t supported by WebKit. Other features remain available." : {
 
     },
     "Some organizations require authorization." : {
 
+    },
+    "Some websites may not work with a custom user agent." : {
+      "comment" : "Caption under the User agent row in Advanced settings, and its Settings search description."
     },
     "Something else" : {
 
@@ -5620,6 +5596,9 @@
     },
     "Starting microphone…" : {
 
+    },
+    "Startup & data" : {
+      "comment" : "Section title on the General settings page that groups the startup and browsing-data options. Sentence case."
     },
     "State or region" : {
 
@@ -6225,8 +6204,8 @@
     "Try Again" : {
       "comment" : "Button that retries a failed agent turn or a failed update check."
     },
-    "Turn on any Safari extension you already have. The App Store keeps it up to date." : {
-      "comment" : "Footnote under the Safari extensions section on the Extensions settings page. The first sentence invites the person to switch on an extension that arrived with an app they installed; the second says updates come through the App Store rather than through Linen. Safari and App Store are product names and are never translated."
+    "Turn off transparency in the side panel." : {
+      "comment" : "Caption under the Solid side panel switch in Appearance settings, and its Settings search description."
     },
     "Turn on Apple Intelligence in System Settings." : {
       "comment" : "Setup hint shown when the Apple Intelligence provider is chosen but not enabled on the Mac. Apple Intelligence and System Settings are Apple’s names — use Apple’s own translations, since the user has to find them on screen."
@@ -6501,9 +6480,6 @@
     "View the installed version and check for updates." : {
       "comment" : "Caption describing the Software update section in the Settings search results. A sentence fragment naming what the section reports."
     },
-    "View websites with custom settings." : {
-
-    },
     "Voice" : {
 
     },
@@ -6630,11 +6606,11 @@
     "Websites use this data to keep you signed in and remember your preferences." : {
       "comment" : "Caption under the Website data page title, saying what the stored data is for before offering to remove it. Third person plural."
     },
+    "Websites with their own settings." : {
+      "comment" : "Description of the Custom settings section, shown only in the Settings search results."
+    },
     "Websites you visit most" : {
       "comment" : "Description of the Frequently Visited section in the start page editor. No final full stop."
-    },
-    "Websites you’ve changed" : {
-
     },
     "Welcome to Linen" : {
       "comment" : "Heading of the first onboarding screen, shown under the app icon. Linen is the application name and is never translated. Keep it short — it is set in large type."
@@ -6659,9 +6635,6 @@
     },
     "Where downloaded files are saved." : {
       "comment" : "Caption describing the Save files to setting in the Settings search results. A sentence fragment."
-    },
-    "Whether Linen is your default browser." : {
-      "comment" : "Description of the Open links from other apps row, shown only in the Settings search results. Linen is the application name and is never translated. Sentence case with a final full stop."
     },
     "Whether video and sound may start on their own." : {
       "comment" : "Caption describing the Autoplay setting in the Settings search results. A sentence fragment naming what the setting decides."

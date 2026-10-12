@@ -42,8 +42,7 @@ struct SafariExtensionsSettingsCard: View {
             if !manager.systemExtensions.isEmpty {
                 SettingsSection(
                     title: "Safari extensions",
-                    symbol: "safari",
-                    footnote: "Turn on any Safari extension you already have. The App Store keeps it up to date."
+                    symbol: "safari"
                 ) {
                     ForEach(manager.systemExtensions.enumerated(), id: \.element.id) { index, record in
                         if index > 0 {

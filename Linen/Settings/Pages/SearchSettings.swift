@@ -92,9 +92,9 @@ struct SearchSettings: View {
                 .disabled(engine.suggestTemplate == nil)
                 .settingsAnchor("search.suggestions")
             }
-        }
 
-        SettingsSection(title: "Address bar", symbol: "character.cursor.ibeam") {
+            RowSeparator()
+
             DetailRow(
                 title: "Always ask the assistant",
                 caption: "Send questions to \(coordinator.agentDisplayName). Open links normally."

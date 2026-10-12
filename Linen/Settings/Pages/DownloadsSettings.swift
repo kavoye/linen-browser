@@ -10,14 +10,12 @@ struct DownloadsSettings: View {
     @Bindable var settings: BrowserSettings
 
     var body: some View {
-        SettingsPageHeader(
-            title: "Downloads",
-            detail: settings.downloadFolder.abbreviatedForDisplay
-        )
+        SettingsPageHeader(title: "Downloads")
 
         SettingsCard {
             DetailRow(
-                title: "Save files to"
+                title: "Save files to",
+                attributedCaption: AttributedString(settings.downloadFolder.abbreviatedForDisplay)
             ) {
                 HStack(spacing: 8) {
                     SettingsButton(title: "Choose…") { chooseFolder() }
@@ -41,8 +39,8 @@ struct DownloadsSettings: View {
             RowSeparator()
 
             DetailRow(
-                title: "Remove download list items",
-                caption: "Downloaded files aren’t deleted."
+                title: "Clear download list",
+                caption: "Files you downloaded stay on your Mac."
             ) {
                 SettingsMenu(
                     options: DownloadRetention.allCases.map {

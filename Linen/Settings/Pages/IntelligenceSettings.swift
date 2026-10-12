@@ -495,8 +495,7 @@ private struct AddProviderPage: View {
         if !model.unconnectedKeyed.isEmpty {
             SettingsSection(
                 title: "Needs an API key",
-                symbol: "key",
-                footnote: "Linen saves keys in your Keychain."
+                symbol: "key"
             ) {
                 ForEach(Array(model.unconnectedKeyed.enumerated()), id: \.element.id) { index, provider in
                     if index > 0 {
@@ -615,7 +614,7 @@ private struct APIKeyEntry: View {
                     SecureField("Paste your key…", text: $model.keyDraft)
                         .textFieldStyle(.plain)
                         .font(Theme.Font.mono)
-                        .frame(maxWidth: 240)
+                        .frame(width: 300)
                         .focused($focused)
                         .onSubmit { save() }
                 }

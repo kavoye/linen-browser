@@ -67,7 +67,7 @@ struct PasswordSettings: View {
             }
         }
         AutofillSavePromptReset(kind: .password, profileID: model.profileID)
-        SettingsSection(title: "Saved passwords", symbol: "key", footnote: "Linen encrypts saved passwords. macOS manages passkeys.", accessory: {
+        SettingsSection(title: "Saved passwords", symbol: "key", accessory: {
             HStack(spacing: 10) {
                 if model.isLoaded, !model.entries.isEmpty {
                     ToolbarSearchField(query: $query, placeholder: "Search passwords")

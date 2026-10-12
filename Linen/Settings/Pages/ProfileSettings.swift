@@ -92,8 +92,8 @@ struct ProfileSettings: View {
             }
         }
 
-        SettingsSection(title: "On launch", symbol: "power") {
-            DetailRow(title: "Open profile") {
+        SettingsCard {
+            DetailRow(title: "Open at launch") {
                 SettingsMenu<UUID?>(
                     options: [
                         .init(value: nil, label: String(localized: "Last used profile"))
@@ -310,9 +310,7 @@ private struct ProfileDetailPage: View {
 
         heading(profile)
 
-        lookSection(profile)
-
-        historySection(profile)
+        detailsSection(profile)
     }
 
     private func heading(_ profile: Profile) -> some View {
@@ -338,8 +336,8 @@ private struct ProfileDetailPage: View {
         }
     }
 
-    private func lookSection(_ profile: Profile) -> some View {
-        SettingsSection(title: "Name and appearance", symbol: "paintpalette") {
+    private func detailsSection(_ profile: Profile) -> some View {
+        SettingsCard {
             DetailRow(title: "Name") {
                 FieldChrome(isFocused: editing) {
                     TextField("", text: $draft)
@@ -364,11 +362,9 @@ private struct ProfileDetailPage: View {
                     set: { store.setAppearance(of: profile, symbol: profile.symbol, color: $0) }
                 )
             )
-        }
-    }
 
-    private func historySection(_ profile: Profile) -> some View {
-        SettingsSection(title: "History", symbol: "clock") {
+            RowSeparator()
+
             DetailRow(title: "Browsing history") {
                 SettingsButton(title: "Clear…", isDestructive: true) { clearing = true }
                     .disabled(facts.pages == 0)

@@ -14,7 +14,7 @@ struct GeneralSettings: View {
     @State private var handedOver = false
 
     private var defaultBrowserCaption: LocalizedStringResource {
-        isDefault ? "Linen is your default browser." : "Linen isn’t your default browser."
+        isDefault ? "Links from other apps open in Linen." : "Links from other apps open in another browser."
     }
 
     private var defaultBrowserButton: LocalizedStringResource {
@@ -28,6 +28,44 @@ struct GeneralSettings: View {
 
     var body: some View {
         SettingsPageHeader(title: "General")
+
+        SettingsSection(
+            title: "Startup & data",
+            symbol: "arrow.up.forward.app",
+            footnote: "Export your bookmarks as an HTML file in the other browser first."
+        ) {
+            DetailRow(
+                title: "Default web browser",
+                caption: defaultBrowserCaption
+            ) {
+                SettingsButton(
+                    title: defaultBrowserButton,
+                    isProminent: !isDefault
+                ) {
+                    becomeDefault()
+                }
+                .disabled(isDefault)
+            }
+            .settingsAnchor("general.defaultBrowser")
+
+            RowSeparator()
+
+            BookmarkImportRow(
+                browser: coordinator.browser,
+                caption: "Import an HTML file from Safari, Chrome, Firefox, or Edge."
+            )
+            .settingsAnchor("general.import")
+        }
+        .task { isDefault = DefaultBrowser.isCurrent }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            isDefault = DefaultBrowser.isCurrent
+        }
+
+        if handedOver {
+            Footnote("System Settings is open. Choose Linen under \"Default web browser.\"")
+        } else if askedToBeDefault, !isDefault {
+            Footnote("If no panel appeared, set it in System Settings under Desktop & Dock.")
+        }
 
         SettingsSection(title: "Tabs", symbol: "rectangle.on.rectangle") {
             DetailRow(
@@ -52,43 +90,17 @@ struct GeneralSettings: View {
             .settingsAnchor("general.archiveTabs")
         }
 
-        SettingsSection(title: "Default browser", symbol: "arrow.up.forward.app") {
+        SettingsSection(title: "Browsing", symbol: "cursorarrow.rays", footnote: mediaFootnote) {
             DetailRow(
-                title: "Open links from other apps",
-                caption: defaultBrowserCaption
-            ) {
-                SettingsButton(
-                    title: defaultBrowserButton,
-                    isProminent: !isDefault
-                ) {
-                    becomeDefault()
-                }
-                .disabled(isDefault)
-            }
-            .settingsAnchor("general.defaultBrowser")
-        }
-        .task { isDefault = DefaultBrowser.isCurrent }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            isDefault = DefaultBrowser.isCurrent
-        }
-
-        if handedOver {
-            Footnote("System Settings is open. Choose Linen under \"Default web browser.\"")
-        } else if askedToBeDefault, !isDefault {
-            Footnote("If no panel appeared, set it in System Settings under Desktop & Dock.")
-        }
-
-        SettingsSection(title: "Browsing", symbol: "cursorarrow.rays") {
-            DetailRow(
-                title: "Show link address",
-                caption: "Show a link’s address at the bottom of the page when you point at it."
+                title: "Show status bar",
+                caption: "Shows where a link goes at the bottom of the window."
             ) {
                 SettingsToggle($settings.showsLinkPreview)
             }
             .settingsAnchor("general.linkPreview")
-        }
 
-        SettingsSection(title: "Media", symbol: "play.rectangle", footnote: mediaFootnote) {
+            RowSeparator()
+
             DetailRow(
                 title: "Show media player",
                 caption: "Pause or skip audio and video playing in any tab."
@@ -108,8 +120,6 @@ struct GeneralSettings: View {
             .settingsAnchor("general.automaticPiP")
             .disabled(settings.showsVideoInPlayer)
         }
-
-        ImportSection(coordinator: coordinator)
     }
 
     private func becomeDefault() {
@@ -117,24 +127,6 @@ struct GeneralSettings: View {
         Task {
             handedOver = await DefaultBrowser.request() == .handedOverToSystemSettings
             isDefault = DefaultBrowser.isCurrent
-        }
-    }
-}
-
-private struct ImportSection: View {
-    let coordinator: AppCoordinator
-
-    var body: some View {
-        SettingsSection(
-            title: "Import",
-            symbol: "square.and.arrow.down",
-            footnote: "Export your bookmarks as an HTML file in the other browser first."
-        ) {
-            BookmarkImportRow(
-                browser: coordinator.browser,
-                caption: "Import an HTML file from Safari, Chrome, Firefox, or Edge."
-            )
-            .settingsAnchor("general.import")
         }
     }
 }

@@ -8,7 +8,6 @@ struct WebKitFeaturesPage: View {
 
     @State private var query = ""
     @State private var overrides = WebKitFeatures.overrides
-    @FocusState private var searching: Bool
 
     private var matches: [WebKitFeature] {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
@@ -35,19 +34,11 @@ struct WebKitFeaturesPage: View {
             caption: "Experimental features may break websites. Reload the page to apply changes."
         )
 
-        SearchFieldChrome {
-            TextField("", text: $query)
-                .textFieldStyle(.plain)
-                .font(Theme.Font.secondary)
-                .fieldPlaceholder("Search", isShowing: query.isEmpty)
-                .focused($searching)
-        }
-
-        SettingsList {
+        SettingsSection(title: "Features", symbol: "flag", isLongList: true, accessory: {
+            ToolbarSearchField(query: $query, placeholder: "Search features")
+        }, content: {
             if matches.isEmpty {
-                DetailRow(caption: "Nothing matches that.") {
-                    EmptyView()
-                }
+                SettingsEmptyState(symbol: "magnifyingglass", title: "No matches", caption: "No features match your search.")
             }
 
             ForEach(Array(matches.enumerated()), id: \.element.id) { index, feature in
@@ -62,7 +53,7 @@ struct WebKitFeaturesPage: View {
                     SettingsToggle(binding(to: feature))
                 }
             }
-        }
+        })
     }
 
     private func binding(to feature: WebKitFeature) -> Binding<Bool> {

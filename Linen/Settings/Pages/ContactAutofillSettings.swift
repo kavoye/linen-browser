@@ -26,7 +26,7 @@ struct ContactAutofillSettings: View {
         .disabled(store.profile.isPrivate)
         .settingsAnchor("autofill.contacts")
         AutofillSavePromptReset(kind: .contact, profileID: store.profile.id)
-        SettingsSection(title: "Saved addresses", symbol: "person.crop.rectangle", footnote: "Linen encrypts saved contacts. Imported copies don’t sync.", accessory: {
+        SettingsSection(title: "Saved addresses", symbol: "person.crop.rectangle", accessory: {
             SettingsButton(title: "Add Address", symbol: "plus") { editing = AutofillContact() }
                 .disabled(!store.isLoaded || store.isBusy || store.contacts.count >= 100)
         }, content: {

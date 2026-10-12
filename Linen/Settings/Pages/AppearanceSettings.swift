@@ -46,7 +46,7 @@ struct AppearanceSettings: View {
 
         WindowStyleSettingsSection(settings: settings)
 
-        SettingsSection(title: "Sidebar", symbol: "sidebar.left") {
+        SettingsSection(title: "Sidebars", symbol: "sidebar.left") {
             DetailRow(title: "Show sidebar") {
                 SettingsToggle(Binding(
                     get: { sidebar.isVisible },
@@ -64,12 +64,12 @@ struct AppearanceSettings: View {
                 ))
             }
             .settingsAnchor("appearance.sidebarStyle")
-        }
 
-        SettingsSection(title: "Side Panel", symbol: "sidebar.right") {
+            RowSeparator()
+
             DetailRow(
-                title: "Solid background",
-                caption: "Show the side panel without transparency."
+                title: "Solid side panel",
+                caption: "Turn off transparency in the side panel."
             ) {
                 SettingsToggle($settings.hasSolidSidePanel)
             }
