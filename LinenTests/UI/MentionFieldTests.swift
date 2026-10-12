@@ -168,6 +168,42 @@ struct MentionFieldTests {
         #expect(MentionText.count(in: harness.text) == 1)
     }
 
+    @Test(arguments: [12.5, 19] as [CGFloat])
+    func attachingATabLeavesTheTextWhereItWas(fontSize: CGFloat) async throws {
+        let window = NSWindow(
+            contentRect: CGRect(x: 0, y: 0, width: 500, height: 60),
+            styleMask: [.titled], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let chip = MentionChip(id: UUID(), title: "Linen Browser", host: "github.com")
+        func field(_ text: String, _ chips: [MentionChip]) -> some View {
+            MentionField(text: .constant(text), chips: chips, placeholder: "", fontSize: fontSize, isFocused: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        let host = NSHostingView(rootView: AnyView(field("as ", [])))
+        window.contentView = host
+        await settlePaletteLayout(host)
+        let mention = try #require(mentionField(in: host))
+        #expect(await waitUntil { mention.currentEditor() != nil })
+
+        func baseline() throws -> CGFloat {
+            let editor = try #require(mention.currentEditor() as? NSTextView)
+            let layout = try #require(editor.layoutManager)
+            layout.ensureLayout(for: try #require(editor.textContainer))
+            let line = layout.lineFragmentRect(forGlyphAt: 0, effectiveRange: nil)
+            let glyph = CGPoint(x: line.minX, y: line.minY + layout.location(forGlyphAt: 0).y)
+            return editor.convert(glyph, to: nil).y
+        }
+        let before = try baseline()
+
+        host.rootView = AnyView(field("as \(MentionText.marker)", [chip]))
+        await settlePaletteLayout(host)
+        let after = try baseline()
+
+        #expect(abs(after - before) < 0.5)
+    }
+
     @Test func chipsRenderAsAttachmentsCarryingTheirTabID() {
         let chip = MentionChip(id: UUID(), title: "Nike Air Max")
         let attributed = MentionFieldRendering.attributed(

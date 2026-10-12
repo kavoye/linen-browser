@@ -464,12 +464,14 @@ enum MentionFieldRendering {
     }
 
     private static func chip(_ chip: MentionChip, font: NSFont, isDark: Bool, favicons: FaviconLoader) -> NSAttributedString {
-        let image = chipImage(chip, fontSize: font.pointSize, isDark: isDark, favicons: favicons)
+        let line = NSLayoutManager().defaultLineHeight(for: font).rounded(.down)
+        let fits = AskPageChip.height(fontSize: AskPageChip.contextFontSize) <= line
+        let image = chipImage(chip, height: fits ? nil : line, isDark: isDark, favicons: favicons)
         let attachment = NSTextAttachment()
         attachment.image = image
         attachment.bounds = CGRect(
             x: 0,
-            y: ((font.capHeight - image.size.height) / 2).rounded(),
+            y: (font.ascender - line + (line - image.size.height) / 2).rounded(.down),
             width: image.size.width,
             height: image.size.height
         )
@@ -481,9 +483,14 @@ enum MentionFieldRendering {
         return piece
     }
 
-    private static func chipImage(_ chip: MentionChip, fontSize: CGFloat, isDark: Bool, favicons: FaviconLoader) -> NSImage {
+    private static func chipImage(
+        _ chip: MentionChip,
+        height: CGFloat?,
+        isDark: Bool,
+        favicons: FaviconLoader
+    ) -> NSImage {
         let icon = chip.host.flatMap { favicons.cached(for: $0) }
-        let key = "\(ObjectIdentifier(favicons))|\(chip.title)|\(chip.host ?? "")|\(icon == nil ? 0 : 1)|\(fontSize)|\(isDark)"
+        let key = "\(ObjectIdentifier(favicons))|\(chip.title)|\(chip.host ?? "")|\(icon == nil ? 0 : 1)|\(height ?? 0)|\(isDark)"
         if favicons.persistsToDisk, let cached = cache[key] {
             return cached
         }
@@ -491,8 +498,10 @@ enum MentionFieldRendering {
             content: AskPageChip(
                 title: chip.title,
                 icon: icon,
+                isAttached: true,
                 isRasterised: true,
-                fontSize: (fontSize - 1.5).rounded()
+                fontSize: AskPageChip.contextFontSize,
+                height: height
             )
                 .environment(\.colorScheme, isDark ? .dark : .light)
         )

@@ -5,11 +5,19 @@ import AppKit
 import SwiftUI
 
 struct AskPageChip: View {
+    static let contextFontSize: CGFloat = 10.5
+
+    static func height(fontSize: CGFloat) -> CGFloat {
+        let text = NSLayoutManager().defaultLineHeight(for: .systemFont(ofSize: fontSize)).rounded(.up)
+        return max((fontSize * 1.15).rounded(), text) + 2 * (fontSize * 0.24).rounded()
+    }
+
     let title: String
     let icon: NSImage?
     var isAttached = false
     var isRasterised = false
     let fontSize: CGFloat
+    var height: CGFloat?
 
     @Environment(\.colorScheme) private var scheme
 
@@ -54,19 +62,15 @@ struct AskPageChip: View {
                 .frame(maxWidth: fontSize * 14, alignment: .leading)
         }
         .padding(.horizontal, (fontSize * 0.55).rounded())
-        .padding(.vertical, (fontSize * 0.24).rounded())
+        .padding(.vertical, height == nil ? (fontSize * 0.24).rounded() : 0)
+        .frame(height: height)
         .background(rasterisedFill, in: Capsule())
-        .overlay {
-            if isRasterised {
-                Capsule().strokeBorder(Theme.Wash.strong, lineWidth: 0.5)
-            }
-        }
         .glassSurface(isEnabled: !isRasterised, in: Capsule())
     }
 
     private var rasterisedFill: AnyShapeStyle {
         guard isRasterised else { return AnyShapeStyle(.clear) }
-        return AnyShapeStyle(ink.opacity(scheme == .dark ? 0.16 : 0.10))
+        return AnyShapeStyle(scheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.07))
     }
 }
 

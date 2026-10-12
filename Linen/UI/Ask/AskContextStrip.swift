@@ -59,7 +59,7 @@ struct AskContextStrip: View {
                             title: page.title,
                             host: page.host,
                             isAttached: page.isAttached,
-                            fontSize: 10.5
+                            fontSize: AskPageChip.contextFontSize
                         )
                     }
                 }
