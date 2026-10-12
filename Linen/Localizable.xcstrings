@@ -1149,9 +1149,6 @@
     "Archive tabs after" : {
       "comment" : "Title of a row in the Tabs section of General settings. A pop-up menu completes it: “Archive tabs after 12 hours”, “… a day”, “… a week”, or Never."
     },
-    "Archived" : {
-      "comment" : "Marks a command palette result as a tab that Linen closed automatically and kept in the archive. Follows the website name, e.g. “example.com • Archived”."
-    },
     "Archived Tabs" : {
       "comment" : "Heading of the command palette section that lists tabs Linen closed automatically. Choosing one opens it again."
     },
@@ -4404,8 +4401,8 @@
     "Press shortcut" : {
       "comment" : "Placeholder inside the keyboard-shortcut field while it is waiting for a keystroke. Press is a verb. Very tight space — the field is only as wide as a couple of key caps."
     },
-    "Press Tab to search this site" : {
-      "comment" : "Accessibility hint for the command palette's site search suggestion. Tab is the keyboard key."
+    "Press Tab to search" : {
+      "comment" : "Accessibility hint on the scope hint in the command palette, which offers to search a website or the archived tabs. Tab is the keyboard key."
     },
     "Preview" : {
       "comment" : "One choice in the Update channel menu in Settings > About: builds made from the newest change, before a release. A noun. Its twin is “Release”. One word, it sits in a narrow menu."
@@ -5096,6 +5093,9 @@
     "Search %@" : {
       "comment" : "Command palette site search hint, placeholder, and result detail. %@ is the website's name and should not be translated. Search is a verb."
     },
+    "Search archived tabs" : {
+      "comment" : "Placeholder and accessibility label of the command palette field while it searches only archived tabs, and the hint that offers that scope. Sentence case."
+    },
     "Search engine" : {
       "comment" : "Title of the General settings row that chooses which search engine is used, and the same wording in the Settings search index. A noun phrase, not an instruction. Sentence case."
     },
@@ -5335,6 +5335,12 @@
     },
     "Show all models" : {
 
+    },
+    "Show all results" : {
+      "comment" : "Tooltip and accessibility label of the Archived Tabs chip in the command palette field; selecting it leaves the archive and searches everything again."
+    },
+    "Show Archived Tabs" : {
+      "comment" : "Command in the command palette that switches the palette to searching tabs Linen archived automatically. Title Case, like a menu command."
     },
     "Show Backup" : {
       "comment" : "External MCP client setup in Advanced settings."

@@ -378,29 +378,33 @@ enum Omnibox {
         query: String,
         entries: [TabArchive.Entry],
         excluding openURLs: Set<String> = [],
-        limit: Int,
-        restore: @escaping (TabArchive.Entry) -> Void
+        restore: @escaping (TabArchive.Entry) -> Void,
+        remove: ((TabArchive.Entry) -> Void)? = nil
     ) -> OmniboxSection? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty, limit > 0 else { return nil }
         let needle = query.lowercased()
 
-        let matching = entries.filter {
-            !openURLs.contains($0.url)
-                && ($0.title.lowercased().contains(needle) || $0.url.lowercased().contains(needle))
-        }
-        let items: [OmniboxItem] = mostRelevant(matching, for: query, limit: limit) {
-            ($0.title, URL(string: $0.url)?.displayAddress ?? $0.url, 0)
-        }
-        .map { entry in
+        let closed = entries.filter { !openURLs.contains($0.url) }
+        let listed = needle.isEmpty
+            ? closed
+            : mostRelevant(
+                closed.filter { $0.title.lowercased().contains(needle) || $0.url.lowercased().contains(needle) },
+                for: query,
+                limit: closed.count
+            ) {
+                ($0.title, URL(string: $0.url)?.displayAddress ?? $0.url, 0)
+            }
+        let items: [OmniboxItem] = listed.map { entry in
             let host = URL(string: entry.url)?.displayHost
+            let archived = entry.archivedAt.formatted(.relative(presentation: .named, unitsStyle: .wide))
             return OmniboxItem(
                 id: "omnibox-archived-\(entry.id)",
                 kind: .archived,
                 title: entry.title,
-                detail: [host, String(localized: "Archived")].compactMap { $0 }.joined(separator: " • "),
+                detail: [host, archived].compactMap { $0 }.joined(separator: " · "),
                 iconHost: host,
-                completionText: entry.url
+                completionText: entry.url,
+                remove: remove.map { remove in { remove(entry) } }
             ) {
                 restore(entry)
             }

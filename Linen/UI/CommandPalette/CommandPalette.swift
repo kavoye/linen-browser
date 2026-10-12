@@ -49,7 +49,8 @@ private struct CommandPalettePanel: View {
                 onChipsChange: model.mentionsDidChange,
                 onDismiss: model.dismiss,
                 searchSite: model.searchSite,
-                suggestedSite: model.suggestedSite,
+                showsArchive: model.showsArchive,
+                scopeHint: model.scopeHint,
                 onActivateSite: model.activateSiteSearch,
                 onRemoveSite: model.removeSearchSite
             )

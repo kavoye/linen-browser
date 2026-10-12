@@ -18,7 +18,7 @@ final class TabArchive {
         var archivedAt: Date
     }
 
-    static let capacity = 500
+    nonisolated static let capacity = 30
 
     private(set) var entries: [Entry] = []
 
@@ -26,6 +26,7 @@ final class TabArchive {
 
     init(database: AppDatabase) {
         self.database = database
+        write(Self.trim)
         reload()
     }
 
@@ -37,14 +38,7 @@ final class TabArchive {
                 try Entry.filter(Column("url") == page.url).deleteAll(db)
                 try Entry(id: UUID(), title: page.title, url: page.url, archivedAt: date).insert(db)
             }
-            try db.execute(
-                sql: """
-                    DELETE FROM archivedTab WHERE id NOT IN (
-                        SELECT id FROM archivedTab ORDER BY archivedAt DESC LIMIT ?
-                    )
-                    """,
-                arguments: [Self.capacity]
-            )
+            try Self.trim(db)
         }
         reload()
     }
@@ -76,6 +70,17 @@ final class TabArchive {
             _ = try Entry.filter(Column("archivedAt") < now.addingTimeInterval(-maximumAge)).deleteAll(db)
         }
         reload()
+    }
+
+    private nonisolated static func trim(_ db: Database) throws {
+        try db.execute(
+            sql: """
+                DELETE FROM archivedTab WHERE id NOT IN (
+                    SELECT id FROM archivedTab ORDER BY archivedAt DESC LIMIT ?
+                )
+                """,
+            arguments: [capacity]
+        )
     }
 
     private func reload() {

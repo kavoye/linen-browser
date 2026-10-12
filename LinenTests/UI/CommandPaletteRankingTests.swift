@@ -138,6 +138,7 @@ struct CommandPaletteRankingTests {
         #expect(!ids.contains("action-clearHistory"))
         #expect(!ids.contains("action-exitSplit"))
         #expect(!ids.contains("action-reopenWindow"))
+        #expect(!ids.contains("action-showArchivedTabs"))
         #expect(ids.contains("action-openStartPage"))
         #expect(ids.contains("action-settings"))
 
@@ -192,6 +193,7 @@ struct CommandPaletteRankingTests {
             isAwayFromPin: true,
             canReopenClosedTab: true,
             canReopenClosedWindow: true,
+            archivedCount: 2,
             canSplit: true,
             isSplit: true,
             canSwapPanes: true,
@@ -211,6 +213,7 @@ struct CommandPaletteRankingTests {
         #expect(performed.contains(.privateBrowsing))
         #expect(performed.contains(.newWindow))
         #expect(performed.contains(.reopenWindow))
+        #expect(performed.contains(.showArchivedTabs))
         #expect(performed.contains(.closeWindow))
     }
 

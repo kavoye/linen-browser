@@ -42,6 +42,33 @@ struct CommandPaletteSiteSearchTests {
         #expect(components.fragment == nil)
     }
 
+    @Test func tabOpensTheArchiveAndBackspaceLeavesIt() {
+        let coordinator = AppCoordinator()
+        coordinator.browser.tabArchive = TabArchive(database: .temporary())
+        coordinator.browser.tabArchive.add([(title: "Report", url: "https://example.com/report")])
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+        model.prepare()
+        model.interaction.query = "archived"
+        #expect(model.scopeHint == String(localized: "Search archived tabs"))
+        #expect(model.activateSiteSearch())
+        #expect(model.showsArchive)
+        #expect(model.interaction.query.isEmpty)
+        #expect(model.sections.flattened.map(\.title) == ["Report"])
+        #expect(model.scopeHint == nil)
+        #expect(model.removeSearchSite())
+        #expect(!model.showsArchive)
+    }
+
+    @Test func anEmptyArchiveOffersNoTab() {
+        let coordinator = AppCoordinator()
+        coordinator.browser.tabArchive = TabArchive(database: .temporary())
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+        model.prepare()
+        model.interaction.query = "archived"
+        #expect(model.scopeHint == nil)
+        #expect(!model.activateSiteSearch())
+    }
+
     @Test func tabActivatesSiteAndEmptySubmitKeepsPaletteOpen() {
         let coordinator = AppCoordinator()
         var dismissed = false

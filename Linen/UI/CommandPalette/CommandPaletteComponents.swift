@@ -15,7 +15,8 @@ struct CommandPaletteField: View {
     let onChipsChange: ([UUID]) -> Void
     let onDismiss: () -> Void
     let searchSite: SearchEngine?
-    let suggestedSite: SearchEngine?
+    let showsArchive: Bool
+    let scopeHint: String?
     let onActivateSite: () -> Bool
     let onRemoveSite: () -> Bool
 
@@ -26,7 +27,7 @@ struct CommandPaletteField: View {
     private let clearLabel = Text("Clear")
 
     private var closes: Bool {
-        query.isEmpty && searchSite == nil
+        query.isEmpty && searchSite == nil && !showsArchive
     }
 
     var body: some View {
@@ -37,7 +38,12 @@ struct CommandPaletteField: View {
                 .accessibilityHidden(true)
 
             if let searchSite {
-                CommandPaletteSiteChip(site: searchSite) {
+                SiteSearchChip(site: searchSite) {
+                    _ = onRemoveSite()
+                    focused = true
+                }
+            } else if showsArchive {
+                CommandPaletteArchiveChip {
                     _ = onRemoveSite()
                     focused = true
                 }
@@ -50,7 +56,9 @@ struct CommandPaletteField: View {
                 fontSize: 19,
                 isFocused: focused,
                 accessibilityLabel: searchSite.map { String(localized: "Search \($0.name)") }
-                    ?? String(localized: "Search tabs, history, and actions"),
+                    ?? (showsArchive
+                        ? String(localized: "Search archived tabs")
+                        : String(localized: "Search tabs, history, and actions")),
                 onFocusChange: { focused = $0 },
                 onChipsChange: onChipsChange,
                 onSubmit: onSubmit,
@@ -63,12 +71,15 @@ struct CommandPaletteField: View {
                         onMoveSelection(delta)
                     }
                 },
-                onTab: onActivateSite,
+                onTab: {
+                    _ = onActivateSite()
+                    return true
+                },
                 onDeleteBackward: onRemoveSite
             )
 
-            if let suggestedSite {
-                CommandPaletteSiteHint(site: suggestedSite) {
+            if let scopeHint {
+                SearchScopeHint(title: scopeHint) {
                     _ = onActivateSite()
                     focused = true
                 }
@@ -130,7 +141,7 @@ private nonisolated struct CommandPaletteClearGlyph: Shape {
     }
 }
 
-private struct CommandPaletteSiteChip: View {
+struct SiteSearchChip: View {
     let site: SearchEngine
     let onRemove: () -> Void
 
@@ -152,14 +163,33 @@ private struct CommandPaletteSiteChip: View {
     }
 }
 
-private struct CommandPaletteSiteHint: View {
-    let site: SearchEngine
+private struct CommandPaletteArchiveChip: View {
+    let onRemove: () -> Void
+
+    var body: some View {
+        Button(action: onRemove) {
+            Text("Archived Tabs")
+                .lineLimit(1)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(.quaternary, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .help("Show all results")
+        .accessibilityLabel("Show all results")
+    }
+}
+
+struct SearchScopeHint: View {
+    let title: String
     let onActivate: () -> Void
 
     var body: some View {
         Button(action: onActivate) {
             HStack(spacing: 6) {
-                Text("Search \(site.name)")
+                Text(title)
                     .lineLimit(1)
                 Text("Tab")
                     .padding(.horizontal, 5)
@@ -170,8 +200,8 @@ private struct CommandPaletteSiteHint: View {
             .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Search \(site.name)")
-        .accessibilityHint("Press Tab to search this site")
+        .accessibilityLabel(title)
+        .accessibilityHint("Press Tab to search")
     }
 }
 

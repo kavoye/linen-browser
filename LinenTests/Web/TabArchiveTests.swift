@@ -211,6 +211,25 @@ struct TabArchiveTests {
         #expect(!archive.entries.contains { $0.url == "https://example.com/0" })
     }
 
+    @Test func anOversizedArchiveIsTrimmedWhenItLoads() throws {
+        let database = AppDatabase.temporary()
+        try database.writer.write { db in
+            for index in 0...TabArchive.capacity {
+                try TabArchive.Entry(
+                    id: UUID(),
+                    title: "Page \(index)",
+                    url: "https://example.com/\(index)",
+                    archivedAt: now.addingTimeInterval(Double(index))
+                ).insert(db)
+            }
+        }
+
+        let archive = TabArchive(database: database)
+
+        #expect(archive.entries.count == TabArchive.capacity)
+        #expect(!archive.entries.contains { $0.url == "https://example.com/0" })
+    }
+
     @Test func theArchiveSkipsPagesHistoryWouldNotRecord() {
         let archive = TabArchive(database: .temporary())
         archive.add([(title: "Settings", url: "linen://settings"), (title: "", url: "")], at: now)
@@ -240,32 +259,66 @@ struct TabArchiveTests {
 
     // MARK: - Command palette
 
-    @Test func theCommandPaletteFindsAnArchivedTab() throws {
+    @Test func theArchiveListShowsEveryArchivedTabNewestFirst() throws {
         let archive = TabArchive(database: .temporary())
-        archive.add([(title: "Quarterly report", url: "https://example.com/report")], at: now)
+        archive.add([(title: "Older", url: "https://example.com/older")], at: now.addingTimeInterval(-60))
+        archive.add([(title: "Newer", url: "https://example.com/newer")], at: now)
+
+        let section = try #require(Omnibox.archivedSection(query: " ", entries: archive.entries) { _ in })
+
+        #expect(section.items.map(\.title) == ["Newer", "Older"])
+    }
+
+    @Test func theArchiveListFiltersAndRestores() throws {
+        let archive = TabArchive(database: .temporary())
+        archive.add([
+            (title: "Quarterly report", url: "https://example.com/report"),
+            (title: "Recipes", url: "https://example.com/recipes"),
+        ], at: now)
         var restored: TabArchive.Entry?
 
         let section = try #require(Omnibox.archivedSection(
             query: "quarterly",
-            entries: archive.entries,
-            limit: 3
+            entries: archive.entries
         ) { restored = $0 })
         section.items.first?.run()
 
-        #expect(section.items.first?.kind == .archived)
+        #expect(section.items.map(\.kind) == [.archived])
         #expect(restored?.url == "https://example.com/report")
     }
 
-    @Test func theCommandPaletteSkipsArchivedPagesThatAreOpen() {
+    @Test func removingFromTheArchiveListDeletesTheEntry() throws {
+        let archive = TabArchive(database: .temporary())
+        archive.add([(title: "Report", url: "https://example.com/report")], at: now)
+
+        let section = try #require(Omnibox.archivedSection(
+            query: "",
+            entries: archive.entries,
+            restore: { _ in },
+            remove: { archive.remove($0) }
+        ))
+        section.items.first?.remove?()
+
+        #expect(archive.entries.isEmpty)
+    }
+
+    @Test func theArchiveListSkipsPagesThatAreOpen() {
         let archive = TabArchive(database: .temporary())
         archive.add([(title: "Report", url: "https://example.com/report")], at: now)
 
         #expect(Omnibox.archivedSection(
-            query: "report",
+            query: "",
             entries: archive.entries,
-            excluding: ["https://example.com/report"],
-            limit: 3
+            excluding: ["https://example.com/report"]
         ) { _ in } == nil)
-        #expect(Omnibox.archivedSection(query: " ", entries: archive.entries, limit: 3) { _ in } == nil)
+    }
+
+    @Test func typingTheArchiveNameOffersTabIntoTheArchive() {
+        #expect(CommandPaletteProjection.opensArchive("arc"))
+        #expect(CommandPaletteProjection.opensArchive("Archived Tabs"))
+        #expect(CommandPaletteProjection.opensArchive("show archived tabs"))
+        #expect(!CommandPaletteProjection.opensArchive("ar"))
+        #expect(!CommandPaletteProjection.opensArchive("show"))
+        #expect(!CommandPaletteProjection.opensArchive("archive.org"))
     }
 }
