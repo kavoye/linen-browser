@@ -350,8 +350,6 @@ struct ExtensionOverflowButton: View {
 }
 
 private struct ExtensionOverflowList: View {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     let manager: ExtensionManager
     let browser: BrowserModel
     let records: [InstalledExtension]
@@ -374,10 +372,6 @@ private struct ExtensionOverflowList: View {
         }
         .padding(Self.inset)
         .frame(width: 236)
-        .background {
-            Theme.windowBackground.opacity(reduceTransparency ? 1 : 0.94)
-                .ignoresSafeArea()
-        }
         .chromePopoverAppearance()
     }
 }
@@ -390,8 +384,6 @@ private struct ExtensionOverflowRow: View {
     @Binding var isPresented: Bool
 
     @State private var hovering = false
-    @State private var pinHovering = false
-    @Environment(\.chromeWash) private var wash
 
     var body: some View {
         HStack(spacing: 9) {
@@ -425,7 +417,7 @@ private struct ExtensionOverflowRow: View {
 
     static var rowRadius: CGFloat {
         Theme.Radius.nested(
-            in: Theme.Radius.window,
+            in: Theme.Radius.systemPopover,
             inset: ExtensionOverflowList.inset
         )
     }
@@ -437,22 +429,10 @@ private struct ExtensionOverflowRow: View {
                 .font(Theme.Font.label)
                 .foregroundStyle(.tertiary)
         } else {
-            Button {
+            SettingsButton(title: "Pin") {
                 manager.setPinned(true, id: record.id)
                 isPresented = false
-            } label: {
-                Text("Pin")
-                    .font(.system(size: 11, weight: .medium))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        pinHovering ? wash.layer(0.12) : wash.layer(0.10),
-                        in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
-                    )
             }
-            .buttonStyle(.plain)
-            .onHover { pinHovering = $0 }
-            .animation(Theme.Motion.quick, value: pinHovering)
             .help("Show \(record.displayName) on the toolbar")
         }
     }

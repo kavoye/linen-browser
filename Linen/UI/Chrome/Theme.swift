@@ -51,6 +51,7 @@ enum Theme {
             min(window, 14)
         }
         static let popover: CGFloat = 16
+        static let systemPopover: CGFloat = 20
         static var card: CGFloat {
             min(window, 12)
         }
