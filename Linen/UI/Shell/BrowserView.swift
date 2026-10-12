@@ -176,28 +176,15 @@ struct BrowserView: View {
             }
 
             if coordinator.isPaletteOpen {
-                GeometryReader { proxy in
-                    ZStack(alignment: .top) {
-                        Color.black.opacity(0.35)
-                            .contentShape(Rectangle())
-                            .onTapGesture { coordinator.closePalette() }
-
-                        CommandPalette(
-                            browser: browser,
-                            coordinator: coordinator,
-                            containerSize: proxy.size
-                        ) {
-                            coordinator.closePalette()
-                        }
-                        .id(coordinator.paletteToken)
-                        .environment(\.chromeIsLight, loom.isLight)
-                        .environment(\.chromeWash, loom)
-                        .environment(\.colorScheme, loomScheme)
-                    }
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                }
-                .transition(.opacity)
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { coordinator.closePalette() }
             }
+
+            CommandPaletteLayer(browser: browser, coordinator: coordinator)
+                .environment(\.chromeIsLight, loom.isLight)
+                .environment(\.chromeWash, loom)
+                .environment(\.colorScheme, loomScheme)
 
             if coordinator.isProfileSwitcherOpen, let anchor = coordinator.profileButtonFrame {
                 GeometryReader { proxy in
@@ -243,7 +230,8 @@ struct BrowserView: View {
         .animation(chromeMotion, value: showsPanel)
         .animation(chromeMotion, value: panel.isExpanded)
         .animation(
-            coordinator.isPaletteOpen ? Theme.Motion.quick : nil, value: coordinator.isPaletteOpen
+            coordinator.isPaletteOpen ? Theme.Motion.settle : nil,
+            value: coordinator.isPaletteOpen
         )
         .animation(
             coordinator.isProfileSwitcherOpen ? Theme.Motion.quick : nil,
@@ -252,4 +240,77 @@ struct BrowserView: View {
 
         .animation(nil, value: coordinator.onboarding.isPresented)
     }
+}
+
+private struct CommandPaletteLayer: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+
+    @State private var model: CommandPaletteModel?
+    @State private var isShown = false
+    @State private var isLeaving = false
+    @State private var isMoving = false
+    @State private var pending: Task<Void, Never>?
+
+    var body: some View {
+        GeometryReader { proxy in
+            let layout = CommandPaletteLayout(containerSize: proxy.size)
+            let anchor = UnitPoint(
+                x: 0.5,
+                y: (layout.topInset + CommandPaletteLayout.fieldHeight / 2) / max(proxy.size.height, 1)
+            )
+            ZStack(alignment: .top) {
+                if isShown, let model {
+                    CommandPalette(model: model, containerSize: proxy.size)
+                        .id(coordinator.paletteToken)
+                        .environment(\.paletteIsMoving, isMoving)
+                        .environment(\.paletteIsLeaving, isLeaving)
+                        .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
+                        .scaleEffect(isLeaving ? 0.97 : 1, anchor: anchor)
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.94, anchor: anchor).combined(with: .opacity),
+                            removal: .identity
+                        ))
+                }
+            }
+        }
+        .onAppear { follow(coordinator.isPaletteOpen) }
+        .onChange(of: coordinator.isPaletteOpen) { _, isOpen in follow(isOpen) }
+    }
+
+    private func follow(_ isOpen: Bool) {
+        pending?.cancel()
+        isMoving = true
+        if isOpen {
+            let coordinator = coordinator
+            model = CommandPaletteModel(browser: browser, coordinator: coordinator) {
+                coordinator.closePalette()
+            }
+            isLeaving = false
+            withAnimation(.spring(duration: 0.28, bounce: 0.18)) { isShown = true }
+            pending = Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                guard !Task.isCancelled else { return }
+                isMoving = false
+            }
+        } else if isShown {
+            withAnimation(.easeOut(duration: 0.16)) { isLeaving = true }
+            pending = Task {
+                try? await Task.sleep(for: .milliseconds(170))
+                guard !Task.isCancelled else { return }
+                var cut = Transaction()
+                cut.disablesAnimations = true
+                withTransaction(cut) {
+                    isShown = false
+                    isLeaving = false
+                }
+                model = nil
+            }
+        }
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var paletteIsMoving = false
+    @Entry var paletteIsLeaving = false
 }

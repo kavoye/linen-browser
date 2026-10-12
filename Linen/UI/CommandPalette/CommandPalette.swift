@@ -5,28 +5,19 @@ import AppKit
 import SwiftUI
 
 struct CommandPalette: View {
-    let browser: BrowserModel
-    let coordinator: AppCoordinator
+    let model: CommandPaletteModel
     let containerSize: CGSize
-    let dismiss: () -> Void
-
-    @State private var model: CommandPaletteModel?
 
     var body: some View {
-        if let model {
-            CommandPalettePanel(model: model, containerSize: containerSize)
-        } else {
-            Color.clear
-                .onAppear {
-                    model = CommandPaletteModel(browser: browser, coordinator: coordinator, dismiss: dismiss)
-                }
-        }
+        CommandPalettePanel(model: model, containerSize: containerSize)
     }
 }
 
 private struct CommandPalettePanel: View {
     let model: CommandPaletteModel
     let containerSize: CGSize
+
+    @Environment(\.paletteIsLeaving) private var isLeaving
 
     @State private var shortcutMonitor: Any?
     @State private var focused = false
@@ -70,11 +61,12 @@ private struct CommandPalettePanel: View {
 
             AskContextStrip(pages: model.contextPages)
         }
+        .opacity(isLeaving ? 0 : 1)
         .frame(width: layout.panelWidth)
         .background {
             CommandPaletteGlass(referenceHeight: CommandPaletteLayout.fieldHeight + layout.maxListHeight)
         }
-        .shadow(color: .black.opacity(0.4), radius: 44, y: 18)
+        .shadow(color: .black.opacity(isLeaving ? 0 : 0.4), radius: 44, y: 18)
         .padding(.top, layout.topInset)
         .onAppear {
             optionHeld = CommandPaletteShortcutPolicy.showsCurrentTab(modifiers: NSEvent.modifierFlags)

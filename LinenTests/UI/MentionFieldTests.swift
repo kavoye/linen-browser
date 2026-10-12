@@ -18,8 +18,8 @@ struct MentionFieldTests {
         window.isReleasedWhenClosed = false
         defer { window.close() }
         let host = NSHostingView(rootView: CommandPalette(
-            browser: coordinator.browser, coordinator: coordinator,
-            containerSize: CGSize(width: 1000, height: 800), dismiss: {}
+            model: CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {},
+            containerSize: CGSize(width: 1000, height: 800)
         ))
         window.contentView = host
         host.layoutSubtreeIfNeeded()

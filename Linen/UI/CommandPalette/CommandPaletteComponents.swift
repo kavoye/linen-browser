@@ -96,7 +96,7 @@ struct CommandPaletteField: View {
                 }
             } label: {
                 CommandPaletteClearGlyph(clears: !closes)
-                    .foregroundStyle(closeHovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                    .foregroundStyle(closeHovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
                     .frame(width: 20, height: 18)
                     .contentShape(.rect)
             }
@@ -207,6 +207,7 @@ struct SearchScopeHint: View {
 }
 
 struct CommandPaletteResultsView: View {
+    @Environment(\.paletteIsMoving) private var isMoving
     let sections: [OmniboxSection]
     let query: String
     let selection: Int
@@ -240,6 +241,7 @@ struct CommandPaletteResultsView: View {
                             alternateClickModifier: .option
                         )
                     }
+                    .scrollIndicators(isMoving ? .never : .automatic)
                     .contentMargins(.vertical, OmniboxList.Density.regular.padding, for: .scrollContent)
                     .frame(height: min(maxHeight, OmniboxList.height(of: sections, density: .regular)))
                     .onChange(of: selection) { _, index in
