@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
-import AppKit
 import SwiftUI
 
 struct StartPage: View {
@@ -40,11 +39,7 @@ struct StartPage: View {
             EditStartPageButton(settings: coordinator.settings)
                 .padding(20)
         }
-        .background(
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture { NSApp.keyWindow?.makeFirstResponder(nil) }
-        )
+        .takesFocusOnClick()
     }
 }
 

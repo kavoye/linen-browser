@@ -10,15 +10,18 @@ struct InternalPageSurface: View {
     let settingsWorkspace: SettingsWorkspace
 
     var body: some View {
-        switch page {
-        case .settings:
-            SettingsView(coordinator: coordinator, workspace: settingsWorkspace)
-        case .history:
-            HistoryView(browser: browser, coordinator: coordinator)
-        case .downloads:
-            DownloadsView(browser: browser)
-        case .releaseNotes:
-            ReleaseNotesView(browser: browser, notes: coordinator.releaseNotes)
+        Group {
+            switch page {
+            case .settings:
+                SettingsView(coordinator: coordinator, workspace: settingsWorkspace)
+            case .history:
+                HistoryView(browser: browser, coordinator: coordinator)
+            case .downloads:
+                DownloadsView(browser: browser)
+            case .releaseNotes:
+                ReleaseNotesView(browser: browser, notes: coordinator.releaseNotes)
+            }
         }
+        .takesFocusOnClick()
     }
 }
