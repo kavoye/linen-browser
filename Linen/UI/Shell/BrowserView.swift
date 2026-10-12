@@ -154,6 +154,7 @@ struct BrowserView: View {
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
                 .environment(\.windowColorScheme, loomScheme)
+                .environment(\.sidebarStyle, sidebar.style)
 
             DownloadFlightLayer(flights: coordinator.downloadFlights)
                 .environment(\.sidebarStyle, sidebar.style)
