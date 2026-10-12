@@ -83,15 +83,14 @@ struct CommandPaletteRankingTests {
         #expect(exact > prefix)
         #expect(prefix > word)
         #expect(word > scattered)
-        #expect(word >= CommandMatch.strong)
-        #expect(scattered < CommandMatch.strong)
     }
 
     @Test func theWordsMayArriveInAnyOrder() throws {
         let command = fixtureCommand()
         let reversed = try #require(CommandMatch.score(command, for: "tabs organize"))
+        let scattered = try #require(CommandMatch.score(command, for: "ogtb"))
 
-        #expect(reversed >= CommandMatch.strong)
+        #expect(reversed > scattered)
     }
 
     @Test func twoStrayLettersAreNotAMatch() {
@@ -114,7 +113,6 @@ struct CommandPaletteRankingTests {
 
         #expect(matched.first?.id == "action-openStartPage")
         #expect(CommandPaletteCatalog.matching("zzqq", in: commands).isEmpty)
-        #expect(CommandPaletteCatalog.bestScore("zzqq", in: commands) == 0)
     }
 
     @Test func aCommandIsFoundByTheWordAPersonWouldReachFor() {

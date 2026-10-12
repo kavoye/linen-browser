@@ -146,8 +146,6 @@ struct CommandPaletteCommand {
 }
 
 enum CommandMatch {
-    static let strong = 450
-
     static func score(_ command: CommandPaletteCommand, for query: String) -> Int? {
         let needle = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return 0 }
@@ -245,10 +243,6 @@ enum CommandPaletteCatalog {
             }
             .sorted { ($0.score, -$0.index) > ($1.score, -$1.index) }
             .map(\.command)
-    }
-
-    static func bestScore(_ query: String, in commands: [CommandPaletteCommand]) -> Int {
-        commands.compactMap { CommandMatch.score($0, for: query) }.max() ?? 0
     }
 
     private struct Builder {

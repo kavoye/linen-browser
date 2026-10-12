@@ -294,6 +294,7 @@ final class HistoryStore {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return Array(entries.prefix(limit)) }
         guard let pattern = FTS5Pattern(matchingAllPrefixesIn: needle) else { return [] }
+        _ = count
 
         return read { db in
             try Entry.fetchAll(

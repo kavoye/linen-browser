@@ -63,7 +63,8 @@ private struct CommandPalettePanel: View {
                 maxHeight: layout.maxListHeight,
                 onSelect: model.hoverSuggestion,
                 onRun: model.run,
-                onRunAlternate: model.runAlternate
+                onRunAlternate: model.runAlternate,
+                onRemove: model.remove
             )
 
             AskContextStrip(pages: model.contextPages)

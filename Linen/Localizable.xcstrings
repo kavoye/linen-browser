@@ -4087,7 +4087,7 @@
 
     },
     "Open Tabs" : {
-      "comment" : "Section heading in the ⌘K palette over the tabs already open. “Open” is an adjective describing the tabs, not a command to open them. Title Case."
+      "comment" : "Name of the assistant tool that opens a new tab, shown in Intelligence settings. “Open” is a verb. Title Case."
     },
     "Open the project page" : {
       "comment" : "Tooltip on the small button beside a package on the About settings page; it opens that package's own repository in a new tab. Sentence case, no final full stop."
@@ -4138,7 +4138,7 @@
       "comment" : "GitHub inbox row reason. %@ is the GitHub username of the pull request author."
     },
     "Opened Tab" : {
-      "comment" : "Detail suffix on an address bar result row that stands for an already-open tab; it is joined after the host with “ • ”, giving “example.com • Opened Tab”. Adjective plus noun, Title Case, very tight."
+      "comment" : "Detail suffix on an address bar result row that stands for an already-open tab; it is joined after the host with “ · ”, giving “example.com · Opened Tab”. Adjective plus noun, Title Case, very tight."
     },
     "Opening apps" : {
 
@@ -4596,9 +4596,6 @@
     "Recently updated" : {
       "comment" : "Sort option in the GitHub filter editor: pull requests changed most recently come first."
     },
-    "Recently Visited" : {
-      "comment" : "Section heading in the ⌘K palette over pages taken from history. Title Case."
-    },
     "Recently visited pages" : {
       "comment" : "Description of the History section in the start page editor. Pages means web pages. No final full stop."
     },
@@ -4736,6 +4733,9 @@
     },
     "Remove from Folder" : {
       "comment" : "Item in a sidebar context menu, shown only when the tab, or a row of the selection, is inside a folder; it moves the rows back out into the main list without closing them. Title Case."
+    },
+    "Remove from Archive" : {
+      "comment" : "Tooltip and accessibility action on the close button of an archived tab row in the command palette; it deletes that archived tab for good. Title Case."
     },
     "Remove from History" : {
       "comment" : "Tooltip on the close button of a history row on the start page; it deletes that one entry from history. Title Case."
@@ -5724,9 +5724,6 @@
     "Switch Tabs" : {
       "comment" : "Tool name in assistant settings: switching between tabs."
     },
-    "Switch to Tab" : {
-      "comment" : "Section heading in the address bar results list over rows for tabs that are already open; choosing one switches to it rather than loading a second copy. Title Case."
-    },
     "Switch to this profile" : {
 
     },
@@ -5738,9 +5735,6 @@
     },
     "System Settings is open. Choose Linen under \"Default web browser.\"" : {
 
-    },
-    "tab" : {
-      "comment" : "Detail line on a ⌘K palette row for an open tab, used only when that tab has no host to show. The noun (a browser tab), lowercase as a caption; capitalise if your language capitalises nouns."
     },
     "Tab" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the Tab key on the keyboard — not a browser tab."

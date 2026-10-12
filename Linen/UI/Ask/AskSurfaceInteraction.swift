@@ -203,8 +203,7 @@ struct AskSurfaceActivity: Equatable {
 }
 
 enum AskSurfaceResults {
-    static let historyLimit = 2
-    static let tabLimit = 1
+    static let pageLimit = 5
 
     // swiftlint:disable:next function_parameter_count
     static func sections(
@@ -259,23 +258,30 @@ enum AskSurfaceResults {
             return [askSection(prompt, agentName: agentName, ask: ask)]
         }
 
+        let pages = Omnibox.pagesSection(
+            query: input,
+            tabs: tabs,
+            hiding: activeTabID,
+            store: history,
+            limit: pageLimit,
+            switchTo: switchTo,
+            open: open
+        )
+
         if agentOnly {
             return [
                 Omnibox.topSection(query: input, settings: settings, open: open),
                 askSection(input, agentName: agentName, ask: ask),
-                Omnibox.historySection(query: input, store: history, limit: historyLimit, open: open),
-                Omnibox.tabsSection(query: input, tabs: tabs, limit: tabLimit, switchTo: switchTo),
+                pages,
             ].compactMap { $0 }
         }
 
-        var result = [
+        return [
             Omnibox.topSection(query: input, settings: settings, open: open),
             Omnibox.phrasesSection(query: input, phrases: phrases, limit: 3, settings: settings, open: open),
-            Omnibox.historySection(query: input, store: history, limit: historyLimit, open: open),
-            Omnibox.tabsSection(query: input, tabs: tabs, limit: tabLimit, switchTo: switchTo),
+            pages,
+            askSection(input, agentName: agentName, ask: ask),
         ].compactMap { $0 }
-        result.append(askSection(input, agentName: agentName, ask: ask))
-        return result
     }
 
     private static func mentionSection(
@@ -299,7 +305,7 @@ enum AskSurfaceResults {
                 title: tab.title,
                 detail: [host, String(localized: "The assistant can read it for this question")]
                     .compactMap { $0 }
-                    .joined(separator: " • "),
+                    .joined(separator: " · "),
                 iconHost: host
             ) {
                 mention(tab)

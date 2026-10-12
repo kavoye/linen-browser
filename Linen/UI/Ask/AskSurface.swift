@@ -96,7 +96,8 @@ struct AskSurface: View {
                     density: .compact,
                     containerRadius: model.placement.cornerRadius,
                     onSelect: { model.hoverSuggestion(at: $0, in: sections) },
-                    onRun: { model.run(at: $0, in: sections) }
+                    onRun: { model.run(at: $0, in: sections) },
+                    onRemove: { model.remove(at: $0, in: sections) }
                 )
                 .transition(.opacity)
             }

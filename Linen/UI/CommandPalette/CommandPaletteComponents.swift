@@ -184,6 +184,7 @@ struct CommandPaletteResultsView: View {
     let onSelect: (Int) -> Void
     let onRun: (Int) -> Void
     let onRunAlternate: (Int) -> Void
+    let onRemove: (Int) -> Void
 
     var body: some View {
         if !sections.isEmpty {
@@ -204,6 +205,7 @@ struct CommandPaletteResultsView: View {
                             onSelect: onSelect,
                             onRun: onRun,
                             onRunAlternate: onRunAlternate,
+                            onRemove: onRemove,
                             alternateClickModifier: .option
                         )
                     }

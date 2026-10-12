@@ -45,6 +45,7 @@ struct OmniboxItem: Identifiable {
     let shortcut: String
     let completionText: String?
     let alternate: (() -> Void)?
+    let remove: (() -> Void)?
     let run: () -> Void
 
     init(
@@ -57,6 +58,7 @@ struct OmniboxItem: Identifiable {
         shortcut: String = "",
         completionText: String? = nil,
         alternate: (() -> Void)? = nil,
+        remove: (() -> Void)? = nil,
         run: @escaping () -> Void
     ) {
         self.id = id
@@ -75,6 +77,7 @@ struct OmniboxItem: Identifiable {
             }
         }()
         self.alternate = alternate
+        self.remove = remove
         self.run = run
     }
 }
@@ -275,38 +278,100 @@ enum Omnibox {
         return OmniboxSection(id: "suggestions", title: String(localized: "\(SearchURLBuilder.engine(settings: settings).name) Suggestions"), items: items)
     }
 
-    static func tabsSection(
+    static func pagesSection(
         query: String,
         tabs: [BrowserTab],
+        hiding activeTabID: UUID? = nil,
+        store: HistoryStore,
         limit: Int,
-        switchTo: @escaping (BrowserTab) -> Void
+        switchTo: @escaping (BrowserTab) -> Void,
+        openInCurrentTab: ((URL) -> Void)? = nil,
+        open: @escaping (URL) -> Void
     ) -> OmniboxSection? {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, limit > 0 else { return nil }
         let needle = query.lowercased()
 
-        let matching = tabs.filter {
-            $0.title.lowercased().contains(needle) || $0.urlString.lowercased().contains(needle)
+        let visited = store.search(query, limit: max(limit * 10, 30))
+        let frecencyByURL = Dictionary(
+            visited.map { ($0.url, frecency(visitCount: $0.visitCount, lastVisit: $0.lastVisit)) },
+            uniquingKeysWith: max
+        )
+        let openTabs = tabs.filter {
+            $0.id != activeTabID
+                && ($0.title.lowercased().contains(needle) || $0.urlString.lowercased().contains(needle))
         }
-        let items: [OmniboxItem] = mostRelevant(matching, for: query, limit: limit) {
-            ($0.title, URL(string: $0.urlString)?.displayAddress ?? $0.urlString, 0)
-        }
-        .map { tab in
-            let host = URL(string: tab.urlString)?.displayHost
-            return OmniboxItem(
-                id: "omnibox-tab-\(tab.id)",
-                kind: .tab,
-                title: tab.title,
-                detail: [host, String(localized: "Opened Tab")].compactMap { $0 }.joined(separator: " • "),
-                iconHost: host,
-                completionText: tab.urlString
-            ) {
-                switchTo(tab)
+        let openURLs = Set(tabs.map(\.urlString))
+
+        let candidates: [PageCandidate] =
+            openTabs.map { tab in
+                PageCandidate(
+                    item: tabItem(tab, switchTo: switchTo),
+                    title: tab.title,
+                    address: URL(string: tab.urlString)?.displayAddress ?? tab.urlString,
+                    bonus: (frecencyByURL[tab.urlString] ?? 0) + openTabBonus
+                )
             }
-        }
+            + visited.filter { !openURLs.contains($0.url) }.compactMap { entry in
+                historyItem(entry, store: store, openInCurrentTab: openInCurrentTab, open: open).map {
+                    PageCandidate(
+                        item: $0,
+                        title: entry.title,
+                        address: URL(string: entry.url)?.displayAddress ?? entry.url,
+                        bonus: frecency(visitCount: entry.visitCount, lastVisit: entry.lastVisit)
+                    )
+                }
+            }
+        let items = mostRelevant(candidates, for: query, limit: limit) { ($0.title, $0.address, $0.bonus) }
+            .map(\.item)
 
         guard !items.isEmpty else { return nil }
-        return OmniboxSection(id: "tabs", title: String(localized: "Switch to Tab"), items: items)
+        return OmniboxSection(id: "pages", title: String(localized: "Pages"), items: items)
+    }
+
+    static let openTabBonus = 120
+
+    private struct PageCandidate {
+        let item: OmniboxItem
+        let title: String
+        let address: String
+        let bonus: Int
+    }
+
+    static func tabItem(_ tab: BrowserTab, id: String? = nil, switchTo: @escaping (BrowserTab) -> Void) -> OmniboxItem {
+        let host = URL(string: tab.urlString)?.displayHost
+        return OmniboxItem(
+            id: id ?? "omnibox-tab-\(tab.id)",
+            kind: .tab,
+            title: tab.title,
+            detail: [host, String(localized: "Opened Tab")].compactMap { $0 }.joined(separator: " · "),
+            iconHost: host,
+            completionText: tab.urlString
+        ) {
+            switchTo(tab)
+        }
+    }
+
+    static func historyItem(
+        _ entry: HistoryStore.Entry,
+        id: String? = nil,
+        store: HistoryStore,
+        openInCurrentTab: ((URL) -> Void)?,
+        open: @escaping (URL) -> Void
+    ) -> OmniboxItem? {
+        guard let url = URL(string: entry.url) else { return nil }
+        return OmniboxItem(
+            id: id ?? "omnibox-history-\(entry.id)",
+            kind: .history,
+            title: entry.title,
+            detail: url.displayAddress ?? url.displayHost ?? entry.url,
+            iconHost: url.displayHost,
+            completionText: url.absoluteString,
+            alternate: openInCurrentTab.map { openCurrent in { openCurrent(url) } },
+            remove: { store.remove(entry) }
+        ) {
+            open(url)
+        }
     }
 
     static func archivedSection(
@@ -435,43 +500,5 @@ enum Omnibox {
                 open(search)
             }
         }
-    }
-
-    static func historySection(
-        query: String,
-        store: HistoryStore,
-        limit: Int,
-        openInCurrentTab: ((URL) -> Void)? = nil,
-        open: @escaping (URL) -> Void
-    ) -> OmniboxSection? {
-        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty, limit > 0 else { return nil }
-
-        let candidates = store.search(query, limit: max(limit * 10, 30))
-        let items: [OmniboxItem] = mostRelevant(candidates, for: query, limit: limit) { entry in
-            (
-                entry.title,
-                URL(string: entry.url)?.displayAddress ?? entry.url,
-                frecency(visitCount: entry.visitCount, lastVisit: entry.lastVisit)
-            )
-        }
-        .compactMap { entry in
-            guard let url = URL(string: entry.url) else { return nil }
-            let host = url.displayHost ?? entry.url
-            return OmniboxItem(
-                id: "omnibox-history-\(entry.id)",
-                kind: .history,
-                title: entry.title,
-                detail: url.displayAddress ?? host,
-                iconHost: url.displayHost,
-                completionText: url.absoluteString,
-                alternate: openInCurrentTab.map { openCurrent in { openCurrent(url) } }
-            ) {
-                open(url)
-            }
-        }
-
-        guard !items.isEmpty else { return nil }
-        return OmniboxSection(id: "history", title: String(localized: "History"), items: items)
     }
 }

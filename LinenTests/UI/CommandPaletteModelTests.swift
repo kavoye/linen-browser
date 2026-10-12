@@ -147,6 +147,7 @@ struct CommandPaletteModelTests {
             let tab = coordinator.browser.newTab()
             tab.urlString = "https://example.com/full/path?q=value#section"
             tab.title = "Example page"
+            coordinator.browser.activate(coordinator.browser.newTab())
             var dismissed = false
             let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {
                 dismissed = true
@@ -204,6 +205,7 @@ struct CommandPaletteModelTests {
             let coordinator = AppCoordinator()
             let tab = coordinator.browser.newTab()
             tab.title = "Project tab"
+            coordinator.browser.activate(coordinator.browser.newTab())
             let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
             model.prepare()
             model.interaction.query = "project"
@@ -466,13 +468,11 @@ struct CommandPaletteModelTests {
                 actions: noOpActions()
             )
 
-            #expect(sections.map(\.id) == ["top", "suggestions", "tabs", "history"])
+            #expect(sections.map(\.id) == ["top", "suggestions", "pages"])
             #expect(sections.first { $0.id == "top" }?.items.map(\.id) == ["omnibox-search", "ask-agent"])
             #expect(sections.first { $0.id == "top" }?.items.last?.detail == "Ask Assistant")
-            #expect(sections.first { $0.id == "tabs" }?.items.count == 4)
-            #expect(sections.first { $0.id == "history" }?.items.count == 3)
+            #expect(sections.first { $0.id == "pages" }?.items.count == 5)
             #expect(sections.first { $0.id == "suggestions" }?.items.count == 3)
-            #expect(sections.flattened.count == CommandPaletteBudget.typing)
         }
     }
 
@@ -549,7 +549,7 @@ struct CommandPaletteModelTests {
                 item.run()
                 item.alternate?()
             }
-            let historyItem = try #require(sections.first { $0.id == "history" }?.items.first)
+            let historyItem = try #require(sections.first { $0.id == "pages" }?.items.first)
             historyItem.run()
             historyItem.alternate?()
 
@@ -644,21 +644,34 @@ struct CommandPaletteModelTests {
             actions: noOpActions()
         )
 
-        #expect(sections.map(\.id) == ["tabs", "actions", "recent"])
+        #expect(sections.map(\.id) == ["pages", "actions"])
         #expect(sections[1].items.allSatisfy { item in
             [
                 "action-openStartPage", "action-organizeTabs", "action-toggleSpeech",
                 "action-clearHistory", "action-settings",
             ].contains(item.id)
         })
-        #expect(sections[0].items.count == 5)
-        #expect(sections[2].items.count == 4)
-        #expect(sections.flattened.count == CommandPaletteBudget.resting)
+        #expect(sections[0].items.map(\.kind) == [.tab, .tab, .tab, .history, .history])
         #expect(sections[1].hint == String(localized: "Type > for commands"))
         let openURLs = Set(tabs.map(\.urlString))
-        #expect(sections[2].items.allSatisfy { item in
+        #expect(sections[0].items.filter { $0.kind == .history }.allSatisfy { item in
             !openURLs.contains { item.detail.contains(URL(string: $0)?.displayHost ?? $0) }
         })
+    }
+
+    @Test func removingARecentRowDropsItFromThePalette() throws {
+        let coordinator = AppCoordinator()
+        coordinator.browser.history.record(url: "https://kept-recent.example/", title: "Kept recent row")
+        coordinator.browser.history.record(url: "https://gone-recent.example/", title: "Gone recent row")
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+        model.prepare()
+
+        let index = try #require(model.sections.flattened.firstIndex { $0.title == "Gone recent row" })
+        model.remove(at: index)
+
+        #expect(!model.sections.flattened.contains { $0.title == "Gone recent row" })
+        #expect(model.sections.flattened.contains { $0.title == "Kept recent row" })
+        #expect(coordinator.browser.history.search("gone-recent").isEmpty)
     }
 
     @Test func restingOpenTabsFollowActivationOrder() throws {
@@ -669,10 +682,13 @@ struct CommandPaletteModelTests {
 
         let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
         model.prepare()
-        let openTabs = try #require(model.sections.first { $0.id == "tabs" }).items
+        let pages = try #require(model.sections.first { $0.id == "pages" }).items
+        let openTabs = pages.filter { $0.kind == .tab }
 
-        #expect(openTabs.count == 5)
-        #expect(openTabs.prefix(2).map(\.id) == ["tab-\(tabs[2].id)", "tab-\(tabs[0].id)"])
+        #expect(pages.count == 5)
+        #expect(openTabs.count >= 3)
+        #expect(openTabs.first?.id == "tab-\(tabs[0].id)")
+        #expect(!openTabs.contains { $0.id == "tab-\(tabs[2].id)" })
     }
 
     @Test func actionRowsRunTheInjectedCommand() {
@@ -726,22 +742,66 @@ struct CommandPaletteModelTests {
         #expect(byID["action-showTab7"]?.id == nil)
     }
 
-    @Test func aQueryThatNamesACommandLiftsItAboveThePages() {
+    @Test func theCurrentTabIsNotListed() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            let history = HistoryStore(database: .temporary())
+            history.record(url: "https://tabs.example/project/0", title: "Project tab 0")
+            let tabs = fixtureTabs(count: 2)
+
+            for query in ["", "project"] {
+                let sections = CommandPaletteProjection.sections(
+                    query: query,
+                    agentName: "Assistant",
+                    history: history,
+                    tabs: tabs,
+                    activeTabID: tabs[0].id,
+                    phrases: [],
+                    actions: noOpActions()
+                )
+                let pages = try #require(sections.first { $0.id == "pages" }).items
+
+                #expect(pages.map(\.title) == ["Project tab 1"])
+            }
+        }
+    }
+
+    @Test func actionsFollowSuggestionsAndPages() {
         Omnibox.$agentOnlyForTesting.withValue(false) {
             let sections = CommandPaletteProjection.sections(
-                query: "organize",
+                query: "tab",
                 agentName: "Assistant",
                 context: fixtureContext(),
                 history: fixtureHistory(count: 4),
                 tabs: fixtureTabs(count: 4),
-                phrases: ["organize my life"],
+                phrases: ["tab groups"],
                 actions: noOpActions()
             )
 
-            #expect(sections.map(\.id).prefix(2) == ["top", "actions"])
-            #expect(sections.first?.items.map(\.id) == ["omnibox-search", "ask-agent"])
-            #expect(sections.first { $0.id == "actions" }?.items.first?.id == "action-organizeTabs")
-            #expect(sections.dropFirst(2).first?.id == "suggestions")
+            #expect(sections.map(\.id) == ["top", "suggestions", "pages", "actions"])
+        }
+    }
+
+    @Test func anOpenTabReplacesItsHistoryRowInPages() throws {
+        try Omnibox.$agentOnlyForTesting.withValue(false) {
+            let history = HistoryStore(database: .temporary())
+            history.record(url: "https://linen.example/", title: "Linen home")
+            history.record(url: "https://linear.example/", title: "Linear")
+            let tab = BrowserTab()
+            tab.title = "Linen home"
+            tab.urlString = "https://linen.example/"
+
+            let sections = CommandPaletteProjection.sections(
+                query: "lin",
+                agentName: "Assistant",
+                history: history,
+                tabs: [tab],
+                phrases: [],
+                actions: noOpActions()
+            )
+            let pages = try #require(sections.first { $0.id == "pages" }).items
+
+            #expect(pages.map(\.title) == ["Linen home", "Linear"])
+            #expect(pages.map(\.kind) == [.tab, .history])
         }
     }
 
@@ -837,7 +897,7 @@ struct CommandPaletteModelTests {
     }
 
     private func fixtureContext() -> CommandPaletteContext {
-        CommandPaletteContext(historyCount: 12, tabCount: 6, hasActiveTab: true)
+        CommandPaletteContext(historyCount: 12, tabCount: 6, hasActiveTab: true, canReload: true)
     }
 
     private func fixtureHistory(count: Int) -> HistoryStore {

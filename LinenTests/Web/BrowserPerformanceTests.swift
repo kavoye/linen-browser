@@ -60,10 +60,12 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
             }
 
             measure(metrics: [XCTClockMetric(), XCTMemoryMetric()]) {
-                _ = Omnibox.historySection(
+                _ = Omnibox.pagesSection(
                     query: "project 42",
+                    tabs: [],
                     store: history,
                     limit: 5,
+                    switchTo: { _ in },
                     open: { _ in }
                 )
             }
@@ -105,8 +107,9 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                     )
                 }
 
-                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "tabs", "history"])
-                XCTAssertEqual(projected.flattened.count, CommandPaletteBudget.typing)
+                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "pages"])
+                XCTAssertEqual(projected.first { $0.id == "pages" }?.items.count, 5)
+                XCTAssertEqual(projected.flattened.count, 10)
                 XCTAssertTrue(tabs.allSatisfy { !$0.isMaterialised })
             }
         }
@@ -180,7 +183,7 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
                     )
                 }
 
-                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "history", "ask"])
+                XCTAssertEqual(projected.map(\.id), ["top", "suggestions", "pages", "ask"])
                 XCTAssertLessThanOrEqual(projected.flattened.count, 10)
                 XCTAssertFalse(tab.isMaterialised)
             }

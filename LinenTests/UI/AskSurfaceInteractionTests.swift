@@ -202,9 +202,9 @@ struct AskSurfaceInteractionTests {
                 ask: { _ in }
             )
 
-            #expect(sections.map(\.id) == ["top", "suggestions", "history", "tabs", "ask"])
-            #expect(sections.first { $0.id == "history" }?.items.count == 2)
-            #expect(sections.first { $0.id == "tabs" }?.items.count == 1)
+            #expect(sections.map(\.id) == ["top", "suggestions", "pages", "ask"])
+            #expect(sections.first { $0.id == "pages" }?.items.count == AskSurfaceResults.pageLimit)
+            #expect(sections.first { $0.id == "pages" }?.items.first?.kind == .tab)
             #expect(sections.first { $0.id == "suggestions" }?.items.count == 3)
         }
     }

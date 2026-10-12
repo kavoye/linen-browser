@@ -103,7 +103,6 @@ struct CommandPaletteActions {
     var openCurrent: (URL) -> Void = { _ in }
     var ask: (String) -> Void = { _ in }
     var switchTo: (BrowserTab) -> Void = { _ in }
-    var restore: (TabArchive.Entry) -> Void = { _ in }
     var mention: (BrowserTab) -> Void = { _ in }
     var openNew: (URL) -> Void = { _ in }
     var perform: (CommandPaletteAction) -> Void = { _ in }
@@ -148,7 +147,6 @@ enum CommandPaletteProjection {
         context: CommandPaletteContext = CommandPaletteContext(),
         history: HistoryStore,
         tabs: [BrowserTab],
-        archived: [TabArchive.Entry] = [],
         mentions: [MentionChip] = [],
         activeTabID: UUID? = nil,
         recentTabIDs: [UUID] = [],
@@ -168,6 +166,7 @@ enum CommandPaletteProjection {
             return restingSections(
                 history: history,
                 tabs: tabs,
+                activeTabID: activeTabID,
                 recentTabIDs: recentTabIDs,
                 commands: commands,
                 actions: actions
@@ -205,8 +204,6 @@ enum CommandPaletteProjection {
             return [askSection(prompt, agentName: agentName, ask: actions.ask)]
         }
 
-        let matched = actionsSection(CommandPaletteCatalog.matching(needle, in: commands))
-        let promoted = CommandPaletteCatalog.bestScore(needle, in: commands) >= CommandMatch.strong
         let webItems = Omnibox.topSection(
             query: needle,
             symbol: OmniboxItem.Kind.newTab.defaultSymbol,
@@ -214,7 +211,7 @@ enum CommandPaletteProjection {
             settings: settings,
             open: actions.openNew
         )?.items ?? []
-        var slots = [
+        let slots = [
             CommandPaletteBudget.Slot(
                 OmniboxSection(
                     id: "top",
@@ -224,52 +221,38 @@ enum CommandPaletteProjection {
                 floor: 1,
                 quota: 2
             ),
+            CommandPaletteBudget.Slot(
+                Omnibox.phrasesSection(
+                    query: needle,
+                    phrases: phrases,
+                    limit: 3,
+                    openInCurrentTab: actions.openCurrent,
+                    settings: settings,
+                    open: actions.openNew
+                ),
+                floor: 2,
+                quota: 3
+            ),
+            CommandPaletteBudget.Slot(
+                Omnibox.pagesSection(
+                    query: needle,
+                    tabs: tabs,
+                    hiding: activeTabID,
+                    store: history,
+                    limit: 5,
+                    switchTo: actions.switchTo,
+                    openInCurrentTab: actions.openCurrent,
+                    open: actions.openNew
+                ),
+                floor: 5,
+                quota: 5
+            ),
+            CommandPaletteBudget.Slot(
+                actionsSection(CommandPaletteCatalog.matching(needle, in: commands)),
+                floor: 1,
+                quota: 3
+            ),
         ]
-        if promoted {
-            slots.append(CommandPaletteBudget.Slot(matched, floor: 1, quota: 3))
-        }
-        slots.append(CommandPaletteBudget.Slot(
-            Omnibox.phrasesSection(
-                query: needle,
-                phrases: phrases,
-                limit: 3,
-                openInCurrentTab: actions.openCurrent,
-                settings: settings,
-                open: actions.openNew
-            ),
-            floor: 2,
-            quota: 3
-        ))
-        slots.append(CommandPaletteBudget.Slot(
-            Omnibox.tabsSection(query: needle, tabs: tabs, limit: 4, switchTo: actions.switchTo),
-            floor: 2,
-            quota: 4
-        ))
-        slots.append(CommandPaletteBudget.Slot(
-            Omnibox.archivedSection(
-                query: needle,
-                entries: archived,
-                excluding: Set(tabs.map(\.urlString)),
-                limit: 3,
-                restore: actions.restore
-            ),
-            floor: 1,
-            quota: 3
-        ))
-        slots.append(CommandPaletteBudget.Slot(
-            Omnibox.historySection(
-                query: needle,
-                store: history,
-                limit: 5,
-                openInCurrentTab: actions.openCurrent,
-                open: actions.openNew
-            ),
-            floor: 2,
-            quota: 5
-        ))
-        if !promoted {
-            slots.append(CommandPaletteBudget.Slot(matched, floor: 1, quota: 3))
-        }
 
         return CommandPaletteBudget.fit(slots, total: CommandPaletteBudget.typing)
     }
@@ -315,6 +298,7 @@ enum CommandPaletteProjection {
     private static func restingSections(
         history: HistoryStore,
         tabs: [BrowserTab],
+        activeTabID: UUID?,
         recentTabIDs: [UUID],
         commands: [CommandPaletteCommand],
         actions: CommandPaletteActions
@@ -322,44 +306,32 @@ enum CommandPaletteProjection {
         let tabsByID = Dictionary(uniqueKeysWithValues: tabs.map { ($0.id, $0) })
         let recentlyUsedTabs = recentTabIDs.compactMap { tabsByID[$0] }
         let recentlyUsedIDs = Set(recentlyUsedTabs.map(\.id))
-        let orderedTabs = recentlyUsedTabs + tabs.filter { !recentlyUsedIDs.contains($0.id) }
-        let openTabs = orderedTabs.prefix(5).map { tab in
-            let host = URL(string: tab.urlString)?.displayHost
-            return OmniboxItem(
-                id: "tab-\(tab.id)",
-                kind: .tab,
-                title: tab.title,
-                detail: host ?? String(localized: "tab"),
-                iconHost: host,
-                completionText: tab.urlString
-            ) {
-                actions.switchTo(tab)
-            }
-        }
-
+        let orderedTabs = (recentlyUsedTabs + tabs.filter { !recentlyUsedIDs.contains($0.id) })
+            .filter { $0.id != activeTabID }
         let openURLs = Set(tabs.map(\.urlString))
-        let recent = history.entries
+        let unopened = Array(history.entries
+            .lazy
             .filter { !openURLs.contains($0.url) }
-            .prefix(8)
-            .compactMap { entry -> OmniboxItem? in
-                guard let url = URL(string: entry.url) else { return nil }
-                return OmniboxItem(
+            .compactMap { entry in
+                Omnibox.historyItem(
+                    entry,
                     id: "recent-\(entry.id)",
-                    kind: .history,
-                    title: entry.title,
-                    detail: url.displayAddress ?? entry.url,
-                    iconHost: url.displayHost,
-                    completionText: url.absoluteString,
-                    alternate: { actions.openCurrent(url) }
-                ) {
-                    actions.openNew(url)
-                }
+                    store: history,
+                    openInCurrentTab: actions.openCurrent,
+                    open: actions.openNew
+                )
             }
+            .prefix(5))
+        let tabCount = min(orderedTabs.count, 5 - min(unopened.count, 2))
+        let openTabs = orderedTabs.prefix(tabCount).map { tab in
+            Omnibox.tabItem(tab, id: "tab-\(tab.id)", switchTo: actions.switchTo)
+        }
+        let recent = unopened.prefix(5 - tabCount)
 
         let slots = [
             CommandPaletteBudget.Slot(
-                OmniboxSection(id: "tabs", title: String(localized: "Open Tabs"), items: openTabs),
-                floor: 3,
+                OmniboxSection(id: "pages", title: String(localized: "Pages"), items: openTabs + recent),
+                floor: 5,
                 quota: 5
             ),
             CommandPaletteBudget.Slot(
@@ -368,12 +340,7 @@ enum CommandPaletteProjection {
                     hint: String(localized: "Type > for commands")
                 ),
                 floor: 3,
-                quota: 6
-            ),
-            CommandPaletteBudget.Slot(
-                OmniboxSection(id: "recent", title: String(localized: "Recently Visited"), items: Array(recent)),
-                floor: 2,
-                quota: 4
+                quota: 5
             ),
         ]
         return CommandPaletteBudget.fit(slots, total: CommandPaletteBudget.resting)
@@ -532,6 +499,18 @@ final class CommandPaletteModel {
         items[index].run()
     }
 
+    func remove(at index: Int) {
+        let items = sections.flattened
+        guard items.indices.contains(index), let remove = items[index].remove else { return }
+        remove()
+        if let typed = suggestionPreview.query {
+            interaction.query = typed
+        } else {
+            refreshSections()
+        }
+        interaction.selection = min(index, max(sections.flattened.count - 1, 0))
+    }
+
     func runAlternate(at index: Int) {
         let items = sections.flattened
         guard items.indices.contains(index) else {
@@ -624,7 +603,6 @@ final class CommandPaletteModel {
             context: context,
             history: browser.history,
             tabs: browser.tabs,
-            archived: browser.tabArchive.entries,
             mentions: mentionChips,
             activeTabID: browser.activeTab?.id,
             recentTabIDs: browser.recentlyActive,
@@ -675,7 +653,6 @@ final class CommandPaletteModel {
             openCurrent: { [weak self] url in self?.openCurrent(url) },
             ask: { [weak self] prompt in self?.ask(prompt) },
             switchTo: { [weak self] tab in self?.switchTo(tab) },
-            restore: { [weak self] entry in self?.restore(entry) },
             mention: { [weak self] tab in self?.mention(tab) },
             openNew: { [weak self] url in self?.openNew(url) },
             perform: { [weak self] action in self?.perform(action) }

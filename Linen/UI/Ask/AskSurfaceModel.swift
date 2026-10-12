@@ -233,6 +233,16 @@ final class AskSurfaceModel {
         items[index].run()
     }
 
+    func remove(at index: Int, in sections: [OmniboxSection]) {
+        let items = sections.flattened
+        guard items.indices.contains(index), let remove = items[index].remove else { return }
+        remove()
+        if let typed = suggestionPreview.query {
+            interaction.text = typed
+        }
+        interaction.selection = min(index, max(resultSections().flattened.count - 1, 0))
+    }
+
     func moveSelection(by delta: Int, in sections: [OmniboxSection]) {
         interaction.moveSelection(by: delta, resultCount: sections.flattened.count)
         selectSuggestion(at: interaction.selection, in: sections)

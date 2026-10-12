@@ -93,9 +93,7 @@ struct OmniboxTests {
         let store = HistoryStore(database: .temporary())
         store.record(url: "https://www.example.com/deep/page", title: "A page")
 
-        let section = try #require(Omnibox.historySection(
-            query: "page", store: store, limit: 6
-        ) { _ in })
+        let section = try #require(pages("page", store: store, limit: 6))
         // No scheme and no `www.`, but the path stays: two pages on one site
         // are otherwise the same row twice.
         #expect(section.items.first?.detail == "example.com/deep/page")
@@ -107,10 +105,35 @@ struct OmniboxTests {
         let store = HistoryStore(database: .temporary())
         store.record(url: "https://example.com/", title: "A home page")
 
-        let section = try #require(Omnibox.historySection(
-            query: "home", store: store, limit: 6
-        ) { _ in })
+        let section = try #require(pages("home", store: store, limit: 6))
         #expect(section.items.first?.detail == "example.com")
+    }
+
+    @Test func removingAHistoryRowForgetsThePage() throws {
+        let store = HistoryStore(database: .temporary())
+        store.record(url: "https://example.com/kept", title: "Kept page")
+        store.record(url: "https://example.com/gone", title: "Gone page")
+
+        let section = try #require(pages("gone", store: store, limit: 6))
+        let remove = try #require(section.items.first?.remove)
+        remove()
+
+        #expect(pages("gone", store: store, limit: 6) == nil)
+        #expect(store.entries.map(\.url) == ["https://example.com/kept"])
+    }
+
+    @Test func anOpenPageIsLeftToTheTabRow() throws {
+        let store = HistoryStore(database: .temporary())
+        store.record(url: "https://example.com/open", title: "Open page")
+        store.record(url: "https://example.com/closed", title: "Closed page")
+
+        let tab = BrowserTab()
+        tab.title = "Open page"
+        tab.urlString = "https://example.com/open"
+
+        let section = try #require(pages("page", store: store, tabs: [tab]))
+        #expect(section.items.map(\.title) == ["Open page", "Closed page"])
+        #expect(section.items.map(\.kind) == [.tab, .history])
     }
 
     @Test func theSiteItselfOutranksAPageBuriedOnIt() throws {
@@ -121,9 +144,7 @@ struct OmniboxTests {
         store.record(url: "https://nike.com/gb/t/pegasus-42-shoes-VNFFbZDe/IB1881-602", title: "Nike Pegasus 42")
         store.record(url: "https://nike.com/gb/t/alphafly-3-shoes-c0BiSuME/FD8315-800", title: "Nike Alphafly 3")
 
-        let section = try #require(Omnibox.historySection(
-            query: "ni", store: store, limit: 2
-        ) { _ in })
+        let section = try #require(pages("ni", store: store, limit: 2))
         #expect(section.items.count == 2)
         #expect(section.items.first?.detail == "nike.com")
     }
@@ -143,9 +164,7 @@ struct OmniboxTests {
             store.record(url: "https://example.com/daily", title: "My weekly report")
         }
 
-        let section = try #require(Omnibox.historySection(
-            query: "wee", store: store, limit: 2
-        ) { _ in })
+        let section = try #require(pages("wee", store: store, limit: 2))
         #expect(section.items.first?.detail == "example.com/daily")
     }
 
@@ -173,9 +192,9 @@ struct OmniboxTests {
         tab.urlString = "https://example.com/page"
 
         let section = try #require(
-            Omnibox.tabsSection(query: "example", tabs: [tab], limit: 3) { _ in }
+            pages("example", tabs: [tab])
         )
-        #expect(section.title == "Switch to Tab")
+        #expect(section.title == "Pages")
         // The row says so on its own line: one that looks like history but
         // steals focus to another tab is a surprise every time.
         #expect(section.items.first?.detail.contains("Opened Tab") == true)
@@ -188,8 +207,8 @@ struct OmniboxTests {
         tab.title = "Something else entirely"
         tab.urlString = "https://example.com/page"
 
-        #expect(Omnibox.tabsSection(query: "example.com", tabs: [tab], limit: 3) { _ in } != nil)
-        #expect(Omnibox.tabsSection(query: "unrelated", tabs: [tab], limit: 3) { _ in } == nil)
+        #expect(pages("example.com", tabs: [tab]) != nil)
+        #expect(pages("unrelated", tabs: [tab]) == nil)
     }
 
     @Test func theRowReturnRunsSitsAloneAndUnheaded() throws {
@@ -256,11 +275,11 @@ struct OmniboxTests {
         }
     }
 
-    @Test func anUnmatchedQueryProducesNoHistorySection() {
+    @Test func anUnmatchedQueryProducesNoPagesSection() {
         let store = HistoryStore(database: .temporary())
         store.record(url: "https://example.com", title: "Something")
 
-        #expect(Omnibox.historySection(query: "unrelated", store: store, limit: 6) { _ in } == nil)
+        #expect(pages("unrelated", store: store, limit: 6) == nil)
     }
 
     // MARK: - Off the web
@@ -357,6 +376,15 @@ struct OmniboxTests {
     }
 
     // MARK: - How the keyboard walks the sections
+
+    private func pages(
+        _ query: String,
+        store: HistoryStore = HistoryStore(database: .temporary()),
+        tabs: [BrowserTab] = [],
+        limit: Int = 6
+    ) -> OmniboxSection? {
+        Omnibox.pagesSection(query: query, tabs: tabs, store: store, limit: limit, switchTo: { _ in }, open: { _ in })
+    }
 
     private func section(_ id: String, _ count: Int) -> OmniboxSection {
         OmniboxSection(
