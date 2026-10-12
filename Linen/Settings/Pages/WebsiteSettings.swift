@@ -11,13 +11,42 @@ struct WebsiteSettings: View {
     let blocker: ContentBlocker
     let grants: AgentActionPolicy
 
-    @State private var destination: Destination?
-
     @Environment(\.settingsHighlight) private var highlight
+    @Environment(\.settingsRouter) private var router
 
     private enum Destination: Equatable {
         case permission(WebPermission)
         case site(String)
+
+        init?(path: [String]) {
+            switch path.count {
+            case 1:
+                guard let permission = WebPermission(rawValue: path[0]) else { return nil }
+                self = .permission(permission)
+            case 2 where path[0] == "site":
+                self = .site("https://\(path[1])")
+            case 3 where path[0] == "site":
+                self = .site("\(path[2])://\(path[1])")
+            default:
+                return nil
+            }
+        }
+
+        var path: [String] {
+            switch self {
+            case .permission(let permission):
+                return [permission.rawValue]
+            case .site(let origin):
+                guard let range = origin.range(of: "://") else { return ["site", origin] }
+                let scheme = String(origin[..<range.lowerBound])
+                let host = String(origin[range.upperBound...])
+                return scheme == "https" ? ["site", host] : ["site", host, scheme]
+            }
+        }
+    }
+
+    private var destination: Destination? {
+        Destination(path: router.path)
     }
 
     private var entries: [SiteSettingsEntry] {
@@ -32,7 +61,7 @@ struct WebsiteSettings: View {
         page
             .onChange(of: highlight) { _, anchor in
                 guard anchor != nil else { return }
-                destination = nil
+                router.back()
             }
     }
 
@@ -41,7 +70,7 @@ struct WebsiteSettings: View {
         switch destination {
         case .permission(let permission):
             PermissionDetailPage(permission: permission, permissions: permissions) {
-                destination = nil
+                router.back()
             }
         case .site(let origin):
             SiteDetailPage(
@@ -50,7 +79,7 @@ struct WebsiteSettings: View {
                 permissions: permissions,
                 blocker: blocker,
                 grants: grants,
-                onBack: { destination = nil }
+                onBack: { router.back() }
             )
         case nil:
             overview
@@ -101,7 +130,7 @@ struct WebsiteSettings: View {
                     tint: tint(for: permission),
                     detail: siteCount(for: permission)
                 ) {
-                    destination = .permission(permission)
+                    router.open(Destination.permission(permission).path)
                 }
             }
         }
@@ -120,7 +149,7 @@ struct WebsiteSettings: View {
                         RowSeparator()
                     }
                     WebsiteSettingsEntryRow(host: entry.host, summary: entry.summary) {
-                        destination = .site(entry.origin)
+                        router.open(Destination.site(entry.origin).path)
                     }
                 }
             }

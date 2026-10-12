@@ -111,8 +111,8 @@ final class AppCoordinator {
     let translationDownloads = TranslationDownloads()
     @ObservationIgnored private(set) lazy var settingsWorkspace: SettingsWorkspace = {
         let workspace = SettingsWorkspace(coordinator: self)
-        workspace.onRoute = { [weak self] category in
-            self?.routeSettings(to: category)
+        workspace.onRoute = { [weak self] category, path, isBack in
+            self?.routeSettings(to: category, path: path, isBack: isBack)
         }
         return workspace
     }()
@@ -488,30 +488,6 @@ final class AppCoordinator {
         let queued = queuedExternalURLs
         queuedExternalURLs = []
         openFromAnotherApp(queued)
-    }
-
-    func openSettings(_ category: SettingsCategory? = nil) {
-        showBrowser()
-        let tab = browser.showSettings()
-        guard let category else { return }
-        route(to: category, in: tab)
-    }
-
-    func routeSettings(to category: SettingsCategory) {
-        guard let tab = browser.tabs.first(where: { $0.internalPage == .settings }) else { return }
-        route(to: category, in: tab)
-    }
-
-    private func route(to category: SettingsCategory, in tab: BrowserTab) {
-        let url = SystemPages.settingsURL(category)
-        guard tab.urlString != url.absoluteString else { return }
-        tab.load(url)
-        tab.urlString = url.absoluteString
-        tab.title = BrowserTab.InternalPage.settings.title
-    }
-
-    var isShowingSettings: Bool {
-        browser.activeTab?.internalPage == .settings
     }
 
     // MARK: - Media following the tab you're looking at

@@ -5,11 +5,40 @@ import SwiftUI
 
 struct OpenAIDeveloperSettings: View {
     @Binding var options: OpenAIResponseSettings
-    @State private var showsJSON = false
-    @State private var showsVoiceModels = false
+    var base: [String] = []
     @Environment(\.settingsHighlight) private var highlight
+    @Environment(\.settingsRouter) private var router
+
+    private var subpage: String? {
+        guard router.path.starts(with: base) else { return nil }
+        return router.path.dropFirst(base.count).first
+    }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            switch subpage {
+            case "api-json":
+                OpenAIJSONSettingsEditor(options: $options)
+            case "voice-models":
+                OpenAIVoiceModelEditor(options: $options.voice)
+            default:
+                settings
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onChange(of: highlight, initial: true) { _, anchor in
+            switch anchor {
+            case "openai.developer.voiceModels":
+                router.open(base + ["voice-models"])
+            case "openai.developer.apiJSON":
+                router.open(base + ["api-json"])
+            default:
+                break
+            }
+        }
+    }
+
+    @ViewBuilder private var settings: some View {
         Text("Change these options only if your API setup needs them. Chat and voice work with the defaults.")
             .font(.callout).foregroundStyle(.secondary)
         SettingsSection(title: "API configuration", symbol: "curlybraces") {
@@ -25,21 +54,11 @@ struct OpenAIDeveloperSettings: View {
             }
             .settingsAnchor("openai.developer.runCommands")
             RowSeparator()
-            DrillInRow(title: "Voice models", caption: "Override the models used for listening and speech.") { showsVoiceModels = true }
+            DrillInRow(title: "Voice models", caption: "Override the models used for listening and speech.") { router.open(base + ["voice-models"]) }
                 .settingsAnchor("openai.developer.voiceModels")
             RowSeparator()
-            DrillInRow(title: "API JSON", caption: "Edit additional parameters and hosted tool definitions.") { showsJSON = true }
+            DrillInRow(title: "API JSON", caption: "Edit additional parameters and hosted tool definitions.") { router.open(base + ["api-json"]) }
                 .settingsAnchor("openai.developer.apiJSON")
-        }
-        .sheet(isPresented: $showsJSON) {
-            OpenAISettingsSheet(title: "API JSON") { OpenAIJSONSettingsEditor(options: $options) }
-        }
-        .sheet(isPresented: $showsVoiceModels) {
-            OpenAISettingsSheet(title: "Voice models") { OpenAIVoiceModelEditor(options: $options.voice) }
-        }
-        .onChange(of: highlight, initial: true) { _, anchor in
-            showsVoiceModels = anchor == "openai.developer.voiceModels"
-            showsJSON = anchor == "openai.developer.apiJSON"
         }
     }
 }

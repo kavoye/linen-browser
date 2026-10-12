@@ -800,4 +800,40 @@ struct SettingsRoutingTests {
         #expect(await waitUntil { tab.urlString == SystemPages.settingsURL(.privacy).absoluteString })
         #expect(tab.title == "Settings")
     }
+
+    @Test func aSubpageHasAnAddressThatReadsBack() {
+        let url = SystemPages.settingsURL(.autofill, path: ["passwords"])
+
+        #expect(url.absoluteString == "linen://settings/autofill/passwords")
+        #expect(SystemPages.settingsCategory(of: url) == .autofill)
+        #expect(SystemPages.settingsPath(of: url) == ["passwords"])
+        #expect(SystemPages.settingsPath(of: SystemPages.settingsURL(.autofill)).isEmpty)
+        #expect(SystemPages.settingsPath(of: BrowserTab.InternalPage.settings.url).isEmpty)
+    }
+
+    @Test func aWebsiteAddressSurvivesThePath() {
+        let path = ["site", "localhost:8080", "http"]
+        let url = SystemPages.settingsURL(.websites, path: path)
+
+        #expect(SystemPages.settingsPath(of: url) == path)
+        #expect(SystemPages.settingsPath(of: url.absoluteString) == path)
+    }
+
+    @Test func backWalksOutOfASubpage() async {
+        let model = BrowserModel(database: .temporary())
+        let tab = model.showSettings()
+        let section = SystemPages.settingsURL(.autofill)
+        let subpage = SystemPages.settingsURL(.autofill, path: ["passwords"])
+        tab.load(section)
+        #expect(await settled(tab, at: section))
+
+        tab.load(subpage)
+        #expect(await settled(tab, at: subpage))
+
+        tab.goBack()
+        #expect(await settled(tab, at: section))
+
+        tab.goForward()
+        #expect(await settled(tab, at: subpage))
+    }
 }

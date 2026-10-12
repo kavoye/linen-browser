@@ -14,6 +14,7 @@ final class IntelligenceViewModel {
         case editor
         case tools
         case grants
+        case openAI(OpenAISettingsPage)
     }
 
     private let catalog: any ProviderCatalogProtocol
@@ -226,6 +227,80 @@ final class IntelligenceViewModel {
         customDraft = nil
         customError = nil
         destination = .grants
+    }
+
+    func showOpenAI(_ page: OpenAISettingsPage) {
+        customDraft = nil
+        customError = nil
+        destination = .openAI(page)
+    }
+
+    var path: [String] {
+        switch destination {
+        case .overview:
+            return []
+        case .provider(let id):
+            return [id]
+        case .picker:
+            return ["add"]
+        case .editor:
+            if let draft = customDraft, providers.contains(where: { $0.id == draft.id }) {
+                return [draft.id, "edit"]
+            }
+            return ["add", "custom"]
+        case .tools:
+            return inspectedID.map { [$0, "tools"] } ?? ["tools"]
+        case .grants:
+            return ["allowed-websites"]
+        case .openAI(let page):
+            return [inspectedID ?? subject.id, page.slug]
+        }
+    }
+
+    func matches(_ path: [String]) -> Bool {
+        let head = path.count > 2 && OpenAISettingsPage(slug: path[1]) != nil ? Array(path.prefix(2)) : path
+        return head == self.path
+    }
+
+    func follow(_ path: [String]) {
+        guard !matches(path) else { return }
+        switch path.first {
+        case nil:
+            showOverview()
+        case "add":
+            if path == ["add", "custom"] {
+                beginCustomProvider()
+            } else {
+                showPicker()
+            }
+        case "tools":
+            inspectedID = nil
+            showTools()
+        case "allowed-websites":
+            showGrants()
+        case let id?:
+            guard let provider = providers.first(where: { $0.id == id }) ?? catalog.provider(id: id) else {
+                showOverview()
+                return
+            }
+            if inspectedID != id {
+                open(provider)
+            }
+            switch path.dropFirst().first {
+            case nil:
+                destination = .provider(id)
+            case "tools":
+                showTools()
+            case "edit" where provider.isCustom:
+                editCustomProvider(provider)
+            case let slug?:
+                if let page = OpenAISettingsPage(slug: slug), provider.adapter == .openAIResponses {
+                    showOpenAI(page)
+                } else {
+                    destination = .provider(id)
+                }
+            }
+        }
     }
 
     func leaveTools() {

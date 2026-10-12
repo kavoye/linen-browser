@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 struct ProfileSettings: View {
     let coordinator: AppCoordinator
 
-    @State private var destination: Destination?
+    @Environment(\.settingsRouter) private var router
     @State private var dropTarget: UUID?
     @State private var dragging: UUID?
 
@@ -20,12 +20,21 @@ struct ProfileSettings: View {
         coordinator.profiles
     }
 
+    private var destination: Destination? {
+        guard router.path.count == 1, let segment = router.path.first else { return nil }
+        if segment == "new" {
+            return .newProfile
+        }
+        guard let id = UUID(uuidString: segment), store.profiles.contains(where: { $0.id == id }) else { return nil }
+        return .profile(id)
+    }
+
     var body: some View {
         switch destination {
         case .newProfile:
-            NewProfilePage(store: store) { destination = nil }
+            NewProfilePage(store: store) { router.back() }
         case .profile(let id):
-            ProfileDetailPage(coordinator: coordinator, profileID: id) { destination = nil }
+            ProfileDetailPage(coordinator: coordinator, profileID: id) { router.back() }
         case nil:
             overview
         }
@@ -45,7 +54,7 @@ struct ProfileSettings: View {
                         profile: profile,
                         isCurrent: profile.id == store.current.id,
                         dragging: $dragging,
-                        open: { destination = .profile(profile.id) }
+                        open: { router.open([profile.id.uuidString.lowercased()]) }
                     )
                     .settingsAnchor(
                         profile.id == store.current.id
@@ -70,7 +79,7 @@ struct ProfileSettings: View {
                 }
 
                 RowSeparator()
-                AddRow(title: "Add profile…") { destination = .newProfile }
+                AddRow(title: "Add profile…") { router.open(["new"]) }
                     .settingsAnchor("profiles.add")
             }
             .settingsAnchor("profiles.list")

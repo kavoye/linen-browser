@@ -33,9 +33,24 @@ nonisolated enum SystemPages {
         isStart(url) || BrowserTab.InternalPage(url: url) != nil
     }
 
-    @MainActor static func settingsURL(_ category: SettingsCategory) -> URL {
-        let base = BrowserTab.InternalPage.settings.url
-        return category == .general ? base : base.appending(path: category.rawValue)
+    @MainActor static func settingsURL(_ category: SettingsCategory, path: [String] = []) -> URL {
+        var url = BrowserTab.InternalPage.settings.url
+        if category != .general || !path.isEmpty {
+            url = url.appending(component: category.rawValue)
+        }
+        for component in path {
+            url = url.appending(component: component)
+        }
+        return url
+    }
+
+    @MainActor static func settingsPath(of url: URL?) -> [String] {
+        guard settingsCategory(of: url) != nil, let url else { return [] }
+        return Array(url.pathComponents.filter { $0 != "/" }.dropFirst())
+    }
+
+    @MainActor static func settingsPath(of url: String) -> [String] {
+        settingsPath(of: URL(string: url))
     }
 
     @MainActor static func settingsCategory(of url: URL?) -> SettingsCategory? {

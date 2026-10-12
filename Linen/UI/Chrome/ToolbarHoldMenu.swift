@@ -44,7 +44,7 @@ enum NavigationHoldMenu {
         guard !items.isEmpty else { return nil }
         let menu = NSMenu()
         for item in items.prefix(maximumEntries) {
-            menu.addItem(title: label(for: item), image: icon(for: item)) { [weak tab] in
+            menu.addItem(title: label(for: item, coordinator: coordinator), image: icon(for: item)) { [weak tab] in
                 tab?.webView.go(to: item)
             }
         }
@@ -55,12 +55,12 @@ enum NavigationHoldMenu {
         return menu
     }
 
-    private static func label(for item: WKBackForwardListItem) -> String {
+    private static func label(for item: WKBackForwardListItem, coordinator: AppCoordinator) -> String {
         if let page = BrowserTab.InternalPage(url: item.url) {
-            guard let category = SystemPages.settingsCategory(of: item.url) else {
+            guard let title = SettingsPageTitles.title(of: item.url, coordinator: coordinator) else {
                 return page.title
             }
-            return "\(page.title) — \(String(localized: category.title))"
+            return "\(page.title) — \(title)"
         }
         if SystemPages.isStart(item.url) {
             return SystemPages.startTitle

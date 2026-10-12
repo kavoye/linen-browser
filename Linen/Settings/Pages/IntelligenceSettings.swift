@@ -9,6 +9,7 @@ struct AssistantSettings: View {
     @Bindable var model: IntelligenceViewModel
     let coordinator: AppCoordinator
     @Environment(\.settingsHighlight) private var highlight
+    @Environment(\.settingsRouter) private var router
 
     var body: some View {
         Group {
@@ -25,21 +26,53 @@ struct AssistantSettings: View {
                 AgentToolsPage(model: model)
             case .grants:
                 AssistantGrantsPage(policy: coordinator.browser.context.actionPolicy, onBack: { model.showOverview() })
+            case .openAI(let page):
+                OpenAISettingsPageView(model: model, page: page)
             }
         }
         .task { await model.onAppear() }
-        .onChange(of: highlight, initial: true) { _, anchor in
-            guard let anchor else { return }
-            if anchor == "provider.connected" || anchor == "privacy.assistant" || anchor.hasPrefix("assistant.") {
-                model.showOverview()
-            } else if anchor.hasPrefix("provider.") {
-                model.open(model.selected)
-                if anchor == "provider.tools" { model.showTools() }
-            } else if anchor.hasPrefix("openai."),
-                      let provider = model.providers.first(where: { $0.adapter == .openAIResponses }) {
-                model.open(provider)
+        .onChange(of: router.path, initial: true) { _, path in
+            model.follow(path)
+        }
+        .onChange(of: model.path) { _, path in
+            guard !model.matches(router.path) else { return }
+            if router.path.starts(with: path) {
+                router.back(to: path)
+            } else {
+                router.open(path)
             }
         }
+        .onChange(of: highlight, initial: true) { _, anchor in
+            guard let anchor else { return }
+            if anchor == "provider.connected" || anchor == "privacy.assistant" || anchor.hasPrefix("assistant.")
+                || model.anchorsMissingFromSelected.contains(anchor) {
+                router.back(to: [])
+            } else if anchor.hasPrefix("provider.") {
+                router.open(anchor == "provider.tools" ? [model.selected.id, "tools"] : [model.selected.id])
+            } else if anchor.hasPrefix("openai."),
+                      let provider = model.providers.first(where: { $0.adapter == .openAIResponses }) {
+                router.open([provider.id] + (OpenAISettingsPage(anchor: anchor).map { [$0.slug] } ?? []))
+            }
+        }
+    }
+}
+
+private extension IntelligenceViewModel {
+    var anchorsMissingFromSelected: [String] {
+        var hidden: [String] = []
+        if selected.isOnDevice {
+            hidden += ["provider.model", "provider.thinking"]
+        }
+        if selected.isOnDevice || !selected.needsKey {
+            hidden.append("provider.key")
+        }
+        if selected.isOnDevice || !selected.isCustom {
+            hidden.append("provider.endpoint")
+        }
+        if !providers.contains(where: { $0.adapter == .openAIResponses }) {
+            hidden += SettingsIndex.all.map(\.id).filter { $0.hasPrefix("openai.") }
+        }
+        return hidden
     }
 }
 
@@ -320,7 +353,7 @@ private struct ProviderPage: View {
         }
         if provider.adapter == .openAIResponses {
             OpenAISettingsSection(providerID: provider.id, modelID: model.selectedModel,
-                credentialRevision: model.credentialRevision, onSave: model.saveOpenAISettings)
+                onSave: model.saveOpenAISettings, onOpen: model.showOpenAI)
                 .id(provider.id)
         }
     }

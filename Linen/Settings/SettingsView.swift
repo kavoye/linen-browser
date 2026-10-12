@@ -9,6 +9,7 @@ import SwiftUI
 @Observable
 final class SettingsWorkspace {
     var category = SettingsCategory.general
+    var path: [String] = []
     var query = ""
     var highlight: String?
 
@@ -39,22 +40,35 @@ final class SettingsWorkspace {
         )
     }
 
-    var onRoute: ((SettingsCategory) -> Void)?
+    var onRoute: ((SettingsCategory, [String], Bool) -> Void)?
 
     func select(_ category: SettingsCategory) {
         query = ""
         highlightTask?.cancel()
         highlight = nil
         self.category = category
-        onRoute?(category)
+        path = []
+        onRoute?(category, [], false)
+    }
+
+    func show(_ path: [String], isBack: Bool = false) {
+        guard path != self.path else { return }
+        onRoute?(category, path, isBack)
+    }
+
+    var router: SettingsRouter {
+        SettingsRouter(path: path) { [weak self] path, isBack in
+            self?.show(path, isBack: isBack)
+        }
     }
 
     func open(_ entry: SettingsEntry) {
         highlightTask?.cancel()
         highlight = nil
         category = entry.category
-        onRoute?(entry.category)
-        let anchor = entry.targetAnchor
+        path = []
+        onRoute?(entry.category, [], false)
+        let anchor = entry.id
         highlightTask = Task { [weak self] in
             await Task.yield()
             guard !Task.isCancelled else { return }
@@ -70,11 +84,35 @@ final class SettingsWorkspace {
         open(entry)
     }
 
-    func adopt(_ category: SettingsCategory) {
+    func adopt(_ category: SettingsCategory, path: [String]) {
+        if self.path != path {
+            self.path = path
+        }
         guard self.category != category else { return }
         self.category = category
         query = ""
     }
+}
+
+nonisolated struct SettingsRouter: Sendable, Equatable {
+    var path: [String] = []
+    var navigate: @MainActor ([String], Bool) -> Void = { _, _ in }
+
+    static func == (lhs: SettingsRouter, rhs: SettingsRouter) -> Bool {
+        lhs.path == rhs.path
+    }
+
+    @MainActor func open(_ path: [String]) {
+        navigate(path, false)
+    }
+
+    @MainActor func back(to path: [String] = []) {
+        navigate(path, true)
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var settingsRouter = SettingsRouter()
 }
 
 struct SettingsView: View {
@@ -135,6 +173,7 @@ struct SettingsView: View {
                 coordinator: coordinator,
                 intelligence: workspace.intelligence,
                 highlight: workspace.highlight,
+                router: workspace.router,
                 isCompact: !showsNamedNavigator,
                 onReveal: workspace.reveal
             )
@@ -144,7 +183,7 @@ struct SettingsView: View {
             surfaceWidth = width
         }
         .onChange(of: address, initial: true) { _, _ in
-            workspace.adopt(SystemPages.settingsCategory(of: address) ?? .general)
+            workspace.adopt(SystemPages.settingsCategory(of: address) ?? .general, path: SystemPages.settingsPath(of: address))
         }
     }
 }
@@ -154,6 +193,7 @@ private struct SettingsDetail: View {
     let coordinator: AppCoordinator
     let intelligence: IntelligenceViewModel
     let highlight: String?
+    let router: SettingsRouter
     let isCompact: Bool
     let onReveal: (String) -> Void
 
@@ -211,6 +251,7 @@ private struct SettingsDetail: View {
             }
             .scrollContentBackground(.hidden)
             .environment(\.settingsHighlight, highlight)
+            .environment(\.settingsRouter, router)
             .environment(\.openURL, OpenURLAction { url in
                 guard url.scheme == SettingsIndex.linkScheme, let anchor = url.host() else {
                     return .systemAction
@@ -293,12 +334,12 @@ private struct AboutSettings: View {
     let coordinator: AppCoordinator
     @Bindable var settings: BrowserSettings
 
-    @State private var readingAcknowledgements = false
+    @Environment(\.settingsRouter) private var router
 
     var body: some View {
-        if readingAcknowledgements {
+        if router.path == ["acknowledgements"] {
             AcknowledgementsPage(coordinator: coordinator) {
-                readingAcknowledgements = false
+                router.back()
             }
         } else {
             SettingsPageHeader(
@@ -339,7 +380,7 @@ private struct AboutSettings: View {
                     title: "Acknowledgements",
                     caption: "Open source packages used by Linen."
                 ) {
-                    readingAcknowledgements = true
+                    router.open(["acknowledgements"])
                 }
             }
             .settingsAnchor("about.acknowledgements")

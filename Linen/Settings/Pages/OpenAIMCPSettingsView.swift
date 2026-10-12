@@ -7,8 +7,9 @@ import SwiftUI
 struct OpenAIMCPSettingsView: View {
     let providerID: String
     @Binding var servers: [OpenAIMCPServer]
+    var base: [String] = []
     var oauthSetup = OpenAIMCPOAuthSetup()
-    @State private var showsEditor = false
+    @Environment(\.settingsRouter) private var router
     @State private var label = ""
     @State private var destination = ""
     @State private var allowedTools = ""
@@ -25,49 +26,160 @@ struct OpenAIMCPSettingsView: View {
     @State private var operationMessage = String(localized: "Waiting for sign-in…")
     @State private var discoveredIssuers: [String] = []
 
+    private var subpage: [String] {
+        guard router.path.starts(with: base) else { return [] }
+        return Array(router.path.dropFirst(base.count))
+    }
+
+    private var showsEditor: Bool {
+        subpage == ["add"] || subpage.first == "edit"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("The assistant can use tools from connected MCP services. Linen asks you to approve each tool call.")
-                .font(.callout).foregroundStyle(.secondary)
-            SettingsCard {
-                if servers.isEmpty {
-                    VStack(spacing: 10) {
-                        Image(systemName: "link").font(.system(size: 30)).foregroundStyle(.secondary)
-                        Text("No connected services").font(.headline)
-                        Text("Add a service using the connection details it provides.")
-                            .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    }.frame(maxWidth: .infinity).padding(.vertical, 28)
+            if showsEditor {
+                editor
+            } else {
+                list
+            }
+        }
+        .onChange(of: subpage, initial: true) { _, subpage in
+            follow(subpage)
+        }
+        .onDisappear(perform: cancelOperation)
+    }
+
+    private func follow(_ subpage: [String]) {
+        switch subpage.first {
+        case "add":
+            if editingID != nil {
+                clear()
+            }
+        case "edit":
+            let target = subpage.dropFirst().first.flatMap { UUID(uuidString: $0) }
+            guard let server = servers.first(where: { $0.id == target }) else {
+                router.back(to: base)
+                return
+            }
+            if editingID != server.id {
+                edit(server)
+            }
+        default:
+            cancelOperation()
+            clear()
+        }
+    }
+
+    private func closeEditor() {
+        router.back(to: base)
+    }
+
+    @ViewBuilder private var list: some View {
+        Text("The assistant can use tools from connected MCP services. Linen asks you to approve each tool call.")
+            .font(.callout).foregroundStyle(.secondary)
+        SettingsCard {
+            if servers.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "link").font(.system(size: 30)).foregroundStyle(.secondary)
+                    Text("No connected services").font(.headline)
+                    Text("Add a service using the connection details it provides.")
+                        .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }.frame(maxWidth: .infinity).padding(.vertical, 28)
+            }
+            ForEach(servers) { server in
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: server.label).font(.callout.weight(.medium))
+                        Text(verbatim: server.destination).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer()
+                    if server.oauth != nil {
+                        Button(server.authorizationRevision == nil ? "Sign in" : "Sign in again") { signIn(server) }
+                    }
+                    Menu {
+                        Button("Edit connection…") { edit(server); router.open(base + ["edit", server.id.uuidString.lowercased()]) }
+                        if server.oauth != nil && server.authorizationRevision != nil {
+                            Button("Sign out") { signOut(server) }
+                        }
+                        Button("Remove connection", role: .destructive) { remove(server) }
+                    } label: { Image(systemName: "ellipsis") }
+                    .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Connection actions")
+                }.padding(.vertical, 14)
+                if server.id != servers.last?.id {
+                    RowSeparator()
                 }
-                ForEach(servers) { server in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(verbatim: server.label).font(.callout.weight(.medium))
-                            Text(verbatim: server.destination).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }.disabled(operationTask != nil)
+        SettingsButton(title: "Add connection…", isProminent: true, symbol: "plus") { clear(); router.open(base + ["add"]) }
+            .disabled(operationTask != nil)
+        if let error, !showsEditor {
+            Text(error).font(.callout).foregroundStyle(.red)
+        }
+        if operationTask != nil && !showsEditor {
+            HStack {
+                ProgressView().controlSize(.small)
+                Text(operationMessage).font(.callout)
+                Button("Cancel", action: cancelOperation)
+            }
+        }
+    }
+
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 14) {
+                OpenAIConnectionField(title: "Name", placeholder: "Name of the service", text: $label)
+                OpenAIConnectionField(title: "Server address", placeholder: "HTTPS MCP URL or connector ID", text: $destination)
+                DisclosureGroup("Limit available tools") {
+                    OpenAIConnectionField(title: "Allowed tools", placeholder: "Tool names, separated by commas", text: $allowedTools)
+                }
+                Picker("Sign-in method", selection: $useOAuth) {
+                    Text("Access token or no sign-in").tag(false)
+                    Text("Sign in with the service").tag(true)
+                }
+                if useOAuth {
+                    Button("Find sign-in settings", action: discoverOAuth)
+                        .disabled(destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    if discoveredIssuers.count > 1 {
+                        Picker("Authorization server", selection: $issuer) {
+                            ForEach(discoveredIssuers, id: \.self) { Text(verbatim: $0).tag($0) }
                         }
-                        Spacer()
-                        if server.oauth != nil {
-                            Button(server.authorizationRevision == nil ? "Sign in" : "Sign in again") { signIn(server) }
-                        }
-                        Menu {
-                            Button("Edit connection…") { edit(server); showsEditor = true }
-                            if server.oauth != nil && server.authorizationRevision != nil {
-                                Button("Sign out") { signOut(server) }
-                            }
-                            Button("Remove connection", role: .destructive) { remove(server) }
-                        } label: { Image(systemName: "ellipsis") }
-                        .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Connection actions")
-                    }.padding(.vertical, 14)
-                    if server.id != servers.last?.id {
-                        RowSeparator()
+                        .onChange(of: issuer) { clientID = "" }
+                    }
+                    OpenAIConnectionField(title: "Authorization server", placeholder: "HTTPS OAuth issuer", text: $issuer)
+                    OpenAIConnectionField(title: "Client ID", placeholder: "Registered public client ID", text: $clientID)
+                    Button("Register public client", action: registerClient)
+                        .disabled(issuer.isEmpty || !clientID.isEmpty)
+                    OpenAIConnectionField(title: "Requested access", placeholder: "Scopes, separated by spaces", text: $scope)
+                    OpenAIConnectionField(title: "Resource URL", placeholder: "Only if the service requires it", text: $resource)
+                    Text("Register this redirect URI with your authorization server:")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(verbatim: OpenAIMCPOAuthConfiguration.redirect).font(.caption).textSelection(.enabled)
+                    Text("Enter a registered public client ID, or register one if the service allows it. Save the connection, then select Sign in.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Access token").font(.callout.weight(.medium))
+                        SecureField(editingID == nil ? "Optional" : "Leave blank to keep the saved token", text: $token)
+                            .accessibilityLabel("Access token")
                     }
                 }
-            }.disabled(operationTask != nil)
-            SettingsButton(title: "Add connection…", isProminent: true, symbol: "plus") { clear(); showsEditor = true }
-                .disabled(operationTask != nil)
-            if let error, !showsEditor {
-                Text(error).font(.callout).foregroundStyle(.red)
-            }
-            if operationTask != nil && !showsEditor {
+                if useOAuth {
+                    Text("Linen sends the access token to your OpenAI provider. The refresh token stays in your Keychain, and Linen sends it only to the authorization server.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Linen saves the token in your Keychain and sends it to your OpenAI provider for this connection.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if let error {
+                    Text(error).foregroundStyle(.red)
+                }
+                HStack {
+                    Button(editingID == nil ? "Add connection" : "Save connection", action: save)
+                    Button("Cancel", action: closeEditor)
+                }
+
+            }.textFieldStyle(.roundedBorder).disabled(operationTask != nil)
+            if operationTask != nil {
                 HStack {
                     ProgressView().controlSize(.small)
                     Text(operationMessage).font(.callout)
@@ -75,71 +187,6 @@ struct OpenAIMCPSettingsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showsEditor, onDismiss: cancelOperation) {
-            OpenAISettingsSheet(title: editingID == nil ? "Add connection" : "Edit connection") {
-                VStack(alignment: .leading, spacing: 14) {
-                    OpenAIConnectionField(title: "Name", placeholder: "Name of the service", text: $label)
-                    OpenAIConnectionField(title: "Server address", placeholder: "HTTPS MCP URL or connector ID", text: $destination)
-                    DisclosureGroup("Limit available tools") {
-                        OpenAIConnectionField(title: "Allowed tools", placeholder: "Tool names, separated by commas", text: $allowedTools)
-                    }
-                    Picker("Sign-in method", selection: $useOAuth) {
-                        Text("Access token or no sign-in").tag(false)
-                        Text("Sign in with the service").tag(true)
-                    }
-                    if useOAuth {
-                        Button("Find sign-in settings", action: discoverOAuth)
-                            .disabled(destination.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        if discoveredIssuers.count > 1 {
-                            Picker("Authorization server", selection: $issuer) {
-                                ForEach(discoveredIssuers, id: \.self) { Text(verbatim: $0).tag($0) }
-                            }
-                            .onChange(of: issuer) { clientID = "" }
-                        }
-                        OpenAIConnectionField(title: "Authorization server", placeholder: "HTTPS OAuth issuer", text: $issuer)
-                        OpenAIConnectionField(title: "Client ID", placeholder: "Registered public client ID", text: $clientID)
-                        Button("Register public client", action: registerClient)
-                            .disabled(issuer.isEmpty || !clientID.isEmpty)
-                        OpenAIConnectionField(title: "Requested access", placeholder: "Scopes, separated by spaces", text: $scope)
-                        OpenAIConnectionField(title: "Resource URL", placeholder: "Only if the service requires it", text: $resource)
-                        Text("Register this redirect URI with your authorization server:")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Text(verbatim: OpenAIMCPOAuthConfiguration.redirect).font(.caption).textSelection(.enabled)
-                        Text("Enter a registered public client ID, or register one if the service allows it. Save the connection, then select Sign in.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Access token").font(.callout.weight(.medium))
-                            SecureField(editingID == nil ? "Optional" : "Leave blank to keep the saved token", text: $token)
-                                .accessibilityLabel("Access token")
-                        }
-                    }
-                    if useOAuth {
-                        Text("Linen sends the access token to your OpenAI provider. The refresh token stays in your Keychain, and Linen sends it only to the authorization server.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        Text("Linen saves the token in your Keychain and sends it to your OpenAI provider for this connection.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    if let error {
-                        Text(error).foregroundStyle(.red)
-                    }
-                    HStack {
-                        Button(editingID == nil ? "Add connection" : "Save connection", action: save)
-                        Button("Cancel") { clear(); showsEditor = false }
-                    }
-
-                }.textFieldStyle(.roundedBorder).disabled(operationTask != nil)
-                if operationTask != nil {
-                    HStack {
-                        ProgressView().controlSize(.small)
-                        Text(operationMessage).font(.callout)
-                        Button("Cancel", action: cancelOperation)
-                    }
-                }
-            }
-        }
-        .onDisappear(perform: cancelOperation)
     }
 
     private func edit(_ server: OpenAIMCPServer) {
@@ -199,7 +246,7 @@ struct OpenAIMCPSettingsView: View {
             updated.append(candidate)
             servers = updated
             clear()
-            showsEditor = false
+            closeEditor()
         } catch { self.error = error.localizedDescription }
     }
 

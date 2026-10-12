@@ -6,18 +6,16 @@ import SwiftUI
 struct OpenAISettingsSection: View {
     let providerID: String
     let modelID: String
-    var credentialRevision = 0
     let onSave: (OpenAIResponseSettings) -> Void
+    let onOpen: (OpenAISettingsPage) -> Void
 
     @State private var options = OpenAIResponseSettings()
     @State private var loaded = false
-    @State private var destination: OpenAISettingsDestination?
-    @Environment(\.settingsHighlight) private var highlight
 
     var body: some View {
         SettingsSection(title: "OpenAI", symbol: "sparkles", footnote: "Supported models can search the web, create images, and analyze data. OpenAI charges for API use.", accessory: {
             Menu {
-                Button("Developer settings…") { destination = .developer }
+                Button("Developer settings…") { onOpen(.developer) }
             } label: { Image(systemName: "ellipsis") }
             .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("More OpenAI settings")
         }) {
@@ -32,10 +30,10 @@ struct OpenAISettingsSection: View {
                 .settingsAnchor("openai.replyLength")
                 RowSeparator()
             }
-            DrillInRow(title: "Connections", symbol: "link", caption: "Connect services your assistant can use.") { destination = .connections }
+            DrillInRow(title: "Connections", symbol: "link", caption: "Connect services your assistant can use.") { onOpen(.connections) }
                 .settingsAnchor("openai.connections")
             RowSeparator()
-            DrillInRow(title: "Data and privacy", symbol: "hand.raised", caption: "Choose whether you can retrieve replies through the OpenAI API.") { destination = .privacy }
+            DrillInRow(title: "Data and privacy", symbol: "hand.raised", caption: "Choose whether you can retrieve replies through the OpenAI API.") { onOpen(.privacy) }
                 .settingsAnchor("openai.privacy")
 
         }
@@ -45,29 +43,6 @@ struct OpenAISettingsSection: View {
             guard !loaded else { return }
             options = OpenAISettingsStore.load(providerID: providerID)
             loaded = true
-        }
-        .onChange(of: highlight, initial: true) { _, anchor in
-            guard let anchor else { return }
-            if anchor.hasPrefix("openai.connections") {
-                destination = .connections
-            } else if anchor.hasPrefix("openai.privacy") {
-                destination = .privacy
-            } else if anchor.hasPrefix("openai.developer") {
-                destination = .developer
-            }
-        }
-        .sheet(item: $destination) { page in
-            OpenAISettingsSheet(title: page.title) {
-                switch page {
-                case .connections:
-                    OpenAIMCPSettingsView(providerID: providerID, servers: savedOptions.mcpServers)
-                        .id("mcp:\(providerID):\(credentialRevision)")
-                case .privacy:
-                    OpenAIPrivacySettings(options: savedOptions)
-                case .developer:
-                    OpenAIDeveloperSettings(options: savedOptions)
-                }
-            }
         }
     }
 
@@ -79,11 +54,60 @@ struct OpenAISettingsSection: View {
     }
 }
 
-private enum OpenAISettingsDestination: String, Identifiable {
+enum OpenAISettingsPage: Hashable {
     case connections, privacy, developer
-    var id: String {
-        rawValue
+
+    init?(anchor: String) {
+        if anchor.hasPrefix("openai.connections") {
+            self = .connections
+        } else if anchor.hasPrefix("openai.privacy") {
+            self = .privacy
+        } else if anchor.hasPrefix("openai.developer") {
+            self = .developer
+        } else {
+            return nil
+        }
     }
+
+    init?(slug: String) {
+        switch slug {
+        case "connections":
+            self = .connections
+        case "privacy":
+            self = .privacy
+        case "developer":
+            self = .developer
+        default:
+            return nil
+        }
+    }
+
+    var slug: String {
+        switch self {
+        case .connections:
+            "connections"
+        case .privacy:
+            "privacy"
+        case .developer:
+            "developer"
+        }
+    }
+
+    func subpageTitle(_ slug: String?) -> LocalizedStringResource? {
+        switch (self, slug) {
+        case (.developer, "api-json"):
+            "API JSON"
+        case (.developer, "voice-models"):
+            "Voice models"
+        case (.connections, "add"):
+            "Add connection"
+        case (.connections, "edit"):
+            "Edit connection"
+        default:
+            nil
+        }
+    }
+
     var title: LocalizedStringResource {
         switch self {
         case .connections:
@@ -96,28 +120,62 @@ private enum OpenAISettingsDestination: String, Identifiable {
     }
 }
 
-struct OpenAISettingsSheet<Content: View>: View {
-    let title: LocalizedStringResource
-    @ViewBuilder let content: Content
-    @Environment(\.dismiss) private var dismiss
+struct OpenAISettingsPageView: View {
+    @Bindable var model: IntelligenceViewModel
+    let page: OpenAISettingsPage
+
+    @Environment(\.settingsRouter) private var router
+    @State private var options = OpenAIResponseSettings()
+    @State private var loaded = false
+
+    private var base: [String] {
+        model.path
+    }
+
+    private var subpageTitle: LocalizedStringResource? {
+        guard router.path.starts(with: base) else { return nil }
+        return page.subpageTitle(router.path.dropFirst(base.count).first)
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(title).font(.title3.weight(.semibold))
-                Spacer()
-                SettingsButton(title: "Done") { dismiss() }.keyboardShortcut(.cancelAction)
-            }.padding(24)
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) { content }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(24)
+        if let subpageTitle {
+            SubPageHeader(backTitle: page.title) { router.back(to: base) }
+            SettingsPageHeader(title: subpageTitle)
+        } else {
+            if let inspected = model.inspectedProvider {
+                SubPageHeader(verbatimBackTitle: inspected.name) { model.leaveTools() }
+            } else {
+                SubPageHeader(backTitle: "Assistant") { model.leaveTools() }
+            }
+            SettingsPageHeader(title: page.title)
+        }
+
+        VStack(alignment: .leading, spacing: 20) {
+            if loaded {
+                switch page {
+                case .connections:
+                    OpenAIMCPSettingsView(providerID: model.subject.id, servers: savedOptions.mcpServers, base: base)
+                        .id("mcp:\(model.subject.id):\(model.credentialRevision)")
+                case .privacy:
+                    OpenAIPrivacySettings(options: savedOptions)
+                case .developer:
+                    OpenAIDeveloperSettings(options: savedOptions, base: base)
+                }
             }
         }
-        .frame(width: 600, height: 580)
-        .background(Theme.windowBackground)
-        .environment(\.settingsDescriptionLineLimit, nil)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task {
+            guard !loaded else { return }
+            options = OpenAISettingsStore.load(providerID: model.subject.id)
+            loaded = true
+        }
+    }
+
+    private var savedOptions: Binding<OpenAIResponseSettings> {
+        Binding(get: { options }, set: { value in
+            options = value
+            model.saveOpenAISettings(value)
+        })
     }
 }
 

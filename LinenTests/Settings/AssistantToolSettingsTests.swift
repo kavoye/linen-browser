@@ -50,6 +50,30 @@ struct AssistantToolSettingsTests {
         #expect(reopened.reasoningEffort == .low)
     }
 
+    @Test func anOpenAIAddressOpensItsPage() throws {
+        let name = TestDefaults.name("settings-address")
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let model = IntelligenceViewModel(settings: LLMSettings(defaults: defaults), credentials: TestCredentialStore(),
+            contextProbe: SilentContextProbe(), onConfigurationChanged: {})
+        let openAI = ProviderCatalog.openAI.id
+
+        model.follow([openAI, "developer", "api-json"])
+
+        #expect(model.destination == .openAI(.developer))
+        #expect(model.path == [openAI, "developer"])
+        #expect(model.matches([openAI, "developer", "api-json"]))
+
+        model.follow([openAI])
+        #expect(model.destination == .provider(openAI))
+
+        model.follow(["allowed-websites"])
+        #expect(model.destination == .grants)
+
+        model.follow(["no-such-provider"])
+        #expect(model.destination == .overview)
+    }
+
     private static let inUse = Provider(
         id: "in-use",
         name: "In Use",

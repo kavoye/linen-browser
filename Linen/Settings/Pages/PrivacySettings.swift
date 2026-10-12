@@ -11,15 +11,15 @@ struct PrivacySettings: View {
     @State private var isClearing = false
     @State private var cleared = false
     @State private var siteCount: Int?
-    @State private var showingWebsiteData = false
+    @Environment(\.settingsRouter) private var router
 
     private var pageCount: Int {
         coordinator.browser.history.count
     }
 
     var body: some View {
-        if showingWebsiteData {
-            WebsiteDataPage(dataStore: coordinator.browser.context.dataStore) { showingWebsiteData = false }
+        if router.path == ["website-data"] {
+            WebsiteDataPage(dataStore: coordinator.browser.context.dataStore) { router.back() }
         } else {
             page
         }
@@ -95,7 +95,7 @@ struct PrivacySettings: View {
             RowSeparator()
 
             DrillInRow(title: "Website data", caption: siteSummary) {
-                showingWebsiteData = true
+                router.open(["website-data"])
             }
             .disabled((siteCount ?? 0) == 0)
             .settingsAnchor("privacy.storage")

@@ -10,23 +10,28 @@ struct AdvancedSettings: View {
 
     @FocusState private var customFieldFocused: Bool
     @State private var confirmingReset = false
-    @State private var readingFeatures = false
-    @State private var readingMCP = false
+    @Environment(\.settingsRouter) private var router
 
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsMetrics.sectionSpacing) {
-            if readingMCP, let mcpServer {
-                MCPSettingsPage(server: mcpServer) { readingMCP = false }
-            } else if readingFeatures {
-                WebKitFeaturesPage { readingFeatures = false }
+            if router.path == ["mcp"], let mcpServer {
+                MCPSettingsPage(server: mcpServer) { router.back() }
+            } else if router.path == ["webkit-features"] {
+                WebKitFeaturesPage { router.back() }
             } else {
                 page
             }
         }
         .onChange(of: highlight, initial: true) { _, anchor in
             guard let anchor, anchor.hasPrefix("advanced.") else { return }
-            readingMCP = anchor == "advanced.mcp"
-            readingFeatures = anchor == "advanced.features"
+            switch anchor {
+            case "advanced.mcp":
+                router.open(["mcp"])
+            case "advanced.features":
+                router.open(["webkit-features"])
+            default:
+                router.back()
+            }
         }
     }
 
@@ -59,7 +64,7 @@ struct AdvancedSettings: View {
                     title: "Feature flags",
                     caption: "Experimental WebKit features may break websites."
                 ) {
-                    readingFeatures = true
+                    router.open(["webkit-features"])
                 }
                 .settingsAnchor("advanced.features")
             }
@@ -102,7 +107,7 @@ struct AdvancedSettings: View {
                     title: "External connections", symbol: "cable.connector",
                     caption: "Connect an external assistant to tabs you choose."
                 ) {
-                    readingMCP = true
+                    router.open(["mcp"])
                 }
                 .settingsAnchor("advanced.mcp")
             }

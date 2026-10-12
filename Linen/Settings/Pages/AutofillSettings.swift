@@ -16,12 +16,16 @@ struct AutofillSettings: View {
     let coordinator: AppCoordinator
     @Bindable var settings: BrowserSettings
     var highlight: String?
-    @State private var destination: AutofillDestination?
+    @Environment(\.settingsRouter) private var router
+
+    private var destination: AutofillDestination? {
+        router.path.first.flatMap(AutofillDestination.init(rawValue:))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsMetrics.sectionSpacing) {
             if let destination {
-                SubPageHeader(backTitle: "Autofill", onBack: { self.destination = nil }) {}
+                SubPageHeader(backTitle: "Autofill", onBack: { router.back() }) {}
                 switch destination {
                 case .passwords:
                     PasswordSettings(settings: settings, extensions: coordinator.extensions, profileID: coordinator.profiles.current.id)
@@ -33,11 +37,11 @@ struct AutofillSettings: View {
             } else {
                 SettingsPageHeader(title: "Autofill", caption: "Linen stores saved details on this Mac.")
                 SettingsCard {
-                    DrillInRow(title: "Passwords", symbol: "key", tint: .orange, caption: "Save and fill website logins.") { destination = .passwords }
+                    DrillInRow(title: "Passwords", symbol: "key", tint: .orange, caption: "Save and fill website logins.") { open(.passwords) }
                     RowSeparator()
-                    DrillInRow(title: "Payment cards", symbol: "creditcard", tint: .blue, caption: "Save and fill payment cards.") { destination = .cards }
+                    DrillInRow(title: "Payment cards", symbol: "creditcard", tint: .blue, caption: "Save and fill payment cards.") { open(.cards) }
                     RowSeparator()
-                    DrillInRow(title: "Contacts and addresses", symbol: "person.crop.rectangle", tint: .green, caption: "Save and fill contact details.") { destination = .contacts }
+                    DrillInRow(title: "Contacts and addresses", symbol: "person.crop.rectangle", tint: .green, caption: "Save and fill contact details.") { open(.contacts) }
                 }
             }
         }
@@ -45,9 +49,13 @@ struct AutofillSettings: View {
         .id(coordinator.profiles.current.id)
         .onChange(of: highlight, initial: true) { _, anchor in
             if let target = AutofillDestination(anchor: anchor) {
-                destination = target
+                open(target)
             }
         }
+    }
+
+    private func open(_ destination: AutofillDestination) {
+        router.open([destination.rawValue])
     }
 }
 
