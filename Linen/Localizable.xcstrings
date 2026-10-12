@@ -5360,6 +5360,9 @@
     "Show Extension" : {
       "comment" : "Command in the right-click menu of an extension’s toolbar button, which puts the button back on the toolbar. The same item reads Hide Extension when it is already there, so the two should stay parallel. Title Case, Show is a verb."
     },
+    "Show full website address" : {
+      "comment" : "Title of the General settings switch that shows a page’s whole address in the address field, instead of just the website name and lock, and its Settings search entry. Sentence case."
+    },
     "Show in Finder" : {
       "comment" : "Tooltip on the small folder button beside a finished download, which reveals the file in the Finder. Finder is Apple’s app name — use Apple’s own name for it, and match Apple’s standard wording for this command."
     },
@@ -5437,6 +5440,9 @@
     },
     "Show what went wrong" : {
       "comment" : "Tooltip on the warning button beside an extension that reported problems; pressing it opens a panel listing them. Show is a verb."
+    },
+    "Shows the whole address instead of just the website name." : {
+      "comment" : "Caption under the Show full website address switch in General settings, and its Settings search description."
     },
     "Shows where a link goes at the bottom of the window." : {
       "comment" : "Caption under the Show status bar switch in General settings, and its Settings search description."

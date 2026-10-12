@@ -156,6 +156,30 @@ struct AskSurfaceInteractionTests {
         #expect(address?.accessibilityValue(fallback: "https://www.example.com/path") == "https://www.example.com/path")
     }
 
+    @Test func theFullAddressLeavesTheFieldShowingTheURL() {
+        func resolve(_ url: String, notice: String? = nil) -> AskRestingContent? {
+            AskRestingContent.resolve(
+                isListening: false,
+                transcript: "",
+                agentMessage: nil,
+                mirrorsPageURL: true,
+                isFocused: false,
+                typedText: "",
+                notice: notice,
+                status: nil,
+                placeholder: "Search",
+                currentURL: url,
+                showsFullAddress: true
+            )
+        }
+
+        #expect(resolve("https://www.example.com/path") == nil)
+        #expect(resolve("https://www.example.com/path", notice: "Saved") == .notice("Saved"))
+        #expect(resolve("") == .placeholder("Search"))
+        let settings = SystemPages.settingsURL(.general).absoluteString
+        #expect(resolve(settings) == .address("settings", symbol: AskRestingContent.systemSymbol(for: settings)))
+    }
+
     @Test func anAgentReplyShowsWhileTheFieldIsFocusedAndEmpty() {
         func resolve(typed: String) -> AskRestingContent? {
             AskRestingContent.resolve(

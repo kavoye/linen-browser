@@ -160,7 +160,8 @@ enum AskRestingContent: Equatable {
         noticeSymbol: String? = nil,
         status: String?,
         placeholder: String,
-        currentURL: String
+        currentURL: String,
+        showsFullAddress: Bool = false
     ) -> AskRestingContent? {
         if isListening {
             return .transcript(transcript)
@@ -177,7 +178,11 @@ enum AskRestingContent: Equatable {
         }
         guard mirrorsPageURL, !isFocused else { return nil }
         let address = displayAddress(for: currentURL)
-        return address.isEmpty ? .placeholder(placeholder) : .address(address, symbol: systemSymbol(for: currentURL))
+        let symbol = systemSymbol(for: currentURL)
+        if showsFullAddress, symbol == nil, !address.isEmpty {
+            return nil
+        }
+        return address.isEmpty ? .placeholder(placeholder) : .address(address, symbol: symbol)
     }
 
     static func systemSymbol(for value: String) -> String? {

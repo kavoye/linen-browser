@@ -102,6 +102,16 @@ struct GeneralSettings: View {
             RowSeparator()
 
             DetailRow(
+                title: "Show full website address",
+                caption: "Shows the whole address instead of just the website name."
+            ) {
+                SettingsToggle($settings.showsFullAddress)
+            }
+            .settingsAnchor("general.fullAddress")
+
+            RowSeparator()
+
+            DetailRow(
                 title: "Show media player",
                 caption: "Pause or skip audio and video playing in any tab."
             ) {

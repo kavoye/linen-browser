@@ -115,7 +115,8 @@ final class AskSurfaceModel {
             noticeSymbol: coordinator.noticeSymbol,
             status: coordinator.statusMessage,
             placeholder: placeholder,
-            currentURL: currentURL
+            currentURL: currentURL,
+            showsFullAddress: browser.context.settings.showsFullAddress
         )
     }
 

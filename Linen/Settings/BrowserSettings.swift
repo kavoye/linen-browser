@@ -26,6 +26,7 @@ final class BrowserSettings {
         static let sleepsInactiveTabs = "tabs.sleep"
         static let archiveTabsAfter = "tabs.archive"
         static let linkPreview = "content.linkPreview"
+        static let fullAddress = "content.fullAddress"
         static let linkPeek = "content.linkPeek"
         static let searchEngine = "search.engine"
         static let customSearchName = "search.custom.name"
@@ -115,6 +116,8 @@ final class BrowserSettings {
             transparency = source.transparency
         case Key.linkPreview:
             showsLinkPreview = source.showsLinkPreview
+        case Key.fullAddress:
+            showsFullAddress = source.showsFullAddress
         case Key.linkPeek:
             peeksAtLinks = source.peeksAtLinks
         case Key.mediaPlayer:
@@ -283,6 +286,13 @@ final class BrowserSettings {
         didSet {
             guard showsLinkPreview != oldValue else { return }
             write(showsLinkPreview, forKey: Key.linkPreview)
+        }
+    }
+
+    var showsFullAddress: Bool {
+        didSet {
+            guard showsFullAddress != oldValue else { return }
+            write(showsFullAddress, forKey: Key.fullAddress)
         }
     }
 
@@ -663,6 +673,7 @@ final class BrowserSettings {
         archiveTabsAfter = string(Key.archiveTabsAfter)
             .flatMap(TabArchiveDelay.init(rawValue:)) ?? .never
         showsLinkPreview = object(Key.linkPreview) as? Bool ?? true
+        showsFullAddress = object(Key.fullAddress) as? Bool ?? false
         peeksAtLinks = object(Key.linkPeek) as? Bool ?? true
         automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
         showsVideoInPlayer = object(Key.videoInPlayer) as? Bool ?? false
