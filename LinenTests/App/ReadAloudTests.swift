@@ -34,6 +34,20 @@ struct ReadAloudTests {
     }
 
     @Test
+    func stoppingTheMacVoiceReportsThatSpeechEnded() {
+        let output = AppleSpeechOutput()
+        var reports: [Bool] = []
+        output.onSpeakingChange = { reports.append($0) }
+
+        output.stopSpeaking()
+        #expect(reports.isEmpty)
+
+        output.speak("Hello")
+        output.stopSpeaking()
+        #expect(reports == [false])
+    }
+
+    @Test
     func lateStopFromThePreviousAnswerKeepsTheNewOne() {
         let coordinator = AppCoordinator()
         let output = ReadAloudSpeech()

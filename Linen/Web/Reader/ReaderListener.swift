@@ -21,17 +21,37 @@ final class ReaderListener {
     private(set) var tabID: UUID?
     private(set) var block: Int?
 
+    nonisolated static let rateRange: ClosedRange<Float> = 0.5...1.5
+
+    private(set) var rate: Float
+
     @ObservationIgnored var onWillStart: (() -> Void)?
     @ObservationIgnored private let output: any SpeechOutput
+    @ObservationIgnored private let defaults: UserDefaults
+    private static let rateKey = "readerSpeechRate"
     @ObservationIgnored private var utterances: [Utterance] = []
     @ObservationIgnored private var position = 0
     @ObservationIgnored private var awaitingStart = false
 
-    init(output: any SpeechOutput) {
+    init(output: any SpeechOutput, defaults: UserDefaults = .standard) {
         self.output = output
+        self.defaults = defaults
+        let stored = defaults.object(forKey: Self.rateKey) as? Float ?? 1
+        rate = Self.rounded(stored)
+        output.setRate(rate)
         output.onSpeakingChange = { [weak self] speaking in
             self?.speakingChanged(speaking)
         }
+    }
+
+    func setRate(_ rate: Float) {
+        self.rate = Self.rounded(rate)
+        output.setRate(self.rate)
+        defaults.set(self.rate, forKey: Self.rateKey)
+    }
+
+    private static func rounded(_ rate: Float) -> Float {
+        (min(max(rate, rateRange.lowerBound), rateRange.upperBound) * 10).rounded() / 10
     }
 
     func isListening(to tabID: UUID) -> Bool {

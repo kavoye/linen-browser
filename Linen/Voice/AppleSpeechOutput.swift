@@ -31,14 +31,17 @@ final class AppleSpeechVoiceCatalog {
 final class AppleSpeechOutput: SpeechOutput {
     private let synthesizer = AVSpeechSynthesizer()
     private var watcher: SpeakingWatcher?
+    private var queued: [AVSpeechUtterance] = []
+    private var spokenLocation = 0
 
     var isMuted = false
     var onSpeakingChange: ((Bool) -> Void)?
+    private var rate: Float = 1
 
     init() {
-        let watcher = SpeakingWatcher { [weak self] speaking in
+        let watcher = SpeakingWatcher { [weak self] utterance, event in
             Task { @MainActor in
-                self?.onSpeakingChange?(speaking)
+                self?.utteranceChanged(utterance.value, event)
             }
         }
         self.watcher = watcher
@@ -49,31 +52,93 @@ final class AppleSpeechOutput: SpeechOutput {
         guard !isMuted else { return }
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AppleSpeechVoiceCatalog.shared.voice
+        utterance.rate = min(AVSpeechUtteranceDefaultSpeechRate * rate, AVSpeechUtteranceMaximumSpeechRate)
+        if queued.isEmpty {
+            spokenLocation = 0
+        }
+        queued.append(utterance)
         synthesizer.speak(utterance)
     }
 
+    func setRate(_ rate: Float) {
+        guard rate != self.rate else { return }
+        self.rate = rate
+        speakRemainderAtRate()
+    }
+
     func stopSpeaking() {
+        let wasSpeaking = !queued.isEmpty
+        cancelQueue()
+        if wasSpeaking {
+            onSpeakingChange?(false)
+        }
+    }
+
+    private func cancelQueue() {
+        queued.removeAll()
+        spokenLocation = 0
         synthesizer.stopSpeaking(at: .immediate)
     }
 
+    private func speakRemainderAtRate() {
+        guard let current = queued.first else { return }
+        let remainder = (current.speechString as NSString).substring(from: min(spokenLocation, current.speechString.utf16.count))
+        let texts = [remainder] + queued.dropFirst().map(\.speechString)
+        cancelQueue()
+        texts.forEach(speak)
+    }
+
+    private func utteranceChanged(_ utterance: AVSpeechUtterance, _ event: SpeakingWatcher.Event) {
+        guard let index = queued.firstIndex(where: { $0 === utterance }) else { return }
+        switch event {
+        case .started:
+            spokenLocation = 0
+            onSpeakingChange?(true)
+        case .word(let location):
+            if index == 0 {
+                spokenLocation = location
+            }
+        case .ended:
+            queued.remove(at: index)
+            if index == 0 {
+                spokenLocation = 0
+            }
+            onSpeakingChange?(!queued.isEmpty)
+        }
+    }
+}
+
+private nonisolated struct UtteranceBox: @unchecked Sendable {
+    let value: AVSpeechUtterance
 }
 
 private nonisolated final class SpeakingWatcher: NSObject, AVSpeechSynthesizerDelegate {
-    private let onChange: @Sendable (Bool) -> Void
+    enum Event: Sendable {
+        case started
+        case word(Int)
+        case ended
+    }
 
-    init(onChange: @escaping @Sendable (Bool) -> Void) {
+    private let onChange: @Sendable (UtteranceBox, Event) -> Void
+
+    init(onChange: @escaping @Sendable (UtteranceBox, Event) -> Void) {
         self.onChange = onChange
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
-        onChange(true)
+        onChange(UtteranceBox(value: utterance), .started)
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, willSpeakRangeOfSpeechString characterRange: NSRange,
+                           utterance: AVSpeechUtterance) {
+        onChange(UtteranceBox(value: utterance), .word(characterRange.location))
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        onChange(synthesizer.isSpeaking)
+        onChange(UtteranceBox(value: utterance), .ended)
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        onChange(synthesizer.isSpeaking)
+        onChange(UtteranceBox(value: utterance), .ended)
     }
 }

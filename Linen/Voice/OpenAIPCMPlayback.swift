@@ -6,9 +6,14 @@ import Foundation
 
 @MainActor
 protocol StreamingSpeechPlaying: AnyObject {
+    func setRate(_ rate: Float)
     func append(_ pcm: Data) async throws
     func finish() async throws
     func stop()
+}
+
+extension StreamingSpeechPlaying {
+    func setRate(_ rate: Float) {}
 }
 
 @MainActor
@@ -28,6 +33,10 @@ final class OpenAIPCMPlayback: ConversationAudioPlaying {
 
     init(hardware: any PCMPlaybackDriving = PCMPlaybackHardware()) {
         self.hardware = hardware
+    }
+
+    func setRate(_ rate: Float) {
+        hardware.setRate(rate)
     }
 
     func append(_ pcm: Data) async throws {
@@ -116,12 +125,19 @@ nonisolated protocol PCMPlaybackDriving: Sendable {
     func schedule(_ pcm: Data, generation: Int, completed: @escaping @Sendable () -> Void,
                   position: @escaping @Sendable (Int) -> Void) async throws
     func stop(generation: Int)
+    func setRate(_ rate: Float)
+}
+
+nonisolated extension PCMPlaybackDriving {
+    func setRate(_ rate: Float) {}
 }
 
 nonisolated final class PCMPlaybackHardware: PCMPlaybackDriving, @unchecked Sendable {
     private static let queue = DispatchQueue(label: "com.kavoye.linen.audio-playback", qos: .default)
     private var engine: AVAudioEngine?
     private var player: AVAudioPlayerNode?
+    private var timePitch: AVAudioUnitTimePitch?
+    private var rate: Float = 1
     private var timeline = OpenAIPlaybackTimeline()
     private var timer: DispatchSourceTimer?
     private var scheduledBuffers = 0
@@ -161,10 +177,16 @@ nonisolated final class PCMPlaybackHardware: PCMPlaybackDriving, @unchecked Send
         if engine == nil {
             let engine = AVAudioEngine()
             let player = AVAudioPlayerNode()
+            let timePitch = AVAudioUnitTimePitch()
+            timePitch.rate = rate
+            timePitch.bypass = rate == 1
             self.engine = engine
             self.player = player
+            self.timePitch = timePitch
             engine.attach(player)
-            engine.connect(player, to: engine.mainMixerNode, format: format)
+            engine.attach(timePitch)
+            engine.connect(player, to: timePitch, format: format)
+            engine.connect(timePitch, to: engine.mainMixerNode, format: format)
             try engine.start()
         }
         guard let player else { throw OpenAIVoiceFailure.invalidAudio }
@@ -206,6 +228,14 @@ nonisolated final class PCMPlaybackHardware: PCMPlaybackDriving, @unchecked Send
         position(timeline.playedMilliseconds(renderedFrame: renderedFrame, latency: player?.outputPresentationLatency ?? 0))
     }
 
+    func setRate(_ rate: Float) {
+        Self.queue.async {
+            self.rate = rate
+            self.timePitch?.rate = rate
+            self.timePitch?.bypass = rate == 1
+        }
+    }
+
     func stop(generation: Int) {
         Self.queue.async {
             self.close()
@@ -222,6 +252,7 @@ nonisolated final class PCMPlaybackHardware: PCMPlaybackDriving, @unchecked Send
         engine?.stop()
         player = nil
         engine = nil
+        timePitch = nil
         timeline = OpenAIPlaybackTimeline()
     }
 

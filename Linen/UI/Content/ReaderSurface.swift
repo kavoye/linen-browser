@@ -133,6 +133,7 @@ private struct ReaderToolbar: View {
     let readsWithOpenAI: Bool
 
     @State private var showsAppearance = false
+    @State private var showsSpeed = false
 
     private var scheme: ColorScheme {
         palette == .dark ? .dark : .light
@@ -193,6 +194,10 @@ private struct ReaderToolbar: View {
         .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
     }
 
+    fileprivate static func speedLabel(_ rate: Float) -> String {
+        "\(rate.formatted(.number.precision(.fractionLength(0...1))))×"
+    }
+
     private var pauseHelp: LocalizedStringResource {
         listener.state == .playing ? "Pause" : "Resume"
     }
@@ -206,6 +211,22 @@ private struct ReaderToolbar: View {
 
     @ViewBuilder
     private var listeningControls: some View {
+        Button {
+            showsSpeed.toggle()
+        } label: {
+            ZStack {
+                Text(Self.speedLabel(0.5)).hidden()
+                Text(Self.speedLabel(listener.rate))
+            }
+            .font(Theme.Font.label)
+            .monospacedDigit()
+        }
+        .help("Playback speed")
+        .popover(isPresented: $showsSpeed, arrowEdge: .bottom) {
+            ReaderSpeedPopover(listener: listener)
+                .chromePopoverAppearance(scheme)
+        }
+
         Button {
             listener.skip(by: -1)
         } label: {
@@ -272,6 +293,53 @@ private struct ReaderToolbarButton: View {
             .contentShape(shape)
             .opacity(isEnabled ? 1 : 0.35)
             .onHover { hovering = $0 }
+    }
+}
+
+private struct ReaderSpeedPopover: View {
+    let listener: ReaderListener
+
+    @State private var draft: Float?
+    @State private var isDragging = false
+
+    private var shownRate: Float {
+        draft ?? listener.rate
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(ReaderToolbar.speedLabel(shownRate))
+                .font(.system(size: 13, weight: .semibold))
+                .monospacedDigit()
+            Slider(value: Binding { shownRate } set: { draft = $0 }, in: ReaderListener.rateRange, step: 0.1) {
+                Text("Playback speed")
+            } minimumValueLabel: {
+                Image(systemName: "tortoise.fill")
+                    .foregroundStyle(.secondary)
+            } maximumValueLabel: {
+                Image(systemName: "hare.fill")
+                    .foregroundStyle(.secondary)
+            } onEditingChanged: { editing in
+                isDragging = editing
+                if !editing {
+                    commit()
+                }
+            }
+            .labelsHidden()
+            .frame(width: 200)
+        }
+        .padding(16)
+        .onChange(of: draft) {
+            if !isDragging {
+                commit()
+            }
+        }
+    }
+
+    private func commit() {
+        guard let draft else { return }
+        listener.setRate(draft)
+        self.draft = nil
     }
 }
 

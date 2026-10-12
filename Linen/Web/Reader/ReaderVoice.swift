@@ -15,6 +15,10 @@ final class ReaderVoice: SpeechOutput {
         set { provider.isMuted = newValue }
     }
 
+    func setRate(_ rate: Float) {
+        provider.setRate(rate)
+    }
+
     var onSpeakingChange: ((Bool) -> Void)? {
         get { provider.onSpeakingChange }
         set { provider.onSpeakingChange = newValue }

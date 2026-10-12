@@ -19,6 +19,10 @@ final class OpenAISpeechOutput: SpeechOutput {
         self.playback = playback
     }
 
+    func setRate(_ rate: Float) {
+        playback.setRate(rate)
+    }
+
     func speak(_ text: String) {
         guard !isMuted, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard text.unicodeScalars.count + pending.reduce(0, { $0 + $1.unicodeScalars.count }) <= 100_000 else {
@@ -106,6 +110,7 @@ final class ProviderSpeechOutput: SpeechOutput {
     var isMuted = false {
         didSet { output.isMuted = isMuted }
     }
+    private var rate: Float = 1
     var onSpeakingChange: ((Bool) -> Void)?
 
     init(output: any SpeechOutput = AppleSpeechOutput()) {
@@ -119,12 +124,18 @@ final class ProviderSpeechOutput: SpeechOutput {
         output.stopSpeaking()
         output = next
         output.isMuted = isMuted
+        output.setRate(rate)
         let generation = generation
         output.onSpeakingChange = { [weak self] speaking in
             guard let self, self.generation == generation else { return }
             onSpeakingChange?(speaking)
         }
         onSpeakingChange?(false)
+    }
+
+    func setRate(_ rate: Float) {
+        self.rate = rate
+        output.setRate(rate)
     }
 
     func speak(_ text: String) {

@@ -4344,6 +4344,9 @@
     "Play Videos" : {
       "comment" : "Tool name in assistant settings: finding and playing a video."
     },
+    "Playback speed" : {
+      "comment" : "Tooltip and accessibility label of the speed button in the Reader listening controls, and of the slider in its popover. Sentence case."
+    },
     "Pop-up windows" : {
 
     },

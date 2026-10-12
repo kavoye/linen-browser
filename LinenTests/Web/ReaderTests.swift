@@ -499,6 +499,21 @@ struct ReaderTests {
         #expect(speech.spoken == ["Headline", "One.", "One."])
     }
 
+    @Test func theChosenSpeedReachesTheVoiceAndIsRemembered() {
+        let defaults = UserDefaults(suiteName: TestDefaults.name("ReaderTests"))!
+        let speech = ScriptedSpeech()
+        let listener = ReaderListener(output: speech, defaults: defaults)
+        #expect(listener.rate == 1)
+
+        listener.setRate(1.5)
+        #expect(speech.rate == 1.5)
+
+        let nextSpeech = ScriptedSpeech()
+        let next = ReaderListener(output: nextSpeech, defaults: defaults)
+        #expect(next.rate == 1.5)
+        #expect(nextSpeech.rate == 1.5)
+    }
+
     @Test func leavingTheReaderStopsListening() async {
         let speech = ScriptedSpeech()
         let listener = ReaderListener(output: speech)
@@ -586,8 +601,13 @@ struct ReaderTests {
 @MainActor
 private final class ScriptedSpeech: SpeechOutput {
     var isMuted = false
+    private(set) var rate: Float = 1
     var onSpeakingChange: ((Bool) -> Void)?
     private(set) var spoken: [String] = []
+
+    func setRate(_ rate: Float) {
+        self.rate = rate
+    }
 
     func speak(_ text: String) {
         spoken.append(text)
