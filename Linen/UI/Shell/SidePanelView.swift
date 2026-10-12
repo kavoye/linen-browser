@@ -164,6 +164,7 @@ private struct SidePanelHeader: View {
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var overflow = HeaderOverflow()
 
     private var expandHelp: LocalizedStringResource {
         panel.isExpanded ? "Collapse Side Panel" : "Expand Side Panel"
@@ -171,20 +172,40 @@ private struct SidePanelHeader: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            ForEach(panel.tabs) { tab in
-                SidePanelTabChip(
-                    tab: tab,
-                    isSelected: panel.selection == tab.id,
-                    mark: tab.kind == .activity ? coordinator.agentMark : nil,
-                    count: tab.kind == .github ? coordinator.github.notifications.count : 0,
-                    onSelect: { panel.select(tab.id) },
-                    onRemove: tab.kind.isRemovable ? { coordinator.setAdded(false, tab.kind) } : nil
-                )
+            ScrollView(.horizontal) {
+                HStack(spacing: 3) {
+                    ForEach(panel.tabs) { tab in
+                        SidePanelTabChip(
+                            tab: tab,
+                            isSelected: panel.selection == tab.id,
+                            mark: tab.kind == .activity ? coordinator.agentMark : nil,
+                            count: tab.kind == .github ? coordinator.github.notifications.count : 0,
+                            onSelect: { panel.select(tab.id) },
+                            onRemove: tab.kind.isRemovable ? { coordinator.setAdded(false, tab.kind) } : nil
+                        )
+                    }
+                }
+            }
+            .scrollIndicators(.never)
+            .onScrollGeometryChange(for: HeaderOverflow.self) { geometry in
+                let leading = geometry.contentOffset.x + geometry.contentInsets.leading
+                let trailing = geometry.contentSize.width - geometry.contentOffset.x
+                    - geometry.containerSize.width + geometry.contentInsets.trailing
+                return HeaderOverflow(leading: leading > 1, trailing: trailing > 1)
+            } action: { _, overflow in
+                self.overflow = overflow
+            }
+            .mask {
+                HStack(spacing: 0) {
+                    LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: overflow.leading ? 16 : 0)
+                    Rectangle()
+                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: overflow.trailing ? 16 : 0)
+                }
             }
 
             SidePanelAddMenu(coordinator: coordinator)
-
-            Spacer(minLength: 4)
 
             QuietIconButton(
                 symbol: panel.isExpanded
@@ -317,29 +338,16 @@ struct PanelNotice: View {
 private struct SidePanelAddMenu: View {
     let coordinator: AppCoordinator
 
-    @State private var hovering = false
     @State private var isPresented = false
 
     var body: some View {
-        Button {
+        QuietIconButton(symbol: "plus", isOn: isPresented, help: String(localized: "Add to Side Panel")) {
             isPresented.toggle()
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(hovering || isPresented ? .primary : .secondary)
-                .hoverLift(hovering)
-                .frame(width: 28, height: SidePanelMetrics.tabHeight)
-                .selectionBackground(isSelected: isPresented, isHovering: false, in: Capsule())
-                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
-        .fixedSize()
-        .onHover { hovering = $0 }
         .popover(isPresented: $isPresented, arrowEdge: .bottom) {
             SidePanelGallery(coordinator: coordinator) { isPresented = false }
                 .chromePopoverAppearance()
         }
-        .help(Text("Add to Side Panel"))
         .accessibilityLabel(Text("Add to Side Panel"))
     }
 }
@@ -423,6 +431,11 @@ private struct SidePanelGalleryRow: View {
             .frame(height: 34)
         }
     }
+}
+
+private struct HeaderOverflow: Equatable {
+    var leading = false
+    var trailing = false
 }
 
 private struct SidePanelTabChip: View {
