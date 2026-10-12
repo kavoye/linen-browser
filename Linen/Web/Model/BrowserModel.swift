@@ -55,6 +55,7 @@ final class BrowserModel {
         sessionRevision = Self.savedRevision(in: selectedDatabase, windowID: windowID)
     }
     let sidebarSelection = SidebarSelection()
+    let modelActivity = ModelActivity()
 
     var activeTabID: UUID? {
         didSet {

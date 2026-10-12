@@ -636,10 +636,12 @@ final class AppCoordinator {
             return
         }
         statusMessage = String(localized: "Looking for related tabs…")
-        Task { [weak self] in
-            let outcome = await TabOrganizer.propose(for: loose.map { ($0.id, $0.title) })
+        let titles = loose.map { ($0.id, $0.title) }
+        Task { [weak self, activity = browser.modelActivity] in
+            let outcome = await activity.perform { await TabOrganizer.propose(for: titles) }
             guard let self else { return }
             statusMessage = nil
+            guard let outcome else { return }
             let plan: TabOrganizer.Plan
             switch outcome {
             case .plan(let proposed):
@@ -728,6 +730,7 @@ final class AppCoordinator {
     func stopAgent() {
         endVoiceConversation()
         agentTurns.cancel()
+        browser.modelActivity.cancelAll()
         speech.stopSpeaking()
     }
 

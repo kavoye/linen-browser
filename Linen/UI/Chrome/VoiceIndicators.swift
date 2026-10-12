@@ -10,9 +10,13 @@ struct MicButton: View {
 
     @State private var hovering = false
 
+    private var glyphState: PipelineState {
+        coordinator.state == .idle && coordinator.browser.modelActivity.isRunning ? .executing : coordinator.state
+    }
+
     private var isAgentTurn: Bool {
         VoiceGlyph.showsAgentTurn(
-            state: coordinator.state,
+            state: glyphState,
             isSpeakingReply: coordinator.isSpeakingInChrome
         )
     }
@@ -39,7 +43,7 @@ struct MicButton: View {
             }
         } label: {
             VoiceGlyph(
-                state: coordinator.state,
+                state: glyphState,
                 isSpeakingReply: coordinator.isSpeakingInChrome,
                 isHighlighted: hovering,
                 orbSize: orbSize
