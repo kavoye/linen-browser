@@ -90,6 +90,23 @@ struct MainMenuKeyTests {
         ))
     }
 
+    @Test func shiftCommandDDuplicatesAndShiftCommandHReturnsToThePin() throws {
+        let coordinator = AppCoordinator()
+        let menu = MainMenu(coordinator: coordinator)
+        menu.install()
+        defer { NSApp.mainMenu = nil }
+        let root = try #require(NSApp.mainMenu)
+        let items = root.items.compactMap(\.submenu).flatMap(\.items)
+        let back = try #require(items.first { $0.title == String(localized: "Back to Pinned Page") })
+        coordinator.browser.newTab()
+        let count = coordinator.browser.tabs.count
+
+        #expect(pressed("D", modifiers: .command, in: root))
+        #expect(coordinator.browser.tabs.count == count + 1)
+        #expect(back.keyEquivalent == "H")
+        #expect(back.keyEquivalentModifierMask == [.command])
+    }
+
     /// A site that calls `preventDefault` on every keydown - hackertyper.com
     /// is the one people meet - reports ⌘R, ⌘T and ⌘K as handled, and the
     /// views are offered a key equivalent before the main menu.

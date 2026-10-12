@@ -324,6 +324,7 @@ enum CommandPaletteCatalog {
                     group: .tabs,
                     title: "Duplicate Tab",
                     symbol: "plus.square.on.square",
+                    shortcut: "⇧⌘D",
                     aliases: ["copy tab", "clone"],
                     isAvailable: context.hasActiveTab
                 ),
@@ -350,7 +351,7 @@ enum CommandPaletteCatalog {
                     group: .tabs,
                     title: "Back to Pinned Page",
                     symbol: "pin",
-                    shortcut: "⇧⌘D",
+                    shortcut: "⇧⌘H",
                     isAvailable: context.isAwayFromPin
                 ),
                 make(

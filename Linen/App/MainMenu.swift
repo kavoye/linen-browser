@@ -147,11 +147,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             modifiers: [.command, .shift]
         ))
         menu.addItem(.separator())
+        menu.addItem(command("Duplicate Tab", #selector(duplicateTab), key: "d", modifiers: [.command, .shift]))
         menu.addItem(command("Pin This Page", #selector(pinPage), key: "d"))
         menu.addItem(command(
             "Back to Pinned Page",
             #selector(returnToPin),
-            key: "d",
+            key: "h",
             modifiers: [.command, .shift]
         ))
         menu.addItem(.separator())
@@ -345,6 +346,11 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         coordinator.copyCurrentURL()
     }
 
+    @objc private func duplicateTab() {
+        guard let tab = coordinator.browser.activeTab else { return }
+        coordinator.browser.duplicate(tab)
+    }
+
     @objc private func pinPage() {
         coordinator.togglePin()
     }
@@ -508,7 +514,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         case #selector(zoomIn), #selector(zoomOut), #selector(openFind), #selector(findNext),
              #selector(findPrevious), #selector(printPage):
             return coordinator.pageCommandTab != nil
-        case #selector(closeTab):
+        case #selector(closeTab), #selector(duplicateTab):
             return coordinator.browser.activeTab != nil
         case #selector(stopLoading):
             return coordinator.pageCommandTab?.isLoading ?? false
