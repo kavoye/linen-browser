@@ -31,10 +31,6 @@ struct SettingsEntry: Identifiable, Hashable {
         String(localized: detail)
     }
 
-    var targetAnchor: String {
-        id == "appearance.transparency" ? "appearance.windowStyle" : id
-    }
-
     static func == (lhs: SettingsEntry, rhs: SettingsEntry) -> Bool {
         lhs.id == rhs.id
     }
@@ -361,20 +357,21 @@ extension EnvironmentValues {
 }
 
 extension View {
-    func settingsAnchor(_ anchor: String) -> some View {
-        modifier(SettingsAnchorModifier(anchor: anchor))
+    func settingsAnchor(_ anchor: String, standingInFor hidden: [String] = []) -> some View {
+        modifier(SettingsAnchorModifier(anchor: anchor, hidden: hidden))
     }
 }
 
 private struct SettingsAnchorModifier: ViewModifier {
     let anchor: String
+    let hidden: [String]
 
     @Environment(\.settingsHighlight) private var highlight
     @Environment(\.settingsCardInset) private var cardInset
     @Environment(\.colorScheme) private var colorScheme
 
     private var isLit: Bool {
-        highlight == anchor
+        highlight.map { $0 == anchor || hidden.contains($0) } ?? false
     }
 
     private static let gap: CGFloat = 4
@@ -385,6 +382,9 @@ private struct SettingsAnchorModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .background {
+                ForEach(hidden, id: \.self) { Color.clear.id($0) }
+            }
             .background(alignment: .center) {
                 if isInCard {
                     RoundedRectangle(cornerRadius: Theme.Radius.card - Self.gap, style: .continuous)

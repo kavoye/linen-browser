@@ -39,7 +39,7 @@ struct SearchSettings: View {
             DetailRow(title: "Search engine") {
                 SettingsMenu(options: engineOptions, selection: $settings.searchEngineID)
             }
-            .settingsAnchor("search.engine")
+            .settingsAnchor("search.engine", standingInFor: engine.isCustom ? [] : ["search.custom"])
 
             if engine.isCustom {
                 RowSeparator()
@@ -101,7 +101,7 @@ struct SearchSettings: View {
             ) {
                 SettingsToggle($settings.agentOnlyInput)
             }
-            .settingsAnchor("general.agentOnly")
+            .settingsAnchor("general.agentOnly", standingInFor: settings.agentOnlyInput ? ["search.suggestions"] : [])
         }
     }
 }

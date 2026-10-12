@@ -82,59 +82,54 @@ private struct WindowStyleSettingsSection: View {
     @Bindable var settings: BrowserSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: SettingsMetrics.headerGap) {
-            SettingsCard {
-                DetailRow(title: "Window style", layout: .stacked) {
-                    LoomStylePicker(
-                        selection: settings.loomStyle,
-                        usesWebsiteTint: settings.matchesWebsiteColor,
-                        tintsSelectedTab: settings.refractsTabColor
-                    ) {
-                        settings.loomStyle = $0
-                    }
-                }
-                .settingsAnchor("appearance.windowStyle")
-
-                RowSeparator()
-
-                DetailRow(
-                    title: "Website tint",
-                    caption: "Use the current website’s color in the toolbar and sidebar."
+        SettingsCard {
+            DetailRow(title: "Window style", layout: .stacked) {
+                LoomStylePicker(
+                    selection: settings.loomStyle,
+                    usesWebsiteTint: settings.matchesWebsiteColor,
+                    tintsSelectedTab: settings.refractsTabColor
                 ) {
-                    SettingsToggle($settings.matchesWebsiteColor)
-                }
-                .settingsAnchor("appearance.websiteTint")
-
-                RowSeparator()
-
-                DetailRow(
-                    title: "Tint selected tab",
-                    caption: "Color the selected tab using the website icon."
-                ) {
-                    SettingsToggle($settings.refractsTabColor)
-                }
-                .settingsAnchor("appearance.refraction")
-
-                if settings.loomStyle == .transparent {
-                    RowSeparator()
-
-                    DetailRow(
-                        title: "Transparency",
-                        caption: "Move left for more transparency or right for more contrast.",
-                        layout: .stacked
-                    ) {
-                        LoomTransparencyControl(opacity: $settings.transparency)
-                    }
-                    .settingsAnchor("appearance.transparency")
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    settings.loomStyle = $0
                 }
             }
+            .settingsAnchor(
+                "appearance.windowStyle",
+                standingInFor: settings.loomStyle == .transparent ? [] : ["appearance.transparency"]
+            )
 
-            Text("Choose Standard or Transparent.")
-                .font(Theme.Font.label)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 1)
+            RowSeparator()
+
+            DetailRow(
+                title: "Website tint",
+                caption: "Use the current website’s color in the toolbar and sidebar."
+            ) {
+                SettingsToggle($settings.matchesWebsiteColor)
+            }
+            .settingsAnchor("appearance.websiteTint")
+
+            RowSeparator()
+
+            DetailRow(
+                title: "Tint selected tab",
+                caption: "Color the selected tab using the website icon."
+            ) {
+                SettingsToggle($settings.refractsTabColor)
+            }
+            .settingsAnchor("appearance.refraction")
+
+            if settings.loomStyle == .transparent {
+                RowSeparator()
+
+                DetailRow(
+                    title: "Transparency",
+                    caption: "Move left for more transparency or right for more contrast.",
+                    layout: .stacked
+                ) {
+                    LoomTransparencyControl(opacity: $settings.transparency)
+                }
+                .settingsAnchor("appearance.transparency")
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .animation(Theme.Motion.settle, value: settings.loomStyle)
     }

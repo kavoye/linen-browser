@@ -102,7 +102,7 @@ private struct AssistantOverview: View {
 
             AddRow(title: "Add Provider…") { model.showPicker() }
         }
-        .settingsAnchor("provider.connected")
+        .settingsAnchor("provider.connected", standingInFor: model.anchorsMissingFromSelected)
         .padding(.top, 6)
 
         BehaviourSection(settings: coordinator.settings)
@@ -262,6 +262,17 @@ private struct ProviderPage: View {
         readiness.level != .ready
     }
 
+    private var anchorsModelReveals: [String] {
+        var hidden: [String] = []
+        if !model.supportsReasoningEffort {
+            hidden.append("provider.thinking")
+        }
+        if provider.adapter == .openAIResponses, !OpenAIModelSupport.verbosity(model.selectedModel) {
+            hidden.append("openai.replyLength")
+        }
+        return hidden
+    }
+
     private var endpoint: String? {
         guard let url = provider.baseURL else { return nil }
         let host = url.host() ?? url.absoluteString
@@ -300,7 +311,7 @@ private struct ProviderPage: View {
             }
 
             if !provider.isOnDevice {
-                ModelControl(model: model)
+                ModelControl(model: model, standingInFor: anchorsModelReveals)
 
                 if let window = model.detectedContextWindow(for: provider) {
                     RowSeparator()
@@ -633,6 +644,7 @@ private struct APIKeyEntry: View {
 
 private struct ModelControl: View {
     @Bindable var model: IntelligenceViewModel
+    var standingInFor: [String] = []
 
     @FocusState private var customFieldFocused: Bool
 
@@ -644,7 +656,7 @@ private struct ModelControl: View {
                     CatalogRefreshButton(model: model, help: "Check for new models")
                 }
             }
-            .settingsAnchor("provider.model")
+            .settingsAnchor("provider.model", standingInFor: standingInFor)
 
             if model.isEditingCustomModel {
                 RowSeparator()

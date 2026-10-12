@@ -21,6 +21,14 @@ struct VoiceSettings: View {
         canUseOpenAI && preferences.allowsConversation
     }
 
+    private var hiddenReadingAnchors: [String] {
+        if coordinator.readsWithOpenAI {
+            return []
+        }
+        let style = conversationIsOn ? [] : ["voice.speakingStyle"]
+        return ["voice.readingVoice", "voice.readingSpeed"] + style
+    }
+
     var body: some View {
         SettingsPageHeader(
             title: "Voice",
@@ -91,7 +99,7 @@ struct VoiceSettings: View {
                 onSelect: { preferences.reading = $0 }
             )
             .disabled(!canUseOpenAI)
-            .settingsAnchor("voice.reading")
+            .settingsAnchor("voice.reading", standingInFor: hiddenReadingAnchors)
 
             if coordinator.readsWithOpenAI {
                 RowSeparator()
@@ -132,7 +140,7 @@ struct VoiceSettings: View {
                 ))
                 .disabled(!canUseOpenAI)
             }
-            .settingsAnchor("voice.conversation")
+            .settingsAnchor("voice.conversation", standingInFor: conversationIsOn ? [] : ["voice.conversationVoice"])
 
             if conversationIsOn {
                 RowSeparator()

@@ -166,7 +166,7 @@ struct SettingsIndexParityTests {
         "profiles.launch",          // the picker row's caption names the current profile
         "extensions.installed",     // the extensions section renders its own header
         // No static caption on the page: the row is its own label.
-        "general.defaultBrowser",
+        "general.defaultBrowser", "appearance.windowStyle",
         "search.custom", "appearance.theme", "profiles.list", "profiles.current",
         "provider.model", "provider.connected", "provider.key", "provider.endpoint",
         "openai.replyLength", "voice.readingVoice", "voice.readingSpeed", "voice.conversationVoice",

@@ -83,8 +83,6 @@ struct SettingsSearchTests {
         #expect(SettingsIndex.search("API key").contains { $0.id == "provider.key" })
         #expect(SettingsIndex.search("endpoint").contains { $0.id == "provider.endpoint" })
         #expect(SettingsIndex.search("transparency").contains { $0.id == "appearance.transparency" })
-        #expect(SettingsIndex.all.first { $0.id == "appearance.transparency" }?.targetAnchor
-            == "appearance.windowStyle")
     }
 
     @Test func openAISettingsBehindProviderNavigationAreSearchable() {
