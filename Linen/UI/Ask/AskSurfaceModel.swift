@@ -16,12 +16,17 @@ final class AskSurfaceModel {
         didSet {
             if oldValue.text != interaction.text, !isPreviewingSelection {
                 suggestionPreview.clear()
-                suggestions.update(for: MentionText.stripped(interaction.text), settings: browser.context.settings)
+                if searchSite == nil {
+                    suggestions.update(for: MentionText.stripped(interaction.text), settings: browser.context.settings)
+                } else {
+                    suggestions.clear()
+                }
             }
         }
     }
     private(set) var isFocused = false
     private(set) var mentionedTabIDs: [UUID] = []
+    private(set) var searchSite: SearchEngine?
     private(set) var selectAllToken = 0
     private var isPreviewingSelection = false
     private var suggestionPreview = OmniboxSuggestionPreview()
@@ -52,7 +57,37 @@ final class AskSurfaceModel {
         Omnibox.isAgentOnly(settings: browser.context.settings)
     }
     var placeholder: String {
-        agentOnly ? Omnibox.agentOnlyPlaceholder : placement.placeholder
+        if let searchSite {
+            return String(localized: "Search \(searchSite.name)")
+        }
+        return agentOnly ? Omnibox.agentOnlyPlaceholder : placement.placeholder
+    }
+
+    var suggestedSite: SearchEngine? {
+        guard isFocused, searchSite == nil, mentionedTabIDs.isEmpty,
+              !placement.mirrorsPageURL || interaction.text != currentURL
+        else { return nil }
+        return SiteSearch.match(interaction.text, customEngine: browser.context.settings.searchEngine)
+    }
+
+    @discardableResult
+    func activateSiteSearch() -> Bool {
+        guard let site = suggestedSite else { return false }
+        searchSite = site
+        suggestionPreview.clear()
+        suggestions.clear()
+        interaction.text = ""
+        interaction.selection = 0
+        return true
+    }
+
+    @discardableResult
+    func removeSearchSite() -> Bool {
+        guard searchSite != nil else { return false }
+        searchSite = nil
+        suggestionPreview.clear()
+        interaction.selection = 0
+        return true
     }
     var restingText: String {
         placement.mirrorsPageURL ? currentURL : ""
@@ -119,6 +154,20 @@ final class AskSurfaceModel {
     func resultSections() -> [OmniboxSection] {
         if isFocused, !isListening, let sections = suggestionPreview.sections {
             return sections
+        }
+        if let searchSite {
+            let query = interaction.trimmedText
+            guard isFocused, !query.isEmpty, let url = searchSite.searchURL(for: query) else { return [] }
+            let item = OmniboxItem(
+                id: "site-search-\(searchSite.id)",
+                kind: .search,
+                title: query,
+                detail: String(localized: "Search \(searchSite.name)"),
+                iconHost: searchSite.host
+            ) { [weak self] in
+                self?.open(url)
+            }
+            return [OmniboxSection(id: "site-search", title: "", items: [item])]
         }
         return AskSurfaceResults.sections(
             placement: placement,
@@ -202,6 +251,10 @@ final class AskSurfaceModel {
     }
 
     func submit(in sections: [OmniboxSection]) {
+        if searchSite != nil {
+            run(at: interaction.selection, in: sections)
+            return
+        }
         switch interaction.submission(
             resultCount: sections.flattened.count,
             agentOnly: agentOnly,
@@ -223,6 +276,10 @@ final class AskSurfaceModel {
     }
 
     func askWhateverIsTyped() {
+        if searchSite != nil {
+            submit(in: resultSections())
+            return
+        }
         guard case .ask(let prompt) = interaction.commandSubmission() else { return }
         ask(prompt)
     }
@@ -325,6 +382,7 @@ final class AskSurfaceModel {
         guard isFocused != focused else { return }
         isFocused = focused
         if !focused {
+            searchSite = nil
             suggestionPreview.clear()
             suggestions.clear()
         }

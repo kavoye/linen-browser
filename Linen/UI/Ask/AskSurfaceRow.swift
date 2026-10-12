@@ -48,30 +48,47 @@ struct AskSurfaceRow: View {
                 .frame(width: placement.iconSlot, height: placement.rowHeight)
 
             ZStack(alignment: .leading) {
-                MentionField(
-                    text: $model.interaction.text,
-                    chips: model.mentionChips,
-                    placeholder: placeholder,
-                    fontSize: placement.textSize,
-                    isFocused: model.isFocused,
-                    selectAllToken: model.selectAllToken,
-                    accessibilityLabel: String(localized: placement.accessibilityLabel),
-                    onFocusChange: { model.fieldFocusDidChange($0) },
-                    onChipsChange: { model.mentionsDidChange($0) },
-                    onSubmit: { model.submit(in: sections) },
-                    onCommandSubmit: { model.askWhateverIsTyped() },
-                    onCancel: { model.cancelEditing() },
-                    onMove: { delta, bySection in
-                        if bySection {
-                            model.moveSection(by: delta, in: sections)
-                        } else {
-                            model.moveSelection(by: delta, in: sections)
+                HStack(spacing: 8) {
+                    if let searchSite = model.searchSite, restingContent == nil {
+                        SiteSearchChip(site: searchSite, fontSize: placement.textSize - 1) {
+                            model.removeSearchSite()
                         }
                     }
-                )
-                .opacity(restingContent == nil ? 1 : 0)
-                .allowsHitTesting(restingContent == nil)
-                .accessibilityValue(Text(verbatim: accessibilityValue))
+
+                    MentionField(
+                        text: $model.interaction.text,
+                        chips: model.mentionChips,
+                        placeholder: placeholder,
+                        fontSize: placement.textSize,
+                        isFocused: model.isFocused,
+                        selectAllToken: model.selectAllToken,
+                        accessibilityLabel: model.searchSite.map { String(localized: "Search \($0.name)") }
+                            ?? String(localized: placement.accessibilityLabel),
+                        onFocusChange: { model.fieldFocusDidChange($0) },
+                        onChipsChange: { model.mentionsDidChange($0) },
+                        onSubmit: { model.submit(in: sections) },
+                        onCommandSubmit: { model.askWhateverIsTyped() },
+                        onCancel: { model.cancelEditing() },
+                        onMove: { delta, bySection in
+                            if bySection {
+                                model.moveSection(by: delta, in: sections)
+                            } else {
+                                model.moveSelection(by: delta, in: sections)
+                            }
+                        },
+                        onTab: { model.activateSiteSearch() },
+                        onDeleteBackward: { model.removeSearchSite() }
+                    )
+                    .opacity(restingContent == nil ? 1 : 0)
+                    .allowsHitTesting(restingContent == nil)
+                    .accessibilityValue(Text(verbatim: accessibilityValue))
+
+                    if let site = model.suggestedSite, restingContent == nil {
+                        SearchScopeHint(title: String(localized: "Search \(site.name)")) {
+                            model.activateSiteSearch()
+                        }
+                    }
+                }
 
                 if let restingContent, !restingContent.isCentred || !centredLineFits {
                     AskRestingLine(

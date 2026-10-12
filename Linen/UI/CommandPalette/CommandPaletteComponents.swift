@@ -143,6 +143,7 @@ private nonisolated struct CommandPaletteClearGlyph: Shape {
 
 struct SiteSearchChip: View {
     let site: SearchEngine
+    var fontSize: CGFloat = 14
     let onRemove: () -> Void
 
     var body: some View {
@@ -151,10 +152,10 @@ struct SiteSearchChip: View {
         Button(action: onRemove) {
             Text(site.name)
                 .lineLimit(1)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: fontSize, weight: .semibold))
                 .foregroundStyle(appearance.foreground)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.horizontal, fontSize * 0.7)
+                .padding(.vertical, fontSize * 0.4)
                 .background(appearance.background, in: Capsule())
         }
         .buttonStyle(.plain)

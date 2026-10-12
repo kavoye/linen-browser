@@ -43,6 +43,59 @@ struct AskSurfaceModelTests {
         }
     }
 
+    @Test(arguments: [AskSurface.Placement.toolbar, .startPage])
+    func tabSearchesTheSuggestedSite(placement: AskSurface.Placement) throws {
+        try Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model(placement: placement)
+            model.fieldFocusDidChange(true)
+            model.interaction.text = "You"
+
+            #expect(model.suggestedSite?.id == "youtube")
+            #expect(model.activateSiteSearch())
+            #expect(model.searchSite?.id == "youtube")
+            #expect(model.interaction.text.isEmpty)
+            #expect(model.suggestedSite == nil)
+            #expect(model.resultSections().isEmpty)
+
+            model.interaction.text = "lofi"
+            let items = model.resultSections().flattened
+            #expect(items.count == 1)
+            let item = try #require(items.first)
+            #expect(item.id == "site-search-youtube")
+            #expect(item.detail == String(localized: "Search \("YouTube")"))
+
+            #expect(model.removeSearchSite())
+            #expect(model.searchSite == nil)
+            #expect(!model.removeSearchSite())
+        }
+    }
+
+    @Test func leavingTheFieldDropsTheSite() {
+        Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model()
+            model.fieldFocusDidChange(true)
+            model.interaction.text = "red"
+            #expect(model.activateSiteSearch())
+
+            model.cancelEditing()
+
+            #expect(model.searchSite == nil)
+        }
+    }
+
+    @Test func theCurrentAddressOffersNoSite() {
+        Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model()
+            let tab = model.browser.newTab()
+            tab.urlString = "https://www.youtube.com/"
+            model.focusFromAddressCommand()
+
+            #expect(model.interaction.text == tab.urlString)
+            #expect(model.suggestedSite == nil)
+            #expect(!model.activateSiteSearch())
+        }
+    }
+
     private func model(placement: AskSurface.Placement = .toolbar) -> AskSurfaceModel {
         let coordinator = AppCoordinator()
         return AskSurfaceModel(
