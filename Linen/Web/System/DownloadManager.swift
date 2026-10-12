@@ -397,7 +397,7 @@ final class DownloadManager: NSObject {
 
     func open(_ item: Item) {
         guard let destination = item.destination, item.state == .finished else { return }
-        NSWorkspace.shared.open(destination)
+        NSWorkspace.shared.open(destination, configuration: NSWorkspace.OpenConfiguration())
     }
 
     // MARK: - Bookkeeping
