@@ -184,6 +184,7 @@ struct CommandPaletteRankingTests {
             historyCount: 5,
             tabCount: 8,
             hasActiveTab: true,
+            canReload: true,
             canGoBack: true,
             canGoForward: true,
             isLoading: true,
@@ -248,7 +249,18 @@ struct CommandPaletteRankingTests {
         )
     }
 
+    @Test func aSystemPageOffersNoReload() {
+        let commands = CommandPaletteCatalog.commands(
+            context: CommandPaletteContext(tabCount: 1, hasActiveTab: true, canReload: false),
+            perform: { _ in }
+        )
+        let ids = Set(commands.map(\.id))
+
+        #expect(!ids.contains("action-reload"))
+        #expect(!ids.contains("action-hardReload"))
+    }
+
     private func fixtureContext() -> CommandPaletteContext {
-        CommandPaletteContext(historyCount: 12, tabCount: 4, hasActiveTab: true)
+        CommandPaletteContext(historyCount: 12, tabCount: 4, hasActiveTab: true, canReload: true)
     }
 }

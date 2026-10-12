@@ -503,8 +503,9 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         case #selector(restartPage):
             guard let tab = coordinator.pageCommandTab else { return false }
             return tab.extensionBaseURL == nil
-        case #selector(reload), #selector(hardReload),
-             #selector(zoomIn), #selector(zoomOut), #selector(openFind), #selector(findNext),
+        case #selector(reload), #selector(hardReload):
+            return coordinator.pageCommandTab?.canReload ?? false
+        case #selector(zoomIn), #selector(zoomOut), #selector(openFind), #selector(findNext),
              #selector(findPrevious), #selector(printPage):
             return coordinator.pageCommandTab != nil
         case #selector(closeTab):

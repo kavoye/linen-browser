@@ -15,6 +15,10 @@ extension BrowserTab {
         return webView.backForwardList.backList
     }
 
+    var canReload: Bool {
+        !urlString.isEmpty && !isShowingSystemPage
+    }
+
     func goBack() {
         webView.stopLoading()
         webView.goBack()

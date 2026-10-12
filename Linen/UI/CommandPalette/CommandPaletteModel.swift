@@ -646,6 +646,7 @@ final class CommandPaletteModel {
             historyCount: browser.history.count,
             tabCount: browser.tabs.count,
             hasActiveTab: tab != nil,
+            canReload: page?.canReload ?? false,
             canGoBack: page?.canGoBack ?? false,
             canGoForward: page?.canGoForward ?? false,
             isLoading: page?.isLoading ?? false,

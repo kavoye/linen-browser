@@ -151,7 +151,7 @@ struct ContentNavBar: View {
             }
             ToolbarButton(
                 symbol: (browser.activeTab?.isLoading ?? false) ? "xmark" : "arrow.clockwise",
-                enabled: !(browser.activeTab?.urlString.isEmpty ?? true),
+                enabled: browser.activeTab.map { $0.isLoading || $0.canReload } ?? false,
                 help: String(localized: reloadHelp),
                 heldMenu: {
                     guard let tab = browser.activeTab else { return nil }

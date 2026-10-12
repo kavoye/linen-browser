@@ -9,6 +9,7 @@ struct CommandPaletteContext {
     var historyCount = 0
     var tabCount = 0
     var hasActiveTab = false
+    var canReload = false
     var canGoBack = false
     var canGoForward = false
     var isLoading = false
@@ -408,7 +409,7 @@ enum CommandPaletteCatalog {
                     symbol: "arrow.clockwise",
                     shortcut: "⌘R",
                     aliases: ["refresh"],
-                    isAvailable: context.hasActiveTab
+                    isAvailable: context.canReload
                 ),
                 make(
                     .hardReload,
@@ -418,7 +419,7 @@ enum CommandPaletteCatalog {
                     symbol: "arrow.2.circlepath",
                     shortcut: "⇧⌘R",
                     aliases: ["hard refresh", "empty cache"],
-                    isAvailable: context.hasActiveTab
+                    isAvailable: context.canReload
                 ),
                 make(
                     .stopLoading,
