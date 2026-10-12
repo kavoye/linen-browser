@@ -5,6 +5,16 @@ import AppKit
 import SwiftUI
 
 enum ChromeInk {
+    static func tint(_ color: Color = Theme.systemAccent, onLight: Bool) -> Color {
+        onLight ? color.deepened(by: 0.28) : color
+    }
+
+    static func label(on fill: Color) -> Color {
+        guard let rgb = NSColor(fill).usingColorSpace(.sRGB) else { return .white }
+        let luminance = 0.2126 * rgb.redComponent + 0.7152 * rgb.greenComponent + 0.0722 * rgb.blueComponent
+        return luminance > 0.55 ? .black.opacity(0.85) : .white
+    }
+
     static let lightSelectionFillOpacity = 0.17
     static let darkSelectionFillOpacity = 0.22
 
@@ -266,7 +276,7 @@ struct ChromeIcon: View {
 
     private var style: AnyShapeStyle {
         if let tint {
-            return AnyShapeStyle(chromeIsLight ? tint.deepened(by: 0.28) : tint)
+            return AnyShapeStyle(ChromeInk.tint(tint, onLight: chromeIsLight))
         }
         return ChromeInk.glyph(
             onLight: chromeIsLight,

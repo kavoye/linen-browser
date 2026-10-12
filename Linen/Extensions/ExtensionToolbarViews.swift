@@ -233,6 +233,7 @@ struct ExtensionActionButton: View {
     let isLifted: Bool
 
     @State private var hovering = false
+    @Environment(\.chromeIsLight) private var chromeIsLight
 
     private var action: WKWebExtension.Action? {
         _ = manager.actionRevision
@@ -249,12 +250,13 @@ struct ExtensionActionButton: View {
             .frame(width: 30, height: 28)
             .overlay(alignment: .bottomTrailing) {
                 if !badge.isEmpty {
+                    let fill = ChromeInk.tint(onLight: chromeIsLight)
                     Text(verbatim: badge)
                         .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(ChromeInk.label(on: fill))
                         .padding(.horizontal, 3)
-                        .padding(.vertical, 1)
-                        .background(Theme.accent, in: Capsule())
+                        .frame(minWidth: 12, minHeight: 12)
+                        .background(fill, in: Capsule())
                         .padding(.trailing, 1)
                 }
             }
@@ -323,7 +325,7 @@ struct ExtensionOverflowButton: View {
         if collapsedCount > 0 {
             dot(Theme.warning)
         } else if hasBadge {
-            dot(Theme.accent)
+            dot(ChromeInk.tint(onLight: chromeIsLight))
         }
     }
 

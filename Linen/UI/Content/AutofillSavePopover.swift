@@ -25,7 +25,7 @@ private struct TabAutofillSaveBadge: View {
         @Bindable var session = session
         Group {
             if let offer = session.current {
-                ChromeIcon(symbol: offer.symbol, weight: .semibold, tint: Theme.accent,
+                ChromeIcon(symbol: offer.symbol, weight: .semibold, tint: Theme.systemAccent,
                            help: String(localized: offer.title)) {
                     session.isPopoverPresented.toggle()
                 }

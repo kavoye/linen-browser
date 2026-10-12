@@ -29,7 +29,7 @@ private struct TabPermissionBadge: View {
             case .hidden:
                 EmptyView()
             case .asking(let permission):
-                icon(permission.symbol, tint: Theme.accent, help: askingHelp(for: permission))
+                icon(permission.symbol, tint: Theme.systemAccent, help: askingHelp(for: permission))
                     .symbolEffect(.pulse)
             case .live(let permission):
                 icon(permission.symbol, tint: permission.liveTint, help: liveHelp(for: permission))

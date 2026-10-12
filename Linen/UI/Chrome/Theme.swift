@@ -20,7 +20,13 @@ enum Theme {
         light: NSColor(red: 0.91, green: 0.91, blue: 0.93, alpha: 1)
     )
 
-    static let accent = Color.blue
+    static let accent = Color(nsColor: NSColor(name: nil) { appearance in
+        let accent = NSColor.controlAccentColor
+        guard appearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua,
+              let deeper = accent.usingColorSpace(.sRGB)?.blended(withFraction: 0.28, of: .black)
+        else { return accent }
+        return deeper
+    })
     static let metaInk = Color.primary.opacity(0.5)
     static let thinkingMax = adaptive(
         dark: NSColor(red: 0.77, green: 0.64, blue: 1.00, alpha: 1),

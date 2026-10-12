@@ -45,7 +45,7 @@ private struct TranslationMenu: View {
         guard translation.isActive else {
             return ChromeInk.glyph(onLight: chromeIsLight, hovering: hovering)
         }
-        return AnyShapeStyle(chromeIsLight ? Theme.systemAccent.deepened(by: 0.28) : Theme.systemAccent)
+        return AnyShapeStyle(ChromeInk.tint(onLight: chromeIsLight))
     }
 
     private func isShowing(_ language: Locale.Language) -> Bool {
