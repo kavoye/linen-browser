@@ -22,8 +22,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await application.bootstrap()
             #if DEBUG
             if let coordinator = application.activeCoordinator {
-                AnimationProbe.runIfRequested(coordinator: coordinator)
-                AnimationProbe.runSplitProbeIfRequested(coordinator: coordinator)
                 StageRun.startIfRequested(coordinator: coordinator)
             }
             #endif
