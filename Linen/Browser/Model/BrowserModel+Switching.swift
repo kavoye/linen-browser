@@ -42,10 +42,12 @@ extension BrowserModel {
 
     func switchTab(forward: Bool) {
         guard tabs.count > 1 else { return }
-        if !isSwitchingTabs {
-            switcherRecency = recentlyActive
-            activeTab?.refreshPreview()
-        }
+        beginTabSwitching()
+        moveSwitcherSelection(forward: forward)
+    }
+
+    private func moveSwitcherSelection(forward: Bool) {
+        guard isSwitchingTabs else { return }
         let order = switcherTabs
         let current = order.firstIndex { $0.id == switcherSelection } ?? 0
         let next = (current + (forward ? 1 : -1) + order.count) % order.count
@@ -70,5 +72,22 @@ extension BrowserModel {
     func cancelTabSwitching() {
         switcherRecency = nil
         switcherSelection = nil
+    }
+
+    func switcherTabClosed(at index: Int) {
+        let order = switcherTabs
+        guard !order.isEmpty else {
+            cancelTabSwitching()
+            return
+        }
+        if switcherSelection.flatMap({ tabsByID[$0] }) == nil {
+            switcherSelection = order[min(index, order.count - 1)].id
+        }
+    }
+
+    private func beginTabSwitching() {
+        guard !isSwitchingTabs else { return }
+        switcherRecency = recentlyActive
+        activeTab?.refreshPreview()
     }
 }

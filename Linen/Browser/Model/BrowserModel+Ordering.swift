@@ -142,12 +142,6 @@ extension BrowserModel {
         splits.others(of: tab.id).compactMap { tabsByID[$0] }
     }
 
-    func splitFollowers(of tab: BrowserTab) -> [BrowserTab]? {
-        guard let split = splits.splitLed(by: tab.id) else { return nil }
-        let resolved = split.tabs.dropFirst().compactMap { tabsByID[$0] }
-        return resolved.count == split.count - 1 ? resolved : nil
-    }
-
     var hiddenSidebarTabIDs: Set<UUID> {
         splits.followerTabs
     }
@@ -245,6 +239,7 @@ extension BrowserModel {
 
     func close(_ tab: BrowserTab, recordForReopening: Bool = true) {
         guard !tab.isClosed, tabs.contains(where: { $0 === tab }) else { return }
+        let switcherIndex = switcherTabs.firstIndex { $0 === tab }
         if tab.isMaterialised {
             AutofillSuggestions.shared.dismiss(in: tab.webView)
         }
@@ -272,6 +267,9 @@ extension BrowserModel {
         sidebarDidChange()
         lastVisitID[tab.id] = nil
         recentlyActive.removeAll { $0 == tab.id }
+        if let switcherIndex {
+            switcherTabClosed(at: switcherIndex)
+        }
         onTabClosed?(tab)
         scheduleSave()
 
@@ -299,12 +297,6 @@ extension BrowserModel {
     func closeOthers(_ kept: BrowserTab) {
         for tab in tabs.reversed() where tab !== kept {
             close(tab)
-        }
-    }
-
-    func closeActiveTab() {
-        if let activeTab {
-            close(activeTab)
         }
     }
 

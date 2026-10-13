@@ -189,14 +189,91 @@ struct TabSwitcherTests {
 
     // MARK: - Which cards fit
 
-    @Test func everyCardShowsWhenThereIsRoom() {
-        #expect(TabSwitcherOverlay.window(count: 4, selected: 3, fitting: 7) == 0..<4)
+    @Test func aShortRowIsOnlyAsWideAsItsCards() {
+        let three = TabSwitcherOverlay.rowWidth(count: 3, available: 5000)
+        let four = TabSwitcherOverlay.rowWidth(count: 4, available: 5000)
+        #expect(four > three)
     }
 
-    @Test func theSelectionStaysNearTheMiddleOfALongRow() {
-        #expect(TabSwitcherOverlay.window(count: 12, selected: 0, fitting: 5) == 0..<5)
-        #expect(TabSwitcherOverlay.window(count: 12, selected: 6, fitting: 5) == 4..<9)
-        #expect(TabSwitcherOverlay.window(count: 12, selected: 11, fitting: 5) == 7..<12)
+    @Test func aLongRowStopsAtSevenCards() {
+        let seven = TabSwitcherOverlay.rowWidth(count: 7, available: 5000)
+        #expect(TabSwitcherOverlay.rowWidth(count: 30, available: 5000) == seven)
+    }
+
+    @Test func aRowNeverOverflowsTheWindow() {
+        #expect(TabSwitcherOverlay.rowWidth(count: 30, available: 800) == CGFloat(800 - 48))
+    }
+
+    @Test func aVisibleCardDoesNotMoveTheRow() {
+        #expect(TabSwitcherOverlay.offset(revealing: 1, from: 0, viewport: 1000) == nil)
+    }
+
+    @Test func aCardPastTheTrailingEdgeKeepsTheRowMargin() {
+        let viewport = TabSwitcherOverlay.rowWidth(count: 3, available: 5000)
+        let target = TabSwitcherOverlay.offset(revealing: 3, from: 0, viewport: viewport)
+        let fourth = TabSwitcherOverlay.rowWidth(count: 4, available: 5000)
+        #expect(target == fourth - viewport)
+    }
+
+    @Test func aCardPastTheLeadingEdgeKeepsTheRowMargin() {
+        let step = TabSwitcherOverlay.rowWidth(count: 2, available: 5000)
+            - TabSwitcherOverlay.rowWidth(count: 1, available: 5000)
+        #expect(TabSwitcherOverlay.offset(revealing: 2, from: 3 * step, viewport: 1000) == 2 * step)
+    }
+
+    // MARK: - Closing from the switcher
+
+    @Test func closingTheSelectedCardSelectsTheOneThatTakesItsPlace() {
+        let model = makeModel()
+        _ = model.newTab()
+        _ = model.newTab()
+        _ = model.newTab()
+
+        model.switchTab(forward: true)
+        let order = model.switcherTabs
+        let closed = order[1]
+        model.close(closed)
+
+        #expect(model.isSwitchingTabs)
+        #expect(model.switcherSelection == order[2].id)
+    }
+
+    @Test func closingAnotherCardKeepsTheSelection() {
+        let model = makeModel()
+        _ = model.newTab()
+        _ = model.newTab()
+        _ = model.newTab()
+
+        model.switchTab(forward: true)
+        let selected = model.switcherSelection
+        model.close(model.switcherTabs[2])
+
+        #expect(model.switcherSelection == selected)
+    }
+
+    @Test func closingEveryTabClosesTheSwitcher() {
+        let model = makeModel()
+        let first = model.newTab()
+        let second = model.newTab()
+
+        model.switchTab(forward: true)
+        model.close(first)
+        model.close(second)
+
+        #expect(!model.isSwitchingTabs)
+    }
+
+    @Test func aClickOnACardGoesToThatTab() {
+        let model = makeModel()
+        let chosen = model.newTab()
+        _ = model.newTab()
+        _ = model.newTab()
+
+        model.switchTab(forward: true)
+        model.endTabSwitching(choosing: chosen.id)
+
+        #expect(model.activeTab === chosen)
+        #expect(!model.isSwitchingTabs)
     }
 
     // MARK: - Shift steps back
