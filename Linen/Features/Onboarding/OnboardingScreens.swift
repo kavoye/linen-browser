@@ -16,7 +16,7 @@ extension OnboardingUI {
                     VStack(spacing: 0) {
                         Heading(
                             title: "Welcome to Linen",
-                            caption: "A browser with a built-in assistant."
+                            caption: "Browse the web and ask about any page."
                         )
                         .introReveal(revealed, delay: 0)
 
@@ -35,47 +35,37 @@ extension OnboardingUI {
         }
     }
 
-    struct ModelScreen: View {
+    struct StyleScreen: View {
         let coordinator: AppCoordinator
         let model: OnboardingModel
         let clock: ShimmerClock
 
         var body: some View {
-            Screen {
+            Screen(usesStage: true) {
                 Heading(
-                    title: "Choose a model",
+                    title: "Choose a layout",
                     caption: "You can change this later in Settings."
                 )
 
-                HStack(alignment: .top, spacing: 14) {
-                    ModelChoiceCard(
-                        tag: "On Device",
-                        title: "Apple Intelligence",
-                        caption: "Private, offline, and no API key. Best for short answers.",
-                        isSelected: model.modelChoice == .onDevice
+                VStack(spacing: 10) {
+                    ChoiceCard(
+                        title: "Standard",
+                        caption: "A sidebar for tabs and a toolbar above the page.",
+                        isSelected: !isMinimal
                     ) {
-                        model.modelChoice = .onDevice
+                        model.prefersMinimal = false
                     }
 
-                    ModelChoiceCard(
-                        tag: "API key required",
-                        title: "Remote model",
-                        caption: "Best for longer, complex tasks. Your key stays in your Keychain.",
-                        isSelected: model.modelChoice == .remote
+                    ChoiceCard(
+                        title: "Minimal",
+                        caption: "The page fills the window, with a floating bar.",
+                        isSelected: isMinimal
                     ) {
-                        model.modelChoice = .remote
+                        model.prefersMinimal = true
                     }
                 }
                 .frame(width: OnboardingUI.columnWidth)
                 .padding(.top, 24)
-
-                Text(AIDisclosure.onboardingCaption)
-                    .font(Theme.Font.secondary)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(width: OnboardingUI.columnWidth)
-                    .padding(.top, 16)
 
                 Actions(
                     primary: "Continue",
@@ -87,6 +77,10 @@ extension OnboardingUI {
                 )
             }
         }
+
+        private var isMinimal: Bool {
+            model.prefersMinimal ?? coordinator.settings.isMinimal
+        }
     }
 
     struct ExtensionsScreen: View {
@@ -95,10 +89,10 @@ extension OnboardingUI {
         let clock: ShimmerClock
 
         var body: some View {
-            Screen {
+            Screen(usesStage: true) {
                 Heading(
                     title: "Add extensions",
-                    caption: "Add extensions from the Chrome Web Store or Firefox Add-ons."
+                    caption: "Linen supports extensions from the Chrome Web Store and Firefox Add-ons."
                 )
 
                 SettingsCard {
@@ -132,16 +126,16 @@ extension OnboardingUI {
         let clock: ShimmerClock
 
         var body: some View {
-            Screen {
+            Screen(usesStage: true) {
                 Heading(
                     title: "Import your bookmarks",
-                    caption: "Import bookmarks from another browser, and open links from other apps in Linen."
+                    caption: "Bring bookmarks from another browser, and make Linen your default."
                 )
 
                 SettingsCard {
                     BookmarkImportRow(
                         browser: coordinator.browser,
-                        caption: "An HTML file from another browser.",
+                        caption: "Choose an exported HTML file.",
                         actionWidth: OnboardingUI.actionWidth
                     )
 
@@ -186,6 +180,7 @@ extension OnboardingUI {
         let coordinator: AppCoordinator
         let model: OnboardingModel
 
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
         @State private var revealed = false
 
         var body: some View {
@@ -194,16 +189,26 @@ extension OnboardingUI {
                     .padding(.bottom, 24)
                     .introReveal(revealed, delay: 0)
 
-                Heading(title: "You’re set", caption: "Start with these shortcuts.")
+                Heading(title: "You’re all set", caption: "Here are a few shortcuts to get you started.")
                     .introReveal(revealed, delay: 0.08)
 
                 FirstMoves()
-                    .padding(.top, 26)
+                    .padding(.top, 28)
                     .introReveal(revealed, delay: 0.16)
+
+                Text(AIDisclosure.onboardingCaption)
+                    .font(Theme.Font.secondary)
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 420)
+                    .padding(.top, 24)
+                    .introReveal(revealed, delay: 0.2)
 
                 Actions(
                     primary: "Start Browsing",
-                    primaryAction: { OnboardingUI.finish(model: model, coordinator: coordinator) },
+                    primaryAction: {
+                        OnboardingUI.handOff(model: model, coordinator: coordinator, reduceMotion: reduceMotion)
+                    },
                     secondary: "Back",
                     secondaryAction: { OnboardingUI.back(model: model) }
                 )
@@ -234,7 +239,7 @@ extension OnboardingUI {
             .init(
                 id: "peek",
                 symbol: "rectangle.on.rectangle",
-                text: "Hold Shift and click a link to open a preview."
+                text: "Shift-click a link to preview it."
             ),
         ]
 
@@ -312,19 +317,34 @@ extension OnboardingUI {
 
 extension OnboardingUI {
     struct Screen<Content: View>: View {
+        let usesStage: Bool
         let content: Content
 
-        init(@ViewBuilder content: () -> Content) {
+        @Environment(\.onboardingColumnX) private var columnX
+
+        init(usesStage: Bool = false, @ViewBuilder content: () -> Content) {
+            self.usesStage = usesStage
             self.content = content()
         }
 
         var body: some View {
-            VStack(spacing: 0) {
-                content
+            if usesStage, let columnX {
+                VStack(alignment: .leading, spacing: 0) {
+                    content
+                }
+                .frame(width: OnboardingUI.columnWidth, alignment: .leading)
+                .padding(.leading, columnX)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .multilineTextAlignment(.leading)
+                .environment(\.onboardingLeads, true)
+            } else {
+                VStack(spacing: 0) {
+                    content
+                }
+                .multilineTextAlignment(.center)
+                .padding(40)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .multilineTextAlignment(.center)
-            .padding(40)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -332,15 +352,17 @@ extension OnboardingUI {
         let title: LocalizedStringKey
         let caption: LocalizedStringKey
 
+        @Environment(\.onboardingLeads) private var leads
+
         var body: some View {
-            VStack(spacing: 8) {
+            VStack(alignment: leads ? .leading : .center, spacing: 10) {
                 Text(title)
-                    .font(.system(size: 26, weight: .semibold))
+                    .font(.system(size: 30, weight: .bold))
 
                 Text(caption)
-                    .font(Theme.Font.row)
+                    .font(.system(size: 14))
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: OnboardingUI.columnWidth)
+                    .frame(maxWidth: OnboardingUI.columnWidth, alignment: leads ? .leading : .center)
             }
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -353,18 +375,24 @@ extension OnboardingUI {
         var secondaryAction: (() -> Void)?
 
         var body: some View {
-            HStack(spacing: 10) {
-                Button(primary, action: primaryAction)
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
-
+            HStack(spacing: 12) {
                 if let secondary, let secondaryAction {
-                    Button(secondary, action: secondaryAction)
-                        .buttonStyle(.bordered)
+                    Button(action: secondaryAction) {
+                        Text(secondary)
+                            .frame(minWidth: 72)
+                    }
+                    .buttonStyle(.bordered)
                 }
+
+                Button(action: primaryAction) {
+                    Text(primary)
+                        .frame(minWidth: 112)
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
-            .controlSize(.large)
-            .padding(.top, 24)
+            .controlSize(.extraLarge)
+            .padding(.top, 32)
         }
     }
 
@@ -380,8 +408,7 @@ extension OnboardingUI {
         }
     }
 
-    struct ModelChoiceCard: View {
-        let tag: LocalizedStringResource
+    struct ChoiceCard: View {
         let title: LocalizedStringResource
         let caption: LocalizedStringResource
         let isSelected: Bool
@@ -392,11 +419,10 @@ extension OnboardingUI {
         var body: some View {
             Button(action: select) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Tag(tag)
 
                     HStack(spacing: 6) {
                         Text(title)
-                            .font(.system(size: 12.5, weight: isSelected ? .semibold : .medium))
+                            .font(.system(size: 14, weight: .semibold))
 
                         Spacer(minLength: 0)
 
@@ -407,7 +433,7 @@ extension OnboardingUI {
                     }
 
                     Text(caption)
-                        .font(Theme.Font.secondary)
+                        .font(.system(size: 12.5))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

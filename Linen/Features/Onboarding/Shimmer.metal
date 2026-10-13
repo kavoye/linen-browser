@@ -27,6 +27,14 @@ constant float kPointerPull = 0.65;
 
 constant float kShineBoost = 0.3;
 
+constant float kThreadPitch = 4.0;
+constant float kThreadHalfWidth = 0.4;
+constant float kUnderThread = 0.45;
+constant float kWeaveRelief = 0.22;
+constant float kWeaveRest = 0.55;
+constant float kSheenFloor = 0.45;
+constant float kSheenGain = 0.9;
+
 constant float kGrainSize = 180.0;
 constant float2 kNoiseHashScale = float2(127.1, 311.7);
 constant float kNoiseHashOffset = 43758.5;
@@ -68,6 +76,20 @@ inline float3 stripeState(
     float introCenter = mix(kIntroStartCenter, kIntroIdleCenter, reveal);
 
     return float3(mix(introCenter, idleCenter, idleBlend), reveal, idleBlend);
+}
+
+inline float threadProfile(float across) {
+    float distance = abs(across) / kThreadHalfWidth;
+    return distance < 1.0 ? sqrt(1.0 - distance * distance) : 0.0;
+}
+
+inline float weave(float2 position) {
+    float2 cell = floor(position / kThreadPitch);
+    float2 local = fract(position / kThreadPitch) - 0.5;
+    bool warpOnTop = fmod(abs(cell.x + cell.y), 2.0) < 1.0;
+    float warp = threadProfile(local.x) * (1.0 - 2.0 * local.y * local.y);
+    float weft = threadProfile(local.y) * (1.0 - 2.0 * local.x * local.x);
+    return warpOnTop ? max(warp, weft * kUnderThread) : max(weft, warp * kUnderThread);
 }
 
 inline float highlightAmount(float position, float bandStart, float center, float bandEnd) {
@@ -125,7 +147,11 @@ using namespace linen;
 
     float amount = linen::highlightAmount(gradientPosition, bandStart, center, bandEnd);
     float strength = clamp01(reveal * (1.0 + intro.y * linen::kShineBoost));
-    float3 color = startColor + highlightDelta * amount * strength;
+    float woven = linen::weave(position);
+    float sheen = amount * strength * (linen::kSheenFloor + linen::kSheenGain * woven);
+    float lift = dot(highlightDelta, float3(1.0)) < 0.0 ? -1.0 : 1.0;
+    float relief = lift * linen::kWeaveRelief * reveal * (woven - linen::kWeaveRest);
+    float3 color = startColor + highlightDelta * (sheen + relief);
 
     float2 grainPosition = floor(fmod(position, linen::kGrainSize));
     float luminance = grain.z + (linen::hashNoise(grainPosition) - 0.5) * grain.w;

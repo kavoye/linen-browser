@@ -6,6 +6,7 @@ import SwiftUI
 
 private nonisolated let introSpace = "onboarding.intro"
 private let heroMarkSize: CGFloat = 168
+private let iconTileFraction: CGFloat = 824.0 / 1024.0
 private let settledMarkSize: CGFloat = 104
 
 extension OnboardingUI {
@@ -29,6 +30,7 @@ extension OnboardingUI {
         @State private var phase: IntroPhase = .hidden
         @State private var revealsCopy = false
         @State private var arc: CGFloat = 0
+        @State private var weaveStart: Date?
         @State private var bounds: CGSize = .zero
         @State private var slotCenterY: CGFloat = 0
 
@@ -47,12 +49,17 @@ extension OnboardingUI {
                     content(revealsCopy)
                 }
 
+                if let weaveStart {
+                    Weave(start: weaveStart, landing: heroMarkSize * iconTileFraction)
+                        .position(x: bounds.width / 2, y: bounds.height / 2)
+                }
+
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
                     .interpolation(.high)
                     .frame(width: markSize, height: markSize)
                     .position(x: bounds.width / 2, y: markCenterY)
-                    .offset(y: rise + arc)
+                    .offset(y: arc)
                     .blur(radius: phase == .hidden ? 10 : 0)
                     .opacity(isPlaced ? 1 : 0)
                     .accessibilityHidden(true)
@@ -79,10 +86,6 @@ extension OnboardingUI {
             phase != .hidden && bounds != .zero && slotCenterY != 0
         }
 
-        private var rise: CGFloat {
-            phase == .hidden ? 360 : 0
-        }
-
         private func play() async {
             guard !model.hasPlayedIntro, !reduceMotion else {
                 phase = .settled
@@ -91,12 +94,21 @@ extension OnboardingUI {
             }
             model.markIntroPlayed()
 
-            try? await Task.sleep(for: .milliseconds(700))
-            withAnimation(.timingCurve(0.16, 1, 0.3, 1, duration: 1.7)) {
+            let deadline = Date().addingTimeInterval(1.5)
+            while !model.isWindowReady, Date() < deadline {
+                try? await Task.sleep(for: .milliseconds(16))
+            }
+            weaveStart = Date()
+
+            try? await Task.sleep(for: .seconds(Weave.iconCue))
+            withAnimation(.easeOut(duration: 0.4)) {
                 phase = .hero
             }
 
-            try? await Task.sleep(for: .milliseconds(1600))
+            try? await Task.sleep(for: .seconds(Weave.duration - Weave.iconCue))
+            weaveStart = nil
+
+            try? await Task.sleep(for: .milliseconds(120))
             withAnimation(.timingCurve(0.32, 1, 0.4, 1, duration: 0.72)) {
                 phase = .settled
             }
@@ -109,7 +121,6 @@ extension OnboardingUI {
                 arc = 0
             }
 
-            try? await Task.sleep(for: .milliseconds(120))
             revealsCopy = true
         }
     }

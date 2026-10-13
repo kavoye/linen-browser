@@ -18,7 +18,7 @@ struct OnboardingModelTests {
         #expect(model.step == .welcome)
 
         model.advance()
-        #expect(model.step == .model)
+        #expect(model.step == .style)
         model.advance()
         #expect(model.step == .extensions)
         model.advance()
@@ -50,6 +50,7 @@ struct OnboardingModelTests {
         model.back()
         #expect(model.step == .extensions)
         model.back()
+        #expect(model.step == .style)
         model.back()
         #expect(model.step == .welcome)
 
@@ -84,6 +85,40 @@ struct OnboardingModelTests {
         model.beginIfNeeded()
 
         #expect(model.step == .welcome)
+    }
+
+    @Test func finishingEndsTheHandOff() {
+        let (defaults, suite) = makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = OnboardingModel(defaults: defaults)
+
+        model.beginHandOff()
+        #expect(!model.isHandingOff)
+
+        model.beginIfNeeded()
+        model.beginHandOff()
+        #expect(model.isHandingOff)
+
+        model.finish()
+        #expect(!model.isHandingOff)
+        #expect(!model.isPresented)
+    }
+
+    @Test func revealFollowsTheHandOffAndEndsWithIt() {
+        let (defaults, suite) = makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = OnboardingModel(defaults: defaults)
+        model.beginIfNeeded()
+
+        model.beginReveal()
+        #expect(!model.isRevealing)
+
+        model.beginHandOff()
+        model.beginReveal()
+        #expect(model.isRevealing)
+
+        model.finish()
+        #expect(!model.isRevealing)
     }
 
     private func makeDefaults() -> (UserDefaults, String) {

@@ -24,7 +24,7 @@ enum ExtensionPicks {
             id: "violentmonkey",
             store: .firefox,
             name: "Violentmonkey",
-            caption: "Runs userscripts on websites.",
+            caption: "Runs user scripts on websites.",
             symbol: "curlybraces"
         ),
     ]

@@ -202,7 +202,7 @@ extension OnboardingShimmer {
     private static func palette(isDark: Bool) -> (start: SIMD3<Float>, delta: SIMD3<Float>) {
         let base = windowBackground(isDark: isDark)
         let target: SIMD3<Float> = isDark ? SIMD3(repeating: 1) : SIMD3(repeating: 0)
-        let ink: Float = isDark ? 0.09 : 0.07
+        let ink: Float = isDark ? 0.09 : 0.16
         return (base, (target - base) * ink)
     }
 

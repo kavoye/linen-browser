@@ -9,15 +9,10 @@ import Observation
 final class OnboardingModel {
     enum Step: Int, CaseIterable {
         case welcome
-        case model
+        case style
         case extensions
         case bookmarks
         case finish
-    }
-
-    enum ModelChoice {
-        case onDevice
-        case remote
     }
 
     private static let completedKey = "onboarding.completed"
@@ -26,14 +21,24 @@ final class OnboardingModel {
 
     private(set) var step: Step?
 
-    var modelChoice: ModelChoice = .onDevice
+    var prefersMinimal: Bool?
+
+    private(set) var isHandingOff = false
+
+    private(set) var isRevealing = false
 
     private(set) var handedOverToSystemSettings = false
 
     private(set) var hasPlayedIntro = false
 
+    private(set) var isWindowReady = false
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+    }
+
+    func markWindowReady() {
+        isWindowReady = true
     }
 
     var isPresented: Bool {
@@ -72,10 +77,22 @@ final class OnboardingModel {
         hasPlayedIntro = true
     }
 
+    func beginHandOff() {
+        guard step != nil else { return }
+        isHandingOff = true
+    }
+
+    func beginReveal() {
+        guard isHandingOff else { return }
+        isRevealing = true
+    }
+
     func finish() {
         guard step != nil else { return }
         defaults.set(true, forKey: Self.completedKey)
         step = nil
+        isHandingOff = false
+        isRevealing = false
     }
 
     func requestDefaultBrowser() {

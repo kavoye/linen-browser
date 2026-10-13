@@ -31,7 +31,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
 
     private(set) var isVisible = false
 
-    private var bloom: Bloom?
+    private var pendingGrowth: Bloom?
     private var isBlooming = false
     private var minimumWidth = BrowserWindowMetrics.minWidth
 
@@ -91,40 +91,66 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         let window = ensureWindow()
         guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
         let target = window.frame
-        bloom = Bloom(target: target, minSize: window.minSize)
+        pendingGrowth = Bloom(target: target, minSize: window.minSize)
         isBlooming = true
         window.setFrameAutosaveName("")
         window.minSize = .zero
+        let size = NSSize(width: target.width * Self.onboardingFraction, height: target.height * Self.onboardingFraction)
         window.setFrame(
             NSRect(
-                x: target.midX - Self.bloomSize.width / 2,
-                y: target.midY - Self.bloomSize.height / 2,
-                width: Self.bloomSize.width,
-                height: Self.bloomSize.height
+                x: target.midX - size.width / 2,
+                y: target.midY - size.height / 2,
+                width: size.width,
+                height: size.height
             ),
             display: false
         )
     }
 
-    func bloomOpen() {
-        guard let window, let bloom else { return }
-        self.bloom = nil
+    func growToOpeningFrame() {
+        guard let window, let growth = pendingGrowth else { return }
+        pendingGrowth = nil
+        guard !window.styleMask.contains(.fullScreen),
+              let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame
+        else {
+            settleBloom(of: window, minSize: growth.minSize)
+            return
+        }
+        let size = NSSize(
+            width: min(growth.target.width, visible.width),
+            height: min(growth.target.height, visible.height)
+        )
+        let current = window.frame
+        let target = NSRect(
+            x: min(max(current.midX - size.width / 2, visible.minX), visible.maxX - size.width),
+            y: min(max(current.midY - size.height / 2, visible.minY), visible.maxY - size.height),
+            width: size.width,
+            height: size.height
+        )
+        animateFrame(of: window, to: Bloom(target: target, minSize: growth.minSize))
+    }
+
+    private func animateFrame(of window: NSWindow, to bloom: Bloom) {
+        coordinator?.frozenShellSize = window.contentRect(forFrameRect: bloom.target).size
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.8
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
             window.animator().setFrame(bloom.target, display: true)
         } completionHandler: { [weak self, weak window] in
             MainActor.assumeIsolated {
-                window?.minSize = bloom.minSize
-                guard let self else { return }
-                self.isBlooming = false
-                if let window = self.window {
-                    self.applyMinimumWidth(to: window)
-                }
-                if self.coordinator?.profiles.isPrivate == false {
-                    window?.setFrameAutosaveName(self.frameKey)
-                }
+                guard let self, let window else { return }
+                self.settleBloom(of: window, minSize: bloom.minSize)
             }
+        }
+    }
+
+    private func settleBloom(of window: NSWindow, minSize: NSSize) {
+        coordinator?.frozenShellSize = nil
+        window.minSize = minSize
+        isBlooming = false
+        applyMinimumWidth(to: window)
+        if coordinator?.profiles.isPrivate == false {
+            window.setFrameAutosaveName(frameKey)
         }
     }
 
@@ -151,7 +177,7 @@ final class BrowserHost: NSObject, NSWindowDelegate {
         let minSize: NSSize
     }
 
-    private static let bloomSize = NSSize(width: 480, height: 360)
+    private static let onboardingFraction: CGFloat = 0.8
 
     // MARK: - Window
 
@@ -438,7 +464,7 @@ struct BrowserRootView: View {
             .writingToolsAffordanceVisibility(.hidden)
             .environment(\.windowControlsInset, coordinator.windowControlsInset)
             .environment(\.profileFavicons, coordinator.browser.context.favicons)
-            .environment(\.assistantProviderID, coordinator.selectedProvider.id)
+            .environment(\.assistantProviderID, coordinator.engine.selectedProvider.id)
             .onChange(of: coordinator.windowTitle) { _, _ in
                 coordinator.updateWindowAppearance()
             }
