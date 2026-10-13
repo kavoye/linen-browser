@@ -39,12 +39,24 @@ struct ProviderContextWiringTests {
         let subject = try #require(agent(for: ProviderCatalog.appleOnDevice, effort: effort))
         let budget = subject.budget
 
-        #expect(budget.windowTokens == 4_096)
+        #expect(budget.windowTokens == SystemModelWindow.tokens)
         #expect(budget.responseTokens <= budget.windowTokens / 4)
         #expect(budget.inputTokens + budget.responseTokens < budget.windowTokens)
         #expect(budget.instructionTier == .compact)
         #expect(budget.toolTier == .core)
         #expect(budget.toolOutput.controlLimit == 12)
+    }
+
+    @Test(arguments: [
+        LLMSettings.ReasoningEffort.none,
+        .low,
+        .medium,
+        .high,
+    ])
+    func onDeviceFitsAFirstMessage(effort: LLMSettings.ReasoningEffort) throws {
+        let subject = try #require(agent(for: ProviderCatalog.appleOnDevice, effort: effort))
+        let session = subject.makeSession()
+        #expect(!subject.isOverBudget(session, nativeState: nil, promptCharacters: "hello".count))
     }
 
     @Test func aHostedProviderKeepsTheFullProfile() throws {

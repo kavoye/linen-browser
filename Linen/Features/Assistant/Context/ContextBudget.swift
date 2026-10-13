@@ -22,6 +22,7 @@ nonisolated struct ContextBudget: Hashable, Sendable {
     let toolSchemaTokens: Int
     let instructionTier: AgentInstructions.Tier
     let toolTier: AgentToolTier
+    var tracksOutcomes = true
     let toolOutput: ToolOutputBudget
     let retainedExchanges: Int
     let retainedToolRounds: Int
@@ -34,7 +35,8 @@ nonisolated struct ContextBudget: Hashable, Sendable {
         windowTokens: Int,
         desiredResponseTokens: Int,
         toolCount: Int? = nil,
-        measuredSchemaTokens: Int? = nil
+        measuredSchemaTokens: Int? = nil,
+        measuredInstructionTokens: Int? = nil
     ) -> Self {
         let window = max(2_048, windowTokens)
         let response = max(256, min(desiredResponseTokens, window / 4))
@@ -42,7 +44,7 @@ nonisolated struct ContextBudget: Hashable, Sendable {
         let input = window - response - safety
         let compact = window < 16_384
 
-        let instructionTokens = compact ? 300 : 1_300
+        let instructionTokens = measuredInstructionTokens ?? (compact ? 300 : 1_300)
         let schemaTokens = measuredSchemaTokens.map { max(150, $0) } ?? toolCount.map { max(150, $0 * 75) } ?? (compact ? 500 : 1_200)
         let conversation = max(512, input - instructionTokens - schemaTokens)
 
@@ -64,6 +66,7 @@ nonisolated struct ContextBudget: Hashable, Sendable {
             toolSchemaTokens: schemaTokens,
             instructionTier: compact ? .compact : .full,
             toolTier: compact ? .core : .full,
+            tracksOutcomes: !compact,
             toolOutput: output,
             retainedExchanges: compact ? max(1, min(4, conversation / 800)) : 12,
             retainedToolRounds: compact ? 1 : 3
@@ -91,6 +94,9 @@ nonisolated enum ContextWindow {
         }
         if let discovered = settings.discoveredContextWindow(for: provider, model: model) {
             return Resolution(tokens: discovered, source: .discovered)
+        }
+        if provider.adapter == .system {
+            return Resolution(tokens: SystemModelWindow.tokens, source: .discovered)
         }
         let fallback = switch provider.adapter {
         case .system:

@@ -181,6 +181,24 @@ struct AgentContextCompactionTests {
         #expect(!trace.diagnostics.exported().contains("fixture-private-account-42"))
     }
 
+    @Test func onDeviceCompactsWithTheRealToolSchemaSize() async throws {
+        let state = HarnessToolState()
+        state.output = { call in "Page \(call): " + String(repeating: "fixture text ", count: 70) }
+        let budget = ContextBudget.resolve(
+            windowTokens: 4_096, desiredResponseTokens: 2_000,
+            measuredSchemaTokens: 1_762, measuredInstructionTokens: 406
+        )
+        let fixture = HarnessFixture(
+            Array(repeating: .calls(["readPage"]), count: 4) + [.text("Finished.")],
+            state: state, contextBudget: budget
+        )
+        await fixture.run("hello")
+        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
+        #expect(trace.stopReason == nil)
+        #expect(fixture.reply.text == "Finished.")
+        #expect(trace.diagnostics.compactions >= 1)
+    }
+
     @Test func hugeHistoryIsSummarizedInBoundedSlicesIncludingBothEnds() async throws {
         let model = HarnessScript([])
         let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 700, toolCount: 3)

@@ -6,7 +6,7 @@ import Foundation
 
 nonisolated enum ModelImageSupport {
     static func acceptsImages(for provider: Provider, model: String) -> Bool {
-        guard !provider.isOnDevice else { return false }
+        guard !provider.isOnDevice else { return SystemLanguageModel.default.supportsImageInput }
         return LLMSettings.defaults.object(forKey: key(provider, model)) as? Bool ?? true
     }
 
@@ -52,6 +52,19 @@ nonisolated enum ModelImageSupport {
                 return false
             }
         }
+    }
+
+    static func withoutToolImages(_ transcript: Transcript) -> Transcript {
+        Transcript(entries: transcript.map { entry in
+            guard case .toolOutput(var output) = entry else { return entry }
+            output.segments.removeAll {
+                if case .image = $0 {
+                    return true
+                }
+                return false
+            }
+            return .toolOutput(output)
+        })
     }
 
     static func textOnly(_ transcript: Transcript) -> Transcript {

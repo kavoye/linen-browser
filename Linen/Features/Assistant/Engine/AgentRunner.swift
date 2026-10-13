@@ -60,14 +60,19 @@ enum AgentInstructions {
     }
 
     static func text(for tier: Tier) -> String {
-        let base = switch tier {
+        switch tier {
         case .compact:
-            compact
+            compact + "\n" + compactProgressGuidance
         case .full:
-            full
+            full + "\n" + progressGuidance
         }
-        return base + "\n" + progressGuidance
     }
+
+    private static let compactProgressGuidance = """
+        Use updateProgress before your first browser action and after a meaningful finding, in one \
+        natural sentence. Check the page before saying an action worked. Do not echo passwords, \
+        payment details, or sensitive field values. For a simple question needing no tools, answer directly.
+        """
 
     private static let progressGuidance = """
         Before changing a website, recordTaskOutcome for every requested result, each with a stable ID. \
@@ -109,11 +114,6 @@ enum AgentInstructions {
         it returns only the main text. Use readPage when you need controls.
         - readPage returns the page text and numbers every control: [7] button "Add to Bag". \
         Act with its ref, pageID, and observationID. Use the fresh observation in action results; read again only when stale or missing needed content.
-        - Fill independent form controls together with fillFields, up to 32 per call. Use #RRGGBB for colors, \
-        numbers for ranges, and true/false for checked states. Set only the desired radio to true. \
-        For form demonstrations, use sample values without submitting. Skip sensitive, disabled and read-only fields. \
-        Files need the user's selection. Do not retry unsupported controls through a native popup or another tool. \
-        Reuse verified refs and copy the complete observationID exactly from action results.
         - For anything factual or current: searchWeb, then navigate to the most promising \
         result, and read it. Report concrete findings: names, models, prices, places.
         - NEVER enter login, payment, or checkout flows: stop and hand over to the user.

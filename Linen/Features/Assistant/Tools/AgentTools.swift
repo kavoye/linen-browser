@@ -455,10 +455,43 @@ nonisolated enum AgentToolTier: Hashable, Sendable {
 }
 
 @MainActor
-func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>) -> [any Tool] {
+func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>, tier: AgentToolTier = .full) -> [any Tool] {
     makeAgentTools(toolkit: toolkit, tier: .full).filter {
-        $0.name == AskUserTool.toolName || AgentToolCatalog.outcomeToolIDs.contains($0.name) || enabledIDs.contains($0.name)
+        if AgentToolCatalog.outcomeToolIDs.contains($0.name) {
+            return tier == .full
+        }
+        return $0.name == AskUserTool.toolName || enabledIDs.contains($0.name)
+    }.map { tier == .core ? compacted($0) : $0 }
+}
+
+private nonisolated struct CompactDescriptionTool<Base: Tool>: Tool {
+    let base: Base
+    let description: String
+
+    var name: String {
+        base.name
     }
+
+    var parameters: GenerationSchema {
+        base.parameters
+    }
+
+    var includesSchemaInInstructions: Bool {
+        base.includesSchemaInInstructions
+    }
+
+    func call(arguments: Base.Arguments) async throws -> Base.Output {
+        try await base.call(arguments: arguments)
+    }
+}
+
+private func compacted(_ tool: any Tool) -> any Tool {
+    guard let description = AgentToolkit.Descriptions.compact[tool.name] else { return tool }
+    return describing(tool, as: description)
+}
+
+private func describing<Base: Tool>(_ base: Base, as description: String) -> any Tool {
+    CompactDescriptionTool(base: base, description: description)
 }
 
 @MainActor
@@ -479,7 +512,7 @@ func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any 
     ]
     switch tier {
     case .core:
-        return core
+        return core.filter { !AgentToolCatalog.outcomeToolIDs.contains($0.name) }.map(compacted)
     case .full:
         return core + [
             NewTabTool(toolkit: toolkit),

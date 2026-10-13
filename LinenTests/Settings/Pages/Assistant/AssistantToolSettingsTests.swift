@@ -198,6 +198,18 @@ struct AssistantToolSettingsTests {
         }
     }
 
+    @Test func theWarningCountsOnlyToolsWithAToggle() {
+        withCleanDefaults { model, _ in
+            model.open(Self.other)
+            let visible = AgentToolCatalog.defaultIDs(for: .core)
+                .intersection(AgentToolCatalog.configurableIDs).count
+
+            model.setTool("playVideo", enabled: true)
+
+            #expect(model.toolWarning?.contains("more than \(visible) tools") == true)
+        }
+    }
+
     @Test func aLargeWindowProviderNeverWarns() {
         withCleanDefaults { model, _ in
             model.setTool("playVideo", enabled: true)

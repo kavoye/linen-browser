@@ -404,7 +404,11 @@ extension AnyLanguageModelAgent {
             nativeState?.presentation = .init()
             checkpoint.progressUpdates = []
             session = agent.session(for: task.spaceID)
-            policy = agent.executionPolicy ?? .current
+            var policy = agent.executionPolicy ?? .current
+            if !agent.budget.tracksOutcomes {
+                policy.requiresOutcomeVerification = false
+            }
+            self.policy = policy
             monitor = AgentProgressMonitor(policy: policy)
             prompt = task.isContinuation ? AnyLanguageModelAgent.continuationPrompt : AssistantAttachment.prompt(
                 utterance, attachments: task.attachments, textOnly: task.attachmentTextOnly || !agent.acceptsImages

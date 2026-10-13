@@ -58,6 +58,14 @@ extension AgentToolkit {
         static let selectOption = "Choose an option in a native select control by its [ref] or label. For custom dropdowns, use clickOnPage on a visible option."
         static let scrollPage = "Scroll up, down, left, or right. Supply a ref inside a container to scroll that container."
         static let goBack = "Go back one page."
+        static let compact: [String: String] = [
+            "askUser": "Ask everything you still need in one call and wait for the answers. One thing per question; put the choices in options.",
+            "searchWeb": "Search the web for one to four queries. Return links and summaries.",
+            "readPage": "Read the page text and list each control with a [ref] number. Use lookingFor to return only the relevant part.",
+            "readArticle": "Read only the main text of an article, post, or documentation page.",
+            "clickOnPage": "Click a control by its [ref], or by its label. Stop if the user declines a confirmation.",
+            "typeOnPage": "Type into a control by [ref] or label, optionally submitting. Never passwords or payment details.",
+        ]
         static let playVideo = "Find a video by topic and play it in a background tab."
         static let closeVideo = "Pause the video and close the media player. Keep its tab open."
         static let controlMedia = "Use pip to enter Picture in Picture, or exitPip to leave it."

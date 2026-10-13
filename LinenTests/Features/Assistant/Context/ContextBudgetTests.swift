@@ -39,7 +39,7 @@ struct ContextBudgetTests {
     }
 
     @Test func theWindowTableCoversEveryAdapter() {
-        #expect(ContextWindow.tokens(for: provider(adapter: .system), model: "") == 4_096)
+        #expect(ContextWindow.resolve(for: provider(adapter: .system), model: "").tokens == SystemModelWindow.tokens)
         #expect(ContextWindow.tokens(for: provider(adapter: .anthropic), model: "") == 200_000)
         #expect(ContextWindow.tokens(for: provider(adapter: .gemini), model: "") == 1_000_000)
         #expect(ContextWindow.tokens(for: provider(adapter: .openAIResponses), model: "") == 400_000)

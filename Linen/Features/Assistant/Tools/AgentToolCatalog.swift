@@ -34,9 +34,9 @@ nonisolated struct AgentToolDescriptor: Identifiable, Sendable {
 
 nonisolated enum AgentToolCatalog {
     static let all: [AgentToolDescriptor] = [
-        AgentToolDescriptor(id: "recordTaskOutcome", title: "Record Task Outcomes", summary: "Keep track of each requested result.", category: .page, isCore: true, isConfigurable: false),
-        AgentToolDescriptor(id: "verifyTaskOutcome", title: "Verify Results", summary: "Check the page for the requested result.", category: .page, isCore: true, isConfigurable: false),
-        AgentToolDescriptor(id: "blockTaskOutcome", title: "Record Unfinished Work", summary: "Save why an outcome needs your help.", category: .page, isCore: true, isConfigurable: false),
+        AgentToolDescriptor(id: "recordTaskOutcome", title: "Record Task Outcomes", summary: "Keep track of each requested result.", category: .page, isCore: false, isConfigurable: false),
+        AgentToolDescriptor(id: "verifyTaskOutcome", title: "Verify Results", summary: "Check the page for the requested result.", category: .page, isCore: false, isConfigurable: false),
+        AgentToolDescriptor(id: "blockTaskOutcome", title: "Record Unfinished Work", summary: "Save why an outcome needs your help.", category: .page, isCore: false, isConfigurable: false),
         AgentToolDescriptor(id: "listFrames", title: "List Embedded Pages", summary: "Find embedded websites on a page.", category: .page, isCore: false),
         AgentToolDescriptor(id: "readFrame", title: "Read Embedded Pages", summary: "Read an embedded website with separate permission.", category: .page, isCore: false),
         AgentToolDescriptor(id: "actInFrame", title: "Use Embedded Pages", summary: "Use controls on a permitted embedded website.", category: .page, isCore: false),

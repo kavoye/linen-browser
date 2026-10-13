@@ -42,6 +42,15 @@ struct AgentToolCatalogTests {
         #expect(names == ["askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome", "searchWeb", "readPage", "playVideo"])
     }
 
+    @Test func aSmallWindowLeavesOutOutcomeTrackingAndShortensDescriptions() throws {
+        let enabled = AgentToolCatalog.defaultIDs(for: .core)
+        let tools = makeAgentTools(toolkit: toolkit(), enabledIDs: enabled, tier: .core)
+
+        #expect(Set(tools.map(\.name)) == enabled.union([AskUserTool.toolName]))
+        let readPage = try #require(tools.first { $0.name == "readPage" })
+        #expect(readPage.description == AgentToolkit.Descriptions.compact["readPage"])
+    }
+
     @Test func everyCategoryListsItsToolsInCatalogOrder() {
         let flattened = AgentToolDescriptor.Category.allCases.flatMap { category in
             AgentToolCatalog.descriptors(in: category).map(\.id)
