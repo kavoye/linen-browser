@@ -29,6 +29,18 @@ struct AssistantContextIndicator: View {
         Int((fraction * 100).rounded())
     }
 
+    private var usedShare: String {
+        Self.share(percent)
+    }
+
+    private var leftShare: String {
+        Self.share(100 - percent)
+    }
+
+    private static func share(_ percent: Int) -> String {
+        (Double(percent) / 100).formatted(.percent.precision(.fractionLength(0)))
+    }
+
     var body: some View {
         Button {
             isPinned = true
@@ -48,7 +60,7 @@ struct AssistantContextIndicator: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Context window")
         .accessibilityValue(hasKnownLimit
-            ? Text("Estimated: \(percent)% used, \(100 - percent)% left")
+            ? Text("Estimated: \(usedShare) used, \(leftShare) left")
             : Text("Estimated: \(tokens) tokens. Model limit unavailable."))
         .onHover { isHovering = $0 }
         .task(id: isHovering) {
@@ -83,7 +95,7 @@ struct AssistantContextIndicator: View {
                         .foregroundStyle(.secondary)
                 }
                 if hasKnownLimit {
-                    Text("\(percent)% used (\(100 - percent)% left)")
+                    Text("\(usedShare) used (\(leftShare) left)")
                         .fontWeight(.medium)
                     Text("\(compact(tokens)) / \(compact(window.tokens)) tokens")
                         .monospacedDigit()
