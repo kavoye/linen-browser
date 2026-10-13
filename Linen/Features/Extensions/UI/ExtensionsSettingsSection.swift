@@ -67,20 +67,30 @@ private struct ExtensionRowMenu: View {
 
     var body: some View {
         SettingsMoreMenu {
-            Button("Check for updates") {
+            Button("Check for Updates") {
                 Task { await manager.checkForUpdate(id: record.id) }
             }
             .disabled(isChecking)
 
             if manager.hasOptionsPage(id: record.id) {
-                Button("Extension options") {
+                Button(String(localized: "extension.menu.settings", defaultValue: "Settings")) {
                     manager.openOptionsPage(id: record.id)
+                }
+            }
+
+            if !record.blockedHosts.isEmpty {
+                Menu("Blocked Websites") {
+                    ForEach(record.blockedHosts, id: \.self) { host in
+                        Button("Allow on \(host)") {
+                            manager.setAllowed(true, on: host, id: record.id)
+                        }
+                    }
                 }
             }
 
             Divider()
 
-            Button("Remove extension", role: .destructive) {
+            Button("Remove Extension…", role: .destructive) {
                 manager.confirmUninstall(id: record.id)
             }
         }
@@ -166,6 +176,14 @@ private struct ExtensionRow: View {
 
                 if let check = manager.updateChecks[record.id] {
                     ExtensionUpdateStatus(check: check)
+                } else if let version = manager.heldUpdates[record.id] {
+                    Button {
+                        Task { await manager.checkForUpdate(id: record.id) }
+                    } label: {
+                        Tag("Update needs approval")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Version \(version) asks for more access.")
                 } else if hovering, !record.version.isEmpty {
                     Text(verbatim: record.version)
                         .font(Theme.Font.caption)

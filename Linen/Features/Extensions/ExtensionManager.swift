@@ -30,12 +30,14 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     private(set) var actionRevision = 0
     var installState: StoreInstallState = .idle
     var updateChecks: [String: UpdateCheck] = [:]
+    var heldUpdates: [String: String] = ExtensionManager.savedHeldUpdates()
 
     @ObservationIgnored private static var systemCatalogue: [SafariExtension]?
     @ObservationIgnored private static let liveManagers = NSHashTable<ExtensionManager>.weakObjects()
 
     /// The application owns window creation; the complete configuration includes all URLs and moved tabs.
     var onOpenWindow: ((WKWebExtension.WindowConfiguration) -> ExtensionWindowAdapter?)?
+    @ObservationIgnored var onManageExtensions: ((BrowserModel?) -> Void)?
 
     private var library: ExtensionLibrary
     private(set) var profile: Profile?
@@ -249,7 +251,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
         systemExtensions = found.map { extensionBundle in
             let placement = library.placement(for: extensionBundle.id)
-            return InstalledExtension(
+            var record = InstalledExtension(
                 id: extensionBundle.id,
                 displayName: extensionBundle.displayName,
                 version: extensionBundle.version,
@@ -259,11 +261,13 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
                 toolbarOrder: placement.toolbarOrder,
                 bundlePath: extensionBundle.bundlePath
             )
+            record.blockedHosts = placement.blockedHosts
+            return record
         }
         Pipeline.log.notice("ext: found \(found.count, privacy: .public) Safari extensions on this Mac")
     }
 
-    private func record(for id: String) -> InstalledExtension? {
+    func record(for id: String) -> InstalledExtension? {
         installed.first { $0.id == id } ?? systemExtensions.first { $0.id == id }
     }
 
@@ -312,6 +316,11 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             }
             for pattern in webExtension.allRequestedMatchPatterns {
                 context.setPermissionStatus(.grantedExplicitly, for: pattern)
+            }
+            for host in record.blockedHosts {
+                if let pattern = Self.websitePattern(for: host) {
+                    context.setPermissionStatus(.deniedExplicitly, for: pattern)
+                }
             }
 
             try controller.load(context)
@@ -536,8 +545,59 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         await load(refreshed)
     }
 
-    func grantedPermissions(id: String) -> Set<String> {
-        Set(contexts[id]?.webExtension.requestedPermissions.map(\.rawValue) ?? [])
+    func packageURL(for id: String) -> URL {
+        library.packageURL(for: id)
+    }
+
+    nonisolated static func website(of url: URL?) -> String? {
+        guard let url, url.scheme == "https" || url.scheme == "http",
+              var host = url.host(percentEncoded: false)?.lowercased(), !host.isEmpty else { return nil }
+        if host.hasPrefix("www.") {
+            host.removeFirst(4)
+        }
+        return host
+    }
+
+    static func websitePattern(for host: String) -> WKWebExtension.MatchPattern? {
+        let literal = host.contains(":") ? "[\(host)]" : host
+        return try? WKWebExtension.MatchPattern(string: "*://*.\(literal)/*")
+    }
+
+    nonisolated static func website(_ host: String, isCoveredBy blocked: String) -> Bool {
+        host == blocked || host.hasSuffix("." + blocked)
+    }
+
+    func requestsAccess(id: String, to url: URL) -> Bool {
+        contexts[id]?.webExtension.allRequestedMatchPatterns.contains { $0.matches(url) } == true
+    }
+
+    func blockingHost(id: String, for host: String) -> String? {
+        record(for: id)?.blockedHosts.first { Self.website(host, isCoveredBy: $0) }
+    }
+
+    func isBlocked(id: String, on host: String) -> Bool {
+        blockingHost(id: id, for: host) != nil
+    }
+
+    func setAllowed(_ allowed: Bool, on host: String, id: String, reloading browser: BrowserModel? = nil) {
+        library.setBlocked(!allowed, host: host, id: id)
+        installed = library.records
+        applyPlacementsToSystemExtensions()
+        if let context = contexts[id], let pattern = Self.websitePattern(for: host) {
+            if allowed {
+                context.setPermissionStatus(.unknown, for: pattern)
+                for requested in context.webExtension.allRequestedMatchPatterns {
+                    context.setPermissionStatus(.grantedExplicitly, for: requested)
+                }
+            } else {
+                context.setPermissionStatus(.deniedExplicitly, for: pattern)
+            }
+        }
+        for tab in browser?.tabs ?? [] where tab.isMaterialised {
+            guard let website = Self.website(of: URL(string: tab.urlString)),
+                  Self.website(website, isCoveredBy: host) else { continue }
+            tab.reload()
+        }
     }
 
     func installedRecord(id: String) -> InstalledExtension? {
@@ -587,6 +647,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             updated.enabled = placement.enabled
             updated.isPinned = placement.isPinned
             updated.toolbarOrder = placement.toolbarOrder
+            updated.blockedHosts = placement.blockedHosts
             return updated
         }
     }
@@ -601,6 +662,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             anchors[key]?[id] = nil
         }
         iconCache[id] = nil
+        setHeldUpdate(nil, id: id)
         Pipeline.log.notice("Extension uninstalled")
     }
 
@@ -814,104 +876,5 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             return radius
         }
         return nil
-    }
-
-    func contextMenu(for id: String, in browser: BrowserModel? = nil) -> NSMenu? {
-        guard let window = registeredWindow(in: browser), let context = contexts[id] else { return nil }
-        let tab = window.browser?.activeTab.map { adapter(for: $0) }
-        let menu = NSMenu()
-
-        for item in context.action(for: tab)?.menuItems ?? [] {
-            item.menu?.removeItem(item)
-            menu.addItem(item)
-        }
-        if !menu.items.isEmpty {
-            menu.addItem(.separator())
-        }
-
-        let known = record(for: id)
-        let isPinned = known?.isPinned ?? true
-        let pinTitle: LocalizedStringResource = isPinned ? "Hide Extension" : "Show Extension"
-        menu.addItem(appMenuItem(
-            title: String(localized: pinTitle),
-            action: #selector(togglePinnedFromMenu(_:)),
-            id: id, browser: browser
-        ))
-        if context.optionsPageURL != nil {
-            menu.addItem(appMenuItem(
-                title: String(localized: "Extension Options"),
-                action: #selector(openOptionsFromMenu(_:)),
-                id: id, browser: browser
-            ))
-        }
-
-        menu.addItem(.separator())
-        if known?.isSystem == true {
-            menu.addItem(appMenuItem(
-                title: String(localized: "Disable Extension"),
-                action: #selector(disableFromMenu(_:)),
-                id: id, browser: browser
-            ))
-        } else {
-            menu.addItem(appMenuItem(
-                title: String(localized: "Remove Extension"),
-                action: #selector(removeFromMenu(_:)),
-                id: id, browser: browser
-            ))
-        }
-        return menu
-    }
-
-    private final class MenuTarget {
-        let id: String
-        weak var browser: BrowserModel?
-
-        init(id: String, browser: BrowserModel?) {
-            self.id = id
-            self.browser = browser
-        }
-    }
-
-    private func appMenuItem(title: String, action: Selector, id: String, browser: BrowserModel?) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        item.representedObject = MenuTarget(id: id, browser: browser ?? preferredWindowAdapter?.browser)
-        return item
-    }
-
-    @objc private func togglePinnedFromMenu(_ sender: NSMenuItem) {
-        guard let target = sender.representedObject as? MenuTarget,
-              let record = record(for: target.id) else { return }
-        setPinned(!record.isPinned, id: target.id)
-    }
-
-    @objc private func disableFromMenu(_ sender: NSMenuItem) {
-        guard let target = sender.representedObject as? MenuTarget else { return }
-        setEnabled(false, id: target.id)
-    }
-
-    @objc private func openOptionsFromMenu(_ sender: NSMenuItem) {
-        guard let target = sender.representedObject as? MenuTarget, let context = contexts[target.id] else { return }
-        _ = openTab(context.optionsPageURL, in: target.browser)
-    }
-
-    @objc private func removeFromMenu(_ sender: NSMenuItem) {
-        guard let target = sender.representedObject as? MenuTarget else { return }
-        confirmUninstall(id: target.id)
-    }
-
-    func confirmUninstall(id: String) {
-        let name = installed.first { $0.id == id }?.displayName ?? id
-        let alert = NSAlert()
-        alert.messageText = String(localized: "Remove “\(name)”?")
-        alert.informativeText = String(localized: "The extension and its settings and data are removed from every profile.")
-        if let icon = loadedIcon(for: id, size: 64) {
-            alert.icon = icon
-        }
-        alert.addButton(withTitle: String(localized: "Remove Extension"))
-        alert.addButton(withTitle: String(localized: "Cancel"))
-        alert.buttons.first?.hasDestructiveAction = true
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        uninstall(id: id)
     }
 }

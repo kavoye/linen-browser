@@ -20,6 +20,29 @@ extension ExtensionManager {
 
     private static let sweepInterval: TimeInterval = 24 * 60 * 60
 
+    private static let heldUpdatesKey = "extensions.heldUpdates"
+
+    static let downloadPackageFromStore: (InstalledExtension) async throws -> Data = { record in
+        switch record.source {
+        case .chrome:
+            try await ChromeWebStore.downloadPackage(id: record.id)
+        case .firefox:
+            try await FirefoxAddons.downloadPackage(slug: record.id)
+        }
+    }
+
+    static var downloadPackage = downloadPackageFromStore
+
+    static func savedHeldUpdates() -> [String: String] {
+        defaults.dictionary(forKey: heldUpdatesKey) as? [String: String] ?? [:]
+    }
+
+    func setHeldUpdate(_ version: String?, id: String) {
+        guard heldUpdates[id] != version else { return }
+        heldUpdates[id] = version
+        Self.defaults.set(heldUpdates, forKey: Self.heldUpdatesKey)
+    }
+
     func updateInstalledIfDue(now: Date = Date()) async {
         let defaults = Self.defaults
         let last = defaults.object(forKey: Self.lastSweepKey) as? Date ?? .distantPast
@@ -37,13 +60,7 @@ extension ExtensionManager {
             updateChecks[id] = .checking
         }
         do {
-            let package: Data
-            switch record.source {
-            case .chrome:
-                package = try await ChromeWebStore.downloadPackage(id: id)
-            case .firefox:
-                package = try await FirefoxAddons.downloadPackage(slug: id)
-            }
+            let package = try await Self.downloadPackage(record)
             let scratch = FileManager.default.temporaryDirectory
                 .appendingPathComponent("linen-ext-update-\(id).zip")
             try package.write(to: scratch, options: .atomic)
@@ -52,15 +69,24 @@ extension ExtensionManager {
             let candidate = try await WKWebExtension(resourceBaseURL: scratch)
             let version = candidate.version ?? ""
             guard isNewer(version, than: record.version) else {
+                setHeldUpdate(nil, id: id)
                 updateChecks[id] = quietly ? nil : .upToDate
                 return
             }
+            let added = Self.access(in: candidate, beyond: await approvedExtension(id: id))
             if quietly {
-                guard asksForNothingNew(candidate, replacing: id) else {
+                guard added.isEmpty else {
+                    setHeldUpdate(version, id: id)
                     Pipeline.log.notice("Extension update needs more access")
                     return
                 }
-            } else if await !accepts(candidate, replacing: id, named: record.displayName) {
+            } else if !added.isEmpty, await !ExtensionConsent.confirmRuntimeGrant(
+                name: candidate.displayName ?? record.displayName,
+                permissions: added.permissions,
+                matchPatterns: added.websites,
+                in: NSApp.keyWindow ?? NSApp.mainWindow
+            ) {
+                setHeldUpdate(nil, id: id)
                 updateChecks[id] = nil
                 return
             }
@@ -70,6 +96,7 @@ extension ExtensionManager {
                 name: candidate.displayName,
                 version: version
             )
+            setHeldUpdate(nil, id: id)
             updateChecks[id] = .updated(version)
             Pipeline.log.notice("Extension updated")
         } catch {
@@ -89,24 +116,29 @@ extension ExtensionManager {
         return candidate.compare(installed, options: .numeric) == .orderedDescending
     }
 
-    private func asksForNothingNew(_ candidate: WKWebExtension, replacing id: String) -> Bool {
-        let granted = grantedPermissions(id: id)
-        return candidate.requestedPermissions.allSatisfy { granted.contains($0.rawValue) }
+    struct AddedAccess {
+        var permissions: Set<WKWebExtension.Permission>
+        var websites: Set<WKWebExtension.MatchPattern>
+
+        var isEmpty: Bool {
+            permissions.isEmpty && websites.isEmpty
+        }
     }
 
-    private func accepts(
-        _ candidate: WKWebExtension,
-        replacing id: String,
-        named name: String
-    ) async -> Bool {
-        let granted = grantedPermissions(id: id)
-        let asked = candidate.requestedPermissions.filter { !granted.contains($0.rawValue) }
-        guard !asked.isEmpty else { return true }
-        return await ExtensionConsent.confirmRuntimeGrant(
-            name: candidate.displayName ?? name,
-            permissions: Set(asked),
-            matchPatterns: candidate.allRequestedMatchPatterns,
-            in: NSApp.keyWindow ?? NSApp.mainWindow
+    static func access(in candidate: WKWebExtension, beyond approved: WKWebExtension?) -> AddedAccess {
+        let approvedWebsites = approved?.allRequestedMatchPatterns ?? []
+        return AddedAccess(
+            permissions: candidate.requestedPermissions.subtracting(approved?.requestedPermissions ?? []),
+            websites: candidate.allRequestedMatchPatterns.filter { pattern in
+                !approvedWebsites.contains { $0.matches(pattern) }
+            }
         )
+    }
+
+    private func approvedExtension(id: String) async -> WKWebExtension? {
+        if let loaded = contexts[id]?.webExtension {
+            return loaded
+        }
+        return try? await WKWebExtension(resourceBaseURL: packageURL(for: id))
     }
 }

@@ -337,6 +337,11 @@ final class BrowserApplication {
             }
             return coordinator.extensions.adapter(for: coordinator.browser)
         }
+        manager.onManageExtensions = { [weak self] browser in
+            guard let self else { return }
+            let coordinator = windows.first { $0.browser === browser } ?? ensureActiveWindow()
+            coordinator.openSettings(.extensions)
+        }
     }
 }
 

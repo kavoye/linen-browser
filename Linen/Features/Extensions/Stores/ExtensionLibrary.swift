@@ -19,6 +19,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
     var toolbarOrder: Int
     var source: ExtensionStore
     var bundlePath: String?
+    var blockedHosts: [String] = []
 
     var isSystem: Bool {
         bundlePath != nil
@@ -57,6 +58,7 @@ struct InstalledExtension: Codable, Identifiable, Equatable {
         toolbarOrder = try container.decodeIfPresent(Int.self, forKey: .toolbarOrder) ?? .max
         source = try container.decodeIfPresent(ExtensionStore.self, forKey: .source) ?? .chrome
         bundlePath = try container.decodeIfPresent(String.self, forKey: .bundlePath)
+        blockedHosts = try container.decodeIfPresent([String].self, forKey: .blockedHosts) ?? []
     }
 }
 
@@ -70,10 +72,26 @@ final class ExtensionLibrary {
         var source: ExtensionStore?
     }
 
-    private nonisolated struct Placement: Codable, Equatable {
+    nonisolated struct Placement: Codable, Equatable {
         var enabled: Bool
         var isPinned: Bool
         var toolbarOrder: Int
+        var blockedHosts: [String] = []
+
+        init(enabled: Bool, isPinned: Bool, toolbarOrder: Int, blockedHosts: [String] = []) {
+            self.enabled = enabled
+            self.isPinned = isPinned
+            self.toolbarOrder = toolbarOrder
+            self.blockedHosts = blockedHosts
+        }
+
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            enabled = try container.decode(Bool.self, forKey: .enabled)
+            isPinned = try container.decode(Bool.self, forKey: .isPinned)
+            toolbarOrder = try container.decode(Int.self, forKey: .toolbarOrder)
+            blockedHosts = try container.decodeIfPresent([String].self, forKey: .blockedHosts) ?? []
+        }
     }
 
     private nonisolated struct Catalogue: Codable {
@@ -117,7 +135,7 @@ final class ExtensionLibrary {
         listed.reserveCapacity(catalogue.entries.count)
         for (offset, entry) in catalogue.entries.enumerated() {
             let placement = mine[entry.id]
-            let record = InstalledExtension(
+            var record = InstalledExtension(
                 id: entry.id,
                 displayName: entry.displayName,
                 version: entry.version,
@@ -127,6 +145,7 @@ final class ExtensionLibrary {
                 toolbarOrder: placement?.toolbarOrder ?? offset,
                 source: entry.source ?? .chrome
             )
+            record.blockedHosts = placement?.blockedHosts ?? []
             listed.append((record, offset))
         }
         listed.sort { left, right in
@@ -298,7 +317,8 @@ final class ExtensionLibrary {
         mine[id] = Placement(
             enabled: true,
             isPinned: mine[id]?.isPinned ?? true,
-            toolbarOrder: mine[id]?.toolbarOrder ?? mine.count
+            toolbarOrder: mine[id]?.toolbarOrder ?? mine.count,
+            blockedHosts: mine[id]?.blockedHosts ?? []
         )
         placements.profiles[profileKey] = mine
         save()
@@ -337,9 +357,19 @@ final class ExtensionLibrary {
         updatePlacement(id: id) { $0.enabled = enabled }
     }
 
-    func placement(for id: String) -> (enabled: Bool, isPinned: Bool, toolbarOrder: Int) {
+    func placement(for id: String) -> Placement {
         let mine = placements.profiles[profileKey]?[id]
-        return (mine?.enabled ?? false, mine?.isPinned ?? true, mine?.toolbarOrder ?? .max)
+        return mine ?? Placement(enabled: false, isPinned: true, toolbarOrder: .max)
+    }
+
+    func setBlocked(_ blocked: Bool, host: String, id: String) {
+        updatePlacement(id: id) { placement in
+            placement.blockedHosts.removeAll { $0 == host }
+            if blocked {
+                placement.blockedHosts.append(host)
+                placement.blockedHosts.sort()
+            }
+        }
     }
 
     func setPinned(_ pinned: Bool, id: String) {
@@ -359,7 +389,8 @@ final class ExtensionLibrary {
             mine[entry.id] = Placement(
                 enabled: mine[entry.id]?.enabled ?? entry.enabled,
                 isPinned: mine[entry.id]?.isPinned ?? entry.isPinned,
-                toolbarOrder: offset
+                toolbarOrder: offset,
+                blockedHosts: mine[entry.id]?.blockedHosts ?? entry.blockedHosts
             )
         }
         placements.profiles[profileKey] = mine
@@ -400,7 +431,8 @@ final class ExtensionLibrary {
         var placement = mine[id] ?? Placement(
             enabled: known.enabled,
             isPinned: known.isPinned,
-            toolbarOrder: known.toolbarOrder
+            toolbarOrder: known.toolbarOrder,
+            blockedHosts: known.blockedHosts
         )
         change(&placement)
         mine[id] = placement
