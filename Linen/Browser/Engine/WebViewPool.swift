@@ -511,6 +511,7 @@ final class WebViewPool {
 
         configuration.userContentController = contentController
         PageFrameRegistry.install(in: contentController)
+        PullToRefreshMonitor.install(in: contentController)
         configuration.setURLSchemeHandler(SystemPageSchemeHandler(), forURLScheme: SystemPages.scheme)
 
         let view = TabWebView(

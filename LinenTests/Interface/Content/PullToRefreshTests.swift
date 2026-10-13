@@ -78,13 +78,22 @@ struct PullToRefreshGateTests {
         #expect(PullToRefreshMonitor.canBeginPull(probe))
     }
 
+    /// The bug: a map cancels the wheel to zoom, the document never moves,
+    /// and the gesture read as a pull.
+    @Test func aPageThatClaimsTheWheelMayNotPull() {
+        #expect(!PullToRefreshMonitor.canBeginPull(
+            PullStartProbe(scrollY: 0, ancestors: [], wheelClaimed: true)
+        ))
+    }
+
     @Test func decodeReadsThePagesAnswerAndRefusesGarbage() {
         let decoded = PullStartProbe.decode(
-            #"{"scrollY":12,"ancestors":[{"overflowY":"auto","scrollHeight":900,"clientHeight":300}]}"#
+            #"{"scrollY":12,"ancestors":[{"overflowY":"auto","scrollHeight":900,"clientHeight":300}],"wheelClaimed":true}"#
         )
         #expect(decoded == PullStartProbe(
             scrollY: 12,
-            ancestors: [ancestor(overflowY: "auto", scrollHeight: 900, clientHeight: 300)]
+            ancestors: [ancestor(overflowY: "auto", scrollHeight: 900, clientHeight: 300)],
+            wheelClaimed: true
         ))
         #expect(PullStartProbe.decode("not json") == nil)
     }
@@ -144,6 +153,7 @@ struct PullToRefreshProbeTests {
     private func loadedWebView(_ body: String) async -> WKWebView {
         let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = .nonPersistent()
+        PullToRefreshMonitor.install(in: configuration.userContentController)
         let webView = WKWebView(
             frame: NSRect(x: 0, y: 0, width: 500, height: 400),
             configuration: configuration
@@ -159,7 +169,9 @@ struct PullToRefreshProbeTests {
     private func probe(_ webView: WKWebView, x: CGFloat, y: CGFloat) async throws -> PullStartProbe {
         let answer = try #require(
             (try? await webView.evaluateJavaScript(
-                PullToRefreshMonitor.startProbeScript(x: x, y: y)
+                PullToRefreshMonitor.startProbeScript(x: x, y: y),
+                in: nil,
+                contentWorld: PullToRefreshMonitor.world
             )) as? String
         )
         return try #require(PullStartProbe.decode(answer))
@@ -190,5 +202,23 @@ struct PullToRefreshProbeTests {
         let scrolled = try await probe(webView, x: 250, y: 200)
         #expect(scrolled.scrollY == 700)
         #expect(!PullToRefreshMonitor.canBeginPull(scrolled))
+    }
+
+    @Test func theProbeSeesAPageThatCancelsTheWheel() async throws {
+        let webView = await loadedWebView("""
+        <div id="map" style="width: 500px; height: 400px"></div>
+        <script>
+        document.getElementById('map').addEventListener('wheel', e => e.preventDefault(), { passive: false });
+        </script>
+        """)
+        let wheel = "document.getElementById('map').dispatchEvent(new WheelEvent('wheel', { deltaY: -40, bubbles: true, cancelable: true }))"
+
+        let before = try await probe(webView, x: 250, y: 200)
+        #expect(!before.wheelClaimed)
+
+        _ = try? await webView.evaluateJavaScript(wheel)
+        let after = try await probe(webView, x: 250, y: 200)
+        #expect(after.wheelClaimed)
+        #expect(!PullToRefreshMonitor.canBeginPull(after))
     }
 }

@@ -28,6 +28,7 @@ nonisolated struct PullStartProbe: Equatable, Codable {
 
     var scrollY: Double
     var ancestors: [Ancestor]
+    var wheelClaimed = false
 
     static func decode(_ answer: String) -> PullStartProbe? {
         try? JSONDecoder().decode(PullStartProbe.self, from: Data(answer.utf8))
@@ -57,6 +58,7 @@ final class PullToRefreshMonitor {
 
     nonisolated static func canBeginPull(_ probe: PullStartProbe) -> Bool {
         probe.scrollY <= topSlack
+            && !probe.wheelClaimed
             && !probe.ancestors.contains(where: \.consumesVerticalScroll)
     }
 
@@ -64,6 +66,44 @@ final class PullToRefreshMonitor {
         guard let hit else { return false }
         return hit.isDescendant(of: page)
     }
+
+    static let world = WKContentWorld.world(name: "LinenPull")
+
+    static let wheelClaimWindow: Double = 500
+
+    static let wheelWatchScript = """
+        (() => {
+          if (window.__linenWheel) return;
+          const watch = { last: null, claimedAt: -Infinity };
+          window.__linenWheel = watch;
+          window.addEventListener('wheel', event => {
+            if (watch.last && watch.last.defaultPrevented) watch.claimedAt = performance.now();
+            watch.last = event;
+          }, { capture: true, passive: true });
+        })();
+        """
+
+    static func install(in controller: WKUserContentController) {
+        controller.addUserScript(WKUserScript(
+            source: wheelWatchScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true,
+            in: world
+        ))
+    }
+
+    private static let wheelClaimedExpression = """
+        (() => {
+          const watch = window.__linenWheel;
+          if (!watch) return false;
+          if (watch.last && watch.last.defaultPrevented) return true;
+          return performance.now() - watch.claimedAt < \(wheelClaimWindow);
+        })()
+        """
+
+    static let finishProbeScript = """
+        JSON.stringify({ scrollY: window.scrollY, ancestors: [], wheelClaimed: \(wheelClaimedExpression) })
+        """
 
     static func startProbeScript(x: CGFloat, y: CGFloat) -> String {
         """
@@ -80,7 +120,7 @@ final class PullToRefreshMonitor {
             });
             node = node.parentElement;
           }
-          return JSON.stringify({ scrollY: window.scrollY, ancestors });
+          return JSON.stringify({ scrollY: window.scrollY, ancestors, wheelClaimed: \(wheelClaimedExpression) });
         })()
         """
     }
@@ -169,7 +209,7 @@ final class PullToRefreshMonitor {
         topCheck = Task { [weak self, weak webView] in
             guard let webView else { return }
             let answer = (try? await webView.evaluateJavaScript(
-                Self.startProbeScript(x: x, y: y)
+                Self.startProbeScript(x: x, y: y), in: nil, contentWorld: Self.world
             )) as? String
             guard let self, !Task.isCancelled else { return }
             let probe = answer.flatMap(PullStartProbe.decode)
@@ -224,8 +264,13 @@ final class PullToRefreshMonitor {
 
         reloadCheck = Task { [weak webView] in
             guard let webView else { return }
-            let y = (try? await webView.evaluateJavaScript("window.scrollY")) as? Double ?? 1
-            guard !Task.isCancelled, y <= Self.topSlack else { return }
+            let answer = (try? await webView.evaluateJavaScript(
+                Self.finishProbeScript, in: nil, contentWorld: Self.world
+            )) as? String
+            guard !Task.isCancelled,
+                  let probe = answer.flatMap(PullStartProbe.decode),
+                  Self.canBeginPull(probe)
+            else { return }
             webView.reload()
         }
     }
