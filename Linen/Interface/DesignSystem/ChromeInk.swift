@@ -11,12 +11,14 @@ enum ChromeInk {
 
     static func label(on fill: Color) -> Color {
         guard let rgb = NSColor(fill).usingColorSpace(.sRGB) else { return .white }
-        let luminance = 0.2126 * rgb.redComponent + 0.7152 * rgb.greenComponent + 0.0722 * rgb.blueComponent
-        return luminance > 0.55 ? .black.opacity(0.85) : .white
+        func linear(_ c: CGFloat) -> CGFloat {
+            c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        let luminance = 0.2126 * linear(rgb.redComponent)
+            + 0.7152 * linear(rgb.greenComponent)
+            + 0.0722 * linear(rgb.blueComponent)
+        return luminance > 0.179 ? .black : .white
     }
-
-    static let lightSelectionFillOpacity = 0.17
-    static let darkSelectionFillOpacity = 0.22
 
     static func glyphOpacity(onLight: Bool, enabled: Bool = true, hovering: Bool = false, subdued: Bool = false) -> Double {
         if !enabled {
@@ -47,13 +49,6 @@ enum ChromeInk {
 
     static func hoverStyle(on wash: ChromeWash) -> AnyShapeStyle {
         AnyShapeStyle(wash.layer(0.10))
-    }
-
-    static func selectionTint(onLight: Bool) -> Color {
-        wash(
-            onLight: onLight,
-            opacity: onLight ? lightSelectionFillOpacity : darkSelectionFillOpacity
-        )
     }
 }
 
@@ -269,6 +264,7 @@ struct ChromeIcon: View {
     @State private var hovering = false
     @Environment(\.chromeIsLight) private var chromeIsLight
     @Environment(\.chromeIconExtent) private var inheritedExtent
+    @Environment(\.chromeHoverLifts) private var hoverLifts
 
     private var side: CGFloat {
         extent ?? inheritedExtent
@@ -292,8 +288,9 @@ struct ChromeIcon: View {
                 .font(.system(size: size, weight: weight))
                 .foregroundStyle(style)
                 .offset(glyphOffset)
-                .hoverLift(hovering && isEnabled)
+                .hoverLift(hoverLifts && hovering && isEnabled)
                 .frame(width: side, height: side)
+                .hoverBackground(isActive: !hoverLifts && hovering && isEnabled)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -408,6 +405,7 @@ extension EnvironmentValues {
 
     @Entry var chromeIsLight: Bool = false
     @Entry var chromeIconExtent: CGFloat = 16
+    @Entry var chromeHoverLifts = true
 
     @Entry var windowColorScheme: ColorScheme = .dark
 }

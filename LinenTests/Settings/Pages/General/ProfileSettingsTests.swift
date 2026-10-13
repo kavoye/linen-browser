@@ -41,6 +41,25 @@ struct ProfileSettingsTests {
         #expect(first.pageZoom == 1.25)
     }
 
+    @Test func theMinimalWindowStyleReachesEveryOpenWindow() throws {
+        let app = try suite()
+        let work = try suite()
+        let personal = try suite()
+        defer { [app, work, personal].forEach(forget) }
+        let first = BrowserSettings(defaults: app, sessionDefaults: work)
+        let second = BrowserSettings(defaults: app, sessionDefaults: personal)
+
+        first.isMinimal = true
+        first.minimalBarEdge = .top
+        first.hidesMinimalBar = true
+
+        #expect(second.isMinimal)
+        #expect(second.minimalBarEdge == .top)
+        #expect(second.hidesMinimalBar)
+        second.isMinimal = false
+        #expect(!first.isMinimal)
+    }
+
     @Test func independentAppDefaultsDoNotReceiveBroadcasts() throws {
         let firstDefaults = try suite()
         let secondDefaults = try suite()

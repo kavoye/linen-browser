@@ -35,6 +35,24 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum MinimalBarEdge: String, CaseIterable, Identifiable {
+    case bottom
+    case top
+
+    var id: String {
+        rawValue
+    }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .bottom:
+            "Bottom"
+        case .top:
+            "Top"
+        }
+    }
+}
+
 enum LoomStyle: String, CaseIterable, Identifiable {
     case standard
     case transparent
@@ -47,6 +65,15 @@ enum LoomStyle: String, CaseIterable, Identifiable {
         switch self {
         case .standard:
             "Standard"
+        case .transparent:
+            "Transparent"
+        }
+    }
+
+    var backgroundLabel: LocalizedStringResource {
+        switch self {
+        case .standard:
+            "Solid"
         case .transparent:
             "Transparent"
         }

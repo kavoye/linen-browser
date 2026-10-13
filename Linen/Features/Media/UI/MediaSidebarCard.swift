@@ -45,10 +45,6 @@ struct MediaSidebarCard: View {
         }
     }
 
-    private var hasPicker: Bool {
-        coordinator.mediaPickerTabs.count > 1
-    }
-
     private var titleWidth: CGFloat {
         max(40, Self.controlsWidth(panelWidth: panelWidth))
     }
@@ -135,6 +131,7 @@ struct MediaSidebarCard: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.sidebarWidth) private var sidebarWidth
     @Environment(\.sidebarIsFloating) private var sidebarIsFloating
+    @Environment(\.floatingGround) private var floatingGround
     @State private var showsControls = false
 
     @State private var controlsWidth: CGFloat = 0
@@ -311,7 +308,18 @@ struct MediaSidebarCard: View {
                 .padding(.horizontal, Self.controlsInset(panelWidth: panelWidth))
                 .padding(.vertical, 8)
                 .onHover { showsControls = $0 }
-                .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.card, style: .continuous))
+                .background {
+                    if let floatingGround {
+                        FloatingChromeFill(
+                            shape: .rect(cornerRadius: Theme.Radius.card, style: .continuous),
+                            ground: floatingGround
+                        )
+                    }
+                }
+                .glassEffect(
+                    floatingGround == nil ? .regular : .identity,
+                    in: .rect(cornerRadius: Theme.Radius.card, style: .continuous)
+                )
                 .contentShape(.rect(cornerRadius: Theme.Radius.card, style: .continuous))
                 .transition(.opacity)
             }

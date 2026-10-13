@@ -14,6 +14,8 @@ struct Sidebar: View {
 
     @Environment(\.windowControlsInset) private var windowControlsInset
     @Environment(\.sidebarStyle) private var sidebarStyle
+    @Environment(\.sidebarIsFloating) private var isFloating
+    @Environment(\.floatingGround) private var floatingGround
     @Environment(\.colorScheme) private var scheme
     @State private var bottomObscuredHeight: CGFloat = 0
     @State private var newFolderDrop = SidebarNewFolderDrop()
@@ -39,7 +41,10 @@ struct Sidebar: View {
     }
 
     private var inkIsLight: Bool {
-        Self.inkIsLight(browser: browser, coordinator: coordinator, scheme: scheme, wearsBand: wearsBand)
+        if let floatingGround {
+            return floatingGround.isLight
+        }
+        return Self.inkIsLight(browser: browser, coordinator: coordinator, scheme: scheme, wearsBand: wearsBand)
     }
 
     static func inkIsLight(
@@ -64,7 +69,7 @@ struct Sidebar: View {
     }
 
     private var contentInsets: EdgeInsets {
-        if sidebar.isFloating {
+        if isFloating {
             let inset = LoomChrome.canvasInset
             return EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset)
         }
@@ -108,7 +113,9 @@ struct Sidebar: View {
         .padding(.top, topPadding)
         .background {
             ZStack {
-                if sidebar.isFloating {
+                if let floatingGround {
+                    FloatingChromeFill(shape: LoomChrome.canvasShape, ground: floatingGround)
+                } else if isFloating {
                     LoomFloatingFill(
                         sampledPageColor: ChromeBand.pageColor(
                             browser: browser,
@@ -121,7 +128,7 @@ struct Sidebar: View {
             }
         }
         .environment(\.chromeIsLight, inkIsLight)
-        .environment(\.chromeWash, .of(inkColor, isLight: inkIsLight))
+        .environment(\.chromeWash, .of(floatingGround.map { $0.color } ?? inkColor, isLight: inkIsLight))
         .environment(\.windowColorScheme, scheme)
         .environment(\.colorScheme, inkIsLight ? .light : .dark)
         .animation(nil, value: inkIsLight)
@@ -168,10 +175,6 @@ private struct SidebarBottomChrome: View {
 
     @Environment(\.sidebarStyle) private var sidebarStyle
 
-    private var expandsProfile: Bool {
-        sidebarStyle == .full
-    }
-
     private var downloadsButton: some View {
         SidebarDownloadsButton(coordinator: coordinator)
     }
@@ -187,6 +190,7 @@ private struct SidebarBottomChrome: View {
                 VStack(spacing: 6) {
                     SidebarProfileControl(coordinator: coordinator)
                     downloadsButton
+                    SidebarHistoryButton(coordinator: coordinator)
                     SidebarSettingsRow(coordinator: coordinator)
                 }
             } else {
@@ -197,6 +201,7 @@ private struct SidebarBottomChrome: View {
                     Spacer(minLength: 0)
 
                     downloadsButton
+                    SidebarHistoryButton(coordinator: coordinator)
                     SidebarSettingsRow(coordinator: coordinator)
                 }
             }
@@ -257,6 +262,8 @@ struct SidebarTopRow: View {
     let newFolderDrop: SidebarNewFolderDrop
 
     @Environment(\.sidebarStyle) private var sidebarStyle
+    @Environment(\.sidebarIsFloating) private var isFloating
+    @Environment(\.sidebarTopRowShift) private var shift
 
     private var sidebar: SidebarLayout {
         coordinator.sidebar
@@ -286,7 +293,8 @@ struct SidebarTopRow: View {
             }
         }
         .padding(.bottom, 2)
-        .opacity(SidebarMetrics.topControlsOpacity(isShowing: sidebar.isShowing))
+        .opacity(SidebarMetrics.topControlsOpacity(isShowing: sidebar.isShowing || isFloating))
+        .visualEffect { [shift] content, _ in content.offset(shift) }
     }
 }
 
@@ -440,7 +448,7 @@ struct NewTabRow: View {
             .frame(maxWidth: .infinity)
             .frame(height: 32)
             .sidebarRowSelectionEffect(
-                isSelected: coordinator.isNewTabPaletteOpen,
+                isSelected: coordinator.palette.isNewTab,
                 isHovering: hovering
             )
             .contentShape(Rectangle())
@@ -456,6 +464,7 @@ struct SidebarDownloadsButton: View {
     let coordinator: AppCoordinator
 
     @Environment(\.sidebarStyle) private var sidebarStyle
+    @Environment(\.chromeHoverLifts) private var hoverLifts
     @State private var hovering = false
 
     private static let barWidth: CGFloat = 15
@@ -491,8 +500,9 @@ struct SidebarDownloadsButton: View {
                     .opacity(isRunning ? 1 : 0)
                     .frame(height: isRunning ? 2 : 0)
             }
-            .hoverLift(hovering)
+            .hoverLift(hoverLifts && hovering)
             .frame(width: 28, height: 28)
+            .hoverBackground(isActive: !hoverLifts && hovering)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -507,6 +517,20 @@ struct SidebarDownloadsButton: View {
         .help(isRunning
               ? Text("Downloads — \(downloads.activeCount) in progress")
               : Text("Downloads"))
+    }
+}
+
+struct SidebarHistoryButton: View {
+    let coordinator: AppCoordinator
+
+    var body: some View {
+        QuietIconButton(
+            symbol: "clock",
+            isOn: false,
+            help: String(localized: "History")
+        ) {
+            coordinator.showHistory()
+        }
     }
 }
 

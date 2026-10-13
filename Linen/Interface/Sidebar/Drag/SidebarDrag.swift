@@ -78,6 +78,14 @@ final class SidebarDragModel {
 
     var contentFrameInWindow: CGRect = .zero
 
+    var listFrameInWindow: CGRect {
+        CGRect(origin: listOriginInWindow, size: listSizeInWindow)
+    }
+
+    func pageOwns(_ pointInWindow: CGPoint) -> Bool {
+        !listFrameInWindow.contains(pointInWindow) && contentFrameInWindow.contains(pointInWindow)
+    }
+
     var dropFrameInWindow: CGRect {
         contentFrameInWindow
     }

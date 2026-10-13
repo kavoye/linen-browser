@@ -225,6 +225,14 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             modifiers: [.command, .option]
         ))
         menu.addItem(.separator())
+        menu.addItem(command(
+            "Use Minimal Window Style",
+            #selector(toggleMinimal),
+            key: "m",
+            modifiers: [.command, .shift]
+        ))
+        menu.addItem(command("Move Bar to Top", #selector(moveMinimalBar)))
+        menu.addItem(.separator())
         let developer = NSMenu()
         developer.addItem(command(
             "Show Web Inspector",
@@ -393,6 +401,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func toggleSidePanel() {
         coordinator.toggleSidePanel()
     }
+    @objc private func toggleMinimal() {
+        coordinator.toggleMinimal()
+    }
+    @objc private func moveMinimalBar() {
+        coordinator.moveMinimalBar()
+    }
 
     @objc private func splitRight() {
         coordinator.splitActiveTab(axis: .sideBySide)
@@ -555,7 +569,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             let sidebarTitle: LocalizedStringResource = coordinator.sidebar.isVisible
                 ? "Hide Sidebar" : "Show Sidebar"
             menuItem.title = String(localized: sidebarTitle)
-            return true
+            return !coordinator.settings.isMinimal
         case #selector(toggleReader):
             let readerTitle: LocalizedStringResource = coordinator.readerTab?.reader.isActive == true
                 ? "Hide Reader"
@@ -568,6 +582,18 @@ final class MainMenu: NSObject, NSMenuItemValidation {
                 : "Show Side Panel"
             menuItem.title = String(localized: sidePanelTitle)
             return true
+        case #selector(toggleMinimal):
+            let windowStyleTitle: LocalizedStringResource = coordinator.settings.isMinimal
+                ? "Use Standard Window Style"
+                : "Use Minimal Window Style"
+            menuItem.title = String(localized: windowStyleTitle)
+            return true
+        case #selector(moveMinimalBar):
+            let barTitle: LocalizedStringResource = coordinator.settings.minimalBarEdge == .top
+                ? "Move Bar to Bottom"
+                : "Move Bar to Top"
+            menuItem.title = String(localized: barTitle)
+            return coordinator.settings.isMinimal
         default:
             return true
         }

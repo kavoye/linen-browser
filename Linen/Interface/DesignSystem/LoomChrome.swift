@@ -107,10 +107,6 @@ nonisolated struct LoomShellGeometry {
         sidebarWidth + (LoomChrome.canvasInset - LoomChrome.resizeGrabWidth) / 2
     }
 
-    var panelLeading: CGFloat {
-        containerWidth - panelWidth - LoomChrome.canvasInset
-    }
-
     var panelCoversPage: Bool {
         isPanelVisible && isPanelExpanded
     }
@@ -286,20 +282,24 @@ struct LoomPanelFill<S: Shape>: View {
 struct LoomPageCanvas<Content: View>: View {
     let trailingInset: CGFloat
     let showsPanelFill: Bool
+    let retraction: CGFloat
     @ViewBuilder let content: Content
 
     init(
         trailingInset: CGFloat = 0,
         showsPanelFill: Bool = false,
+        retraction: CGFloat = 0,
         @ViewBuilder content: () -> Content
     ) {
         self.trailingInset = trailingInset
         self.showsPanelFill = showsPanelFill
+        self.retraction = retraction
         self.content = content()
     }
 
     var body: some View {
-        let shape = LoomChrome.canvasShape
+        let keep = 1 - retraction
+        let shape = RoundedRectangle(cornerRadius: LoomChrome.canvasRadius * keep, style: .continuous)
 
         content
             .background {
@@ -307,13 +307,13 @@ struct LoomPageCanvas<Content: View>: View {
             }
             .clipShape(shape)
             .shadow(
-                color: .black.opacity(0.18),
+                color: .black.opacity(0.18 * keep),
                 radius: 12,
                 y: 4
             )
-            .padding(.top, LoomChrome.canvasTop)
-            .padding(.leading, LoomChrome.canvasInset)
-            .padding(.trailing, LoomChrome.canvasInset + trailingInset)
-            .padding(.bottom, LoomChrome.canvasInset)
+            .padding(.top, LoomChrome.canvasTop * keep)
+            .padding(.leading, LoomChrome.canvasInset * keep)
+            .padding(.trailing, LoomChrome.canvasInset * keep + trailingInset)
+            .padding(.bottom, LoomChrome.canvasInset * keep)
     }
 }

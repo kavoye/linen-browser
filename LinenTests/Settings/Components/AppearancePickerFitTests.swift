@@ -25,8 +25,9 @@ struct AppearancePickerFitTests {
 
     @Test func theWindowStyleCardsWrapIntoANarrowPage() {
         let narrow = AppearanceThumbnailMetrics.width + 20
-        let picker = LoomStylePicker(
-            selection: .standard,
+        let picker = WindowStylePicker(
+            isMinimal: false,
+            loomStyle: .standard,
             usesWebsiteTint: false,
             tintsSelectedTab: false,
             onSelect: { _ in }

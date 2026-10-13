@@ -178,6 +178,22 @@ struct CommandPaletteRankingTests {
         #expect(loud.first { $0.id == "action-toggleSidebar" }?.title == String(localized: "Show Sidebar"))
     }
 
+    @Test func theMinimalWindowStyleHasItsOwnViewCommands() {
+        let standard = CommandPaletteCatalog.commands(context: CommandPaletteContext(), perform: { _ in })
+        let minimal = CommandPaletteCatalog.commands(
+            context: CommandPaletteContext(isMinimal: true, isBarOnTop: true),
+            perform: { _ in }
+        )
+
+        #expect(standard.contains { $0.id == "action-toggleSidebar" })
+        #expect(!standard.contains { $0.id == "action-moveMinimalBar" })
+        #expect(standard.first { $0.id == "action-toggleMinimal" }?.title == String(localized: "Use Minimal Window Style"))
+
+        #expect(!minimal.contains { $0.id == "action-toggleSidebar" })
+        #expect(minimal.first { $0.id == "action-moveMinimalBar" }?.title == String(localized: "Move Bar to Bottom"))
+        #expect(minimal.first { $0.id == "action-toggleMinimal" }?.title == String(localized: "Use Standard Window Style"))
+    }
+
     @Test func everyActionIsReachableAndRunsItsOwnCase() {
         let context = CommandPaletteContext(
             historyCount: 5,
@@ -200,10 +216,15 @@ struct CommandPaletteRankingTests {
             hasSplitAxis: true,
             canCheckForUpdates: true
         )
+        var minimal = context
+        minimal.isMinimal = true
         var performed: [CommandPaletteAction] = []
-        let commands = CommandPaletteCatalog.commands(context: context) { performed.append($0) }
+        let standard = CommandPaletteCatalog.commands(context: context) { performed.append($0) }
+        let onlyMinimal = CommandPaletteCatalog.commands(context: minimal) { performed.append($0) }
+            .filter { command in !standard.contains { $0.id == command.id } }
+        let commands = standard + onlyMinimal
 
-        #expect(Set(commands.map(\.id)).count == commands.count)
+        #expect(Set(standard.map(\.id)).count == standard.count)
         #expect(commands.count == CommandPaletteAction.allCases.count)
 
         for command in commands {

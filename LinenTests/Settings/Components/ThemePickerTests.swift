@@ -95,6 +95,30 @@ struct ThemePickerTests {
         #expect(restored.matchesWebsiteColor)
     }
 
+    @Test func theMinimalBarStartsAtTheBottomAndRemembersTheTop() throws {
+        let name = TestDefaults.name("MinimalBarEdgeTests")
+        let suite = try #require(UserDefaults(suiteName: name))
+        defer { suite.removePersistentDomain(forName: name) }
+
+        let settings = BrowserSettings(defaults: suite)
+        #expect(settings.minimalBarEdge == .bottom)
+
+        settings.minimalBarEdge = .top
+        #expect(BrowserSettings(defaults: suite).minimalBarEdge == .top)
+    }
+
+    @Test func theMinimalBarStaysUntilAutoHideIsTurnedOn() throws {
+        let name = TestDefaults.name("MinimalBarAutoHideTests")
+        let suite = try #require(UserDefaults(suiteName: name))
+        defer { suite.removePersistentDomain(forName: name) }
+
+        let settings = BrowserSettings(defaults: suite)
+        #expect(!settings.hidesMinimalBar)
+
+        settings.hidesMinimalBar = true
+        #expect(BrowserSettings(defaults: suite).hidesMinimalBar)
+    }
+
     @Test func legacyWebsiteTintStyleMigratesToStandardWithTintEnabled() throws {
         let suite = try #require(UserDefaults(suiteName: TestDefaults.name("WebsiteTintMigrationTests")))
         defer { suite.removePersistentDomain(forName: suite.description) }

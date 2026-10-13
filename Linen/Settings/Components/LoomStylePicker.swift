@@ -4,11 +4,12 @@
 import AppKit
 import SwiftUI
 
-struct LoomStylePicker: View {
-    let selection: LoomStyle
+struct WindowStylePicker: View {
+    let isMinimal: Bool
+    let loomStyle: LoomStyle
     let usesWebsiteTint: Bool
     let tintsSelectedTab: Bool
-    let onSelect: (LoomStyle) -> Void
+    let onSelect: (Bool) -> Void
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -27,33 +28,124 @@ struct LoomStylePicker: View {
 
     @ViewBuilder
     private var cards: some View {
-        ForEach(LoomStyle.allCases) { style in
-            LoomStyleCard(
-                style: style,
-                usesWebsiteTint: usesWebsiteTint,
-                tintsSelectedTab: tintsSelectedTab,
-                isSelected: style == selection,
-                action: { onSelect(style) }
-            )
-        }
-    }
-}
-
-private struct LoomStyleCard: View {
-    let style: LoomStyle
-    let usesWebsiteTint: Bool
-    let tintsSelectedTab: Bool
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        PreviewChoiceCard(label: style.label, isSelected: isSelected, action: action) {
+        PreviewChoiceCard(label: "Standard", isSelected: !isMinimal, action: { onSelect(false) }) {
             LoomStyleThumbnail(
-                style: style,
+                style: loomStyle,
                 usesWebsiteTint: usesWebsiteTint,
                 tintsSelectedTab: tintsSelectedTab
             )
         }
+        PreviewChoiceCard(label: "Minimal", isSelected: isMinimal, action: { onSelect(true) }) {
+            MinimalStyleThumbnail()
+        }
+    }
+}
+
+private struct MinimalStyleThumbnail: View {
+    private let ink = Color.white
+    private let orange = Color(red: 0.95, green: 0.43, blue: 0.18)
+    private let magenta = Color(red: 0.72, green: 0.26, blue: 0.46)
+    private let purple = Color(red: 0.38, green: 0.14, blue: 0.58)
+
+    private var cards: [[Color]] {
+        [[orange, magenta], [magenta, purple], [purple, Color(red: 0.24, green: 0.2, blue: 0.62)]]
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.21, green: 0.09, blue: 0.25),
+                    Color(red: 0.10, green: 0.06, blue: 0.19),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 0) {
+                LinearGradient(colors: [orange, purple], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .frame(height: 26)
+                    .overlay(alignment: .bottomLeading) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Capsule().fill(ink.opacity(0.92)).frame(width: 40, height: 4)
+                            Capsule().fill(ink.opacity(0.6)).frame(width: 28, height: 2)
+                        }
+                        .padding(7)
+                    }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Capsule().fill(ink.opacity(0.4)).frame(width: 74, height: 2)
+                    Capsule().fill(ink.opacity(0.4)).frame(width: 66, height: 2)
+                    Capsule().fill(ink.opacity(0.4)).frame(width: 70, height: 2)
+                    HStack(spacing: 3) {
+                        ForEach(cards, id: \.self) { pair in
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .fill(LinearGradient(colors: pair, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .opacity(0.6)
+                                .frame(height: 9)
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+                .padding(.horizontal, 7)
+                .padding(.top, 6)
+
+                Spacer(minLength: 0)
+            }
+
+            MinimalPreviewPill(ink: ink, accent: orange)
+                .padding(.bottom, 4)
+        }
+    }
+}
+
+private struct MinimalPreviewPill: View {
+    let ink: Color
+    let accent: Color
+
+    var body: some View {
+        HStack(spacing: 2.5) {
+            RoundedRectangle(cornerRadius: 1, style: .continuous)
+                .strokeBorder(ink.opacity(0.85), lineWidth: 0.7)
+                .frame(width: 4, height: 4)
+            Rectangle()
+                .fill(ink.opacity(0.25))
+                .frame(width: 0.5, height: 4)
+            Image(systemName: "chevron.left")
+            Image(systemName: "chevron.right")
+                .opacity(0.45)
+            Image(systemName: "arrow.clockwise")
+            HStack(spacing: 2) {
+                Circle().fill(accent).frame(width: 2.5, height: 2.5)
+                Capsule().fill(ink.opacity(0.6)).frame(width: 13, height: 1.8)
+            }
+            .frame(maxWidth: .infinity)
+            Image(systemName: "ellipsis")
+            Image(systemName: "sidebar.right")
+        }
+        .font(.system(size: 3.5, weight: .bold))
+        .foregroundStyle(ink.opacity(0.8))
+        .padding(.horizontal, 4.5)
+        .frame(width: 70, height: 10)
+        .background {
+            Capsule().fill(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.33, green: 0.15, blue: 0.43),
+                        Color(red: 0.23, green: 0.11, blue: 0.35),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+        }
+        .overlay {
+            Capsule().strokeBorder(
+                LinearGradient(colors: [ink.opacity(0.3), ink.opacity(0.08)], startPoint: .top, endPoint: .bottom),
+                lineWidth: 0.5
+            )
+        }
+        .shadow(color: .black.opacity(0.4), radius: 3, y: 1)
     }
 }
 

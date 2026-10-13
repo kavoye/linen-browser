@@ -9,6 +9,9 @@ struct ContentArea: View {
     let coordinator: AppCoordinator
     let settingsWorkspace: SettingsWorkspace
     let canvasTrailingInset: CGFloat
+    var isFullBleed = false
+    var retraction: CGFloat = 0
+    var findBarTop: CGFloat = 10
 
     @State private var pull = PullToRefreshMonitor()
     @State private var pullState = PullState.idle
@@ -25,17 +28,24 @@ struct ContentArea: View {
         return showStartPage || browser.activeTab?.internalPage != nil
     }
 
-    var body: some View {
-        LoomPageCanvas(
+    private var canvas: some View {
+        let retraction = isFullBleed ? 1 : retraction
+        return LoomPageCanvas(
             trailingInset: canvasTrailingInset,
-            showsPanelFill: showsPagePanelFill
+            showsPanelFill: showsPagePanelFill && !isFullBleed,
+            retraction: retraction
         ) {
             page
+                .background(Theme.windowBackground.opacity(showsPagePanelFill ? retraction : 0))
         }
+    }
+
+    var body: some View {
+        canvas
         .onAppear {
             pull.webViewProvider = { browser.activeTab?.webView }
             pull.isCovered = {
-                coordinator.isPaletteOpen || coordinator.onboarding.isPresented
+                coordinator.palette.isOpen || coordinator.onboarding.isPresented
                     || browser.activeTab?.reader.isActive == true
             }
             pull.onChange = { state, animation in
@@ -90,7 +100,7 @@ struct ContentArea: View {
                     )
                     .transition(.identity)
                 } else if let tab = browser.activeTab, !showStartPage {
-                    ActiveWebSurface(tab: tab, coordinator: coordinator)
+                    ActiveWebSurface(tab: tab, coordinator: coordinator, showsLinkPreview: !isFullBleed)
                         .transition(.identity)
                         .offset(y: pullState.offset)
                         .overlay(alignment: .top) {
@@ -131,7 +141,7 @@ struct ContentArea: View {
                         )
                 }
                 .id(tab.id)
-                .padding(.top, 10)
+                .padding(.top, findBarTop)
                 .padding(.trailing, 14)
                 .zIndex(5)
                 .transition(.move(edge: .top).combined(with: .opacity))
@@ -182,6 +192,7 @@ private struct KeptAliveTabs: View {
 private struct ActiveWebSurface: View {
     let tab: BrowserTab
     let coordinator: AppCoordinator
+    let showsLinkPreview: Bool
 
     var body: some View {
         WebViewRepresentable(
@@ -197,8 +208,9 @@ private struct ActiveWebSurface: View {
                         .transition(.identity)
                 }
             }
+            .overlay { PageMorphCover(tab: tab) }
             .overlay {
-                ReaderPresenter(tab: tab, listener: coordinator.readerListener, readsWithOpenAI: coordinator.readsWithOpenAI)
+                ReaderPresenter(tab: tab, listener: coordinator.readerListener, readsWithOpenAI: coordinator.voiceRoute.readsWithOpenAI)
             }
             .onChange(of: tab.reader.isActive) { _, isActive in
                 tab.find.pageChanged()
@@ -207,11 +219,13 @@ private struct ActiveWebSurface: View {
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                LinkPreview(
-                    address: tab.hoveredLink?.absoluteString,
-                    intent: .of(coordinator.linkModifiers),
-                    ground: tab.canvasColor
-                )
+                if showsLinkPreview {
+                    LinkPreview(
+                        address: tab.hoveredLink?.absoluteString,
+                        intent: .of(coordinator.linkModifiers),
+                        ground: tab.canvasColor
+                    )
+                }
             }
             .overlay {
                 LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id, ground: tab.canvasColor)

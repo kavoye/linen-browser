@@ -45,6 +45,9 @@ final class BrowserSettings {
         static let github = "sidePanel.github"
         static let tabColorRefraction = "appearance.tabColorRefraction"
         static let solidSidePanel = "appearance.solidSidePanel"
+        static let minimal = "appearance.minimal"
+        static let minimalBar = "appearance.minimalBar"
+        static let minimalBarAutoHide = "appearance.minimalBarAutoHide"
         static let automaticPiP = "media.automaticPiP"
         static let videoInPlayer = "experiments.videoInPlayer"
         static let passwordAutofill = "autofill.passwords"
@@ -74,10 +77,7 @@ final class BrowserSettings {
         Key.startPageOrder, Key.startPageHidden, Key.startPageHiddenSites,
     ]
 
-    private static let sessionKeySet = Set(sessionKeys)
-
-    @ObservationIgnored private let appDefaults: UserDefaults
-    @ObservationIgnored private var sessionDefaults: UserDefaults
+    @ObservationIgnored private let store: SettingsDefaults
 
     @ObservationIgnored var onContentBlockingChanged: (() -> Void)?
     @ObservationIgnored var onWebPreferencesChanged: (() -> Void)?
@@ -89,15 +89,11 @@ final class BrowserSettings {
     @ObservationIgnored var onVideoInPlayerChanged: ((Bool) -> Void)?
     @ObservationIgnored var onArchiveTabsAfterChanged: ((TabArchiveDelay) -> Void)?
 
-    private func store(for key: String) -> UserDefaults {
-        Self.sessionKeySet.contains(key) ? sessionDefaults : appDefaults
-    }
-
     private func write(_ value: Any?, forKey key: String) {
         guard !isReceivingAppSetting else { return }
-        store(for: key).set(value, forKey: key)
-        guard !Self.sessionKeySet.contains(key) else { return }
-        for other in Self.liveSettings.allObjects where other !== self && other.appDefaults === appDefaults {
+        store.set(value, forKey: key)
+        guard !store.isSessionKey(key) else { return }
+        for other in Self.liveSettings.allObjects where other !== self && other.store.app === store.app {
             other.receiveAppSetting(key, from: self)
         }
     }
@@ -130,6 +126,12 @@ final class BrowserSettings {
             refractsTabColor = source.refractsTabColor
         case Key.solidSidePanel:
             hasSolidSidePanel = source.hasSolidSidePanel
+        case Key.minimal:
+            isMinimal = source.isMinimal
+        case Key.minimalBar:
+            minimalBarEdge = source.minimalBarEdge
+        case Key.minimalBarAutoHide:
+            hidesMinimalBar = source.hidesMinimalBar
         case Key.automaticPiP:
             automaticPictureInPicture = source.automaticPictureInPicture
         case Key.videoInPlayer:
@@ -168,30 +170,6 @@ final class BrowserSettings {
         default:
             break
         }
-    }
-
-    private func remove(_ key: String) {
-        store(for: key).removeObject(forKey: key)
-    }
-
-    private func string(_ key: String) -> String? {
-        store(for: key).string(forKey: key)
-    }
-
-    private func bool(_ key: String) -> Bool {
-        store(for: key).bool(forKey: key)
-    }
-
-    private func object(_ key: String) -> Any? {
-        store(for: key).object(forKey: key)
-    }
-
-    private func double(_ key: String) -> Double {
-        store(for: key).double(forKey: key)
-    }
-
-    private func stringArray(_ key: String) -> [String]? {
-        store(for: key).stringArray(forKey: key)
     }
 
     // MARK: - Appearance
@@ -279,6 +257,27 @@ final class BrowserSettings {
             guard archiveTabsAfter != oldValue else { return }
             write(archiveTabsAfter.rawValue, forKey: Key.archiveTabsAfter)
             onArchiveTabsAfterChanged?(archiveTabsAfter)
+        }
+    }
+
+    var isMinimal: Bool {
+        didSet {
+            guard isMinimal != oldValue else { return }
+            write(isMinimal, forKey: Key.minimal)
+        }
+    }
+
+    var minimalBarEdge: MinimalBarEdge {
+        didSet {
+            guard minimalBarEdge != oldValue else { return }
+            write(minimalBarEdge.rawValue, forKey: Key.minimalBar)
+        }
+    }
+
+    var hidesMinimalBar: Bool {
+        didSet {
+            guard hidesMinimalBar != oldValue else { return }
+            write(hidesMinimalBar, forKey: Key.minimalBarAutoHide)
         }
     }
 
@@ -625,139 +624,125 @@ final class BrowserSettings {
     // MARK: - Init
 
     init(defaults: UserDefaults = .standard, sessionDefaults: UserDefaults? = nil) {
-        let session = sessionDefaults ?? defaults
-        self.appDefaults = defaults
-        self.sessionDefaults = session
+        let store = SettingsDefaults(
+            app: defaults,
+            session: sessionDefaults ?? defaults,
+            sessionKeys: Set(Self.sessionKeys)
+        )
+        self.store = store
 
-        func pick(_ key: String) -> UserDefaults {
-            Self.sessionKeySet.contains(key) ? session : defaults
-        }
-        func string(_ key: String) -> String? {
-            pick(key).string(forKey: key)
-        }
-        func bool(_ key: String) -> Bool {
-            pick(key).bool(forKey: key)
-        }
-        func object(_ key: String) -> Any? {
-            pick(key).object(forKey: key)
-        }
-        func double(_ key: String) -> Double {
-            pick(key).double(forKey: key)
-        }
-        func stringArray(_ key: String) -> [String]? {
-            pick(key).stringArray(forKey: key)
-        }
-
-        appearance = string(Key.appearance)
+        appearance = store.string(Key.appearance)
             .flatMap(AppearanceMode.init(rawValue:)) ?? .system
-        let storedLoomStyle = string(Key.loomStyle)
+        let storedLoomStyle = store.string(Key.loomStyle)
         loomStyle = storedLoomStyle == LoomStyle.transparent.rawValue ? .transparent : .standard
-        if let storedWebsiteTint = object(Key.websiteTint) as? Bool {
+        if let storedWebsiteTint = store.object(Key.websiteTint) as? Bool {
             matchesWebsiteColor = storedWebsiteTint
         } else if storedLoomStyle == "websiteTint" {
             matchesWebsiteColor = true
         } else if storedLoomStyle == nil {
-            matchesWebsiteColor = object(Key.websiteColor) as? Bool ?? true
+            matchesWebsiteColor = store.object(Key.websiteColor) as? Bool ?? true
         } else {
             matchesWebsiteColor = false
         }
-        transparency = object(Key.transparency) == nil
+        transparency = store.object(Key.transparency) == nil
             ? 0.5
-            : min(max(double(Key.transparency), 0), 1)
-        showsMediaPlayer = object(Key.mediaPlayer) as? Bool ?? true
-        showsLyrics = object(Key.lyrics) as? Bool ?? false
-        showsGitHub = object(Key.github) as? Bool ?? false
-        refractsTabColor = object(Key.tabColorRefraction) as? Bool ?? true
-        hasSolidSidePanel = object(Key.solidSidePanel) as? Bool ?? false
-        sleepsInactiveTabs = object(Key.sleepsInactiveTabs) as? Bool ?? false
-        archiveTabsAfter = string(Key.archiveTabsAfter)
+            : min(max(store.double(Key.transparency), 0), 1)
+        showsMediaPlayer = store.object(Key.mediaPlayer) as? Bool ?? true
+        showsLyrics = store.object(Key.lyrics) as? Bool ?? false
+        showsGitHub = store.object(Key.github) as? Bool ?? false
+        refractsTabColor = store.object(Key.tabColorRefraction) as? Bool ?? true
+        hasSolidSidePanel = store.object(Key.solidSidePanel) as? Bool ?? false
+        isMinimal = store.object(Key.minimal) as? Bool ?? false
+        minimalBarEdge = store.string(Key.minimalBar).flatMap(MinimalBarEdge.init(rawValue:)) ?? .bottom
+        hidesMinimalBar = store.object(Key.minimalBarAutoHide) as? Bool ?? false
+        sleepsInactiveTabs = store.object(Key.sleepsInactiveTabs) as? Bool ?? false
+        archiveTabsAfter = store.string(Key.archiveTabsAfter)
             .flatMap(TabArchiveDelay.init(rawValue:)) ?? .never
-        showsLinkPreview = object(Key.linkPreview) as? Bool ?? true
-        showsFullAddress = object(Key.fullAddress) as? Bool ?? false
-        peeksAtLinks = object(Key.linkPeek) as? Bool ?? true
-        automaticPictureInPicture = object(Key.automaticPiP) as? Bool ?? false
-        showsVideoInPlayer = object(Key.videoInPlayer) as? Bool ?? false
-        fillsPasswords = object(Key.passwordAutofill) as? Bool ?? true
-        passwordExtensionID = object(Key.passwordExtension) as? String ?? ""
-        fillsContacts = object(Key.contactAutofill) as? Bool ?? true
-        fillsPaymentCards = object(Key.paymentCardAutofill) as? Bool ?? true
-        updateChannel = string(Key.updateChannel)
+        showsLinkPreview = store.object(Key.linkPreview) as? Bool ?? true
+        showsFullAddress = store.object(Key.fullAddress) as? Bool ?? false
+        peeksAtLinks = store.object(Key.linkPeek) as? Bool ?? true
+        automaticPictureInPicture = store.object(Key.automaticPiP) as? Bool ?? false
+        showsVideoInPlayer = store.object(Key.videoInPlayer) as? Bool ?? false
+        fillsPasswords = store.object(Key.passwordAutofill) as? Bool ?? true
+        passwordExtensionID = store.object(Key.passwordExtension) as? String ?? ""
+        fillsContacts = store.object(Key.contactAutofill) as? Bool ?? true
+        fillsPaymentCards = store.object(Key.paymentCardAutofill) as? Bool ?? true
+        updateChannel = store.string(Key.updateChannel)
             .flatMap(UpdateChannel.init(rawValue:)) ?? .release
-        let storedZoom = double(Key.pageZoom)
+        let storedZoom = store.double(Key.pageZoom)
         pageZoom = storedZoom > 0 ? storedZoom : 1
 
-        searchEngineID = string(Key.searchEngine) ?? SearchEngine.duckDuckGo.id
-        customSearchName = string(Key.customSearchName) ?? ""
-        customSearchTemplate = string(Key.customSearchTemplate) ?? ""
-        showsSearchSuggestions = object(Key.suggestions) as? Bool ?? true
-        agentOnlyInput = bool(Key.agentOnlyInput)
+        searchEngineID = store.string(Key.searchEngine) ?? SearchEngine.duckDuckGo.id
+        customSearchName = store.string(Key.customSearchName) ?? ""
+        customSearchTemplate = store.string(Key.customSearchTemplate) ?? ""
+        showsSearchSuggestions = store.object(Key.suggestions) as? Bool ?? true
+        agentOnlyInput = store.bool(Key.agentOnlyInput)
 
-        historyRetention = string(Key.historyRetention)
+        historyRetention = store.string(Key.historyRetention)
             .flatMap(HistoryRetention.init(rawValue:)) ?? .forever
-        clearsDataOnQuit = bool(Key.clearOnQuit)
-        allowsCertificateExceptions = bool(Key.certificateExceptions)
+        clearsDataOnQuit = store.bool(Key.clearOnQuit)
+        allowsCertificateExceptions = store.bool(Key.certificateExceptions)
 
-        javaScriptEnabled = object(Key.javaScript) as? Bool ?? true
-        blocksPopups = object(Key.blockPopups) as? Bool ?? true
-        blocksTrackers = object(Key.blockTrackers) as? Bool ?? true
-        autoplay = string(Key.autoplay)
+        javaScriptEnabled = store.object(Key.javaScript) as? Bool ?? true
+        blocksPopups = store.object(Key.blockPopups) as? Bool ?? true
+        blocksTrackers = store.object(Key.blockTrackers) as? Bool ?? true
+        autoplay = store.string(Key.autoplay)
             .flatMap(AutoplayPolicy.init(rawValue:)) ?? .allow
 
-        let storedFolder = string(Key.downloadFolder)
+        let storedFolder = store.string(Key.downloadFolder)
         downloadFolder = storedFolder.map { URL(filePath: $0, directoryHint: .isDirectory) }
             ?? Self.defaultDownloadFolder
-        asksWhereToSave = bool(Key.askWhereToSave)
-        downloadRetention = string(Key.downloadRetention)
+        asksWhereToSave = store.bool(Key.askWhereToSave)
+        downloadRetention = store.string(Key.downloadRetention)
             .flatMap(DownloadRetention.init(rawValue:)) ?? .manually
 
-        userAgentMode = string(Key.userAgent)
+        userAgentMode = store.string(Key.userAgent)
             .flatMap(UserAgentMode.init(rawValue:)) ?? .safari
-        customUserAgent = string(Key.customUserAgent) ?? ""
-        webInspectorEnabled = object(Key.webInspector) as? Bool ?? true
-        translationTargetID = string(Key.translationTarget) ?? ""
-        alwaysTranslatedLanguages = Set(stringArray(Key.alwaysTranslate) ?? [])
+        customUserAgent = store.string(Key.customUserAgent) ?? ""
+        webInspectorEnabled = store.object(Key.webInspector) as? Bool ?? true
+        translationTargetID = store.string(Key.translationTarget) ?? ""
+        alwaysTranslatedLanguages = Set(store.stringArray(Key.alwaysTranslate) ?? [])
 
-        startPageOrder = Self.resolveOrder(stringArray(Key.startPageOrder))
+        startPageOrder = Self.resolveOrder(store.stringArray(Key.startPageOrder))
         hiddenStartPageSections = Set(
-            (stringArray(Key.startPageHidden) ?? [])
+            (store.stringArray(Key.startPageHidden) ?? [])
                 .compactMap(StartPageSection.init(rawValue:))
         )
-        hiddenFrequentHosts = Set(stringArray(Key.startPageHiddenSites) ?? [])
+        hiddenFrequentHosts = Set(store.stringArray(Key.startPageHiddenSites) ?? [])
 
-        if object(Key.websiteTint) == nil {
+        if store.object(Key.websiteTint) == nil {
             write(matchesWebsiteColor, forKey: Key.websiteTint)
         }
         Self.liveSettings.add(self)
     }
 
     func useSessionDefaults(_ defaults: UserDefaults) {
-        guard defaults !== sessionDefaults else { return }
-        sessionDefaults = defaults
-        fillsPasswords = object(Key.passwordAutofill) as? Bool ?? true
-        passwordExtensionID = object(Key.passwordExtension) as? String ?? ""
-        fillsContacts = object(Key.contactAutofill) as? Bool ?? true
-        fillsPaymentCards = object(Key.paymentCardAutofill) as? Bool ?? true
+        guard store.useSession(defaults) else { return }
+        fillsPasswords = store.object(Key.passwordAutofill) as? Bool ?? true
+        passwordExtensionID = store.object(Key.passwordExtension) as? String ?? ""
+        fillsContacts = store.object(Key.contactAutofill) as? Bool ?? true
+        fillsPaymentCards = store.object(Key.paymentCardAutofill) as? Bool ?? true
 
-        searchEngineID = string(Key.searchEngine) ?? SearchEngine.duckDuckGo.id
-        customSearchName = string(Key.customSearchName) ?? ""
-        customSearchTemplate = string(Key.customSearchTemplate) ?? ""
-        showsSearchSuggestions = object(Key.suggestions) as? Bool ?? true
-        agentOnlyInput = bool(Key.agentOnlyInput)
+        searchEngineID = store.string(Key.searchEngine) ?? SearchEngine.duckDuckGo.id
+        customSearchName = store.string(Key.customSearchName) ?? ""
+        customSearchTemplate = store.string(Key.customSearchTemplate) ?? ""
+        showsSearchSuggestions = store.object(Key.suggestions) as? Bool ?? true
+        agentOnlyInput = store.bool(Key.agentOnlyInput)
 
-        historyRetention = string(Key.historyRetention).flatMap(HistoryRetention.init(rawValue:)) ?? .forever
-        clearsDataOnQuit = bool(Key.clearOnQuit)
-        allowsCertificateExceptions = bool(Key.certificateExceptions)
+        historyRetention = store.string(Key.historyRetention).flatMap(HistoryRetention.init(rawValue:)) ?? .forever
+        clearsDataOnQuit = store.bool(Key.clearOnQuit)
+        allowsCertificateExceptions = store.bool(Key.certificateExceptions)
 
-        javaScriptEnabled = object(Key.javaScript) as? Bool ?? true
-        blocksPopups = object(Key.blockPopups) as? Bool ?? true
-        blocksTrackers = object(Key.blockTrackers) as? Bool ?? true
-        autoplay = string(Key.autoplay).flatMap(AutoplayPolicy.init(rawValue:)) ?? .allow
+        javaScriptEnabled = store.object(Key.javaScript) as? Bool ?? true
+        blocksPopups = store.object(Key.blockPopups) as? Bool ?? true
+        blocksTrackers = store.object(Key.blockTrackers) as? Bool ?? true
+        autoplay = store.string(Key.autoplay).flatMap(AutoplayPolicy.init(rawValue:)) ?? .allow
 
-        startPageOrder = Self.resolveOrder(stringArray(Key.startPageOrder))
+        startPageOrder = Self.resolveOrder(store.stringArray(Key.startPageOrder))
         hiddenStartPageSections = Set(
-            (stringArray(Key.startPageHidden) ?? []).compactMap(StartPageSection.init(rawValue:))
+            (store.stringArray(Key.startPageHidden) ?? []).compactMap(StartPageSection.init(rawValue:))
         )
-        hiddenFrequentHosts = Set(stringArray(Key.startPageHiddenSites) ?? [])
+        hiddenFrequentHosts = Set(store.stringArray(Key.startPageHiddenSites) ?? [])
 
         onWebPreferencesChanged?()
     }
@@ -833,168 +818,5 @@ final class BrowserSettings {
         hiddenStartPageSections = []
         hiddenFrequentHosts = []
         onWebPreferencesChanged?()
-    }
-}
-
-enum StartPageSection: String, CaseIterable, Identifiable {
-    case suggestions
-    case recentTasks
-    case frequentSites
-    case history
-    case downloads
-
-    var id: String {
-        rawValue
-    }
-
-    var title: LocalizedStringResource {
-        switch self {
-        case .suggestions:
-            "Suggestions"
-        case .recentTasks:
-            "Recent Tasks"
-        case .frequentSites:
-            "Frequently Visited"
-        case .history:
-            "History"
-        case .downloads:
-            "Downloads"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .suggestions:
-            "sparkles"
-        case .recentTasks:
-            "clock.arrow.circlepath"
-        case .frequentSites:
-            "chart.bar"
-        case .history:
-            "clock"
-        case .downloads:
-            "arrow.down"
-        }
-    }
-
-    var summary: LocalizedStringResource {
-        switch self {
-        case .suggestions:
-            "Things to try"
-        case .recentTasks:
-            "Repeat a recent task"
-        case .frequentSites:
-            "Websites you visit most"
-        case .history:
-            "Recently visited pages"
-        case .downloads:
-            "Recent files"
-        }
-    }
-}
-
-enum UpdateChannel: String, CaseIterable, Identifiable {
-    case release
-    case preview
-
-    var id: String {
-        rawValue
-    }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .release:
-            "Release"
-        case .preview:
-            "Preview"
-        }
-    }
-
-    var caption: LocalizedStringResource {
-        switch self {
-        case .release:
-            "Linen updates when a version is ready for everyone."
-        case .preview:
-            "Linen updates to preview builds, ahead of the release."
-        }
-    }
-}
-
-enum TabArchiveDelay: String, CaseIterable, Identifiable {
-    case twelveHours
-    case day
-    case week
-    case never
-
-    var id: String {
-        rawValue
-    }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .twelveHours:
-            LocalizedStringResource("settings.archiveTabs.twelveHours", defaultValue: "12 hours")
-        case .day:
-            LocalizedStringResource("settings.archiveTabs.day", defaultValue: "A day")
-        case .week:
-            LocalizedStringResource("settings.archiveTabs.week", defaultValue: "A week")
-        case .never:
-            LocalizedStringResource("settings.archiveTabs.never", defaultValue: "Never")
-        }
-    }
-
-    var interval: TimeInterval? {
-        switch self {
-        case .twelveHours:
-            12 * 3600
-        case .day:
-            86_400
-        case .week:
-            7 * 86_400
-        case .never:
-            nil
-        }
-    }
-}
-
-enum HistoryRetention: String, CaseIterable, Identifiable {
-    case day
-    case week
-    case month
-    case year
-    case forever
-
-    var id: String {
-        rawValue
-    }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .day:
-            "A day"
-        case .week:
-            "A week"
-        case .month:
-            "A month"
-        case .year:
-            "A year"
-        case .forever:
-            "Forever"
-        }
-    }
-
-    var maximumAge: TimeInterval? {
-        switch self {
-        case .day:
-            86_400
-        case .week:
-            7 * 86_400
-        case .month:
-            30 * 86_400
-        case .year:
-            365 * 86_400
-        case .forever:
-            nil
-        }
     }
 }
