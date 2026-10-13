@@ -104,6 +104,95 @@ struct AgentToolkitPolicyTests {
         #expect(!media.model.isActive)
     }
 
+    @Test func anEmptyReferenceStopsNoWatch() async throws {
+        let browser = BrowserModel(database: .temporary())
+        let center = PageWatchCenter(
+            file: nil,
+            schedules: false,
+            fetch: { _ in PageWatchReading(title: "Kettle", text: "Kettle $54.99 In stock") },
+            judge: { _, _ in PageWatchVerdict(met: false, state: "$54.99", message: "") },
+            classify: { _, _ in nil },
+            notify: { _, _ in }
+        )
+        browser.context.pageWatches = center
+        let url = try #require(URL(string: "https://shop.example/kettle"))
+        let result = await center.start(url: url, title: "", condition: "price below $50", everyMinutes: 60)
+        guard case .watching = result else {
+            Issue.record("Expected a watch")
+            return
+        }
+
+        let output = toolkit(browser: browser).stopWatch(matching: "  ")
+
+        #expect(output.hasPrefix("Pass a watch ID"))
+        #expect(center.watches.count == 1)
+    }
+
+    private func watchCenter(schedules: Bool) -> PageWatchCenter {
+        PageWatchCenter(
+            file: nil,
+            schedules: schedules,
+            fetch: { _ in PageWatchReading(title: "Kettle", text: "Kettle $54.99 In stock") },
+            judge: { _, _ in PageWatchVerdict(met: false, state: "$54.99", message: "") },
+            classify: { _, _ in nil },
+            notify: { _, _ in }
+        )
+    }
+
+    private func watchablePage() async throws -> (BrowserModel, AgentToolkit, URL) {
+        let server = try await HTTPFixtureServer.start(routes: ["/": .html("<h1>Kettle</h1><p>$54.99</p>")])
+        let url = try server.url()
+        let (browser, _, subject) = await controlledSubject(at: url)
+        return (browser, subject, url)
+    }
+
+    @Test func aProfileThatCannotScheduleWatchesSaysWhy() async throws {
+        let (browser, subject, _) = try await watchablePage()
+        browser.context.pageWatches = watchCenter(schedules: false)
+
+        let output = await subject.watchPage(condition: "price below $50", everyMinutes: 60)
+
+        let expected = AppDatabase.ownsSession
+            ? "This profile can’t watch pages right now."
+            : "Another copy of Linen is running, so this one can’t watch pages."
+        #expect(output.hasPrefix(expected))
+        #expect(browser.context.pageWatches.watches.isEmpty)
+    }
+
+    @Test func theSameWatchIsRefusedWithTheExistingID() async throws {
+        let (browser, subject, url) = try await watchablePage()
+        let center = watchCenter(schedules: true)
+        browser.context.pageWatches = center
+        let first = await center.start(url: url, title: "", condition: "price below $50", everyMinutes: 60)
+        guard case .watching(let watch) = first else {
+            Issue.record("Expected a watch")
+            return
+        }
+
+        let output = await subject.watchPage(condition: "  price below $50  ", everyMinutes: 60)
+
+        #expect(output == "Already watching this page for that. Watch ID: \(watch.id.uuidString)")
+        #expect(center.watches.count == 1)
+        await center.close()
+    }
+
+    @Test func aFullListAsksWhichWatchToStop() async throws {
+        let (browser, subject, _) = try await watchablePage()
+        let center = watchCenter(schedules: true)
+        browser.context.pageWatches = center
+        for index in 0..<PageWatch.limit {
+            let other = try #require(URL(string: "https://shop.example/item-\(index)"))
+            _ = await center.start(url: other, title: "", condition: "", everyMinutes: 60)
+        }
+        #expect(center.watches.count == PageWatch.limit)
+
+        let output = await subject.watchPage(condition: "price below $50", everyMinutes: 60)
+
+        #expect(output == "Linen watches up to \(PageWatch.limit) pages. Ask the person which watch to stop first.")
+        #expect(center.watches.count == PageWatch.limit)
+        await center.close()
+    }
+
     @Test func malformedOrUnavailableRequestsFailWithoutSideEffects() async {
         var searched = false
         var resolvedVideo = false

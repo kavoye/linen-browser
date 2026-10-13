@@ -23,6 +23,7 @@ nonisolated struct PageWatch: Identifiable, Codable, Equatable, Sendable {
     static let intervals: ClosedRange<TimeInterval> = 300...86_400
     static let lifetime: TimeInterval = 30 * 86_400
     static let failureLimit = 3
+    static let limit = 20
 
     var expires: Date {
         created + Self.lifetime
@@ -151,7 +152,7 @@ nonisolated struct PageWatchVerdict: Equatable, Sendable {
 @Observable
 final class PageWatchCenter {
     enum Notice: Equatable {
-        case met(String)
+        case met
         case unreachable
         case expired
     }
@@ -161,6 +162,9 @@ final class PageWatchCenter {
         case alreadyMet(PageWatchVerdict)
         case unreadable
         case noModel
+        case undecided
+        case duplicate(PageWatch)
+        case full
     }
 
     private(set) var watches: [PageWatch] = [] {
@@ -180,6 +184,7 @@ final class PageWatchCenter {
     @ObservationIgnored var notify: (PageWatch, Notice) -> Void
     @ObservationIgnored var allows: (URL) -> Bool
     @ObservationIgnored var now: () -> Date = Date.init
+    @ObservationIgnored var launchHold: TimeInterval = 60
 
     @ObservationIgnored private let file: URL?
     @ObservationIgnored private let schedules: Bool
@@ -187,6 +192,7 @@ final class PageWatchCenter {
     @ObservationIgnored private var sleeper: Task<Void, Never>?
     @ObservationIgnored private var checking: Set<UUID> = []
     @ObservationIgnored private var isShutDown = false
+    @ObservationIgnored private var holdUntil: Date?
 
     static let classifyLimit = 16
 
@@ -218,8 +224,20 @@ final class PageWatchCenter {
         sleeper?.cancel()
     }
 
+    var isScheduling: Bool {
+        schedules && !isShutDown
+    }
+
     func resume() {
+        holdUntil = now() + launchHold
         wake()
+    }
+
+    func refusal(url: URL, condition: String) -> Start? {
+        if let existing = watches.first(where: { $0.url == url && $0.condition == condition }) {
+            return .duplicate(existing)
+        }
+        return watches.count < PageWatch.limit ? nil : .full
     }
 
     func start(url: URL, title: String, condition: String, everyMinutes minutes: Int) async -> Start {
@@ -233,13 +251,16 @@ final class PageWatchCenter {
             created: date,
             nextCheck: date
         )
+        if let refusal = refusal(url: url, condition: condition) {
+            return refusal
+        }
         guard canJudge() else { return .noModel }
         guard let reading = await fetch(url), !reading.text.isEmpty else { return .unreadable }
         if let landed = reading.url, !PageWatch.isSamePage(landed, url) {
             return .unreadable
         }
         if !condition.isEmpty {
-            guard let verdict = await judge(watch, reading) else { return .noModel }
+            guard let verdict = await judge(watch, reading) else { return .undecided }
             guard !verdict.met else { return .alreadyMet(verdict) }
             watch.state = verdict.state
         }
@@ -250,6 +271,9 @@ final class PageWatchCenter {
         watch.snapshot = reading.text
         watch.lastChecked = date
         watch.nextCheck = date + watch.interval
+        if let refusal = refusal(url: url, condition: condition) {
+            return refusal
+        }
         watches.append(watch)
         save()
         wake()
@@ -330,7 +354,7 @@ final class PageWatchCenter {
         }
         guard watches.contains(where: { $0.id == id }) else { return }
         if verdict.met {
-            finish(id, with: .met(verdict.message))
+            finish(id, with: .met)
             return
         }
         update(id) {
@@ -406,14 +430,19 @@ final class PageWatchCenter {
                 await nap.value
                 guard !Task.isCancelled, let self else { break }
                 sleeper = nil
-                await checkDue()
+                if holdUntil.map({ now() >= $0 }) ?? true {
+                    await checkDue()
+                }
             }
             self?.loop = nil
         }
     }
 
     private func napUntilNextCheck() -> Task<Void, Never>? {
-        guard let next = watches.map(\.nextCheck).min() else { return nil }
+        guard var next = watches.map(\.nextCheck).min() else { return nil }
+        if let holdUntil {
+            next = max(next, holdUntil)
+        }
         let delay = min(max(next.timeIntervalSince(now()), 0), 900)
         let nap = Task<Void, Never> {
             guard delay > 0 else { return }
@@ -430,6 +459,12 @@ final class PageWatchCenter {
         sleeper?.cancel()
         loop = nil
     }
+
+    func close() async {
+        let running = loop
+        shutDown()
+        await running?.value
+    }
 }
 
 // MARK: - Live
@@ -438,12 +473,13 @@ extension PageWatchCenter {
     static func live(for context: BrowserProfileContext) -> PageWatchCenter {
         let persists = !context.profile.isPrivate && !AppDatabase.isRunningTests && AppDatabase.ownsSession
         let dataStore = context.dataStore
+        let contentBlocker = context.contentBlocker
         let permissions = context.sitePermissions
         let profileID = context.profile.id
         return PageWatchCenter(
             file: persists ? context.profile.pageWatchesFile : nil,
             schedules: persists,
-            fetch: { url in await PageWatchLoader.read(url, dataStore: dataStore) },
+            fetch: { url in await PageWatchLoader.read(url, dataStore: dataStore, contentBlocker: contentBlocker) },
             judge: { watch, reading in await PageWatchJudge.judge(watch, reading: reading) },
             classify: { _, pair in await PageWatchJudge.classify(pair) },
             canJudge: { UtilityModelSource.isAvailable },
@@ -463,15 +499,26 @@ extension Profile {
 enum PageWatchLoader {
     private static let loadCeiling: Duration = .seconds(15)
     private static let quietCeiling: Duration = .seconds(2)
+    private static var isReading = false
+    private static var waiting: [(id: UUID, continuation: CheckedContinuation<Bool, Never>)] = []
 
     static func canWatch(_ url: URL) -> Bool {
         LinkPeekLoader.canPeek(url)
     }
 
-    static func read(_ url: URL, dataStore: WKWebsiteDataStore) async -> PageWatchReading? {
+    static func read(
+        _ url: URL,
+        dataStore: WKWebsiteDataStore,
+        contentBlocker: ContentBlocker
+    ) async -> PageWatchReading? {
         guard canWatch(url) else { return nil }
+        guard await takeTurn() else { return nil }
+        defer { endTurn() }
+        await contentBlocker.waitForPendingCompilation()
+        guard !Task.isCancelled else { return nil }
         let configuration = WebViewPool.makeConfiguration()
         configuration.websiteDataStore = dataStore
+        contentBlocker.apply(to: configuration.userContentController)
         BrowserSettings.shared.apply(to: configuration)
         configuration.mediaTypesRequiringUserActionForPlayback = .all
         configuration.preferences.inactiveSchedulingPolicy = .none
@@ -497,6 +544,38 @@ enum PageWatchLoader {
             text: String((object["text"] as? String ?? "").prefix(LinkPeekLoader.textBudget)),
             url: landed
         )
+    }
+
+    private static func takeTurn() async -> Bool {
+        guard isReading else {
+            isReading = true
+            return true
+        }
+        let id = UUID()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                if Task.isCancelled {
+                    continuation.resume(returning: false)
+                } else {
+                    waiting.append((id, continuation))
+                }
+            }
+        } onCancel: {
+            Task { @MainActor in leaveQueue(id) }
+        }
+    }
+
+    private static func leaveQueue(_ id: UUID) {
+        guard let index = waiting.firstIndex(where: { $0.id == id }) else { return }
+        waiting.remove(at: index).continuation.resume(returning: false)
+    }
+
+    private static func endTurn() {
+        guard !waiting.isEmpty else {
+            isReading = false
+            return
+        }
+        waiting.removeFirst().continuation.resume(returning: true)
     }
 
     private static let script = #"""

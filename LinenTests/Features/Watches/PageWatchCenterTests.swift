@@ -20,6 +20,7 @@ struct PageWatchCenterTests {
         var allowed = true
         var verdict = PageWatchVerdict(met: false, state: "$54.99", message: "")
         var judged = 0
+        var fetched = 0
         var answers = true
         var classified: [PageWatchChange.Pair] = []
         var classification: (PageWatchChange.Pair) -> PageWatchVerdict = { _ in
@@ -31,13 +32,14 @@ struct PageWatchCenterTests {
         var duringJudge: (() -> Void)?
         var center: PageWatchCenter!
 
-        init(date: Date, file: URL? = nil) {
+        init(date: Date, file: URL? = nil, schedules: Bool = false) {
             self.date = date
             center = PageWatchCenter(
                 file: file,
-                schedules: false,
+                schedules: schedules,
                 fetch: { [unowned self] _ in
-                    reads ? PageWatchReading(title: "Kettle", text: text, url: landed) : nil
+                    fetched += 1
+                    return reads ? PageWatchReading(title: "Kettle", text: text, url: landed) : nil
                 },
                 judge: { [unowned self] _, _ in
                     judged += 1
@@ -134,7 +136,7 @@ struct PageWatchCenterTests {
         harness.advance(3600)
         await harness.center.checkDue()
 
-        #expect(harness.notices == [.met("The price dropped to $42.99.")])
+        #expect(harness.notices == [.met])
         #expect(harness.center.watches.isEmpty)
     }
 
@@ -200,6 +202,7 @@ struct PageWatchCenterTests {
         await harness.center.checkDue()
 
         #expect(harness.center.watches.isEmpty)
+        #expect(harness.fetched == 1)
         #expect(harness.judged == 1)
         #expect(harness.notices.isEmpty)
     }
@@ -294,7 +297,7 @@ struct PageWatchCenterTests {
         harness.advance(3600)
         await harness.center.checkDue()
 
-        #expect(harness.notices == [.met("The price is now $49.99.")])
+        #expect(harness.notices == [.met])
         #expect(harness.center.watches.isEmpty)
     }
 
@@ -379,7 +382,7 @@ struct PageWatchCenterTests {
         await harness.center.checkDue()
 
         #expect(harness.classified.count == 2)
-        #expect(harness.notices == [.met("Price dropped.")])
+        #expect(harness.notices == [.met])
     }
 
     @Test func tooManyChangesOfNoiseDoNotNotify() async throws {
@@ -442,6 +445,81 @@ struct PageWatchCenterTests {
 
         #expect(harness.notices.isEmpty)
         #expect(harness.center.watches.isEmpty)
+    }
+
+    @Test func aModelErrorAtTheStartIsNotAMissingModel() async {
+        let harness = Harness(date: start)
+        harness.answers = false
+        let result = await harness.center.start(url: page, title: "", condition: "price below $50", everyMinutes: 60)
+
+        #expect(result == .undecided)
+        #expect(harness.center.watches.isEmpty)
+    }
+
+    @Test func theSameWatchIsRefusedBeforeReading() async throws {
+        let harness = Harness(date: start)
+        let watch = try #require(await watching(harness))
+        let fetched = harness.fetched
+        let result = await harness.center.start(url: page, title: "", condition: "price below $50", everyMinutes: 30)
+
+        #expect(result == .duplicate(watch))
+        #expect(harness.fetched == fetched)
+        #expect(harness.center.watches == [watch])
+    }
+
+    @Test func noWatchStartsPastTheLimit() async throws {
+        let harness = Harness(date: start)
+        for index in 0..<PageWatch.limit {
+            let result = await harness.center.start(url: page, title: "", condition: "condition \(index)", everyMinutes: 60)
+            guard case .watching = result else {
+                Issue.record("Expected watch \(index) to start")
+                return
+            }
+        }
+        let result = await harness.center.start(url: page, title: "", condition: "one more", everyMinutes: 60)
+
+        #expect(result == .full)
+        #expect(harness.center.watches.count == PageWatch.limit)
+    }
+
+    @Test func theScheduleChecksADueWatchAfterTheLaunchHold() async throws {
+        let harness = Harness(date: start, schedules: true)
+        harness.center.launchHold = 0
+        _ = try #require(await watching(harness))
+        harness.text = "Kettle $49.99 In stock"
+        harness.advance(3600)
+        harness.center.resume()
+
+        #expect(await waitUntil { harness.judged == 2 })
+        await harness.center.close()
+    }
+
+    @Test func theScheduleWaitsOutTheLaunchHold() async throws {
+        let harness = Harness(date: start, schedules: true)
+        _ = try #require(await watching(harness))
+        try await Task.sleep(for: .milliseconds(100))
+        harness.text = "Kettle $49.99 In stock"
+        harness.advance(3600)
+        harness.center.resume()
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(harness.judged == 1)
+        await harness.center.close()
+    }
+
+    @Test func closingStopsTheScheduleWithoutNotifying() async throws {
+        let harness = Harness(date: start, schedules: true)
+        harness.center.launchHold = 0
+        _ = try #require(await watching(harness))
+        harness.text = "Kettle $42.99 In stock"
+        harness.verdict = PageWatchVerdict(met: true, state: "$42.99", message: "Dropped.")
+        harness.advance(3600)
+        harness.center.resume()
+        await harness.center.close()
+
+        #expect(harness.notices.isEmpty)
+        #expect(harness.center.watches.isEmpty)
+        #expect(!harness.center.isScheduling)
     }
 
     @Test func aSleepingScheduleDoesNotKeepTheCenterAlive() async throws {

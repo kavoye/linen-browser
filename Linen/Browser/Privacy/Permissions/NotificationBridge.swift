@@ -180,8 +180,10 @@ final class NotificationBridge: NSObject {
         content.title = watch.title.isEmpty ? watch.place : watch.title
         content.subtitle = watch.place
         switch notice {
-        case .met(let message):
-            content.body = message
+        case .met:
+            content.body = watch.condition.isEmpty
+                ? String(localized: "The page changed.")
+                : String(localized: "The page now shows what you were waiting for: \(watch.condition)")
             content.sound = .default
         case .unreachable:
             content.body = String(localized: "Linen can’t read this page anymore, so it stopped watching it.")

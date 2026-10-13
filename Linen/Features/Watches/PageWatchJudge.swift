@@ -74,26 +74,40 @@ enum PageWatchJudge {
         model: (any LanguageModel)? = UtilityModelSource.make()
     ) async -> PageWatchVerdict? {
         guard let model else { return nil }
+        var text = reading.text
+        while true {
+            do {
+                return try await judge(watch, title: reading.title, text: text, model: model)
+            } catch where AgentContextCompactor.isContextWindowError(error) && text.count > 500 {
+                text = String(text.prefix(text.count / 2))
+            } catch {
+                Pipeline.log.error("Page watch check failed")
+                return nil
+            }
+        }
+    }
+
+    private static func judge(
+        _ watch: PageWatch,
+        title: String,
+        text: String,
+        model: any LanguageModel
+    ) async throws -> PageWatchVerdict {
         var prompt = "WAITING FOR: \(watch.condition)\n"
         prompt += "LAST TIME: \(watch.state ?? "Nothing yet. This is the first reading.")\n"
         prompt += "ADDRESS: \(watch.url.absoluteString)\n"
-        let page = reading.title.isEmpty ? reading.text : reading.title + "\n\n" + reading.text
+        let page = title.isEmpty ? text : title + "\n\n" + text
         prompt += "\n" + AgentToolkit.untrusted(page)
 
-        do {
-            let session = LanguageModelSession(model: model, instructions: instructions)
-            let finding = try await session.respond(to: prompt, generating: Finding.self).content
-            let state = LinkSummarizer.sanitize(finding.state)
-            let message = LinkSummarizer.sanitize(finding.message)
-            return PageWatchVerdict(
-                met: finding.met,
-                state: state,
-                message: message.isEmpty ? state : message
-            )
-        } catch {
-            Pipeline.log.error("Page watch check failed")
-            return nil
-        }
+        let session = LanguageModelSession(model: model, instructions: instructions)
+        let finding = try await session.respond(to: prompt, generating: Finding.self).content
+        let state = LinkSummarizer.sanitize(finding.state)
+        let message = LinkSummarizer.sanitize(finding.message)
+        return PageWatchVerdict(
+            met: finding.met,
+            state: state,
+            message: message.isEmpty ? state : message
+        )
     }
 }
 

@@ -5,8 +5,6 @@ import Foundation
 import WebKit
 
 extension AgentToolkit {
-    static let watchLimit = 20
-
     var pageWatches: PageWatchCenter {
         browserContext.pageWatches
     }
@@ -26,6 +24,12 @@ extension AgentToolkit {
         guard !browserContext.profile.isPrivate else {
             return fail("Private windows can’t watch pages. Tell the person to ask again in a regular window.")
         }
+        guard pageWatches.isScheduling else {
+            guard AppDatabase.ownsSession else {
+                return fail("Another copy of Linen is running, so this one can’t watch pages. Tell the person to ask in the other copy.")
+            }
+            return fail("This profile can’t watch pages right now.")
+        }
         guard let view, view.url.map(PageWatchLoader.canWatch) == true else {
             return fail("Open the page to watch first. Only websites can be watched.")
         }
@@ -37,11 +41,8 @@ extension AgentToolkit {
             return fail("Open the page to watch first. Only websites can be watched.")
         }
         let center = pageWatches
-        if let existing = center.watches.first(where: { $0.url == url && $0.condition == condition }) {
-            return fail("Already watching this page for that. Watch ID: \(existing.id.uuidString)")
-        }
-        guard center.watches.count < Self.watchLimit else {
-            return fail("Linen watches up to \(Self.watchLimit) pages. Ask the person which watch to stop first.")
+        if let refusal = center.refusal(url: url, condition: condition) {
+            return fail(Self.output(for: refusal))
         }
         guard await NotificationBridge.shared.requestAlerts() else {
             return fail("Notifications for Linen are turned off in System Settings, so a watch could never alert the person. Tell them to turn them on in System Settings > Notifications.")
@@ -60,21 +61,37 @@ extension AgentToolkit {
             if let outcomeID {
                 _ = taskLedger.confirm(id: outcomeID, url: watch.url.absoluteString, proof: "Watch \(watch.id.uuidString) started")
             }
-            let output = """
-                Watching \(watch.place) every \(Self.describe(watch.interval)). Watch ID: \(watch.id.uuidString)
-                Waiting for: \(watch.condition.isEmpty ? "any change to the main content" : watch.condition)
-                Now: \(watch.state ?? "")
-                The person gets one notification when it happens, and then the watch ends. \
-                It also ends after 30 days, or after the page can’t be read three times in a row.
-                """
+            let output = Self.output(for: started)
             completeTool(step, output: output)
             return output
+        default:
+            return fail(Self.output(for: started))
+        }
+    }
+
+    private static func output(for start: PageWatchCenter.Start) -> String {
+        switch start {
+        case .watching(let watch):
+            let now = watch.state.map { "Now:\n" + untrusted($0) + "\n" } ?? ""
+            return """
+                Watching \(watch.place) every \(describe(watch.interval)). Watch ID: \(watch.id.uuidString)
+                Waiting for: \(watch.condition.isEmpty ? "any change to the main content" : watch.condition)
+                \(now)The person gets one notification when it happens, and then the watch ends. \
+                Linen checks the page only while it is open. The watch also ends after 30 days, \
+                or after the page can’t be read three times in a row.
+                """
         case .alreadyMet(let verdict):
-            return fail("No watch was set: the page already shows it. \(verdict.message)")
+            return "No watch was set: the page already shows it.\n" + untrusted(verdict.message)
         case .unreadable:
-            return fail("Linen couldn’t read this page in the background, so it can’t watch it.")
+            return "Linen couldn’t read this page in the background, so it can’t watch it."
         case .noModel:
-            return fail("Watching pages needs Apple Intelligence, which isn’t available on this Mac.")
+            return "Watching pages needs Apple Intelligence, which isn’t available on this Mac."
+        case .undecided:
+            return "Apple Intelligence couldn’t check this page right now, so no watch was set. Tell the person to try again later."
+        case .duplicate(let existing):
+            return "Already watching this page for that. Watch ID: \(existing.id.uuidString)"
+        case .full:
+            return "Linen watches up to \(PageWatch.limit) pages. Ask the person which watch to stop first."
         }
     }
 
@@ -99,6 +116,11 @@ extension AgentToolkit {
         if let output = cancellationOutput(for: step) {
             return output
         }
+        guard !reference.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            let output = "Pass a watch ID, or part of the page title, address or condition."
+            completeTool(step, output: output, failed: true)
+            return output
+        }
         let center = pageWatches
         let matches = center.matching(reference)
         guard let watch = matches.first else {
@@ -120,7 +142,7 @@ extension AgentToolkit {
 
     private static func describe(_ watch: PageWatch) -> String {
         let condition = watch.condition.isEmpty ? "any change" : watch.condition
-        let state = watch.state.map { " Last seen: \($0)." } ?? ""
+        let state = watch.state.map { " Last seen:\n" + untrusted($0) } ?? ""
         return "[\(watch.id.uuidString)] \(watch.title) (\(watch.place)), every \(describe(watch.interval)), "
             + "waiting for: \(condition).\(state)"
     }
