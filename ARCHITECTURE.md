@@ -3,6 +3,26 @@
 Linen is a macOS SwiftUI app around WebKit. Swift 6 strict concurrency and
 Main Actor default isolation are enabled for the app target.
 
+## Source layout
+
+| Folder | Contents |
+| --- | --- |
+| `Linen/App` | Launch, the application, menus, install and updates. `App/Coordinator` holds `AppCoordinator` and its extensions. |
+| `Linen/Core` | Code with no browser or feature knowledge: persistence, runtime helpers, profiles and stage mode. |
+| `Linen/Browser` | The browser engine: models, tabs, splits, search, history, downloads, pages and privacy. It contains no SwiftUI views. |
+| `Linen/Interface` | The window shell and the shared visual system: shell, toolbar, sidebar, start page, command palette and content area. |
+| `Linen/Features` | Self-contained features. Each feature folder holds its model, its engine and its views. |
+| `Linen/Settings` | The settings model, the settings components, navigation and one folder per settings group. |
+| `Linen/Resources` | Assets, the app icon, string catalogs, `Info.plist`, entitlements and generated data. |
+
+`LinenTests` uses the same folders. A test goes in the folder of the code it
+tests. `LinenTests/Support` holds shared helpers and fixtures.
+`LinenTests/Evals` holds live and benchmark tests.
+
+Put a new file in the folder of the feature or layer that owns it. If a feature
+has views, put them in a `UI` subfolder of that feature. If a folder holds more
+than about 15 files, divide it by responsibility.
+
 ## Runtime structure
 
 ```mermaid
@@ -156,7 +176,8 @@ not report measured provider token usage. Progress updates remain in private cha
 history. Diagnostics record only their event type and status.
 
 See [OpenAI integration](OPENAI.md) for provider configuration and validation,
-and [Browser autofill](Linen/Web/Autofill/README.md) for form and credential handling.
+and [Browser autofill](Linen/Features/Autofill/README.md) for form and
+credential handling.
 
 ## State and SwiftUI
 
@@ -165,8 +186,8 @@ screen or independently changing section should be a real `View` type with
 narrow inputs. A computed `some View` property does not create an observation
 boundary.
 
-Use the components and metrics in `Linen/UI/Chrome` and
-`Linen/Settings/SettingsPrimitives.swift`. `Theme` owns shared visual tokens.
+Use the components and metrics in `Linen/Interface/DesignSystem` and
+`Linen/Settings/Components`. `Theme` owns shared visual tokens.
 User-facing strings stay localizable. Protocol values, URLs, model IDs and
 third-party error text stay verbatim.
 

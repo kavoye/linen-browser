@@ -10,6 +10,14 @@
   ],
   "defaultOptions" : {
     "codeCoverage" : true,
+    "commandLineArgumentEntries" : [
+      {
+        "argument" : "-NSAutomaticWindowAnimationsEnabled"
+      },
+      {
+        "argument" : "NO"
+      }
+    ],
     "defaultTestExecutionTimeAllowance" : 120,
     "maximumTestExecutionTimeAllowance" : 300,
     "testTimeoutsEnabled" : true

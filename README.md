@@ -105,7 +105,8 @@ Select the `Linen` target, set your team in **Signing & Capabilities**, then bui
 and run the `Linen` scheme. Dependencies resolve automatically.
 
 If your team lacks the passkey entitlement, remove this entry from
-`Linen/Linen.entitlements`. Passkeys will be unavailable in that build.
+`Linen/Resources/Linen.entitlements`. Passkeys will be unavailable in that
+build.
 
 ```xml
 <key>com.apple.developer.web-browser.public-key-credential</key>
@@ -123,4 +124,4 @@ Linen is licensed under [Apache 2.0](LICENSE). Provider logos belong to their ow
 Linen uses [Sparkle](https://github.com/sparkle-project/Sparkle),
 [AnyLanguageModel](https://github.com/huggingface/AnyLanguageModel), and other
 open source packages. Full credits and license texts are in **Settings › About**
-and [Acknowledgements.json](Linen/Support/Acknowledgements.json).
+and [Acknowledgements.json](Linen/Resources/Acknowledgements.json).

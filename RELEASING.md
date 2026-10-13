@@ -2,13 +2,13 @@
 
 Linen uses [Sparkle 2.10.0](https://sparkle-project.org) for updates. The app
 does not show the Sparkle windows. The update interface is only the banner in
-`Linen/Updates/UpdateBanner.swift`.
+`Linen/App/Updates/UpdateBanner.swift`.
 
 Two files contain the hosting configuration. The values in these two files must
 agree:
 
-- `Linen/Updates/UpdateFeed.swift`: the `owner` and `repository` values
-- `Linen/Info.plist`: the `SUFeedURL` value
+- `Linen/App/Updates/UpdateFeed.swift`: the `owner` and `repository` values
+- `Linen/Resources/Info.plist`: the `SUFeedURL` value
 
 The feed URL is
 `https://github.com/<owner>/<repo>/releases/latest/download/appcast.xml`.
@@ -32,9 +32,9 @@ https://github.com/sparkle-project/Sparkle/releases.
 
 ## One-time: the Sparkle signing keys
 
-The EdDSA key pair already exists. `Linen/Info.plist` holds the public key as
-`SUPublicEDKey`, and this Mac’s login keychain holds the private key, where
-`sign_update` finds it. Nothing else needs configuring.
+The EdDSA key pair already exists. `Linen/Resources/Info.plist` holds the public
+key as `SUPublicEDKey`, and this Mac’s login keychain holds the private key,
+where `sign_update` finds it. Nothing else needs configuring.
 
 Back up the private key and keep the backup for at least two years. If you lose
 it, installed copies cannot verify new updates. Users must download the app again.
@@ -240,9 +240,9 @@ Release requirements:
   also, and then the feed contains two items for one version.
 - **Install in Applications.** A copy that runs from another folder cannot
   always update itself, so Linen offers to move itself to the Applications
-  folder at the first launch. `Linen/App/InstallLocation.swift` makes that
-  decision. Linen asks one time only. Keep the Applications folder link
-  in the disk image to show where to install the app.
+  folder at the first launch. `Linen/App/Install/InstallLocation.swift` makes
+  that decision. Linen asks one time only. Keep the Applications folder link in
+  the disk image to show where to install the app.
 - **The tag sets the version.** `MARKETING_VERSION` comes from the tag without
   the `v` character. `CURRENT_PROJECT_VERSION` comes from `git rev-list --count
   HEAD`, the number of commits, so the `CFBundleVersion` that Sparkle compares
@@ -274,8 +274,8 @@ Release requirements:
 ### Acknowledgements
 
 The app shows the license of each open source package in Settings › About. The
-list comes from `Linen/Support/Acknowledgements.json`. A script makes this file
-from `Package.resolved` and the resolved checkouts:
+list comes from `Linen/Resources/Acknowledgements.json`. A script makes this
+file from `Package.resolved` and the resolved checkouts:
 
 ```bash
 swift Tools/make-acknowledgements.swift
@@ -395,7 +395,7 @@ builds.
 | Release | `v0.1.2`, a new tag each time | No | `appcast.xml` |
 | Preview | `tip`, one tag that moves | **Yes** | `appcast-tip.xml` |
 
-`Linen/Updates/UpdateFeed.swift` contains both URLs. The release feed is
+`Linen/App/Updates/UpdateFeed.swift` contains both URLs. The release feed is
 `releases/latest/download/appcast.xml`. The preview feed is
 `releases/download/tip/appcast-tip.xml`. The second URL is a permalink because
 the tag name never changes.

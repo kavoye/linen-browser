@@ -1,0 +1,819 @@
+// SPDX-FileCopyrightText: 2026 Kavoye
+// SPDX-License-Identifier: Apache-2.0
+
+import Foundation
+import GRDB
+import Observation
+import os
+
+@MainActor
+@Observable
+final class ConversationLog {
+    nonisolated struct Usage: Codable, Equatable, Sendable {
+        var requestCount = 0
+        var inputTokens = 0
+        var cachedTokens = 0
+        var outputTokens = 0
+        var estimatedContextTokens = 0
+
+        static let zero = Usage()
+    }
+
+    nonisolated struct ActivityLink: Codable, Identifiable, Equatable, Sendable {
+        let id: UUID
+        let title: String
+        let url: URL
+
+        init(id: UUID = UUID(), title: String, url: URL) {
+            self.id = id
+            self.title = title
+            self.url = url
+        }
+    }
+
+    nonisolated struct Step: Codable, Identifiable, Equatable, Sendable {
+        enum Kind: String, Codable, Equatable {
+            case thinking
+            case tool
+        }
+
+        enum State: String, Codable, Equatable {
+            case running
+            case completed
+            case failed
+        }
+
+        let id: UUID
+        let kind: Kind
+        let title: String
+        let toolName: String?
+        let startedAt: Date
+        var detail: String?
+        var links: [ActivityLink]
+        var state: State
+
+        init(
+            kind: Kind,
+            title: String,
+            toolName: String? = nil,
+            detail: String? = nil,
+            links: [ActivityLink] = [],
+            state: State = .running
+        ) {
+            id = UUID()
+            self.kind = kind
+            self.title = title
+            self.toolName = toolName
+            self.startedAt = Date()
+            self.detail = detail
+            self.links = links
+            self.state = state
+        }
+
+        init(
+            id: UUID,
+            kind: Kind,
+            title: String,
+            toolName: String?,
+            startedAt: Date,
+            detail: String?,
+            links: [ActivityLink],
+            state: State
+        ) {
+            self.id = id
+            self.kind = kind
+            self.title = title
+            self.toolName = toolName
+            self.startedAt = startedAt
+            self.detail = detail
+            self.links = links
+            self.state = state
+        }
+    }
+
+    nonisolated struct TaskTrace: Codable, Identifiable, Equatable, Sendable {
+        enum State: String, Codable, Equatable {
+            case running
+            case completed
+            case cancelled
+            case failed
+            case paused
+
+            var isSpoken: Bool {
+                self == .completed || self == .cancelled || self == .paused
+            }
+        }
+
+        let id: UUID
+        var tabID: UUID
+        var prompt: String
+        let startedAt: Date
+        var steps: [Step]
+        var response: String
+        var liveProgress: String?
+        var state: State
+        var finishedAt: Date?
+        let providerID: String?
+        var attachments: [AssistantAttachment] = []
+        var attachmentTextOnly = false
+        var stopReason: AgentStopReason?
+        var diagnostics = AgentRunDiagnostics()
+        var checkpoint: AgentCheckpoint?
+
+        var progressUpdates: [AgentProgressUpdate] {
+            checkpoint?.progressUpdates ?? []
+        }
+
+        var hasUserPrompt: Bool {
+            !prompt.isEmpty && prompt != AgentCheckpoint.resumePrompt
+        }
+
+        var canContinue: Bool {
+            state == .paused || state == .cancelled || state == .failed
+        }
+    }
+
+    struct Exchange: Equatable {
+        let prompt: String
+        let response: String
+        var attachments: [AssistantAttachment] = []
+        var attachmentTextOnly = false
+    }
+
+    private nonisolated struct TraceRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+        static let databaseTableName = "agentTrace"
+
+        var id: UUID
+        var tabID: UUID
+        var prompt: String
+        var startedAt: Date
+        var response: String
+        var state: TaskTrace.State
+        var finishedAt: Date?
+        var providerID: String?
+        var stopReason: AgentStopReason?
+        var diagnostics: Data?
+    }
+
+    private nonisolated struct MemoryRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+        static let databaseTableName = "agentConversationMemory"
+        let traceID: UUID
+        let payload: Data
+    }
+
+    private nonisolated struct AttachmentRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+        static let databaseTableName = "agentAttachments"
+        let traceID: UUID
+        let payload: Data
+        let textOnly: Bool
+    }
+
+    private nonisolated struct StepRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+        static let databaseTableName = "agentStep"
+
+        var id: UUID
+        var traceID: UUID
+        var position: Int
+        var kind: Step.Kind
+        var title: String
+        var toolName: String?
+        var startedAt: Date
+        var detail: String?
+        var links: String
+        var state: Step.State
+    }
+
+    private nonisolated struct UsageRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
+        static let databaseTableName = "agentUsage"
+
+        var tabID: UUID
+        var requestCount: Int
+        var inputTokens: Int
+        var cachedTokens: Int
+        var outputTokens: Int
+        var estimatedContextTokens: Int
+    }
+
+    private(set) var traces: [TaskTrace] = []
+    private(set) var usageByTab: [UUID: Usage] = [:]
+    @ObservationIgnored private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private var discardedTabIDs = RecentIDs()
+    @ObservationIgnored private var voiceTraceIDs = RecentIDs()
+    @ObservationIgnored private var historyRevision = UUID()
+    @ObservationIgnored private var dirtyAttachmentIDs: Set<UUID> = []
+    @ObservationIgnored private var dirtyTraceIDs: Set<UUID> = []
+    @ObservationIgnored private var dirtyUsageTabIDs: Set<UUID> = []
+    private var database: AppDatabase
+
+    init(database: AppDatabase = .shared) {
+        self.database = database
+        load()
+    }
+
+    func adopt(database: AppDatabase) {
+        historyRevision = UUID()
+        saveTask?.cancel()
+        saveTask = nil
+        self.database = database
+        traces = []
+        usageByTab = [:]
+        dirtyAttachmentIDs = []
+        dirtyTraceIDs = []
+        dirtyUsageTabIDs = []
+        discardedTabIDs = RecentIDs()
+        load()
+    }
+
+    func voiceTranscriptWriter(tabID: UUID, providerID: String) -> (UUID, String, String) -> Void {
+        discardedTabIDs.remove(tabID)
+        let revision = historyRevision
+        return { [weak self] id, prompt, response in
+            guard let self, historyRevision == revision, !discardedTabIDs.contains(tabID),
+                  !prompt.isEmpty || !response.isEmpty else { return }
+            if let index = traces.firstIndex(where: { $0.id == id }) {
+                if !prompt.isEmpty {
+                    traces[index].prompt = prompt
+                }
+                if !response.isEmpty {
+                    traces[index].response = response
+                }
+                traces[index].finishedAt = Date()
+            } else {
+                guard !voiceTraceIDs.contains(id) else { return }
+                voiceTraceIDs.insert(id)
+                traces.append(TaskTrace(id: id, tabID: tabID, prompt: prompt, startedAt: Date(), steps: [],
+                                        response: response, state: .completed, finishedAt: Date(), providerID: providerID))
+            }
+            scheduleSave(trace: id)
+        }
+    }
+
+    @discardableResult
+    func beginTask(_ prompt: String, tabID: UUID) -> UUID {
+        discardedTabIDs.remove(tabID)
+        cancelRunningTask(forTab: tabID)
+
+        let taskID = UUID()
+        traces.append(TaskTrace(
+            id: taskID,
+            tabID: tabID,
+            prompt: prompt,
+            startedAt: Date(),
+            steps: [],
+            response: "",
+            state: .running,
+            finishedAt: nil,
+            providerID: LLMSettings.providerID
+        ))
+        scheduleSave(trace: taskID)
+        return taskID
+    }
+
+    func setAttachments(_ attachments: [AssistantAttachment], textOnly: Bool, taskID: UUID) {
+        guard !attachments.isEmpty, let index = traces.firstIndex(where: { $0.id == taskID }) else { return }
+        traces[index].attachments = attachments
+        traces[index].attachmentTextOnly = textOnly
+        dirtyAttachmentIDs.insert(taskID)
+        scheduleSave(trace: taskID)
+    }
+
+    @discardableResult
+    func beginTool(
+        taskID: UUID,
+        name: String,
+        title: String,
+        detail: String? = nil
+    ) -> UUID? {
+        guard let traceIndex = traces.firstIndex(where: { $0.id == taskID }),
+              traces[traceIndex].state == .running
+        else { return nil }
+        finishRunningSteps(at: traceIndex)
+        let safeName = AgentDiagnosticPrivacy.tool(name)
+        let step = Step(kind: .tool, title: AgentDiagnosticPrivacy.title(for: safeName), toolName: safeName)
+        traces[traceIndex].steps.append(step)
+        scheduleSave(trace: taskID)
+        return step.id
+    }
+
+    func completeTool(
+        taskID: UUID,
+        stepID: UUID?,
+        detail: String,
+        links: [ActivityLink] = [],
+        failed: Bool = false
+    ) {
+        guard let stepID,
+              let traceIndex = traces.firstIndex(where: { $0.id == taskID }),
+              traces[traceIndex].state == .running,
+              let stepIndex = traces[traceIndex].steps.firstIndex(where: { $0.id == stepID })
+        else { return }
+
+        traces[traceIndex].steps[stepIndex].detail = nil
+        traces[traceIndex].steps[stepIndex].links = []
+        traces[traceIndex].steps[stepIndex].state = failed ? .failed : .completed
+        scheduleSave(trace: taskID)
+    }
+
+    func updateResponse(_ response: String, taskID: UUID, closingSteps: Bool = true) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              traces[index].state == .running
+        else { return }
+        if closingSteps {
+            finishRunningSteps(at: index)
+        }
+        traces[index].response = response
+        scheduleSave(trace: taskID)
+    }
+
+    func updateLiveProgress(_ text: String?, taskID: UUID) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              traces[index].state == .running else { return }
+        traces[index].liveProgress = text
+    }
+
+    func completeTask(_ taskID: UUID, response: String) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              traces[index].state == .running
+        else { return }
+        finishRunningSteps(at: index)
+        traces[index].response = response
+        traces[index].state = .completed
+        traces[index].finishedAt = Date()
+        scheduleSave(trace: taskID)
+        saveNow()
+    }
+
+    func failTask(_ taskID: UUID, reason: String) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              traces[index].state == .running
+        else { return }
+        finishRunningSteps(at: index, failed: true)
+        traces[index].response = reason
+        traces[index].state = .failed
+        traces[index].finishedAt = Date()
+        scheduleSave(trace: taskID)
+        saveNow()
+    }
+
+    func cancelTask(_ taskID: UUID) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              traces[index].state == .running
+        else { return }
+        finishRunningSteps(at: index, failed: true)
+        traces[index].state = .cancelled
+        traces[index].finishedAt = Date()
+        scheduleSave(trace: taskID)
+        saveNow()
+    }
+
+    func cancelRunningTask(forTab tabID: UUID) {
+        guard let index = traces.lastIndex(where: { $0.tabID == tabID && $0.state == .running }) else { return }
+        finishRunningSteps(at: index, failed: true)
+        traces[index].state = .cancelled
+        traces[index].finishedAt = Date()
+        scheduleSave(trace: traces[index].id)
+    }
+
+    func checkpoint(forTab tabID: UUID) -> AgentCheckpoint? {
+        traces.last(where: { $0.tabID == tabID && $0.checkpoint != nil })?.checkpoint
+    }
+
+    func saveCheckpoint(_ checkpoint: AgentCheckpoint, taskID: UUID) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              !discardedTabIDs.contains(traces[index].tabID) else { return }
+        traces[index].checkpoint = checkpoint
+        let trace = traces[index]
+        writeNow { db in
+            try Self.record(trace).save(db)
+            try MemoryRecord(traceID: taskID, payload: JSONEncoder().encode(checkpoint)).save(db)
+        }
+        scheduleSave(trace: taskID)
+    }
+
+    func persistCheckpoint(taskID: UUID) throws {
+        guard let trace = traces.first(where: { $0.id == taskID }),
+              !discardedTabIDs.contains(trace.tabID), let checkpoint = trace.checkpoint else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try database.writer.write { db in
+            try Self.record(trace).save(db)
+            try MemoryRecord(traceID: taskID, payload: JSONEncoder().encode(checkpoint)).save(db)
+        }
+    }
+
+    func setDiagnostics(_ diagnostics: AgentRunDiagnostics, taskID: UUID) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }) else { return }
+        var safe = diagnostics
+        safe.model = AgentDiagnosticPrivacy.model(diagnostics.model)
+        safe.reasoningEffort = AgentDiagnosticPrivacy.effort(diagnostics.reasoningEffort)
+        traces[index].diagnostics = safe
+        scheduleSave(trace: taskID)
+    }
+
+    func pauseTask(_ taskID: UUID, reason: AgentStopReason, response: String) {
+        guard let index = traces.firstIndex(where: { $0.id == taskID }),
+              traces[index].state == .running else { return }
+        finishRunningSteps(at: index, failed: true)
+        traces[index].state = .paused
+        traces[index].stopReason = reason
+        traces[index].response = response
+        traces[index].finishedAt = Date()
+        scheduleSave(trace: taskID)
+    }
+
+    func recordModelRequest(tabID: UUID) {
+        guard !discardedTabIDs.contains(tabID) else { return }
+        var usage = usageByTab[tabID, default: .zero]
+        usage.requestCount += 1
+        usageByTab[tabID] = usage
+        scheduleSave(usage: tabID)
+    }
+
+    func recordUsage(tabID: UUID, input: Int, cached: Int, output: Int, countRequest: Bool = true) {
+        guard !discardedTabIDs.contains(tabID) else { return }
+        var usage = usageByTab[tabID, default: .zero]
+        if countRequest {
+            usage.requestCount += 1
+        }
+        usage.inputTokens += input
+        usage.cachedTokens += cached
+        usage.outputTokens += output
+        usageByTab[tabID] = usage
+        scheduleSave(usage: tabID)
+    }
+
+    func recordContextEstimate(tabID: UUID, tokens: Int) {
+        guard !discardedTabIDs.contains(tabID) else { return }
+        var usage = usageByTab[tabID, default: .zero]
+        usage.estimatedContextTokens = tokens
+        usageByTab[tabID] = usage
+        scheduleSave(usage: tabID)
+    }
+
+    func usage(forTab tabID: UUID) -> Usage {
+        usageByTab[tabID, default: .zero]
+    }
+
+    func traces(forTab tabID: UUID) -> [TaskTrace] {
+        traces.filter { $0.tabID == tabID }
+    }
+
+    func failureCount(forTab tabID: UUID) -> Int {
+        traces.count { $0.tabID == tabID && ($0.state == .failed || $0.state == .paused) }
+    }
+
+    func latestTrace(forTab tabID: UUID) -> TaskTrace? {
+        traces.last { $0.tabID == tabID }
+    }
+
+    func hasActivity(forTab tabID: UUID) -> Bool {
+        traces.contains { $0.tabID == tabID }
+    }
+
+    func isRunning(onTab tabID: UUID) -> Bool {
+        traces.contains { $0.tabID == tabID && $0.state == .running }
+    }
+
+    func exchanges(forTab tabID: UUID, limit: Int? = nil) -> [Exchange] {
+        let exchanges = traces.lazy
+            .filter { $0.tabID == tabID && $0.state.isSpoken && !$0.response.isEmpty }
+            .map { Exchange(
+                prompt: $0.hasUserPrompt ? $0.prompt : "", response: $0.response,
+                attachments: $0.attachments, attachmentTextOnly: $0.attachmentTextOnly
+            ) }
+        let all = Array(exchanges)
+        guard let limit, all.count > limit else { return all }
+        return Array(all.suffix(limit))
+    }
+
+    func removeTab(_ tabID: UUID) {
+        discardedTabIDs.insert(tabID)
+        traces.removeAll { $0.tabID == tabID }
+        usageByTab.removeValue(forKey: tabID)
+        forget([tabID])
+    }
+
+    func reassign(from tabID: UUID, to newTabID: UUID) {
+        guard tabID != newTabID,
+              !discardedTabIDs.contains(newTabID),
+              !traces.contains(where: { $0.tabID == newTabID }),
+              usageByTab[newTabID] == nil
+        else { return }
+
+        var moved = false
+        for index in traces.indices where traces[index].tabID == tabID {
+            traces[index].tabID = newTabID
+            dirtyTraceIDs.insert(traces[index].id)
+            moved = true
+        }
+        if let usage = usageByTab.removeValue(forKey: tabID) {
+            usageByTab[newTabID] = usage
+            dirtyUsageTabIDs.remove(tabID)
+            dirtyUsageTabIDs.insert(newTabID)
+            writeNow { db in
+                _ = try UsageRecord.filter(Column("tabID") == tabID).deleteAll(db)
+            }
+            moved = true
+        }
+        guard moved else { return }
+        scheduleFlush()
+    }
+
+    func removeTrace(_ traceID: UUID) {
+        guard let index = traces.firstIndex(where: { $0.id == traceID }),
+              traces[index].state != .running
+        else { return }
+        let tabID = traces[index].tabID
+        traces.remove(at: index)
+        for index in traces.indices where traces[index].tabID == tabID {
+            traces[index].checkpoint = nil
+        }
+        dirtyTraceIDs.remove(traceID)
+        writeNow { db in
+            let ids = try UUID.fetchAll(db, sql: "SELECT id FROM agentTrace WHERE tabID = ?", arguments: [tabID])
+            _ = try MemoryRecord.filter(ids.contains(Column("traceID"))).deleteAll(db)
+            _ = try TraceRecord.filter(Column("id") == traceID).deleteAll(db)
+        }
+    }
+
+    func clearAll() {
+        historyRevision = UUID()
+        guard !traces.isEmpty || !usageByTab.isEmpty else { return }
+        discardedTabIDs.formUnion(traces.map(\.tabID))
+        traces.removeAll()
+        usageByTab.removeAll()
+        dirtyAttachmentIDs.removeAll()
+        dirtyTraceIDs.removeAll()
+        dirtyUsageTabIDs.removeAll()
+        saveTask?.cancel()
+        saveTask = nil
+        writeNow { db in
+            _ = try TraceRecord.deleteAll(db)
+            _ = try UsageRecord.deleteAll(db)
+        }
+    }
+
+    /// Saved windows include closed windows that the user may reopen.
+    func retainSessionTabs(including liveTabIDs: Set<UUID>) {
+        guard let stored = try? database.writer.read({ db in
+            try UUID.fetchAll(db, sql: "SELECT id FROM sessionTab")
+        }) else { return }
+        retainTabs(Set(stored).union(liveTabIDs))
+    }
+
+    func retainTabs(_ tabIDs: Set<UUID>) {
+        let removed = Set(traces.map(\.tabID)).union(usageByTab.keys).subtracting(tabIDs)
+        guard !removed.isEmpty else { return }
+        discardedTabIDs.formUnion(removed)
+        traces.removeAll { !tabIDs.contains($0.tabID) }
+        usageByTab = usageByTab.filter { tabIDs.contains($0.key) }
+        forget(removed)
+    }
+
+    private func forget(_ tabIDs: Set<UUID>) {
+        guard !tabIDs.isEmpty else { return }
+        dirtyTraceIDs.subtract(traces.filter { tabIDs.contains($0.tabID) }.map(\.id))
+        dirtyUsageTabIDs.subtract(tabIDs)
+        let ids = Array(tabIDs)
+        writeNow { db in
+            _ = try TraceRecord.filter(ids.contains(Column("tabID"))).deleteAll(db)
+            _ = try UsageRecord.filter(ids.contains(Column("tabID"))).deleteAll(db)
+        }
+    }
+
+    // MARK: - Persistence
+
+    private func scheduleSave(trace id: UUID) {
+        dirtyTraceIDs.insert(id)
+        scheduleFlush()
+    }
+
+    private func scheduleSave(usage tabID: UUID) {
+        dirtyUsageTabIDs.insert(tabID)
+        scheduleFlush()
+    }
+
+    private func scheduleFlush() {
+        saveTask?.cancel()
+        saveTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            self?.saveNow()
+        }
+    }
+
+    func saveNow() {
+        flush(blocking: false)
+    }
+
+    func saveBlocking() {
+        flush(blocking: true)
+    }
+
+    private func flush(blocking: Bool) {
+        saveTask?.cancel()
+        saveTask = nil
+        guard blocking || !dirtyTraceIDs.isEmpty || !dirtyUsageTabIDs.isEmpty else { return }
+
+        let traceRows = blocking
+            ? traces
+            : dirtyTraceIDs.compactMap { id in traces.first { $0.id == id } }
+        let stepRows = traceRows.flatMap(Self.steps(of:))
+        let usageRows = blocking
+            ? usageByTab.map { Self.record($0.value, for: $0.key) }
+            : dirtyUsageTabIDs.map { tabID in
+                Self.record(usageByTab[tabID, default: .zero], for: tabID)
+            }
+        let attachmentRows = traceRows.filter { !$0.attachments.isEmpty && (blocking || dirtyAttachmentIDs.contains($0.id)) }
+        dirtyAttachmentIDs.subtract(attachmentRows.map(\.id))
+        let touched = traceRows.map(\.id)
+        dirtyTraceIDs.removeAll()
+        dirtyUsageTabIDs.removeAll()
+
+        let updates: @Sendable (Database) throws -> Void = { db in
+            for trace in traceRows {
+                try Self.record(trace).save(db)
+            }
+            for trace in attachmentRows {
+                try AttachmentRecord(
+                    traceID: trace.id, payload: JSONEncoder().encode(trace.attachments), textOnly: trace.attachmentTextOnly
+                ).save(db)
+            }
+            _ = try StepRecord.filter(touched.contains(Column("traceID"))).deleteAll(db)
+            for step in stepRows {
+                try step.insert(db)
+            }
+            for usage in usageRows {
+                try usage.save(db)
+            }
+        }
+        if blocking {
+            writeNow(updates)
+        } else {
+            write(updates)
+        }
+    }
+
+    private func load() {
+        let stored = try? database.writer.read { db in
+            (
+                traces: try TraceRecord.order(Column("startedAt")).fetchAll(db),
+                attachments: try AttachmentRecord.fetchAll(db),
+                memories: try MemoryRecord.fetchAll(db),
+                steps: try StepRecord.order(Column("position")).fetchAll(db),
+                usage: try UsageRecord.fetchAll(db)
+            )
+        }
+        guard let stored else { return }
+
+        let memories = Dictionary(uniqueKeysWithValues: stored.memories.map { ($0.traceID, $0.payload) })
+        let attachmentsByTrace = Dictionary(uniqueKeysWithValues: stored.attachments.map { ($0.traceID, $0) })
+        let stepsByTrace = Dictionary(grouping: stored.steps, by: \.traceID)
+        var repairedStoredTask = false
+
+        traces = stored.traces.map { record in
+            var trace = TaskTrace(
+                id: record.id,
+                tabID: record.tabID,
+                prompt: record.prompt,
+                startedAt: record.startedAt,
+                steps: (stepsByTrace[record.id] ?? []).map(Self.step(from:)),
+                response: record.response,
+                state: record.state,
+                finishedAt: record.finishedAt,
+                providerID: record.providerID
+            )
+            trace.stopReason = record.stopReason
+            trace.diagnostics = record.diagnostics.flatMap {
+                try? JSONDecoder().decode(AgentRunDiagnostics.self, from: $0)
+            } ?? AgentRunDiagnostics()
+            trace.checkpoint = memories[record.id].flatMap {
+                try? JSONDecoder().decode(AgentCheckpoint.self, from: $0)
+            }
+            if let attachmentRecord = attachmentsByTrace[record.id] {
+                trace.attachments = (try? JSONDecoder().decode([AssistantAttachment].self, from: attachmentRecord.payload)) ?? []
+                trace.attachmentTextOnly = attachmentRecord.textOnly
+            }
+            let terminalStatus = trace.diagnostics.events.last { $0.kind == "terminal" }?.values["status"]
+            if terminalStatus == "completed", trace.state == .running || trace.state == .cancelled {
+                trace.state = .completed
+                trace.stopReason = nil
+                trace.finishedAt = trace.finishedAt ?? Date()
+                repairedStoredTask = true
+                dirtyTraceIDs.insert(trace.id)
+                return trace
+            }
+            guard trace.state == .running else { return trace }
+            for index in trace.steps.indices where trace.steps[index].state == .running {
+                trace.steps[index].state = .failed
+            }
+            trace.state = .cancelled
+            trace.finishedAt = Date()
+            repairedStoredTask = true
+            dirtyTraceIDs.insert(trace.id)
+            return trace
+        }
+
+        usageByTab = Dictionary(
+            stored.usage.map { ($0.tabID, Self.usage(from: $0)) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        if repairedStoredTask {
+            scheduleFlush()
+        }
+    }
+
+    private func write(_ updates: @escaping @Sendable (Database) throws -> Void) {
+        let database = database
+        Task {
+            do {
+                try await database.writer.write(updates)
+            } catch {
+                Pipeline.log.error("Conversation storage write failed")
+            }
+        }
+    }
+
+    private func writeNow(_ updates: (Database) throws -> Void) {
+        do {
+            try database.writer.write(updates)
+        } catch {
+            Pipeline.log.error("Conversation storage update failed")
+        }
+    }
+
+    // MARK: - Records
+
+    private nonisolated static func record(_ trace: TaskTrace) -> TraceRecord {
+        TraceRecord(
+            id: trace.id,
+            tabID: trace.tabID,
+            prompt: trace.prompt,
+            startedAt: trace.startedAt,
+            response: trace.response,
+            state: trace.state,
+            finishedAt: trace.finishedAt,
+            providerID: trace.providerID,
+            stopReason: trace.stopReason,
+            diagnostics: try? JSONEncoder().encode(trace.diagnostics)
+        )
+    }
+
+    private nonisolated static func steps(of trace: TaskTrace) -> [StepRecord] {
+        trace.steps.enumerated().map { position, step in
+            return StepRecord(
+                id: step.id,
+                traceID: trace.id,
+                position: position,
+                kind: step.kind,
+                title: AgentDiagnosticPrivacy.title(for: step.toolName ?? ""),
+                toolName: step.toolName.map(AgentDiagnosticPrivacy.tool),
+                startedAt: step.startedAt,
+                detail: nil,
+                links: "[]",
+                state: step.state
+            )
+        }
+    }
+
+    private nonisolated static func step(from record: StepRecord) -> Step {
+        Step(
+            id: record.id,
+            kind: record.kind,
+            title: AgentDiagnosticPrivacy.title(for: record.toolName ?? ""),
+            toolName: record.toolName.map(AgentDiagnosticPrivacy.tool),
+            startedAt: record.startedAt,
+            detail: nil,
+            links: [],
+            state: record.state
+        )
+    }
+
+    private nonisolated static func record(_ usage: Usage, for tabID: UUID) -> UsageRecord {
+        UsageRecord(
+            tabID: tabID,
+            requestCount: usage.requestCount,
+            inputTokens: usage.inputTokens,
+            cachedTokens: usage.cachedTokens,
+            outputTokens: usage.outputTokens,
+            estimatedContextTokens: usage.estimatedContextTokens
+        )
+    }
+
+    private nonisolated static func usage(from record: UsageRecord) -> Usage {
+        Usage(
+            requestCount: record.requestCount,
+            inputTokens: record.inputTokens,
+            cachedTokens: record.cachedTokens,
+            outputTokens: record.outputTokens,
+            estimatedContextTokens: record.estimatedContextTokens
+        )
+    }
+
+    private func finishRunningSteps(at traceIndex: Int, failed: Bool = false) {
+        for stepIndex in traces[traceIndex].steps.indices
+        where traces[traceIndex].steps[stepIndex].state == .running {
+            traces[traceIndex].steps[stepIndex].state = failed ? .failed : .completed
+        }
+    }
+}

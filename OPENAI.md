@@ -2,7 +2,7 @@
 
 Linen uses its Responses client for providers configured with the Responses
 adapter. Other providers use AnyLanguageModel. The implementation lives in
-`Linen/Agent/Providers/OpenAI`.
+`Linen/Features/Assistant/Providers/OpenAI`.
 
 ## Settings and tools
 

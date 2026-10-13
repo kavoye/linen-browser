@@ -39,8 +39,8 @@ Do not weaken concurrency checks to make a change compile.
 - Make each distinct SwiftUI section a separate `View` with narrow inputs.
   Computed `some View` properties do not create invalidation boundaries.
 - Prefer `@Observable` models. Keep view-local `@State` private.
-- Use the existing design primitives in `Linen/UI/Chrome` and
-  `Linen/Settings/SettingsPrimitives.swift` before adding another style.
+- Use the existing design primitives in `Linen/Interface/DesignSystem` and
+  `Linen/Settings/Components` before adding another style.
 - Keep user-facing strings localizable. Prefer `LocalizedStringResource` in
   models and string literals in SwiftUI controls.
 
@@ -133,8 +133,8 @@ copy.
 
 Stage mode loads sample browsing data for screenshots and recordings.
 
-Set the session in `Linen/Stage/StageSet.swift`: pinned tabs, folders, loose
-tabs, history and downloads.
+Set the session in `Linen/Core/Stage/StageSet.swift`: pinned tabs, folders,
+loose tabs, history and downloads.
 
 ```bash
 LINEN_STAGE=1 build/DD/Build/Products/Debug/Linen.app/Contents/MacOS/Linen

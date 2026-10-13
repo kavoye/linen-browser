@@ -71,9 +71,9 @@ jobs:
       - name: Check acknowledgements
         run: |
           swift Tools/make-acknowledgements.swift "$DD/SourcePackages/checkouts"
-          if ! git diff --quiet -- Linen/Support/Acknowledgements.json; then
-            echo "::error file=Linen/Support/Acknowledgements.json::Out of date. Run: swift Tools/make-acknowledgements.swift"
-            git diff --stat -- Linen/Support/Acknowledgements.json
+          if ! git diff --quiet -- Linen/Resources/Acknowledgements.json; then
+            echo "::error file=Linen/Resources/Acknowledgements.json::Out of date. Run: swift Tools/make-acknowledgements.swift"
+            git diff --stat -- Linen/Resources/Acknowledgements.json
             exit 1
           fi
 

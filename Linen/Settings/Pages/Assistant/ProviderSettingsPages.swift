@@ -1,0 +1,660 @@
+// SPDX-FileCopyrightText: 2026 Kavoye
+// SPDX-License-Identifier: Apache-2.0
+
+import AppKit
+import Observation
+import SwiftUI
+
+// MARK: - One provider
+
+struct SettingsProviderRow: View {
+    let provider: Provider
+    let summary: String
+    let isInUse: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                ProviderBrandIcon(providerID: provider.id, size: 20)
+                    .frame(width: 26, height: 26)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: provider.name)
+                        .font(Theme.Font.rowTitle)
+
+                    if !summary.isEmpty {
+                        Text(verbatim: summary)
+                            .font(Theme.Font.secondary)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                if isInUse {
+                    Tag("In use")
+                }
+
+                DrillInChevron()
+            }
+            .padding(.vertical, 9)
+            .settingsRowTarget()
+        }
+        .buttonStyle(.plain)
+        .help(Text(verbatim: provider.blurb))
+    }
+}
+
+struct ProviderPage: View {
+    @Bindable var model: IntelligenceViewModel
+    let coordinator: AppCoordinator
+
+    @State private var confirmingEndpointRemoval = false
+
+    private var provider: Provider {
+        model.subject
+    }
+    private var readiness: ProviderReadiness {
+        model.readiness(for: provider)
+    }
+    private var showsReadiness: Bool {
+        readiness.level != .ready
+    }
+
+    private var anchorsModelReveals: [String] {
+        var hidden: [String] = []
+        if !model.supportsReasoningEffort {
+            hidden.append("provider.thinking")
+        }
+        if provider.adapter == .openAIResponses, !OpenAIModelSupport.verbosity(model.selectedModel) {
+            hidden.append("openai.replyLength")
+        }
+        return hidden
+    }
+
+    private var endpoint: String? {
+        guard let url = provider.baseURL else { return nil }
+        let host = url.host() ?? url.absoluteString
+        let port = url.port.map { ":\($0)" } ?? ""
+        return host + port + url.path()
+    }
+
+    var body: some View {
+        SubPageHeader(backTitle: "Assistant", onBack: { model.showOverview() })
+
+        HStack(alignment: .top, spacing: 12) {
+            SettingsPageHeader(
+                verbatimTitle: provider.name,
+                detail: endpoint,
+                verbatimCaption: endpoint == nil ? provider.blurb : nil
+            )
+
+            if model.isSubjectInUse {
+                Tag("In use")
+                    .padding(.top, 5)
+            } else {
+                SettingsButton(title: "Use \(provider.name)") {
+                    model.use(provider)
+                }
+                .disabled(readiness.level != .ready)
+            }
+        }
+
+        SettingsCard {
+            if showsReadiness {
+                ReadinessRow(model: model)
+
+                if !provider.isOnDevice {
+                    RowSeparator()
+                }
+            }
+
+            if !provider.isOnDevice {
+                ModelControl(model: model, standingInFor: anchorsModelReveals)
+
+                if let window = model.detectedContextWindow(for: provider) {
+                    RowSeparator()
+                    DetailRow(
+                        title: "Context window",
+                        caption: "\(provider.name) reports this for the selected model."
+                    ) {
+                        Text("\(window.formatted()) tokens")
+                            .font(Theme.Font.control)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if provider.needsKey {
+                    RowSeparator()
+                    APIKeyRow(model: model)
+                        .settingsAnchor("provider.key")
+                }
+
+                if provider.isCustom {
+                    RowSeparator()
+                    endpointRow
+                }
+            }
+
+            if showsReadiness || !provider.isOnDevice {
+                RowSeparator()
+            }
+
+            DrillInRow(
+                title: "Tools",
+                detail: "\(model.enabledToolCount(for: provider)) of \(AgentToolCatalog.configurableIDs.count)"
+            ) {
+                model.showTools()
+            }
+            .settingsAnchor("provider.tools")
+        }
+        .padding(.top, 6)
+
+        if let hint = provider.setupHint, readiness.level != .ready {
+            Text(verbatim: hint)
+                .font(Theme.Font.label)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, -20)
+        }
+
+        if model.supportsReasoningEffort {
+            ThinkingSection(model: model)
+        }
+        if provider.adapter == .openAIResponses {
+            OpenAISettingsSection(providerID: provider.id, modelID: model.selectedModel,
+                onSave: model.saveOpenAISettings, onOpen: model.showOpenAI)
+                .id(provider.id)
+        }
+    }
+
+    @ViewBuilder
+    private var endpointRow: some View {
+        DetailRow(title: "Endpoint") {
+            HStack(spacing: 7) {
+                SettingsButton(title: "Edit") { model.editCustomProvider(provider) }
+                SettingsButton(title: "Remove…", isDestructive: true, symbol: "trash") {
+                    confirmingEndpointRemoval = true
+                }
+                Tag(provider.adapterLabel)
+            }
+        }
+        .settingsAnchor("provider.endpoint")
+        .confirmationDialog(
+            "Remove \"\(provider.name)\"?",
+            isPresented: $confirmingEndpointRemoval
+        ) {
+            Button("Remove Endpoint", role: .destructive) {
+                model.removeCustomProvider(provider)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Linen removes the endpoint’s name and URL. Nothing changes on the server.")
+        }
+    }
+}
+
+private struct ReadinessRow: View {
+    @Bindable var model: IntelligenceViewModel
+
+    private var provider: Provider {
+        model.subject
+    }
+
+    var body: some View {
+        switch model.readiness(for: provider) {
+        case .ready:
+            EmptyView()
+
+        case .needsKey:
+            StatusRow(
+                tint: Theme.warning,
+                symbol: "key",
+                title: "Needs a key",
+                caption: "Add an API key to use \(provider.name)."
+            ) {}
+
+        case .notRunning(let why):
+            StatusRow(
+                tint: Theme.warning,
+                symbol: "exclamationmark",
+                title: "Not responding",
+                verbatimCaption: why
+            ) {
+                refresh
+            }
+
+        case .checking:
+            StatusRow(tint: .secondary, symbol: "ellipsis", title: "Checking…") {}
+
+        case .unsupported(let why):
+            StatusRow(
+                tint: Theme.danger,
+                symbol: "xmark",
+                title: "Unavailable",
+                verbatimCaption: why
+            ) {}
+        }
+    }
+
+    private var refresh: some View {
+        CatalogRefreshButton(model: model)
+    }
+}
+
+private struct CatalogRefreshButton: View {
+    @Bindable var model: IntelligenceViewModel
+    var help: LocalizedStringResource = "Check this provider again"
+
+    var body: some View {
+        IconButton(
+            symbol: "arrow.clockwise",
+            help: help,
+            isBusy: model.isLoadingCatalog
+        ) {
+            Task { await model.loadCatalog(force: true) }
+        }
+        .disabled(model.isLoadingCatalog)
+    }
+}
+
+private struct RemoveKeyButton: View {
+    @Bindable var model: IntelligenceViewModel
+
+    @State private var confirming = false
+
+    var body: some View {
+        SettingsButton(title: "Remove…", isDestructive: true, symbol: "trash") {
+            confirming = true
+        }
+        .confirmationDialog(
+            "Remove the \(model.subject.name) key?",
+            isPresented: $confirming
+        ) {
+            Button("Remove Key", role: .destructive) { model.removeKey() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Linen deletes the key from your Keychain. To use \(model.subject.name) again, add a new key.")
+        }
+    }
+}
+
+// MARK: - Adding one
+
+struct AddProviderPage: View {
+    @Bindable var model: IntelligenceViewModel
+
+    var body: some View {
+        SubPageHeader(backTitle: "Assistant") { model.showOverview() }
+
+        SettingsPageHeader(
+            title: "Add a provider"
+        )
+
+        if !model.unconnectedKeyed.isEmpty {
+            SettingsSection(
+                title: "Needs an API key",
+                symbol: "key"
+            ) {
+                ForEach(Array(model.unconnectedKeyed.enumerated()), id: \.element.id) { index, provider in
+                    if index > 0 {
+                        RowSeparator()
+                    }
+
+                    SettingsProviderRow(
+                        provider: provider,
+                        summary: provider.blurb,
+                        isInUse: false
+                    ) {
+                        model.open(provider)
+                    }
+                }
+            }
+        }
+
+        SettingsSection(title: "Needs a server you run", symbol: "desktopcomputer") {
+            ForEach(Array(model.unconnectedLocal.enumerated()), id: \.element.id) { index, provider in
+                if index > 0 {
+                    RowSeparator()
+                }
+
+                SettingsProviderRow(
+                    provider: provider,
+                    summary: model.summary(for: provider),
+                    isInUse: false
+                ) {
+                    model.open(provider)
+                }
+            }
+
+            if !model.unconnectedLocal.isEmpty {
+                RowSeparator()
+            }
+
+            DetailRow(
+                title: "Your own server",
+                caption: "Any server that uses the OpenAI chat API."
+            ) {
+                SettingsButton(title: "Set Up…") { model.beginCustomProvider() }
+            }
+        }
+    }
+}
+
+// MARK: - Rows
+
+private struct APIKeyRow: View {
+    @Bindable var model: IntelligenceViewModel
+
+    @State private var entering = false
+
+    private var provider: Provider {
+        model.subject
+    }
+
+    private var caption: LocalizedStringResource? {
+        switch model.keySource {
+        case .keychain:
+            if let masked = model.maskedKey {
+                return "`\(masked)` is saved in your Keychain."
+            }
+            return "Saved in your Keychain."
+        case .environment(let name):
+            return "Using `\(name)` from the environment."
+        case .none:
+            return nil
+        }
+    }
+
+    var body: some View {
+        DetailRow(title: "API key", caption: caption, controlWidth: nil) {
+            HStack(spacing: 7) {
+                if let console = provider.consoleURL {
+                    SettingsButton(title: "Get a Key", symbol: "arrow.up.forward") {
+                        NSWorkspace.shared.open(console)
+                    }
+                }
+
+                SettingsButton(
+                    title: model.keySource == .none ? "Add Key…" : "Change…",
+                    isProminent: model.keySource == .none
+                ) {
+                    entering = true
+                }
+                .popover(isPresented: $entering, arrowEdge: .bottom) {
+                    APIKeyEntry(model: model, dismiss: { entering = false })
+                }
+
+                if !provider.isCustom, model.keySource == .keychain {
+                    RemoveKeyButton(model: model)
+                }
+            }
+        }
+    }
+}
+
+private struct APIKeyEntry: View {
+    @Bindable var model: IntelligenceViewModel
+    let dismiss: () -> Void
+
+    @FocusState private var focused: Bool
+
+    private var canSave: Bool {
+        !model.keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(model.keySource == .none ? "Add \(model.subject.name) key" : "Replace \(model.subject.name) key")
+                .font(.system(size: 12, weight: .semibold))
+
+            HStack(spacing: 7) {
+                FieldChrome(isFocused: focused) {
+                    SecureField("Paste your key…", text: $model.keyDraft)
+                        .textFieldStyle(.plain)
+                        .font(Theme.Font.mono)
+                        .frame(width: 300)
+                        .focused($focused)
+                        .onSubmit { save() }
+                }
+
+                SettingsButton(title: "Save", isProminent: true) { save() }
+                    .disabled(!canSave)
+            }
+
+            if let keyError = model.keyError {
+                SettingsNotice(symbol: "exclamationmark.triangle.fill", text: keyError)
+                    .frame(maxWidth: 300, alignment: .leading)
+            }
+        }
+        .padding(14)
+        .onAppear { focused = true }
+    }
+
+    private func save() {
+        guard canSave else { return }
+        model.saveKey()
+        if model.keyError == nil {
+            dismiss()
+        }
+    }
+}
+
+private struct ModelControl: View {
+    @Bindable var model: IntelligenceViewModel
+    var standingInFor: [String] = []
+
+    @FocusState private var customFieldFocused: Bool
+
+    var body: some View {
+        Group {
+            DetailRow(title: "Model") {
+                HStack(spacing: 7) {
+                    menu
+                    CatalogRefreshButton(model: model, help: "Check for new models")
+                }
+            }
+            .settingsAnchor("provider.model", standingInFor: standingInFor)
+
+            if model.isEditingCustomModel {
+                RowSeparator()
+
+                DetailRow(caption: "Enter the model ID as the provider lists it.", layout: .stacked) {
+                    HStack(spacing: 7) {
+                        FieldChrome(isFocused: customFieldFocused) {
+                            TextField("", text: $model.customModelDraft)
+                                .fieldPlaceholder(verbatim: "model-id", isShowing: model.customModelDraft.isEmpty)
+                                .textFieldStyle(.plain)
+                                .font(Theme.Font.mono)
+                                .focused($customFieldFocused)
+                                .onSubmit { model.applyCustomModel() }
+                        }
+                        SettingsButton(title: "Apply", isProminent: true) { model.applyCustomModel() }
+                    }
+                    .onAppear { customFieldFocused = true }
+                }
+            }
+
+            if let notice = model.modelCatalogNotice {
+                RowSeparator()
+
+                DetailRow(layout: .stacked) {
+                    SettingsNotice(symbol: "exclamationmark.triangle.fill", text: notice)
+                }
+            }
+        }
+    }
+
+    private var catalogModels: [String] {
+        let suggested = Set(model.subject.suggestedModels.map(\.id))
+        return model.availableModels.filter { !suggested.contains($0) }
+    }
+
+    private var menu: some View {
+        Menu {
+            if !model.subject.suggestedModels.isEmpty {
+                Picker(selection: chosenModel) {
+                    ForEach(model.subject.suggestedModels) { suggestion in
+                        Text(verbatim: suggestion.id).tag(suggestion.id)
+                    }
+                } label: {
+                    Text("Suggested")
+                }
+                .pickerStyle(.inline)
+            }
+
+            if !catalogModels.isEmpty {
+                Picker(selection: chosenModel) {
+                    ForEach(catalogModels, id: \.self) { id in
+                        Text(verbatim: id).tag(id)
+                    }
+                } label: {
+                    if model.subject.isLocal {
+                        Text("Pulled locally")
+                    } else {
+                        Text("Available to this key")
+                    }
+                }
+                .pickerStyle(.inline)
+            }
+
+            Divider()
+            Button("Enter model ID…") { model.beginCustomModelEntry() }
+        } label: {
+            MenuChrome {
+                label
+            }
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        if model.selectedModel.isEmpty {
+            Text("Choose a model")
+                .font(Theme.Font.secondary)
+                .foregroundStyle(.tertiary)
+        } else {
+            Text(verbatim: model.selectedModel)
+                .font(Theme.Font.mono)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+    }
+
+    private var chosenModel: Binding<String> {
+        Binding {
+            model.selectedModel
+        } set: { id in
+            model.selectModel(id)
+        }
+    }
+}
+
+// MARK: - Bring your own endpoint
+
+struct CustomProviderEditor: View {
+    @Bindable var model: IntelligenceViewModel
+
+    @FocusState private var focus: Field?
+
+    private enum Field { case name, url }
+
+    private var isEditing: Bool {
+        editedProviderName != nil
+    }
+
+    private var editedProviderName: String? {
+        guard let draft = model.customDraft else { return nil }
+        return model.providers.first { $0.id == draft.id }?.name
+    }
+
+    var body: some View {
+        if let name = editedProviderName {
+            SubPageHeader(verbatimBackTitle: name) { model.cancelCustomProvider() }
+        } else {
+            SubPageHeader(backTitle: "Assistant") { model.cancelCustomProvider() }
+        }
+
+        SettingsPageHeader(
+            title: isEditing ? "Edit endpoint" : "Custom endpoint",
+            caption: "Connect any server that uses the OpenAI chat API. Its base URL usually ends in /v1."
+        )
+
+        SettingsCard {
+            DetailRow(title: "Name", layout: .stacked) {
+                FieldChrome(isFocused: focus == .name) {
+                    TextField("", text: $model.customName)
+                        .fieldPlaceholder("My server", isShowing: model.customName.isEmpty)
+                        .textFieldStyle(.plain)
+                        .font(Theme.Font.secondary)
+                        .focused($focus, equals: .name)
+                }
+            }
+
+            RowSeparator()
+
+            DetailRow(title: "Base URL", layout: .stacked) {
+                FieldChrome(isFocused: focus == .url) {
+                    TextField("", text: $model.customBaseURL)
+                        .textFieldStyle(.plain)
+                        .font(Theme.Font.mono)
+                        .fieldPlaceholder(
+                            verbatim: "http://localhost:8000/v1",
+                            isShowing: model.customBaseURL.isEmpty
+                        )
+                        .focused($focus, equals: .url)
+                        .onSubmit { model.commitCustomProvider() }
+                }
+            }
+
+            RowSeparator()
+
+            DetailRow(layout: .stacked) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 7) {
+                        SettingsButton(title: isEditing ? "Save" : "Add", isProminent: true) {
+                            model.commitCustomProvider()
+                        }
+                        .disabled(!model.canCommitCustomProvider)
+
+                        SettingsButton(title: "Cancel") { model.cancelCustomProvider() }
+                    }
+
+                    if let error = model.customError {
+                        SettingsNotice(symbol: "exclamationmark.triangle.fill", text: error)
+                    }
+                }
+            }
+        }
+        .padding(.top, 6)
+        .onAppear { focus = .name }
+    }
+}
+
+// MARK: - Readiness
+
+enum ProviderReadiness: Equatable {
+    case ready(String)
+    case needsKey
+    case notRunning(String)
+    case checking
+    case unsupported(String)
+
+    var level: StatusLevel {
+        switch self {
+        case .ready:
+            .ready
+        case .needsKey, .notRunning, .unsupported:
+            .attention
+        case .checking:
+            .idle
+        }
+    }
+}

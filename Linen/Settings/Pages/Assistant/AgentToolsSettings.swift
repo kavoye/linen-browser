@@ -1,0 +1,106 @@
+// SPDX-FileCopyrightText: 2026 Kavoye
+// SPDX-License-Identifier: Apache-2.0
+
+import AppKit
+import Observation
+import SwiftUI
+
+struct AgentToolsPage: View {
+    @Bindable var model: IntelligenceViewModel
+
+    var body: some View {
+        if let inspected = model.inspectedProvider {
+            SubPageHeader(verbatimBackTitle: inspected.name, onBack: { model.leaveTools() }) {
+                resetButton
+            }
+        } else {
+            SubPageHeader(backTitle: "Assistant", onBack: { model.leaveTools() }) {
+                resetButton
+            }
+        }
+
+        SettingsPageHeader(
+            title: "Tools",
+            caption: "Each tool you turn on uses part of the context window."
+        )
+
+        ForEach(AgentToolDescriptor.Category.allCases, id: \.self) { category in
+            let tools = AgentToolCatalog.descriptors(in: category)
+            SettingsSection(title: category.title, symbol: Self.symbol(for: category), footnote: footnote(for: category)) {
+                ForEach(tools) { tool in
+                    DetailRow(title: tool.title, caption: tool.summary) {
+                        SettingsToggle(Binding(
+                            get: { model.isToolEnabled(tool.id) },
+                            set: { model.setTool(tool.id, enabled: $0) }
+                        ))
+                    }
+
+                    if tool.id != tools.last?.id {
+                        RowSeparator()
+                    }
+                }
+            }
+        }
+
+        if let warning = model.toolWarning {
+            StatusRow(
+                tint: Theme.warning,
+                symbol: "exclamationmark",
+                title: "More tools than recommended",
+                verbatimCaption: warning
+            ) {
+                EmptyView()
+            }
+            .padding(.top, 6)
+        }
+    }
+
+    @ViewBuilder private var resetButton: some View {
+        if model.toolWarning != nil {
+            SettingsButton(title: "Use Recommended", tint: Theme.warning) {
+                model.resetToolsToRecommended()
+            }
+        } else if !model.isUsingRecommendedTools {
+            SettingsButton(title: "Reset") {
+                model.resetToolsToRecommended()
+            }
+        }
+    }
+
+    private func footnote(for category: AgentToolDescriptor.Category) -> LocalizedStringResource? {
+        guard model.tracksOutcomes, category == AgentToolDescriptor.Category.allCases.last else { return nil }
+        return "Linen always keeps track of task results. Models with large context windows can also use screenshots."
+    }
+
+    private static func symbol(for category: AgentToolDescriptor.Category) -> String {
+        switch category {
+        case .research:
+            "magnifyingglass"
+        case .page:
+            "cursorarrow.click"
+        case .tabs:
+            "square.on.square"
+        case .media:
+            "play.rectangle"
+        }
+    }
+}
+
+struct AssistantExecutionSettings: View {
+    @AppStorage(AgentExecutionPolicy.settingsKey) private var requestLimit = 0
+
+    var body: some View {
+        SettingsSection(title: "Long tasks", symbol: "arrow.trianglehead.2.clockwise") {
+            DetailRow(title: "Pause after", caption: "Stop a long task after this many model requests. Click Continue to resume it.") {
+                Picker("Model requests", selection: $requestLimit) {
+                    Text("No limit").tag(0)
+                    Text("100 requests").tag(100)
+                    Text("250 requests").tag(250)
+                    Text("500 requests").tag(500)
+                }
+                .labelsHidden()
+            }
+            .settingsAnchor("assistant.pauseAfter")
+        }
+    }
+}

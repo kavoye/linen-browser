@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //
-// Draws Linen's app icon and writes Linen/AppIcon.icon.
+// Draws Linen's app icon and writes Linen/Resources/AppIcon.icon.
 //
 //     swift Tools/make-app-icon.swift
 //
@@ -105,7 +105,7 @@ guard FileManager.default.fileExists(atPath: root.appendingPathComponent("Linen"
     exit(1)
 }
 
-let icon = root.appendingPathComponent("Linen/AppIcon.icon")
+let icon = root.appendingPathComponent("Linen/Resources/AppIcon.icon")
 let assets = icon.appendingPathComponent("Assets")
 try FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
 

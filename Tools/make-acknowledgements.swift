@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //
-// Writes Linen/Support/Acknowledgements.json from the resolved packages and
+// Writes Linen/Resources/Acknowledgements.json from the resolved packages and
 // from the vendored code in Tools/vendored.
 //
 //     swift Tools/make-acknowledgements.swift [checkouts-directory]
@@ -56,7 +56,7 @@ let fileManager = FileManager.default
 let root = URL(fileURLWithPath: fileManager.currentDirectoryPath)
 let resolvedPath = root
     .appending(path: "Linen.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved")
-let output = root.appending(path: "Linen/Support/Acknowledgements.json")
+let output = root.appending(path: "Linen/Resources/Acknowledgements.json")
 
 func fail(_ message: String) -> Never {
     FileHandle.standardError.write(Data("make-acknowledgements: \(message)\n".utf8))

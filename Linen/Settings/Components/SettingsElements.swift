@@ -1,0 +1,511 @@
+// SPDX-FileCopyrightText: 2026 Kavoye
+// SPDX-License-Identifier: Apache-2.0
+
+import SwiftUI
+
+struct OptionList<Value: Hashable>: View {
+    struct Option: Identifiable {
+        let value: Value
+        let label: LocalizedStringResource
+        var caption: LocalizedStringResource?
+
+        var id: Value {
+            value
+        }
+    }
+
+    let options: [Option]
+    let selection: Value
+    let onSelect: (Value) -> Void
+
+    private var selectionBinding: Binding<Value> {
+        Binding(get: { selection }, set: { onSelect($0) })
+    }
+
+    var body: some View {
+        Picker(selection: selectionBinding) {
+            ForEach(options) { option in
+                OptionPickerLabel(label: option.label, caption: option.caption)
+                    .tag(option.value)
+            }
+        } label: {
+            EmptyView()
+        }
+        .labelsHidden()
+        .pickerStyle(.radioGroup)
+        .controlSize(.small)
+        .padding(.horizontal, SettingsMetrics.pickerHorizontalInset)
+        .padding(.vertical, SettingsMetrics.pickerVerticalInset)
+    }
+}
+
+private struct OptionPickerLabel: View {
+    let label: LocalizedStringResource
+    let caption: LocalizedStringResource?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(Theme.Font.rowTitle)
+
+            if let caption {
+                Text(caption)
+                    .font(Theme.Font.secondary)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, SettingsMetrics.pickerLabelGap)
+        .padding(.vertical, SettingsMetrics.pickerItemPaddingV)
+    }
+}
+
+struct SiteIcon: View {
+    @Environment(\.profileFavicons) private var profileFavicons
+    private var favicons: FaviconLoader {
+        profileFavicons ?? .shared
+    }
+    let host: String
+    var size: CGFloat = 16
+
+    var body: some View {
+        Group {
+            if let favicon = favicons.cached(for: host) {
+                Image(nsImage: favicon)
+                    .resizable()
+                    .interpolation(.high)
+            } else {
+                RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous)
+                    .fill(.clear)
+                    .settingsSurface(
+                        in: RoundedRectangle(
+                            cornerRadius: Theme.Radius.tight,
+                            style: .continuous
+                        )
+                    )
+                    .overlay {
+                        Image(systemName: "globe")
+                            .font(.system(size: size * 0.62))
+                            .foregroundStyle(.secondary)
+                    }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
+        .accessibilityHidden(true)
+    }
+}
+
+struct SiteRow<Trailing: View>: View {
+    let host: String
+    var summary: String?
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 10) {
+            SiteIcon(host: host)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: host)
+                    .font(Theme.Font.row)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+
+                if let summary, !summary.isEmpty {
+                    Text(verbatim: summary)
+                        .font(Theme.Font.label)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            trailing
+        }
+        .padding(.vertical, 9)
+    }
+}
+
+struct DrillInRow: View {
+    @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
+    let title: LocalizedStringResource
+    var symbol: String?
+    var tint: Color = .secondary
+    var caption: LocalizedStringResource?
+    var detail: LocalizedStringResource?
+    let action: () -> Void
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                if let symbol {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(tint.opacity(0.16))
+                        .frame(width: 22, height: 22)
+                        .overlay {
+                            Image(systemName: symbol)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(tint)
+                        }
+                        .accessibilityHidden(true)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(Theme.Font.rowTitle)
+                        .foregroundStyle(isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+
+                    if let caption {
+                        Text(caption)
+                            .lineLimit(descriptionLineLimit)
+                            .font(Theme.Font.secondary)
+                            .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                if let detail {
+                    Text(detail)
+                        .font(Theme.Font.secondary)
+                        .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                }
+
+                DrillInChevron()
+            }
+            .padding(.vertical, caption == nil ? 10 : SettingsMetrics.rowPaddingV)
+            .settingsRowTarget()
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct AddRow: View {
+    let title: LocalizedStringResource
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Circle()
+                    .strokeBorder(
+                        Color.primary.opacity(0.22),
+                        style: StrokeStyle(lineWidth: 1, dash: [3, 2.5])
+                    )
+                    .frame(width: 26, height: 26)
+                    .overlay {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityHidden(true)
+
+                Text(title)
+                    .font(Theme.Font.rowTitle)
+                    .foregroundStyle(.secondary)
+
+                Spacer(minLength: 8)
+            }
+            .padding(.vertical, 9)
+            .settingsRowTarget()
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SubPageHeader<Accessory: View>: View {
+    private let button: SettingsButton
+    private let accessory: Accessory
+
+    init(
+        backTitle: LocalizedStringResource,
+        onBack: @escaping () -> Void,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        button = SettingsButton(title: backTitle, symbol: "chevron.left", action: onBack)
+        self.accessory = accessory()
+    }
+
+    init(
+        verbatimBackTitle: String,
+        onBack: @escaping () -> Void,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        button = SettingsButton(
+            verbatimTitle: verbatimBackTitle,
+            symbol: "chevron.left",
+            action: onBack
+        )
+        self.accessory = accessory()
+    }
+
+    init(backTitle: LocalizedStringResource, onBack: @escaping () -> Void) where Accessory == EmptyView {
+        self.init(backTitle: backTitle, onBack: onBack) { EmptyView() }
+    }
+
+    init(verbatimBackTitle: String, onBack: @escaping () -> Void) where Accessory == EmptyView {
+        self.init(verbatimBackTitle: verbatimBackTitle, onBack: onBack) { EmptyView() }
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            button
+
+            Spacer(minLength: 8)
+
+            accessory
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct SettingsList<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .environment(\.settingsCardInset, SettingsMetrics.cardInset)
+        .environment(\.settingsSectionLit, false)
+        .padding(.horizontal, SettingsMetrics.cardInset)
+        .padding(.vertical, SettingsMetrics.cardInsetV)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Theme.Wash.faint,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+        )
+    }
+}
+
+struct PreviewChoiceCard<Thumbnail: View>: View {
+    let label: LocalizedStringResource
+    let isSelected: Bool
+    let action: () -> Void
+    @ViewBuilder let thumbnail: Thumbnail
+
+    @State private var hovering = false
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                thumbnail
+                    .frame(
+                        width: AppearanceThumbnailMetrics.width,
+                        height: AppearanceThumbnailMetrics.height
+                    )
+                    .clipShape(shape)
+                    .overlay {
+                        shape.strokeBorder(
+                            isSelected
+                                ? Theme.systemAccent.opacity(0.95)
+                                : Color.primary.opacity(hovering ? 0.22 : 0.11),
+                            lineWidth: isSelected ? 2 : 1
+                        )
+                    }
+                    .shadow(
+                        color: .black.opacity(hovering || isSelected ? 0.26 : 0.18),
+                        radius: hovering || isSelected ? 7 : 4,
+                        y: hovering || isSelected ? 3 : 2
+                    )
+                    .scaleEffect(hovering ? 1.015 : 1)
+
+                Text(label)
+                    .font(.system(size: 11.5, weight: isSelected ? .semibold : .regular))
+                    .frame(width: AppearanceThumbnailMetrics.width, alignment: .center)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .animation(Theme.Motion.quick, value: hovering)
+        .animation(Theme.Motion.quick, value: isSelected)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+struct SettingsEmptyState: View {
+    @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
+    let symbol: String
+    let title: LocalizedStringResource
+    var caption: LocalizedStringResource?
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: symbol)
+                .font(.system(size: 20, weight: .light))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+
+            Text(title)
+                .font(Theme.Font.rowTitle)
+                .foregroundStyle(.secondary)
+
+            if let caption {
+                Text(caption)
+                    .lineLimit(descriptionLineLimit)
+                    .font(Theme.Font.secondary)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 26)
+    }
+}
+
+struct DrillInChevron: View {
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
+    }
+}
+
+struct StatusRow<Trailing: View>: View {
+    let tint: Color
+    let symbol: String
+    let title: LocalizedStringResource
+    var caption: LocalizedStringResource?
+    var verbatimCaption: String?
+    var action: (() -> Void)?
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        if let action {
+            Button(action: action) {
+                row
+                    .settingsRowTarget()
+            }
+            .buttonStyle(.plain)
+        } else {
+            row
+        }
+    }
+
+    private var row: some View {
+        HStack(spacing: 11) {
+            Circle()
+                .fill(tint.opacity(0.16))
+                .frame(width: 26, height: 26)
+                .overlay {
+                    Image(systemName: symbol)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(tint)
+                }
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(Theme.Font.rowTitle)
+
+                if let verbatimCaption {
+                    Text(verbatim: verbatimCaption)
+                        .font(Theme.Font.secondary)
+                        .foregroundStyle(.secondary)
+                } else if let caption {
+                    Text(caption)
+                        .font(Theme.Font.secondary)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            trailing
+
+            if action != nil {
+                DrillInChevron()
+            }
+        }
+        .padding(.vertical, SettingsMetrics.rowPaddingV)
+    }
+}
+
+struct SectionActions<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+            content
+        }
+        .padding(.top, 8)
+    }
+}
+
+struct ChipFlow: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        let rows = rows(of: subviews, within: width)
+        let height = rows.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        var y = bounds.minY
+        for row in rows(of: subviews, within: bounds.width) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(
+                    at: CGPoint(x: x, y: y + (row.height - size.height) / 2),
+                    proposal: ProposedViewSize(size)
+                )
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func rows(of subviews: Subviews, within width: CGFloat) -> [Row] {
+        var rows: [Row] = []
+        var row = Row()
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let next = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            if next > width, !row.indices.isEmpty {
+                rows.append(row)
+                row = Row()
+                row.indices = [index]
+                row.width = size.width
+                row.height = size.height
+            } else {
+                row.indices.append(index)
+                row.width = next
+                row.height = max(row.height, size.height)
+            }
+        }
+        if !row.indices.isEmpty {
+            rows.append(row)
+        }
+        return rows
+    }
+}

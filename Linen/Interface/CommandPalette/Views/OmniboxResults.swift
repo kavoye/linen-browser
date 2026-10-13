@@ -1,0 +1,385 @@
+// SPDX-FileCopyrightText: 2026 Kavoye
+// SPDX-License-Identifier: Apache-2.0
+
+import AppKit
+import SwiftUI
+
+struct OmniboxList: View {
+    enum Density {
+        case compact
+        case regular
+
+        var rowHeight: CGFloat {
+            self == .compact ? 28 : 40
+        }
+
+        var hintStyle: HierarchicalShapeStyle {
+            self == .compact ? .quaternary : .tertiary
+        }
+
+        var detailStyle: HierarchicalShapeStyle {
+            self == .compact ? .tertiary : .secondary
+        }
+        var stackedRowHeight: CGFloat {
+            self == .compact ? 40 : 50
+        }
+
+        func rowHeight(for item: OmniboxItem) -> CGFloat {
+            item.kind.stacksDetail ? stackedRowHeight : rowHeight
+        }
+
+        var headerHeight: CGFloat {
+            self == .compact ? 20 : 26
+        }
+        var sectionGap: CGFloat {
+            self == .compact ? 4 : 6
+        }
+        var titleSize: CGFloat {
+            self == .compact ? 12.5 : 14
+        }
+        var detailSize: CGFloat {
+            self == .compact ? 11 : 12
+        }
+        var padding: CGFloat {
+            self == .compact ? 6 : 8
+        }
+    }
+
+    let sections: [OmniboxSection]
+    let query: String
+    let selection: Int
+    var optionHeld = false
+    var density: Density = .regular
+    /// A scrolling container sets this false and uses `.contentMargins`.
+    /// `scrollTo` cannot see padding inside the content, so it brings the row
+    /// flush to the edge and leaves the inset off screen.
+    var insetsVertically = true
+    var containerRadius: CGFloat = Theme.Radius.panel
+    let onSelect: (Int) -> Void
+    let onRun: (Int) -> Void
+    var onRunAlternate: ((Int) -> Void)?
+    var onRemove: ((Int) -> Void)?
+    var alternateClickModifier: NSEvent.ModifierFlags = .command
+
+    @State private var pointerAnchor: CGPoint?
+
+    private func tapped(_ index: Int) {
+        let modifiers = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if modifiers.contains(alternateClickModifier), let onRunAlternate {
+            onRunAlternate(index)
+        } else {
+            onRun(index)
+        }
+    }
+
+    private func hovered(_ index: Int) {
+        let pointer = NSEvent.mouseLocation
+        guard pointerAnchor != pointer else { return }
+        pointerAnchor = nil
+        onSelect(index)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(groups, id: \.section.id) { group in
+                ForEach(group.section.items.enumerated(), id: \.element.id) { offset, item in
+                    let index = group.start + offset
+                    let presentation = OmniboxRowPresentation(item: item, optionHeld: optionHeld)
+                    VStack(alignment: .leading, spacing: 0) {
+                        if offset == 0 {
+                            heading(group.section, isFirst: group.start == 0)
+                        }
+
+                        OmniboxRow(
+                            item: item,
+                            presentation: presentation,
+                            query: query,
+                            isSelected: index == selection,
+                            density: density,
+                            cornerRadius: Theme.Radius.nested(in: containerRadius, inset: density.padding),
+                            onRemove: removal(for: item, at: index)
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture { tapped(index) }
+                        .onHover { if $0 { hovered(index) } }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text(verbatim: item.title))
+                        .accessibilityValue(Text(verbatim: [presentation.detail, item.shortcut]
+                            .filter { !$0.isEmpty }
+                            .joined(separator: ", ")))
+                        .accessibilityAddTraits(index == selection ? [.isButton, .isSelected] : [.isButton])
+                        .accessibilityAction { onRun(index) }
+                        .accessibilityActions {
+                            if let remove = removal(for: item, at: index) {
+                                Button(OmniboxRemoveButton.label(for: item), action: remove)
+                            }
+                        }
+                    }
+                    .id(index)
+                }
+            }
+        }
+        .padding(.horizontal, density.padding)
+        .padding(.vertical, insetsVertically ? density.padding : 0)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onChange(of: selection) { _, _ in
+            pointerAnchor = NSEvent.mouseLocation
+        }
+    }
+
+    private func removal(for item: OmniboxItem, at index: Int) -> (() -> Void)? {
+        guard item.remove != nil, let onRemove else { return nil }
+        return { onRemove(index) }
+    }
+
+    @ViewBuilder
+    private func heading(_ section: OmniboxSection, isFirst: Bool) -> some View {
+        if !section.title.isEmpty {
+            HStack(alignment: .bottom, spacing: 8) {
+                Text(verbatim: section.title)
+                    .font(.system(size: density == .compact ? 10 : 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+
+                if !section.hint.isEmpty {
+                    Spacer(minLength: 8)
+                    Text(verbatim: section.hint)
+                        .font(.system(size: density == .compact ? 10 : 11))
+                        .foregroundStyle(density.hintStyle)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.horizontal, density == .compact ? 10 : 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: density.headerHeight, alignment: .leading)
+            .padding(.top, isFirst ? 0 : density.sectionGap)
+            .accessibilityAddTraits(.isHeader)
+        }
+    }
+
+    private var groups: [(section: OmniboxSection, start: Int)] {
+        var start = 0
+        var result: [(OmniboxSection, Int)] = []
+        for section in sections {
+            result.append((section, start))
+            start += section.items.count
+        }
+        return result
+    }
+
+    static func height(of sections: [OmniboxSection], density: Density) -> CGFloat {
+        let rows = sections.flatMap(\.items).reduce(CGFloat(0)) { $0 + density.rowHeight(for: $1) }
+        let headers = sections.filter { !$0.title.isEmpty }.count
+        return rows
+            + CGFloat(headers) * density.headerHeight
+            + CGFloat(max(0, sections.count - 1)) * density.sectionGap
+            + density.padding * 2
+    }
+}
+
+struct OmniboxRowPresentation {
+    let symbol: String
+    let detail: String
+    let replacesFavicon: Bool
+
+    init(item: OmniboxItem, optionHeld: Bool) {
+        guard optionHeld, item.alternate != nil else {
+            symbol = item.symbol
+            detail = item.detail
+            replacesFavicon = false
+            return
+        }
+
+        switch item.kind {
+        case .go:
+            detail = String(localized: "Open website in current tab")
+        case .search, .phrase:
+            detail = String(localized: "Search in current tab")
+        case .history:
+            detail = "\(item.detail) · \(String(localized: "Open in current tab"))"
+        case .newTab, .tab, .archived, .ask, .action:
+            symbol = item.symbol
+            detail = item.detail
+            replacesFavicon = false
+            return
+        }
+        symbol = "arrow.up.right"
+        replacesFavicon = true
+    }
+}
+
+struct OmniboxFavicon: View {
+    @Environment(\.profileFavicons) private var profileFavicons
+    private var favicons: FaviconLoader {
+        profileFavicons ?? .shared
+    }
+    let host: String
+    let fallback: String
+    let size: CGFloat
+    let isSelected: Bool
+
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                FaviconImage(image: image)
+            } else {
+                Image(systemName: fallback)
+                    .font(.system(size: size * 0.75))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
+            }
+        }
+        .frame(width: size, height: size)
+        .task(id: host) {
+            if let hit = favicons.cached(for: host) {
+                image = hit
+                return
+            }
+            image = await favicons.load(forHost: host)
+        }
+    }
+}
+
+private struct OmniboxRow: View {
+    @Environment(\.assistantProviderID) private var assistantProviderID
+    let item: OmniboxItem
+    let presentation: OmniboxRowPresentation
+    let query: String
+    let isSelected: Bool
+    let density: OmniboxList.Density
+    let cornerRadius: CGFloat
+    let onRemove: (() -> Void)?
+
+    private var iconWidth: CGFloat {
+        density == .compact ? 16 : 20
+    }
+
+    var body: some View {
+        HStack(spacing: density == .compact ? 8 : 11) {
+            icon
+
+            if item.kind.stacksDetail {
+                VStack(alignment: .leading, spacing: 1) {
+                    title
+                        .font(.system(size: density.titleSize, weight: .medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    Text(verbatim: presentation.detail)
+                        .font(.system(size: density.detailSize))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            } else {
+                title
+                    .font(.system(size: density.titleSize))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                if !presentation.detail.isEmpty {
+                    Text(verbatim: presentation.detail)
+                        .font(.system(size: density.detailSize))
+                        .foregroundStyle(density.detailStyle)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 6)
+
+            if !item.shortcut.isEmpty {
+                Text(verbatim: item.shortcut)
+                    .font(.system(size: density.detailSize, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+
+            if let onRemove {
+                OmniboxRemoveButton(density: density, help: OmniboxRemoveButton.label(for: item), action: onRemove)
+                    .opacity(isSelected ? 1 : 0)
+                    .allowsHitTesting(isSelected)
+            }
+        }
+        .padding(.horizontal, density == .compact ? 8 : 10)
+        .frame(height: density.rowHeight(for: item))
+        .background(
+            isSelected ? AnyShapeStyle(Theme.Wash.hover) : AnyShapeStyle(.clear),
+            in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        )
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        if item.kind == .ask {
+            ProviderBrandIcon(
+                providerID: assistantProviderID ?? ProviderCatalog.openAI.id,
+                size: density == .compact ? 13 : 16
+            )
+            .frame(width: iconWidth)
+        } else if let host = item.iconHost, !presentation.replacesFavicon {
+            OmniboxFavicon(
+                host: host,
+                fallback: presentation.symbol,
+                size: density == .compact ? 15 : 18,
+                isSelected: isSelected
+            )
+            .frame(width: iconWidth)
+        } else {
+            symbolIcon
+        }
+    }
+
+    private var symbolIcon: some View {
+        Image(systemName: presentation.symbol)
+            .font(.system(size: density == .compact ? 11 : 13))
+            .foregroundStyle(isSelected ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
+            .frame(width: iconWidth)
+    }
+
+    private var title: Text {
+        let typed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard item.kind == .phrase,
+              !typed.isEmpty,
+              item.title.lowercased().hasPrefix(typed.lowercased())
+        else {
+            return Text(verbatim: item.title)
+        }
+        var head = AttributedString(item.title.prefix(typed.count))
+        head.foregroundColor = .secondary
+        var tail = AttributedString(item.title.dropFirst(typed.count))
+        tail.foregroundColor = .primary
+        return Text(head + tail)
+    }
+}
+
+private struct OmniboxRemoveButton: View {
+    let density: OmniboxList.Density
+    let help: String
+    let action: () -> Void
+
+    static func label(for item: OmniboxItem) -> String {
+        if item.kind == .archived {
+            return String(localized: "Remove from Archive")
+        }
+        if item.kind == .tab {
+            return String(localized: "Close Tab")
+        }
+        return String(localized: "Remove from History")
+    }
+
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: density == .compact ? 9.5 : 11, weight: .semibold))
+                .foregroundStyle(hovering ? .primary : .secondary)
+                .hoverLift(hovering)
+                .frame(width: density == .compact ? 16 : 20, height: density == .compact ? 16 : 20)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(help)
+    }
+}
