@@ -3,8 +3,9 @@
   "contracts": {
     "create_fields": {
       "url": "https://raw.githubusercontent.com/openai/openai-python/main/src/openai/types/responses/response_create_params.py",
-      "sha256": "31149b44b6c2cb7699cb5c9759aeb1aa9f41c8361fd74ccdd54639ccc5dd5a51",
+      "sha256": "ebaf13e93a42bb971307a5b4f8e11967a3cc033313ab0433365a95b9c1819544",
       "values": [
+        "access_programs",
         "background",
         "context_management",
         "conversation",
@@ -74,7 +75,7 @@
     },
     "event_variants": {
       "url": "https://raw.githubusercontent.com/openai/openai-python/main/src/openai/types/responses/response_stream_event.py",
-      "sha256": "f452a0be1eaf91f0930e0c680a72b46aa6532f8ea5b2becc924abcee5aca9105",
+      "sha256": "f1b0730198c759276a2b2ef138812c2e722eb50b4689e1368b93d16e9e83e62f",
       "values": [
         "ResponseAudioDeltaEvent",
         "ResponseAudioDoneEvent",
@@ -85,6 +86,7 @@
         "ResponseCodeInterpreterCallCompletedEvent",
         "ResponseCodeInterpreterCallInProgressEvent",
         "ResponseCodeInterpreterCallInterpretingEvent",
+        "ResponseCompactionCompactingEvent",
         "ResponseCompletedEvent",
         "ResponseContentPartAddedEvent",
         "ResponseContentPartDoneEvent",
