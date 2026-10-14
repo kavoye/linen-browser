@@ -68,12 +68,25 @@ struct PageReplyTests {
 
     @Test func theCeilingTaskDoesNotRetainAnAnsweredReply() async {
         weak var reply: PageReply<Int>?
-        let answer = await PageReply<Int>.awaiting(within: .seconds(3600)) { gate in
-            reply = gate
-            Task { gate.finish(1) }
+        var finished = false
+        let caller = Task { @MainActor in
+            let answer = await PageReply<Int>.awaiting(within: .seconds(3600)) { gate in
+                reply = gate
+                Task { gate.finish(1) }
+            }
+            finished = true
+            return answer
+        }
+        defer {
+            caller.cancel()
+            reply?.finish(nil)
+        }
+        guard await waitUntil(timeout: Self.bound, { finished }) else {
+            Issue.record("the answered caller is still waiting for the ceiling")
+            return
         }
 
-        #expect(answer == 1)
+        #expect(await caller.value == 1)
         #expect(
             await waitUntil(timeout: Self.bound) { reply == nil },
             "the sleeping ceiling still holds the answered reply"
