@@ -81,6 +81,20 @@ struct MCPClientInstallerTests {
         #expect(try MCPClientConfiguration.addingJSON(to: data, kind: .cursor, command: command) == nil)
     }
 
+    @Test func aStageInstallationKeepsItsSocketAndRefusesAnyOtherEntry() throws {
+        let stage = ["--mcp", "--mcp-socket", "/tmp/linen-mcp-501-stage-a/browser.sock"]
+        let other = ["--mcp", "--mcp-socket", "/tmp/linen-mcp-501-stage-b/browser.sock"]
+        let installed = try #require(MCPClientConfiguration.addingJSON(to: nil, kind: .claudeCode, command: command, arguments: stage))
+        let servers = try #require(object(installed)["mcpServers"] as? [String: Any])
+        #expect((servers["linen"] as? [String: Any])?["args"] as? [String] == stage)
+        #expect(try MCPClientConfiguration.addingJSON(to: installed, kind: .claudeCode, command: command, arguments: stage) == nil)
+        for arguments in [other, ["--mcp"]] {
+            #expect(throws: MCPClientSetupError.conflictingServer) {
+                try MCPClientConfiguration.addingJSON(to: installed, kind: .claudeCode, command: command, arguments: arguments)
+            }
+        }
+    }
+
     @Test(arguments: [#"{"mcpServers":{"linen":{"command":"/other","args":["--mcp"]}}}"#,
                       #"{"mcpServers":{"linen":{"url":"https://example.test"}}}"#,
                       #"{"mcpServers":{"linen":null}}"#, ])

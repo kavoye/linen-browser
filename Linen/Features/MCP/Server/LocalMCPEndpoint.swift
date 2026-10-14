@@ -8,8 +8,23 @@ import Network
 
 nonisolated enum LocalMCPEndpoint {
     static var directory: String {
-        "/tmp/linen-mcp-\(geteuid())"
+        #if DEBUG
+        if let home = StageMode.home {
+            return stageDirectory(for: home)
+        }
+        #endif
+        return "/tmp/linen-mcp-\(geteuid())"
     }
+
+    #if DEBUG
+    static func stagePath(for home: URL) -> String {
+        stageDirectory(for: home) + "/browser.sock"
+    }
+
+    private static func stageDirectory(for home: URL) -> String {
+        "/tmp/linen-mcp-\(geteuid())-\(StageMode.identity(for: home).prefix(32))"
+    }
+    #endif
 
     static var path: String {
         directory + "/browser.sock"

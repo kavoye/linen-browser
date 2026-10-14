@@ -75,7 +75,7 @@ final class BrowserMCPServer {
 
     var configuration: String {
         let command = MCPClientConfiguration.command
-        let value: [String: Any] = ["mcpServers": ["linen": ["command": command, "args": ["--mcp"]]]]
+        let value: [String: Any] = ["mcpServers": ["linen": ["command": command, "args": MCPClientConfiguration.arguments]]]
         guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]) else { return "" }
         return String(decoding: data, as: UTF8.self)
     }
