@@ -38,6 +38,13 @@ struct ContextBudgetTests {
         #expect(budget.retainedExchanges >= 1)
     }
 
+    @Test func aSystemModelThatReportsNoWindowGetsTheOnDeviceSize() {
+        #expect(SystemModelWindow.window(reported: 0) == 4_096)
+        #expect(SystemModelWindow.window(reported: -1) == 4_096)
+        #expect(SystemModelWindow.window(reported: 8_192) == 8_192)
+        #expect(SystemModelWindow.tokens > 0)
+    }
+
     @Test func theWindowTableCoversEveryAdapter() {
         #expect(ContextWindow.resolve(for: provider(adapter: .system), model: "").tokens == SystemModelWindow.tokens)
         #expect(ContextWindow.tokens(for: provider(adapter: .anthropic), model: "") == 200_000)

@@ -4,5 +4,11 @@
 import FoundationModels
 
 nonisolated enum SystemModelWindow {
-    static let tokens = SystemLanguageModel.default.contextSize
+    static let fallback = 4_096
+
+    static let tokens = window(reported: SystemLanguageModel.default.contextSize)
+
+    static func window(reported: Int) -> Int {
+        reported > 0 ? reported : fallback
+    }
 }
