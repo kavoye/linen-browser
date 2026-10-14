@@ -20,11 +20,18 @@ struct MCPPrivacyTests {
         <a href="/next">Next page</a>
         """
 
+    private func makePermissions() -> SitePermissions {
+        SitePermissions(
+            storageURL: TestFiles.directory
+                .appendingPathComponent("MCPPrivacyPermissions-\(UUID().uuidString).json")
+        )
+    }
+
     private func fixture() async throws -> (HTTPFixtureServer, BrowserModel, BrowserTab) {
         let server = try await HTTPFixtureServer.start(routes: [
             "/": .html(Self.html), "/next": .html("<p>Next page</p>"),
         ])
-        let browser = BrowserModel(database: .temporary(), sitePermissions: SitePermissions(storageURL: nil))
+        let browser = BrowserModel(database: .temporary(), sitePermissions: makePermissions())
         let url = try server.url()
         let tab = browser.newTab(url: url)
         #expect(await PageSettle.untilIdle(tab.webView))
@@ -172,8 +179,9 @@ struct MCPPrivacyTests {
     }
 
     @Test func privateAndInternalPagesCannotBeShared() async throws {
-        let browser = BrowserModel(database: .temporary())
-        let privateTab = BrowserTab(privately: true)
+        let permissions = makePermissions()
+        let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)
+        let privateTab = BrowserTab(privately: true, sitePermissions: permissions)
         privateTab.urlString = "https://private.invalid/"
         privateTab.title = "Private secret"
         browser.tabs = [privateTab]
