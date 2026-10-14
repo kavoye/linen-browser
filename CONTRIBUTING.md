@@ -148,20 +148,22 @@ banners and region prompts on first use.
 3. Add a model API key in Settings if a recording needs an agent turn.
 4. Quit. Your choices are saved in the stage data store for the next launch.
 
-A stage run writes to its own support directory, its own website data store and
-its own preference domain, and serves MCP clients on its own socket. Each
+A stage run writes to its own support directory, its own preference domain and
+its own website data store, and serves MCP clients on its own socket. Each
 `LINEN_STAGE_HOME` (the default home included) gets its own preference domain,
-website data store and socket, so a stage run does not touch the real
-installation’s history, cookies or tabs, and two staged sessions stay apart. The
-keychain and `UserDefaults.standard` are not isolated.
+socket and website data store for the original profile, so two staged sessions
+keep those apart. Other profiles that you create in a stage run keep their own
+per-profile website data stores, which are not tied to the home: copying a
+stage home’s `profiles.json` to another home reuses those profile IDs and so
+their stores. The keychain and `UserDefaults.standard` are not isolated.
 
 The preference domain and website data store are named after the home’s path and
 live outside it. Deleting `$TMPDIR/linen-stage` removes only the support files,
-not the preferences or cookies of that path; set a new `LINEN_STAGE_HOME` for a
-fresh staged session. Earlier builds kept one shared preference domain and
-website data store for every home. The default home no longer uses them, so its
-first run starts without those choices, and they are neither migrated nor
-deleted.
+not the preferences or the original profile’s cookies for that path; set a new
+`LINEN_STAGE_HOME` for a fresh staged session. Earlier builds kept one shared
+preference domain and original-profile website data store for every home. The
+default home no longer uses them, so its first run starts without those
+choices, and they are neither migrated nor deleted.
 
 ## Write commit messages
 
