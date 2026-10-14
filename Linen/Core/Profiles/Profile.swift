@@ -89,8 +89,8 @@ extension Profile {
             return .nonPersistent()
         }
         #if DEBUG
-        if StageMode.isActive, isOriginal {
-            return StageMode.websiteDataStore()
+        if let home = StageMode.home, isOriginal {
+            return StageMode.websiteDataStore(for: home)
         }
         #endif
         return isOriginal ? .default() : WKWebsiteDataStore(forIdentifier: id)

@@ -16,35 +16,39 @@ nonisolated enum MCPCodexConfiguration {
         return try body(directory)
     }
 
-    static func isInstalled(in original: Data?, executable: URL, command: String) throws -> Bool {
+    static func isInstalled(
+        in original: Data?, executable: URL, command: String, arguments: [String] = MCPClientConfiguration.arguments
+    ) throws -> Bool {
         guard original != nil else { return false }
         return try withStagedConfiguration(original) { directory in
             let entries = try servers(executable: executable, directory: directory)
             guard let existing = entries.first(where: { $0["name"] as? String == "linen" }) else { return false }
             guard let transport = existing["transport"] as? [String: Any],
-                  MCPClientConfiguration.matches(transport, command: command) else { throw MCPClientSetupError.conflictingServer }
+                  MCPClientConfiguration.matches(transport, command: command, arguments: arguments) else { throw MCPClientSetupError.conflictingServer }
             return true
         }
     }
 
-    static func adding(to original: Data?, executable: URL, command: String) throws -> Data? {
+    static func adding(
+        to original: Data?, executable: URL, command: String, arguments: [String] = MCPClientConfiguration.arguments
+    ) throws -> Data? {
         try withStagedConfiguration(original) { directory in
-            try addInStagingDirectory(directory, executable: executable, command: command)
+            try addInStagingDirectory(directory, executable: executable, command: command, arguments: arguments)
         }
     }
 
-    private static func addInStagingDirectory(_ directory: URL, executable: URL, command: String) throws -> Data? {
+    private static func addInStagingDirectory(_ directory: URL, executable: URL, command: String, arguments: [String]) throws -> Data? {
         let configuration = directory.appending(path: "config.toml")
         let before = try servers(executable: executable, directory: directory)
         if let existing = before.first(where: { $0["name"] as? String == "linen" }) {
             guard let transport = existing["transport"] as? [String: Any],
-                  MCPClientConfiguration.matches(transport, command: command) else { throw MCPClientSetupError.conflictingServer }
+                  MCPClientConfiguration.matches(transport, command: command, arguments: arguments) else { throw MCPClientSetupError.conflictingServer }
             return nil
         }
-        _ = try run(executable, arguments: ["mcp", "add", "linen", "--", command, "--mcp"], directory: directory)
+        _ = try run(executable, arguments: ["mcp", "add", "linen", "--", command] + arguments, directory: directory)
         let after = try servers(executable: executable, directory: directory)
         guard let installed = after.first(where: { $0["name"] as? String == "linen" })?["transport"] as? [String: Any],
-              MCPClientConfiguration.matches(installed, command: command),
+              MCPClientConfiguration.matches(installed, command: command, arguments: arguments),
               NSDictionary(dictionary: indexed(before)).isEqual(to: indexed(after.filter { $0["name"] as? String != "linen" })) else {
             throw MCPClientSetupError.commandFailed
         }
