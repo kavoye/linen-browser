@@ -15,6 +15,15 @@ struct StageIsolationTests {
         TestFiles.directory.appending(path: "stage-\(UUID().uuidString)").appending(path: name)
     }
 
+    private func remove(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch {
+            Issue.record(error, "Could not remove \(url.path)")
+        }
+    }
+
     @Test func eachHomeKeepsItsOwnPreferencesAcrossARestart() {
         let first = home("first")
         let second = home("second")
@@ -23,8 +32,7 @@ struct StageIsolationTests {
             for suite in [first, second].map(StageMode.defaultsSuiteName(for:)) {
                 UserDefaults.standard.removePersistentDomain(forName: suite)
                 // removePersistentDomain leaves an empty plist behind.
-                try? FileManager.default.removeItem(
-                    at: URL.libraryDirectory.appending(path: "Preferences/\(suite).plist"))
+                remove(URL.libraryDirectory.appending(path: "Preferences/\(suite).plist"))
             }
         }
 
@@ -39,21 +47,27 @@ struct StageIsolationTests {
     @Test func eachHomeKeepsItsOwnWebsiteData() async throws {
         let first = home("first")
         let second = home("second")
-        // WebKit crashes removing a store before any store exists in the process.
-        _ = WKWebsiteDataStore.nonPersistent()
-        let firstStore = StageMode.websiteDataStore(for: first)
-        let secondStore = StageMode.websiteDataStore(for: second)
         let cookie = try #require(HTTPCookie(properties: [
             .name: "stage", .value: "first", .domain: "stage.example", .path: "/",
             .expires: Date(timeIntervalSinceNow: 3_600),
         ]))
+        // WebKit crashes removing a store before any store exists in the process.
+        _ = WKWebsiteDataStore.nonPersistent()
+        let firstStore = StageMode.websiteDataStore(for: first)
+        let secondStore = StageMode.websiteDataStore(for: second)
 
         await firstStore.httpCookieStore.setCookie(cookie)
-
         let firstCookies = await firstStore.httpCookieStore.allCookies().map(\.name)
         let secondCookies = await secondStore.httpCookieStore.allCookies()
-        try? await WKWebsiteDataStore.remove(forIdentifier: StageMode.dataStoreID(for: first))
-        try? await WKWebsiteDataStore.remove(forIdentifier: StageMode.dataStoreID(for: second))
+
+        // Nothing above throws, so the persistent stores are always removed, and a failed removal is reported.
+        for home in [first, second] {
+            do {
+                try await WKWebsiteDataStore.remove(forIdentifier: StageMode.dataStoreID(for: home))
+            } catch {
+                Issue.record(error, "Could not remove the website data store of \(home.path)")
+            }
+        }
 
         #expect(firstCookies == ["stage"])
         #expect(secondCookies.isEmpty)
@@ -68,17 +82,20 @@ struct StageIsolationTests {
         let first = LocalMCPEndpoint.stagePath(for: home("first"))
         let second = LocalMCPEndpoint.stagePath(for: home("second"))
         let accepted = Accepted()
-        let firstListener = try LocalMCPListener(path: first) { _ in accepted.first += 1 }
-        let secondListener = try LocalMCPListener(path: second) { _ in accepted.second += 1 }
+        var listeners: [LocalMCPListener] = []
+        // Registered before the throwing initializers: the first listener creates its directory even if the second fails.
         defer {
-            firstListener.stop()
-            secondListener.stop()
+            for listener in listeners {
+                listener.stop()
+            }
             for path in [first, second] {
-                try? FileManager.default.removeItem(atPath: URL(filePath: path).deletingLastPathComponent().path)
+                remove(URL(filePath: path).deletingLastPathComponent())
             }
         }
-        try await firstListener.start()
-        try await secondListener.start()
+        listeners.append(try LocalMCPListener(path: first) { _ in accepted.first += 1 })
+        listeners.append(try LocalMCPListener(path: second) { _ in accepted.second += 1 })
+        try await listeners[0].start()
+        try await listeners[1].start()
 
         let connection = NWConnection(to: .unix(path: first), using: .tcp)
         defer { connection.cancel() }
