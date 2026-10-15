@@ -67,7 +67,7 @@ struct AgentToolkitPolicyTests {
 
         #expect(names == [
             "askUser", "searchWeb", "navigate", "readPage", "readArticle", "clickOnPage",
-            "typeOnPage", "scrollPage", "goBack",
+            "typeOnPage",
         ])
     }
 
