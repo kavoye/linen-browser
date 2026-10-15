@@ -1,5 +1,97 @@
 # Changelog
 
+## 0.9.0
+
+### New
+
+- **Spaces.** Group your tabs into spaces. Switch spaces from the sidebar,
+  swipe between them, or press ⌃1 to ⌃9. A new space can share sign-ins and
+  data with another space, or keep its own. Choose Move to Space to move tabs
+  and folders. Your profiles now appear as spaces, and Linen opens the space
+  you used last.
+- **Recent downloads.** Hold the pointer over the Downloads button in the
+  sidebar to see your five most recent downloads.
+- **Clear Context.** Clear the assistant's context to start fresh in a chat.
+  Earlier messages stay visible but are no longer sent to the model.
+- **Archived tabs in ⌘K.** Choose Show Archived Tabs, or type "archived" and
+  press Tab, to search the tabs Linen archived. Each row shows when the tab was
+  archived. Linen keeps your 30 most recent archived tabs.
+- **Images for Apple Intelligence.** On macOS 27, the on-device model reads the
+  images you attach to a message.
+- **Site search in the address field.** Type a website name such as YouTube,
+  then press Tab to search that website.
+- **Reading speed.** Choose how fast Reader reads aloud, from 0.5× to 1.5×.
+  Linen remembers your choice.
+- **Duplicate Tab shortcut.** Press ⇧⌘D to duplicate the current tab. Back to
+  Pinned Page is now ⇧⌘H.
+- **Full website address.** Turn on Show full website address in Settings >
+  General to see a page's whole address in the address field.
+- **Settings pages in history.** Each settings page has its own address, so
+  Back and Forward move between settings pages. Click and hold the Back button
+  to see the page names.
+- **Window style in the View menu.** Choose View > Use Minimal Window Style, or
+  press ⇧⌘M, to switch between Standard and Minimal. In Minimal, View > Move
+  Bar to Top moves the bar.
+- **Extensions on each website.** In an extension's menu, turn off Allow on a
+  website to block the extension there. Settings > Extensions lists the
+  blocked websites.
+- **Layout in setup.** Setup asks you to choose Standard or Minimal.
+
+### Improved
+
+- **Pages in ⌘K.** Open tabs and history are now one Pages list instead of two
+  sections, and the tab you're on is left out. Select a history row and choose
+  the remove button to remove the page from your history.
+- **Simpler settings.** Settings have clearer names and descriptions, and
+  related options are grouped together.
+- **Settings search.** Search finds a setting that appears only after you turn
+  on another setting, and highlights the row that shows it.
+- **Accent color.** Badges and highlights in the toolbar use the accent color
+  you choose in System Settings.
+- **Folder names.** Linen suggests a name for a new folder when it holds four
+  tabs.
+- **Organize Tabs progress.** The assistant button shows when Linen is
+  organizing your tabs, and Stop cancels it.
+- **Minimal settings.** Show only tab icons now also appears in Settings when
+  you use the Minimal window style.
+- **Copy confirmations.** A checkmark appears when you copy a link. Copying the
+  external assistant configuration shows what was copied.
+- **Download previews.** A finished download shows a thumbnail of the file.
+  Other downloads show an icon for their kind of file.
+- **Side Panel tabs.** Side Panel tabs scroll when they don't fit.
+- **Command palette motion.** ⌘K opens and closes with a short animation.
+- **Extensions list.** The list of extensions that don't fit in the toolbar
+  looks like other popovers in macOS.
+- **Icons Only.** The sidebar button's menu item is now Icons Only, to match
+  Settings.
+- **Extension updates.** An update that asks for more access waits for your
+  approval. Settings > Extensions shows which updates wait.
+- **Page watches.** Linen doesn't add the same watch twice, and keeps up to 20
+  watches.
+- **Context details.** The context indicator shows what uses the assistant's
+  context, such as messages, tool activity and instructions, and how much space
+  is free.
+- **Apple Intelligence tools.** The on-device model gets fewer tools, so more
+  of its context is left for your conversation.
+
+### Fixed
+
+- **Pull to refresh.** Pages that use the scroll wheel themselves, such as
+  maps, no longer reload when you scroll to the top.
+- **Reload on system pages.** Reload is off on Settings, History, and other
+  pages that can't reload.
+- **Focus on Linen pages.** Clicking Settings, History, Downloads, or the start
+  page moves focus away from the address field.
+- **Attached tabs.** Tabs attached to a question stay on the line of text.
+- **Sidebar button.** The sidebar button matches the sidebar when the sidebar
+  is open, and dragged rows match the icons-only sidebar.
+- **Page translation.** Linen uses the page's language when a page has little
+  text.
+- **External assistants.** Screenshots fit within the message limit, field
+  values come back in full, and a query matches every element in its scope.
+  Actions report the text they reveal, and a reference that wasn't listed gets
+  a clear message.
+
 ## 0.8.0
 
 ### New
