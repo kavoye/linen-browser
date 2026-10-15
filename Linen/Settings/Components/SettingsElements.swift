@@ -134,7 +134,7 @@ struct DrillInRow: View {
     @Environment(\.settingsDescriptionLineLimit) private var descriptionLineLimit
     let title: LocalizedStringResource
     var symbol: String?
-    var tint: Color = .secondary
+    var tint = Color(nsColor: .systemGray)
     var caption: LocalizedStringResource?
     var detail: LocalizedStringResource?
     let action: () -> Void
@@ -144,29 +144,23 @@ struct DrillInRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                if let symbol {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(tint.opacity(0.16))
-                        .frame(width: 22, height: 22)
-                        .overlay {
-                            Image(systemName: symbol)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(tint)
+                HStack(alignment: caption == nil ? .center : .top, spacing: 10) {
+                    if let symbol {
+                        CategoryTile(symbol: symbol, tint: tint, size: 22)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(title)
+                            .font(Theme.Font.rowTitle)
+                            .foregroundStyle(isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
+
+                        if let caption {
+                            Text(caption)
+                                .lineLimit(descriptionLineLimit)
+                                .font(Theme.Font.secondary)
+                                .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .accessibilityHidden(true)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(Theme.Font.rowTitle)
-                        .foregroundStyle(isEnabled ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
-
-                    if let caption {
-                        Text(caption)
-                            .lineLimit(descriptionLineLimit)
-                            .font(Theme.Font.secondary)
-                            .foregroundStyle(isEnabled ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -398,29 +392,23 @@ struct StatusRow<Trailing: View>: View {
 
     private var row: some View {
         HStack(spacing: 11) {
-            Circle()
-                .fill(tint.opacity(0.16))
-                .frame(width: 26, height: 26)
-                .overlay {
-                    Image(systemName: symbol)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(tint)
-                }
-                .accessibilityHidden(true)
+            HStack(alignment: caption == nil && verbatimCaption == nil ? .center : .top, spacing: 11) {
+                CategoryTile(symbol: symbol, tint: tint, size: 26)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(Theme.Font.rowTitle)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(Theme.Font.rowTitle)
 
-                if let verbatimCaption {
-                    Text(verbatim: verbatimCaption)
-                        .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
-                } else if let caption {
-                    Text(caption)
-                        .font(Theme.Font.secondary)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let verbatimCaption {
+                        Text(verbatim: verbatimCaption)
+                            .font(Theme.Font.secondary)
+                            .foregroundStyle(.secondary)
+                    } else if let caption {
+                        Text(caption)
+                            .font(Theme.Font.secondary)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 

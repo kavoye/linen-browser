@@ -427,21 +427,38 @@ struct SettingsNavigator: View {
     }
 }
 
-private struct CategoryTile: View {
+struct CategoryTile: View {
     let symbol: String
     let tint: Color
-
-    static let size: CGFloat = 20
+    var size: CGFloat = 20
+    var isRound = false
 
     var body: some View {
-        RoundedRectangle(cornerRadius: Self.size * 0.28, style: .continuous)
-            .fill(tint)
-            .frame(width: Self.size, height: Self.size)
+        let shape = RoundedRectangle(
+            cornerRadius: isRound ? size / 2 : size * 0.27,
+            style: isRound ? .circular : .continuous
+        )
+        shape
+            .fill(tint.gradient)
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.35), .white.opacity(0.04)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.75
+                )
+            }
+            .frame(width: size, height: size)
             .overlay {
                 Image(systemName: symbol)
-                    .font(.system(size: 11, weight: .medium))
+                    .symbolVariant(.fill)
+                    .font(.system(size: size * 0.52, weight: .semibold))
                     .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.18), radius: 0.5, y: 0.5)
             }
+            .shadow(color: .black.opacity(0.22), radius: 1, y: 0.5)
             .accessibilityHidden(true)
     }
 }
@@ -451,13 +468,14 @@ private struct NavigatorIcon: View {
     let tint: Color
     let title: String
     let isSelected: Bool
+    var isRound = false
     let action: () -> Void
 
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            CategoryTile(symbol: symbol, tint: tint)
+            CategoryTile(symbol: symbol, tint: tint, isRound: isRound)
                 .frame(width: 32, height: 32)
                 .selectionBackground(
                     isSelected: isSelected,
@@ -484,11 +502,11 @@ private struct NavigatorRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                CategoryTile(symbol: category.symbol, tint: category.tint)
+            HStack(spacing: 9) {
+                CategoryTile(symbol: category.symbol, tint: category.tint, size: 22)
 
                 Text(category.title)
-                    .font(.system(size: 12.5, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 13.25, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
 
                 Spacer(minLength: 6)
@@ -500,7 +518,7 @@ private struct NavigatorRow: View {
                 }
             }
             .padding(.horizontal, 7)
-            .frame(height: 32)
+            .frame(height: 35)
             .selectionBackground(
                 isSelected: isSelected,
                 isHovering: hovering,
@@ -572,11 +590,11 @@ private struct ResultRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 9) {
                 Image(systemName: entry.category.symbol)
                     .font(Theme.Font.label)
                     .foregroundStyle(.secondary)
-                    .frame(width: 14)
+                    .frame(width: 14, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(entry.title)

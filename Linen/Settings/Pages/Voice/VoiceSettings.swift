@@ -222,7 +222,7 @@ private struct OpenAIKeyNotice: View {
     var body: some View {
         SettingsCard {
             StatusRow(
-                tint: Theme.metaInk,
+                tint: Color(nsColor: .systemGray),
                 symbol: "key",
                 title: "OpenAI voices need an OpenAI API key",
                 caption: "Add an OpenAI API key in Assistant. The assistant can still use a different provider."

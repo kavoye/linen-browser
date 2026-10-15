@@ -228,7 +228,7 @@ private struct ReadinessRow: View {
             }
 
         case .checking:
-            StatusRow(tint: .secondary, symbol: "ellipsis", title: "Checking…") {}
+            StatusRow(tint: Color(nsColor: .systemGray), symbol: "ellipsis", title: "Checking…") {}
 
         case .unsupported(let why):
             StatusRow(
