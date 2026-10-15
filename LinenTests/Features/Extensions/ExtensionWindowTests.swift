@@ -202,28 +202,26 @@ struct ExtensionWindowTests {
     @Test func aBrowserAtAFreedBrowsersAddressGetsItsOwnWindow() throws {
         let manager = ExtensionManager()
         var freed: ObjectIdentifier?
+        var stale: ExtensionWindowAdapter?
         weak var released: BrowserModel?
         do {
             let browser = BrowserModel(database: .temporary())
-            manager.register(browser: browser)
+            stale = manager.register(browser: browser)
             freed = ObjectIdentifier(browser)
             released = browser
         }
         try #require(released == nil)
+        let staleWindow = try #require(stale)
+        try #require(staleWindow.browser == nil)
 
-        var successor: BrowserModel?
-        var discarded: [BrowserModel] = []
-        for _ in 0..<200 {
-            let candidate = BrowserModel(database: .temporary())
-            if ObjectIdentifier(candidate) == freed {
-                successor = candidate
-                break
-            }
-            discarded.append(candidate)
-        }
-        let browser = try #require(successor)
+        let browser = BrowserModel(database: .temporary())
+        let reused = ObjectIdentifier(browser)
+        manager.windows[try #require(freed)] = nil
+        manager.windows[reused] = staleWindow
+        manager.windowOrder = manager.windowOrder.map { $0 == freed ? reused : $0 }
 
         let window = manager.register(browser: browser)
+        #expect(window !== staleWindow)
         #expect(window.browser === browser)
         let tab = browser.newTab()
         #expect(manager.adapter(for: tab).browser === browser)
