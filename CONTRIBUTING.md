@@ -107,6 +107,19 @@ Tests get their own support directory, so a test can create profiles, write
 permissions or fill the download list without reaching the files of an installed
 copy.
 
+A temporary database does not give a test its own site permissions.
+`SitePermissions.shared` and `SitePermissions(storageURL: nil)` read the
+installed copy’s file. Make the store with `TestFiles.directory` and pass the
+same one to the `BrowserModel` and to any `BrowserTab` you build directly:
+
+```swift
+let permissions = SitePermissions(
+    storageURL: TestFiles.directory.appending(path: "Permissions-\(UUID().uuidString).json")
+)
+let browser = BrowserModel(database: .temporary(), sitePermissions: permissions)
+let tab = BrowserTab(privately: true, sitePermissions: permissions)
+```
+
 ## Keep copy and design consistent
 
 - Use the shortest familiar label that is unambiguous.
