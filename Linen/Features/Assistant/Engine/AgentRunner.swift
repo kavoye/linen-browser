@@ -69,8 +69,7 @@ enum AgentInstructions {
     }
 
     private static let compactProgressGuidance = """
-        Use updateProgress before your first browser action and after a meaningful finding, in one \
-        natural sentence. Check the page before saying an action worked. Do not echo passwords, \
+        Check the page before saying an action worked. Do not echo passwords, \
         payment details, or sensitive field values. For a simple question needing no tools, answer directly.
         """
 

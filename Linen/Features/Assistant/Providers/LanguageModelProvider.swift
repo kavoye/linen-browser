@@ -144,7 +144,7 @@ private struct AnyLanguageModelProvider: ModelProvider {
                 for: reasoningEffort,
                 adapter: configuration.adapter
             ),
-            measuredSchemaTokens: estimatedToolSchemaTokens(makeAgentTools(toolkit: toolkit, enabledIDs: toolIDs, tier: tier) + [UpdateProgressTool()]),
+            measuredSchemaTokens: estimatedToolSchemaTokens(makeAgentTools(toolkit: toolkit, enabledIDs: toolIDs, tier: tier) + (tier == .core ? [] : [UpdateProgressTool()])),
             measuredInstructionTokens: AgentInstructions.text(for: tier == .core ? .compact : .full).count / 4
         )
         let runtime = LanguageModelRuntimeFactory.make(

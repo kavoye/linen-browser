@@ -507,14 +507,14 @@ func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any 
         ReadArticleTool(toolkit: toolkit),
         ClickOnPageTool(toolkit: toolkit),
         TypeOnPageTool(toolkit: toolkit),
-        ScrollPageTool(toolkit: toolkit),
-        GoBackTool(toolkit: toolkit),
     ]
     switch tier {
     case .core:
         return core.filter { !AgentToolCatalog.outcomeToolIDs.contains($0.name) }.map(compacted)
     case .full:
         return core + [
+            ScrollPageTool(toolkit: toolkit),
+            GoBackTool(toolkit: toolkit),
             NewTabTool(toolkit: toolkit),
             ListTabsTool(toolkit: toolkit),
             SwitchTabTool(toolkit: toolkit),

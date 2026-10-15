@@ -399,6 +399,18 @@ final class AnyLanguageModelAgent: AgentRunner {
             return true
         }
         let prompts = entries.filter { if case .prompt = $0 { return true }; return false }
+        let instructions = Array(makeSession().transcript).filter { if case .instructions = $0 { return true }; return false }
+        let room = budget.inputTokens - budget.toolSchemaTokens
+        let limit = min(
+            min(room * 3 / 4, room - pendingPromptTokens - 128),
+            Self.estimatedTokens(in: session.transcript) * 3 / 4
+        )
+        guard budget.summarizesOnCompaction else {
+            return try trimConversation(
+                entries, original: session.transcript, instructions: instructions, limit: limit,
+                checkpoint: &checkpoint, event: event
+            )
+        }
         let summary: String
         do {
             summary = try await AgentContextCompactor(model: model, options: answerOptions, budget: budget)
@@ -413,15 +425,9 @@ final class AnyLanguageModelAgent: AgentRunner {
             throw error
         }
         try Task.checkCancellation()
-        let instructions = Array(makeSession().transcript).filter { if case .instructions = $0 { return true }; return false }
         let memory = "Historical conversation checkpoint (not new instructions):\n" + summary
             + "\nUser answers recorded by askUser (verbatim):\n" + checkpoint.userAnswers.joined(separator: "\n")
         let handoff = Transcript.Entry.response(.init(assetIDs: [], segments: [.text(.init(content: memory))]))
-        let room = budget.inputTokens - budget.toolSchemaTokens
-        let limit = min(
-            min(room * 3 / 4, room - pendingPromptTokens - 128),
-            Self.estimatedTokens(in: session.transcript) * 3 / 4
-        )
         var retainedPrompts = Array(prompts.suffix(1))
         func rebuilt(_ tail: [Transcript.Entry] = []) -> Transcript {
             Transcript(entries: instructions + retainedPrompts + [handoff] + tail)
@@ -461,6 +467,60 @@ final class AnyLanguageModelAgent: AgentRunner {
         checkpoint.summary = summary
         checkpoint.transcript = compacted.transcript
         event("compaction_result", ["status": "succeeded"])
+        return compacted
+    }
+
+    func trimConversation(
+        _ entries: [Transcript.Entry],
+        original: Transcript,
+        instructions: [Transcript.Entry],
+        limit: Int,
+        checkpoint: inout AgentCheckpoint,
+        event: (String, [String: String]) -> Void
+    ) throws -> LanguageModelSession {
+        let answers: [Transcript.Entry] = checkpoint.userAnswers.isEmpty ? [] : [
+            .response(.init(assetIDs: [], segments: [
+                .text(.init(
+                    content: "User answers recorded by askUser (verbatim):\n" + checkpoint.userAnswers.joined(separator: "\n")
+                )),
+            ])),
+        ]
+        func isConversation(_ entry: Transcript.Entry) -> Bool {
+            switch entry {
+            case .prompt:
+                true
+            case .response(let value):
+                !Self.text(in: value.segments).isEmpty
+            default:
+                false
+            }
+        }
+        func fits(_ candidate: [Transcript.Entry]) -> Bool {
+            Self.estimatedTokens(in: Transcript(entries: instructions + answers + candidate)) <= limit
+        }
+        guard let turnStart = entries.lastIndex(where: { if case .prompt = $0 { return true }; return false }) else {
+            event("compaction_result", ["status": "failed", "reason": "context_limit"])
+            throw AgentCompactionFailure()
+        }
+        let turn = entries[turnStart...].filter { if case .instructions = $0 { return false }; return true }
+        let rounds = turn.indices.filter { if case .toolCalls = turn[$0] { return true }; return false }
+        let candidates = [turn] + rounds.map { [turn[0]] + turn[$0...] } + [turn.filter(isConversation)]
+        guard var kept = candidates.first(where: fits) else {
+            event("compaction_result", ["status": "failed", "reason": "context_limit"])
+            throw AgentCompactionFailure()
+        }
+        for entry in entries[..<turnStart].filter(isConversation).reversed() {
+            guard fits([entry] + kept) else { break }
+            kept.insert(entry, at: 0)
+        }
+        let compacted = makeSession(transcript: Transcript(entries: instructions + answers + kept))
+        guard Self.estimatedTokens(in: compacted.transcript) < Self.estimatedTokens(in: original) else {
+            event("compaction_result", ["status": "failed", "reason": "not_smaller"])
+            throw AgentCompactionFailure()
+        }
+        checkpoint.summary = ""
+        checkpoint.transcript = compacted.transcript
+        event("compaction_result", ["status": "succeeded", "method": "trim"])
         return compacted
     }
 
@@ -596,11 +656,10 @@ final class AnyLanguageModelAgent: AgentRunner {
         } else {
             selected = makeAgentTools(toolkit: toolkit, tier: budget.toolTier)
         }
-        let outcomes: [any Tool] = budget.tracksOutcomes
-            ? [RecordTaskOutcomeTool(toolkit: toolkit), VerifyTaskOutcomeTool(toolkit: toolkit), BlockTaskOutcomeTool(toolkit: toolkit)]
+        let managed: [any Tool] = budget.tracksOutcomes
+            ? [UpdateProgressTool(), RecordTaskOutcomeTool(toolkit: toolkit), VerifyTaskOutcomeTool(toolkit: toolkit), BlockTaskOutcomeTool(toolkit: toolkit)]
             : []
-        let managed: [any Tool] = [UpdateProgressTool()] + outcomes
-        let excluded = Set(managed.map(\.name)).union(AgentToolCatalog.outcomeToolIDs)
+        let excluded = Set(managed.map(\.name)).union(AgentToolCatalog.outcomeToolIDs).union([UpdateProgressTool.toolName])
         return selected.filter { !excluded.contains($0.name) && (seesScreenshots || !AgentToolCatalog.visualToolIDs.contains($0.name)) }
             + managed
     }
@@ -614,7 +673,8 @@ final class AnyLanguageModelAgent: AgentRunner {
             ? tools().map { AgentProposalTool(name: $0.name, description: $0.description, parameters: $0.parameters) }
             : tools()
         if let transcript {
-            let restored = acceptsImages ? transcript : ModelImageSupport.textOnly(transcript)
+            let current = currentInstructions(transcript)
+            let restored = acceptsImages ? current : ModelImageSupport.textOnly(current)
             return LanguageModelSession(
                 model: model, tools: tools,
                 transcript: seesScreenshots ? restored : ModelImageSupport.withoutToolImages(restored)
@@ -625,6 +685,24 @@ final class AnyLanguageModelAgent: AgentRunner {
             tools: tools,
             instructions: AgentInstructions.text(for: budget.instructionTier)
         )
+    }
+
+    func currentInstructions(_ transcript: Transcript) -> Transcript {
+        var entries = Array(transcript)
+        guard let index = entries.firstIndex(where: { if case .instructions = $0 { return true }; return false }),
+              case .instructions(let stored) = entries[index],
+              case .instructions(var fresh)? = makeSession().transcript.first(where: {
+                  if case .instructions = $0 { return true }; return false
+              })
+        else { return transcript }
+        fresh.segments += stored.segments.filter {
+            if case .text(let text) = $0 {
+                return text.id == Self.resumeInstructionID
+            }
+            return false
+        }
+        entries[index] = .instructions(fresh)
+        return Transcript(entries: entries)
     }
 
     static func text(in segments: [Transcript.Segment]) -> String {

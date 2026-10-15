@@ -10,7 +10,7 @@ struct ContextBudgetTests {
     @Test func aTinyWindowGetsTheCompactProfile() {
         let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 2_000)
 
-        #expect(budget.responseTokens == 1_024)
+        #expect(budget.responseTokens == 512)
         #expect(budget.instructionTier == .compact)
         #expect(budget.toolTier == .core)
         #expect(budget.toolOutput.pageTextCharacters <= 1_600)

@@ -65,6 +65,7 @@ struct AgentContextCompactor {
             guard !batch.isEmpty else { throw AgentCompactionFailure() }
             let input = try encoded(Input(previousCheckpoint: summary, historicalEvidence: batch))
             var candidate: String?
+            var oversized: String?
             do {
                 for attempt in 0..<2 {
                     try Task.checkCancellation()
@@ -83,13 +84,16 @@ struct AgentContextCompactor {
                         candidate = result
                         break
                     }
+                    oversized = result
                 }
             } catch {
                 guard Self.isContextWindowError(error), requestBytes > 2_400 else { throw error }
                 requestBytes = max(2_400, requestBytes / 2)
                 continue
             }
-            guard let candidate else { throw AgentCompactionFailure(reason: .summaryTooLarge) }
+            guard let candidate = candidate ?? oversized.flatMap({ trimmed($0, bytes: summaryBytes) }) else {
+                throw AgentCompactionFailure(reason: .summaryTooLarge)
+            }
             summary = candidate
             records = remaining
         }
@@ -124,6 +128,13 @@ struct AgentContextCompactor {
 
     private func encoded<T: Encodable>(_ value: T) throws -> String {
         String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
+    }
+
+    private func trimmed(_ text: String, bytes: Int) -> String? {
+        let head = prefix(text, bytes: bytes)
+        guard let end = head.lastIndex(where: { $0 == "\n" || $0 == "." }) else { return nil }
+        let kept = head[...end].trimmingCharacters(in: .whitespacesAndNewlines)
+        return kept.utf8.count >= bytes / 2 ? kept : nil
     }
 
     private func prefix(_ text: String, bytes: Int) -> String {

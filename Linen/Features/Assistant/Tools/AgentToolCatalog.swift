@@ -75,7 +75,7 @@ nonisolated enum AgentToolCatalog {
             title: "Go Back",
             summary: "Return to the previous page.",
             category: .research,
-            isCore: true
+            isCore: false
         ),
         AgentToolDescriptor(
             id: "clickOnPage",
@@ -110,7 +110,7 @@ nonisolated enum AgentToolCatalog {
             title: "Scroll",
             summary: "Move up or down a page.",
             category: .page,
-            isCore: true
+            isCore: false
         ),
         AgentToolDescriptor(id: "hoverOnPage", title: "Hover", summary: "Reveal content by hovering over a control.", category: .page, isCore: false),
         AgentToolDescriptor(id: "pressKey", title: "Press Keys", summary: "Use keyboard controls on a page.", category: .page, isCore: false),

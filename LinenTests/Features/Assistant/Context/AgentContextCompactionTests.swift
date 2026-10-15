@@ -197,6 +197,10 @@ struct AgentContextCompactionTests {
         #expect(trace.stopReason == nil)
         #expect(fixture.reply.text == "Finished.")
         #expect(trace.diagnostics.compactions >= 1)
+        #expect(!fixture.model.requests.contains { $0.hasPrefix("Create a historical checkpoint") })
+        let saved = HarnessFixture.flattened(try #require(trace.checkpoint).transcript)
+        #expect(saved.contains("hello"))
+        #expect(!saved.contains("Page 1:"))
     }
 
     @Test func hugeHistoryIsSummarizedInBoundedSlicesIncludingBothEnds() async throws {
@@ -212,6 +216,34 @@ struct AgentContextCompactionTests {
         #expect(model.requests.first?.contains("FIRST_EVIDENCE") == true)
         #expect(model.requests.last?.contains("LAST_EVIDENCE") == true)
         #expect(model.requests.dropFirst().allSatisfy { $0.contains("earlier fields were completed") })
+    }
+
+    @Test func oversizedSummaryIsTrimmedAtASentenceInsteadOfFailing() async throws {
+        let model = HarnessScript([])
+        model.summary = String(repeating: "Verified one fact on the page. ", count: 200)
+        let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 700, toolCount: 3)
+        let transcript = Transcript(entries: [.prompt(.init(segments: [.text(.init(content: "Find the price"))]))])
+        let summary = try await AgentContextCompactor(model: model, options: .init(), budget: budget)
+            .summarize(transcript) { _, _ in }
+        #expect(!summary.isEmpty)
+        #expect(summary.utf8.count <= min(8_400, max(400, budget.inputTokens * 2 / 5)))
+        #expect(summary.hasSuffix("."))
+    }
+
+    @Test func restoredSessionsUseTheCurrentInstructions() throws {
+        let fixture = HarnessFixture([])
+        let stale = Transcript(entries: [
+            .instructions(.init(segments: [
+                .text(.init(content: "STALE_INSTRUCTIONS")),
+                .text(.init(id: "linen.internal.resume", content: "RESUME_GUIDANCE")),
+            ], toolDefinitions: [])),
+            .prompt(.init(segments: [.text(.init(content: "Earlier request"))])),
+        ])
+        let restored = HarnessFixture.flattened(fixture.agent.makeSession(transcript: stale).transcript)
+        #expect(!restored.contains("STALE_INSTRUCTIONS"))
+        #expect(restored.contains("RESUME_GUIDANCE"))
+        #expect(restored.contains("Earlier request"))
+        #expect(restored.contains("You are Linen"))
     }
 
     @Test func summaryOverflowRetriesSmallerSlicesWithoutDroppingEvidence() async throws {
@@ -284,8 +316,8 @@ struct AgentContextCompactionTests {
 
     @Test func chunkedCompactionHonorsTheOptionalRequestLimit() async throws {
         let state = HarnessToolState()
-        state.output = { _ in String(repeating: "recorded browser evidence ", count: 1_000) }
-        let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 700, toolCount: 3)
+        state.output = { _ in String(repeating: "recorded browser evidence ", count: 5_000) }
+        let budget = ContextBudget.resolve(windowTokens: 16_384, desiredResponseTokens: 700, toolCount: 3)
         let fixture = HarnessFixture(
             [.calls(["readPage"]), .text("Must not run past the limit")],
             policy: .init(maxModelRequests: 2), state: state, contextBudget: budget

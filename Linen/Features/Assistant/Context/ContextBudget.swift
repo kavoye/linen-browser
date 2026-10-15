@@ -27,6 +27,10 @@ nonisolated struct ContextBudget: Hashable, Sendable {
     let retainedExchanges: Int
     let retainedToolRounds: Int
 
+    var summarizesOnCompaction: Bool {
+        windowTokens >= 16_384
+    }
+
     static func toolTier(forWindow windowTokens: Int) -> AgentToolTier {
         windowTokens < 16_384 ? .core : .full
     }
@@ -39,10 +43,10 @@ nonisolated struct ContextBudget: Hashable, Sendable {
         measuredInstructionTokens: Int? = nil
     ) -> Self {
         let window = max(2_048, windowTokens)
-        let response = max(256, min(desiredResponseTokens, window / 4))
+        let compact = window < 16_384
+        let response = max(256, min(desiredResponseTokens, compact ? min(512, window / 4) : window / 4))
         let safety = max(256, window / 16)
         let input = window - response - safety
-        let compact = window < 16_384
 
         let instructionTokens = measuredInstructionTokens ?? (compact ? 300 : 1_300)
         let schemaTokens = measuredSchemaTokens.map { max(150, $0) } ?? toolCount.map { max(150, $0 * 75) } ?? (compact ? 500 : 1_200)

@@ -59,6 +59,19 @@ struct ProviderContextWiringTests {
         #expect(!subject.isOverBudget(session, nativeState: nil, promptCharacters: "hello".count))
     }
 
+    @Test func onDeviceLeavesOutToolsItCannotAfford() throws {
+        let subject = try #require(agent(for: ProviderCatalog.appleOnDevice, effort: .low))
+        let names = subject.makeSession().transcript.flatMap { entry -> [String] in
+            guard case .instructions(let value) = entry else { return [] }
+            return value.toolDefinitions.map(\.name)
+        }
+        #expect(subject.budget.responseTokens <= 512)
+        #expect(names.contains("readPage"))
+        #expect(!names.contains(UpdateProgressTool.toolName))
+        #expect(!names.contains("goBack"))
+        #expect(!names.contains("scrollPage"))
+    }
+
     @Test func aHostedProviderKeepsTheFullProfile() throws {
         let subject = try #require(agent(for: ProviderCatalog.openAI, effort: .low))
         let budget = subject.budget
