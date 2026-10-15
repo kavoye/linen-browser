@@ -113,11 +113,11 @@ struct AgentTurnModelTests {
     @Test func aNewTurnCancelsManualCompactionAndClearsItsStatus() async throws {
         let fixture = Fixture()
         fixture.model.use(fixture.runner)
-        fixture.model.compactContext(inSpace: fixture.browser.tabID)
-        #expect(fixture.model.compactingSpaceID == fixture.browser.tabID)
+        fixture.model.compactContext(inAnchor: fixture.browser.tabID)
+        #expect(fixture.model.compactingAnchorID == fixture.browser.tabID)
         try #require(await waitUntil { fixture.runner.compactionStarted })
         #expect(fixture.model.run(utterance: "Continue working"))
-        #expect(fixture.model.compactingSpaceID == nil)
+        #expect(fixture.model.compactingAnchorID == nil)
         fixture.runner.releaseCompaction()
         try #require(await waitUntil { fixture.runner.compactionCancelled })
         #expect(fixture.model.compactionMessage == nil)
@@ -128,8 +128,8 @@ struct AgentTurnModelTests {
         fixture.runner.waitsForRelease = true
         fixture.model.use(fixture.runner)
         #expect(fixture.model.run(utterance: "Work"))
-        fixture.model.compactContext(inSpace: fixture.browser.tabID)
-        #expect(fixture.model.compactingSpaceID == nil)
+        fixture.model.compactContext(inAnchor: fixture.browser.tabID)
+        #expect(fixture.model.compactingAnchorID == nil)
         #expect(!fixture.runner.compactionStarted)
         try #require(await waitUntil { !fixture.runner.runs.isEmpty })
         fixture.runner.release(try #require(fixture.runner.runs.first).task.id)
@@ -171,9 +171,9 @@ struct AgentTurnModelTests {
         let tab = try #require(browser.tab(id: tabID))
         #expect(browser.agentContextSummary(mentionedTabIDs: [])?.contains("ACTIVE") == true)
 
-        browser.setAgentWorking(true, inSpace: tabID)
+        browser.setAgentWorking(true, inAnchor: tabID)
         #expect(tab.isAgentWorking)
-        browser.setAgentWorking(false, inSpace: tabID)
+        browser.setAgentWorking(false, inAnchor: tabID)
         #expect(!tab.isAgentWorking)
     }
 
@@ -292,7 +292,7 @@ struct AgentTurnModelTests {
         try #require(await waitUntil { fixture.runner.runs.count == 1 })
         let task = try #require(fixture.model.activeTask)
 
-        fixture.model.detachTab(task.tabID, inSpace: task.spaceID)
+        fixture.model.detachTab(task.tabID, inAnchor: task.anchorID)
         #expect(!fixture.model.isRunning)
         #expect(fixture.log.cancelled == [task.id])
         #expect(fixture.log.removedTabs.isEmpty)
@@ -344,6 +344,19 @@ struct AgentTurnModelTests {
         #expect(await waitUntil { !fixture.model.isRunning })
     }
 
+    @Test func aReopenableTabKeepsItsConversationForTheTabThatReplacesIt() {
+        let fixture = Fixture()
+        let closed = UUID(), reopened = UUID(), forgotten = UUID()
+
+        fixture.model.closeTab(closed, keepingConversation: true)
+        fixture.model.reopenTab(closed, as: reopened)
+        fixture.model.closeTab(forgotten, keepingConversation: true)
+        fixture.model.forgetClosedTab(forgotten)
+
+        #expect(fixture.log.reassigned == [.init(from: closed, to: reopened)])
+        #expect(fixture.log.removedTabs == [forgotten])
+    }
+
 }
 
 @MainActor
@@ -369,7 +382,7 @@ private final class FakeAgentTurnBrowser: AgentTurnBrowsing {
     }
 
     let tabID = UUID()
-    var spaceID: UUID?
+    var anchorID: UUID?
     var context: String?
     private(set) var ensureCount = 0
     private(set) var working: [WorkingEvent] = []
@@ -383,16 +396,16 @@ private final class FakeAgentTurnBrowser: AgentTurnBrowsing {
         return tabID
     }
 
-    func agentSpaceID(forTab tabID: UUID) -> UUID {
-        spaceID ?? tabID
+    func agentAnchorID(forTab tabID: UUID) -> UUID {
+        anchorID ?? tabID
     }
 
     func agentContextSummary(mentionedTabIDs: [UUID]) -> String? {
         context
     }
 
-    func setAgentWorking(_ isWorking: Bool, inSpace spaceID: UUID) {
-        working.append(.init(tabID: spaceID, isWorking: isWorking))
+    func setAgentWorking(_ isWorking: Bool, inAnchor anchorID: UUID) {
+        working.append(.init(tabID: anchorID, isWorking: isWorking))
     }
 }
 

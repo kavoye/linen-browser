@@ -148,12 +148,11 @@ struct SettingsIndexParityTests {
         "about.updates",            // the About page renders version state, not a caption
         "about.updates.channel",    // the page caption names the chosen channel; the index covers both
         "about.acknowledgements",
-        "profiles.launch",          // the picker row's caption names the current profile
         "extensions.installed",     // the extensions section renders its own header
         // No static caption on the page: the row is its own label.
         "general.defaultBrowser", "appearance.windowStyle",
         "appearance.minimal", "appearance.minimalBar", "appearance.background",
-        "search.custom", "appearance.theme", "profiles.list", "profiles.current",
+        "search.custom", "appearance.theme",
         "provider.model", "provider.connected", "provider.key", "provider.endpoint",
         "openai.replyLength", "voice.readingVoice", "voice.readingSpeed", "voice.conversationVoice",
         // Each engine option carries its own caption.
@@ -190,7 +189,6 @@ struct SettingsIndexParityTests {
         "Linen/Settings/Pages/Advanced/MCPSettingsPage.swift",
         "Linen/Settings/Pages/Advanced/ExperimentsSettings.swift",
         "Linen/Settings/Navigation/SettingsView.swift",
-        "Linen/Settings/Pages/General/ProfileSettings.swift",
         "Linen/Settings/Pages/Assistant/IntelligenceSettings.swift",
         "Linen/Settings/Pages/Assistant/ProviderSettingsPages.swift",
         "Linen/Settings/Pages/Assistant/AgentToolsSettings.swift",

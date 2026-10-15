@@ -6,20 +6,20 @@ import Foundation
 nonisolated struct AgentTaskContext: Sendable, Equatable {
     let id: UUID
     let tabID: UUID
-    let spaceID: UUID
+    let anchorID: UUID
     let mentionedTabIDs: [UUID]
     let attachments: [AssistantAttachment]
     let attachmentTextOnly: Bool
     let isContinuation: Bool
 
     init(
-        id: UUID, tabID: UUID, spaceID: UUID? = nil, mentionedTabIDs: [UUID] = [],
+        id: UUID, tabID: UUID, anchorID: UUID? = nil, mentionedTabIDs: [UUID] = [],
         attachments: [AssistantAttachment] = [], attachmentTextOnly: Bool = false,
         isContinuation: Bool = false
     ) {
         self.id = id
         self.tabID = tabID
-        self.spaceID = spaceID ?? tabID
+        self.anchorID = anchorID ?? tabID
         self.mentionedTabIDs = mentionedTabIDs
         self.attachments = attachments
         self.attachmentTextOnly = attachmentTextOnly

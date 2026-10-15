@@ -84,15 +84,11 @@ final class BrowserApplication {
         if windows.isEmpty {
             newWindow(profile: catalog.current)
         }
-        if let profileID = catalog.launchProfileID,
-           let profile = catalog.profiles.first(where: { $0.id == profileID }) {
-            let window = windows.last { $0.profiles.current.id == profileID }
-                ?? newWindow(profile: profile, show: false)
-            window.showBrowser()
-        } else if let lastWindowID, let window = windows.first(where: { $0.windowID == lastWindowID }) {
+        if let lastWindowID, let window = windows.first(where: { $0.windowID == lastWindowID }) {
             window.showBrowser()
         }
         isReady = true
+        followProfileList()
         let queued = queuedURLs
         queuedURLs.removeAll()
         openFromAnotherApp(queued)
@@ -258,6 +254,7 @@ final class BrowserApplication {
             coordinator.stopAgent()
             coordinator.voiceInput.cancel()
             coordinator.browser.saveBlocking()
+            coordinator.saveParkedTabModels()
             coordinator.conversationLog.saveBlocking()
         }
     }
@@ -304,6 +301,17 @@ final class BrowserApplication {
     private func remember(_ context: BrowserProfileContext) {
         if !context.profile.isPrivate {
             usedProfiles[context.profile.id] = context
+        }
+    }
+
+    private func followProfileList() {
+        Task { [weak self] in
+            for await _ in Observations({ ProfileStore.shared.profiles.map(\.id) }) {
+                guard let self else { return }
+                for window in windows {
+                    window.refreshSpaces()
+                }
+            }
         }
     }
 

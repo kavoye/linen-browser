@@ -12,6 +12,12 @@ nonisolated struct SidebarTree: Equatable, Sendable {
         self.children = children.filter { !$0.value.isEmpty }
     }
 
+    func keepingRoot(where isKept: (SidebarItem) -> Bool) -> SidebarTree {
+        var next = self
+        next.root = root.filter(isKept)
+        return next
+    }
+
     func rows(in parent: UUID?) -> [SidebarItem] {
         guard let parent else { return root }
         return children[parent] ?? []

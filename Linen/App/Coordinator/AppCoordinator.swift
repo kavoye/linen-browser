@@ -46,7 +46,16 @@ final class AppCoordinator {
     }
     let engine = EngineSelection()
 
-    let browser: BrowserModel
+    private(set) var browser: BrowserModel
+    @ObservationIgnored let activeBrowser: ActiveTabModel
+    @ObservationIgnored var parkedModels: [UUID: BrowserModel] = [:]
+    @ObservationIgnored let spaceStore: SpaceStore
+    @ObservationIgnored private(set) lazy var spaceSlider = SpaceSlideController(coordinator: self)
+
+    func show(_ model: BrowserModel) {
+        browser = model
+        activeBrowser.model = model
+    }
     var github: GitHubPanelModel {
         browser.context.github
     }
@@ -124,7 +133,7 @@ final class AppCoordinator {
         application?.mcpServer ?? standaloneMCPServer
     }
     @ObservationIgnored private lazy var standaloneMCPServer = BrowserMCPServer(
-        browser: browser, defaults: BrowserMCPServer.appDefaults,
+        following: { [weak self] in self?.browser }, defaults: BrowserMCPServer.appDefaults,
         canListen: { [weak self] in
             guard let self else { return false }
             return !profiles.isPrivate && !isSwitchingProfile
@@ -186,9 +195,12 @@ final class AppCoordinator {
     init(
         browser: BrowserModel = BrowserModel(),
         profiles: ProfileStore? = nil,
+        spaceStore: SpaceStore = .shared,
         modelProviders: any ModelProviderResolving = ModelProviderRegistry()
     ) {
         self.browser = browser
+        self.spaceStore = spaceStore
+        activeBrowser = ActiveTabModel(browser)
         self.profiles = profiles ?? ProfileStore.selection(profile: browser.context.profile)
         self.modelProviders = modelProviders
         let extensions = browser.context.extensions
@@ -199,7 +211,7 @@ final class AppCoordinator {
         speech = ProviderSpeechOutput()
         readerListener = ReaderListener(output: readerSpeech)
         agentTurns = AgentTurnModel(
-            browser: browser,
+            browser: activeBrowser,
             log: browser.context.conversationLog,
             speech: speech,
             modelSettings: browser.context.modelSettings,
@@ -245,7 +257,7 @@ final class AppCoordinator {
         }
 
         configureWindowCallbacks()
-        configureWindowAgentTransfer()
+        bindTabModel(browser)
 
         sidebarDrag.planSource = { [weak self] in
             guard let self else { return SplitDropPlan() }
@@ -367,13 +379,13 @@ final class AppCoordinator {
     }
 
     var isSpeakingInChrome: Bool {
-        agentReply.isStreaming && agentReply.showsInChrome(inSpace: browser.activeSpaceID)
+        agentReply.isStreaming && agentReply.showsInChrome(inAnchor: browser.activeAnchorID)
     }
 
     func pendingAgentQuestion(inChrome: Bool) -> AgentQuestionModel.Ask? {
-        let spaceID = browser.activeSpaceID
-        guard agentReply.showsInChrome(inSpace: spaceID) == inChrome else { return nil }
-        return agentQuestions.ask(inSpace: spaceID)
+        let anchorID = browser.activeAnchorID
+        guard agentReply.showsInChrome(inAnchor: anchorID) == inChrome else { return nil }
+        return agentQuestions.ask(inAnchor: anchorID)
     }
 
     func readAloud(_ text: String, id: UUID) {
@@ -564,10 +576,11 @@ final class AppCoordinator {
     }
 
     func confirmClearHistory() {
-        guard browser.history.count > 0 else { return }
+        let model = browser
+        guard model.history.count > 0 else { return }
         Task {
             guard let choice = await ConfirmAlert.clear(.history()) else { return }
-            await BrowsingData.clear(choice.kinds, range: choice.range, history: browser.history, context: browser.context)
+            await BrowsingData.clear(choice.kinds, range: choice.range, history: model.history, context: model.context)
         }
     }
 
@@ -576,8 +589,10 @@ final class AppCoordinator {
             statusMessage = String(localized: "Organizing tabs needs a model: add a provider key or enable Apple Intelligence.")
             return
         }
-        let loose = browser.tabs.filter {
-            browser.folder(containing: $0) == nil && $0.pinnedURL == nil
+        let model = browser
+        let space = model.currentSpaceID
+        let loose = model.currentSpaceTabs.filter {
+            model.folder(containing: $0) == nil && $0.pinnedURL == nil
         }
         guard loose.count >= 4 else {
             statusMessage = String(localized: "Not enough loose tabs to organize.")
@@ -585,7 +600,7 @@ final class AppCoordinator {
         }
         statusMessage = String(localized: "Looking for related tabs…")
         let titles = loose.map { ($0.id, $0.title) }
-        Task { [weak self, activity = browser.modelActivity] in
+        Task { [weak self, activity = model.modelActivity] in
             let outcome = await activity.perform { await TabOrganizer.propose(for: titles) }
             guard let self else { return }
             statusMessage = nil
@@ -601,25 +616,28 @@ final class AppCoordinator {
                 statusMessage = String(localized: "The model couldn’t group the tabs. Try again.")
                 return
             }
+            let isStillShown = { [weak self] in self?.browser === model && model.currentSpaceID == space }
+            guard isStillShown() else { return }
             let proposed = plan.folders.map { ($0.name, $0.tabIDs.count) }
-            guard await ConfirmAlert.organize(folders: proposed) else { return }
+            guard await ConfirmAlert.organize(folders: proposed), isStillShown() else { return }
             for folder in plan.folders {
                 let members = folder.tabIDs
-                    .compactMap { id in browser.tabs.first { $0.id == id } }
-                    .filter { browser.folder(containing: $0) == nil && $0.pinnedURL == nil }
+                    .compactMap { id in model.tabs.first { $0.id == id } }
+                    .filter { $0.spaceID == space && model.folder(containing: $0) == nil && $0.pinnedURL == nil }
                 guard members.count >= 2 else { continue }
-                let made = browser.createFolder(named: folder.name, containing: members)
-                if browser.tabs(in: made).count < 2 {
+                let made = model.createFolder(named: folder.name, containing: members)
+                if model.tabs(in: made).count < 2 {
                     Pipeline.log.error("organized folder arrived empty; removing it")
-                    browser.deleteFolder(made)
+                    model.deleteFolder(made)
                 }
             }
         }
     }
 
     func closeAskingIfPinned(_ tab: BrowserTab, then closed: @escaping () -> Void = {}) {
+        let model = browser
         guard tab.pinnedURL != nil else {
-            browser.close(tab)
+            model.close(tab)
             closed()
             return
         }
@@ -629,7 +647,7 @@ final class AppCoordinator {
                 detail: "Closing this tab also removes its pin. You can pin the page again later.",
                 verb: "Close Tab"
             ) else { return }
-            browser.close(tab)
+            model.close(tab)
             closed()
         }
     }

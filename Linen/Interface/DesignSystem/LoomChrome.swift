@@ -44,12 +44,36 @@ enum LoomChrome {
         return neutral.blended(withFraction: 0.85, of: tint) ?? neutral
     }
 
+    static func blend(_ from: NSColor?, _ to: NSColor?, by fraction: Double) -> NSColor? {
+        guard from != nil || to != nil else { return nil }
+        let isLight = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua
+        let start = (from ?? neutral(isLight: isLight)).usingColorSpace(.sRGB) ?? neutral(isLight: isLight)
+        let end = (to ?? neutral(isLight: isLight)).usingColorSpace(.sRGB) ?? neutral(isLight: isLight)
+        return start.blended(withFraction: min(max(fraction, 0), 1), of: end)
+    }
+
     private static func neutral(isLight: Bool) -> NSColor {
         if isLight {
             NSColor(srgbRed: 0.94, green: 0.94, blue: 0.955, alpha: 1)
         } else {
             NSColor(srgbRed: 0.105, green: 0.105, blue: 0.125, alpha: 1)
         }
+    }
+}
+
+struct LoomTint: Equatable {
+    var from: NSColor?
+    var to: NSColor?
+    var fraction: Double
+
+    static func solid(_ color: NSColor?) -> LoomTint {
+        LoomTint(from: color, to: color, fraction: 0)
+    }
+
+    static let none = solid(nil)
+
+    var color: NSColor? {
+        fraction > 0 ? LoomChrome.blend(from, to, by: fraction) : from
     }
 }
 
@@ -119,78 +143,95 @@ nonisolated struct LoomShellGeometry {
     }
 }
 
+struct LoomSpaceBackdrop: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+    var isFloating = false
+
+    var body: some View {
+        let tint = ChromeBand.tint(browser: browser, coordinator: coordinator)
+        if isFloating {
+            LoomFloatingFill(tint: tint, settings: coordinator.settings)
+        } else {
+            LoomAmbientBackdrop(tint: tint, settings: coordinator.settings)
+        }
+    }
+}
+
 struct LoomAmbientBackdrop: View {
-    let sampledPageColor: NSColor?
+    let tint: LoomTint
     let settings: BrowserSettings
 
     var body: some View {
         switch settings.loomStyle {
         case .standard:
-            LoomTintedBackdrop(sampledPageColor: websiteTint, isFloating: false)
+            LoomTintedBackdrop(tint: websiteTint, isFloating: false)
         case .transparent:
             LoomTransparentBackdrop(
-                sampledPageColor: websiteTint,
+                sampledPageColor: websiteTint.color,
                 opacity: settings.transparency,
                 isFloating: false
             )
         }
     }
 
-    private var websiteTint: NSColor? {
-        settings.matchesWebsiteColor ? sampledPageColor : nil
+    private var websiteTint: LoomTint {
+        settings.matchesWebsiteColor ? tint : .none
     }
 }
 
 struct LoomFloatingFill: View {
-    let sampledPageColor: NSColor?
+    let tint: LoomTint
     let settings: BrowserSettings
 
     var body: some View {
         switch settings.loomStyle {
         case .standard:
-            LoomTintedBackdrop(sampledPageColor: websiteTint, isFloating: true)
+            LoomTintedBackdrop(tint: websiteTint, isFloating: true)
         case .transparent:
             LoomTransparentBackdrop(
-                sampledPageColor: websiteTint,
+                sampledPageColor: websiteTint.color,
                 opacity: settings.transparency,
                 isFloating: true
             )
         }
     }
 
-    private var websiteTint: NSColor? {
-        settings.matchesWebsiteColor ? sampledPageColor : nil
+    private var websiteTint: LoomTint {
+        settings.matchesWebsiteColor ? tint : .none
     }
 }
 
 private struct LoomTintedBackdrop: View {
-    let sampledPageColor: NSColor?
+    let tint: LoomTint
     let isFloating: Bool
 
     @Environment(\.colorScheme) private var scheme
 
-    private var sampled: NSColor {
-        LoomChrome.sampledColor(sampledPageColor, scheme: scheme)
-    }
-
-    private var washOpacity: CGFloat {
-        if sampledPageColor != nil {
-            return isFloating ? 0.72 : 0.92
+    private func ground(of color: NSColor?) -> (wash: NSColor, opacity: CGFloat) {
+        let wash = LoomChrome.sampledColor(color, scheme: scheme)
+        if let color, color.alphaComponent > 0.05 {
+            return (wash, isFloating ? 0.72 : 0.92)
         }
         if isFloating {
-            return 0.55
+            return (wash, 0.55)
         }
-        return PageInk.isLight(sampled, scheme: scheme) ? 0.34 : 0.28
+        return (wash, PageInk.isLight(wash, scheme: scheme) ? 0.34 : 0.28)
     }
 
     var body: some View {
+        let start = ground(of: tint.from)
+        let end = ground(of: tint.to)
+        let fraction = CGFloat(min(max(tint.fraction, 0), 1))
+        let wash = start.wash.blended(withFraction: fraction, of: end.wash) ?? start.wash
+        let opacity = start.opacity + (end.opacity - start.opacity) * fraction
         ZStack {
             VisualEffectView(
                 material: .underWindowBackground,
                 blending: isFloating ? .withinWindow : .behindWindow
             )
 
-            Color(nsColor: sampled).opacity(washOpacity)
+            Color(nsColor: wash).opacity(opacity)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -315,5 +356,48 @@ struct LoomPageCanvas<Content: View>: View {
             .padding(.leading, LoomChrome.canvasInset * keep)
             .padding(.trailing, LoomChrome.canvasInset * keep + trailingInset)
             .padding(.bottom, LoomChrome.canvasInset * keep)
+    }
+}
+
+struct LoomInk: ViewModifier {
+    enum Reach {
+        case scheme
+        case window
+        case full
+    }
+
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+    var reach = Reach.full
+
+    @Environment(\.colorScheme) private var scheme
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let loom = ChromeBand.loomWash(browser: browser, coordinator: coordinator, scheme: scheme)
+        let loomScheme: ColorScheme = loom.isLight ? .light : .dark
+        switch reach {
+        case .scheme:
+            content.environment(\.colorScheme, loomScheme)
+        case .window:
+            content.environment(\.windowColorScheme, loomScheme)
+        case .full:
+            content
+                .environment(\.chromeIsLight, loom.isLight)
+                .environment(\.chromeWash, loom)
+                .environment(\.colorScheme, loomScheme)
+        }
+    }
+}
+
+struct LoomPageInkReader<Content: View>: View {
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+    @ViewBuilder let content: (Bool) -> Content
+
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        content(PageInk.isLight(ChromeBand.pageColor(browser: browser, coordinator: coordinator), scheme: scheme))
     }
 }

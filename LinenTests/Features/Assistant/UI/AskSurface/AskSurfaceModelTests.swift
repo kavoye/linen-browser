@@ -96,6 +96,24 @@ struct AskSurfaceModelTests {
         }
     }
 
+    @Test func switchingSpacesShowsTheNewSpacesAddress() {
+        Omnibox.$agentOnlyForTesting.withValue(true) {
+            let model = model()
+            model.browser.newTab().urlString = "linen://settings"
+            model.prepare()
+            #expect(model.interaction.text == "linen://settings")
+
+            let other = AppCoordinator().browser
+            let tab = other.newTab()
+            tab.urlString = "https://example.com/"
+            model.browserDidChange(other)
+
+            #expect(model.interaction.text == "https://example.com/")
+            tab.urlString = "https://example.com/next"
+            #expect(model.currentURL == "https://example.com/next")
+        }
+    }
+
     private func model(placement: AskSurface.Placement = .toolbar) -> AskSurfaceModel {
         let coordinator = AppCoordinator()
         return AskSurfaceModel(
@@ -111,11 +129,11 @@ struct AskSurfaceModelTests {
     ) throws {
         let model = model(placement: placement)
         model.browser.newTab()
-        let spaceID = try #require(model.activeSpaceID)
+        let anchorID = try #require(model.activeAnchorID)
         let coordinator = model.coordinator
-        coordinator.agentReply.bind(toSpace: spaceID, showsInChrome: showsInChrome)
+        coordinator.agentReply.bind(toAnchor: anchorID, showsInChrome: showsInChrome)
         let question = coordinator.agentQuestions.present(
-            [.init(text: "Which color?", options: [])], inSpace: spaceID
+            [.init(text: "Which color?", options: [])], inAnchor: anchorID
         )
 
         #expect(model.pendingQuestion == (showsInChrome ? question : nil))
@@ -127,14 +145,14 @@ struct AskSurfaceModelTests {
     }
 
     @Test(arguments: [true, false])
-    func questionsFromAnotherSpaceStayHidden(showsInChrome: Bool) throws {
+    func questionsFromAnotherAnchorStayHidden(showsInChrome: Bool) throws {
         let model = model()
         model.browser.newTab()
-        let otherSpaceID = UUID()
+        let otherAnchorID = UUID()
         let coordinator = model.coordinator
-        coordinator.agentReply.bind(toSpace: otherSpaceID, showsInChrome: showsInChrome)
+        coordinator.agentReply.bind(toAnchor: otherAnchorID, showsInChrome: showsInChrome)
         coordinator.agentQuestions.present(
-            [.init(text: "Which color?", options: [])], inSpace: otherSpaceID
+            [.init(text: "Which color?", options: [])], inAnchor: otherAnchorID
         )
 
         #expect(model.pendingQuestion == nil)

@@ -16,9 +16,10 @@ extension BrowserModel {
               !tabs.contains(where: { $0.id == tab.id }), !tab.isClosed else { return false }
 
         source.onTabWillTransferOut?(tab)
+        let peers = source.tabs.enumerated().filter { $0.element.spaceID == tab.spaceID }
         let survivor = source.splits.others(of: tab.id).first.flatMap { source.tabsByID[$0] }
-            ?? source.tabs.dropFirst(oldIndex + 1).first
-            ?? source.tabs.prefix(oldIndex).last
+            ?? peers.first { $0.offset > oldIndex }?.element
+            ?? peers.last { $0.offset < oldIndex }?.element
         let wasActive = source.activeTabID == tab.id
         let visitID = source.lastVisitID.removeValue(forKey: tab.id)
         source.splits = source.splits.removing(tab.id)
@@ -39,6 +40,7 @@ extension BrowserModel {
             tab.webView.removeFromSuperview()
         }
         bindCallbacks(to: tab)
+        tab.spaceID = nil
         insert(tab, after: nil)
         lastVisitID[tab.id] = visitID
         writtenStateGeneration[tab.id] = nil

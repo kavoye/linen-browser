@@ -33,20 +33,6 @@ struct Sidebar: View {
         sidebarStyle == .icons
     }
 
-    private var inkColor: NSColor {
-        LoomChrome.sampledColor(
-            ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
-            scheme: scheme
-        )
-    }
-
-    private var inkIsLight: Bool {
-        if let floatingGround {
-            return floatingGround.isLight
-        }
-        return Self.inkIsLight(browser: browser, coordinator: coordinator, scheme: scheme, wearsBand: wearsBand)
-    }
-
     static func inkIsLight(
         browser: BrowserModel,
         coordinator: AppCoordinator,
@@ -86,7 +72,73 @@ struct Sidebar: View {
         )
     }
 
+    private var spaceEditor: SpaceEditorTarget? {
+        coordinator.overlays.spaceEditor
+    }
+
     var body: some View {
+        ZStack {
+            workspace
+                .visualEffect { [isEditing = spaceEditor != nil && !coordinator.overlays.spaceEditorRevealsList] content, proxy in
+                    content.offset(x: isEditing ? -proxy.size.width : 0)
+                }
+                .animation(nil, value: coordinator.overlays.spaceEditorRevealsList)
+                .modifier(SpaceArrival(progress: coordinator.overlays.spaceAppearance))
+                .allowsHitTesting(spaceEditor == nil)
+                .clipped()
+
+            ZStack {
+                if let spaceEditor {
+                    SpaceEditor(coordinator: coordinator, target: spaceEditor)
+                        .id(spaceEditor)
+                        .padding(.top, topPadding)
+                        .padding(.bottom, 12)
+                        .modifier(SpaceEditorExit(progress: coordinator.overlays.spaceEditorExit))
+                        .transition(.move(edge: .trailing))
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlayPreferenceValue(SpaceTipPlacement.self) { placement in
+            GeometryReader { proxy in
+                if let (anchor, tip) = placement {
+                    let dot = proxy[anchor]
+                    tip
+                        .fixedSize()
+                        .position(x: dot.midX, y: dot.minY - 17)
+                        .transition(.opacity)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+        .background {
+            ZStack {
+                if let floatingGround {
+                    FloatingChromeFill(shape: LoomChrome.canvasShape, ground: floatingGround)
+                } else if isFloating {
+                    LoomSpaceBackdrop(browser: browser, coordinator: coordinator, isFloating: true)
+                }
+                WindowDragArea()
+                if coordinator.showsSpaces, spaceEditor == nil {
+                    SpaceSwipeCatcher(onChange: swipeChanged, onEnd: swipeEnded)
+                }
+            }
+        }
+        .modifier(SidebarInk(browser: browser, coordinator: coordinator, wearsBand: wearsBand))
+        .animation(Theme.Motion.settle, value: coordinator.media.model.isActive)
+    }
+
+    private func swipeChanged(_ travel: CGFloat) {
+        coordinator.spaceSlider.drag(to: travel)
+    }
+
+    private func swipeEnded(_ travel: CGFloat, velocity: CGFloat) {
+        coordinator.spaceSlider.endSwipe(travel: travel, velocity: velocity)
+    }
+
+    private var workspace: some View {
         WorkspaceList(
             browser: browser,
             coordinator: coordinator,
@@ -111,28 +163,6 @@ struct Sidebar: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.bottom, 12)
         .padding(.top, topPadding)
-        .background {
-            ZStack {
-                if let floatingGround {
-                    FloatingChromeFill(shape: LoomChrome.canvasShape, ground: floatingGround)
-                } else if isFloating {
-                    LoomFloatingFill(
-                        sampledPageColor: ChromeBand.pageColor(
-                            browser: browser,
-                            coordinator: coordinator
-                        ),
-                        settings: coordinator.settings
-                    )
-                }
-                WindowDragArea()
-            }
-        }
-        .environment(\.chromeIsLight, inkIsLight)
-        .environment(\.chromeWash, .of(floatingGround.map { $0.color } ?? inkColor, isLight: inkIsLight))
-        .environment(\.windowColorScheme, scheme)
-        .environment(\.colorScheme, inkIsLight ? .light : .dark)
-        .animation(nil, value: inkIsLight)
-        .animation(Theme.Motion.settle, value: coordinator.media.model.isActive)
     }
 }
 
@@ -188,21 +218,23 @@ private struct SidebarBottomChrome: View {
 
             if sidebarStyle == .icons {
                 VStack(spacing: 6) {
-                    SidebarProfileControl(coordinator: coordinator)
+                    if coordinator.showsSpaces {
+                        SidebarSpaceSwitcher(coordinator: coordinator, axis: .vertical)
+                    }
                     downloadsButton
-                    SidebarHistoryButton(coordinator: coordinator)
-                    SidebarSettingsRow(coordinator: coordinator)
+                    SidebarMoreMenu(coordinator: coordinator)
                 }
             } else {
                 HStack(spacing: 6) {
-                    SidebarProfileControl(coordinator: coordinator)
-                        .padding(.leading, SidebarMetrics.profileLeading)
-
-                    Spacer(minLength: 0)
-
                     downloadsButton
-                    SidebarHistoryButton(coordinator: coordinator)
-                    SidebarSettingsRow(coordinator: coordinator)
+
+                    if coordinator.showsSpaces {
+                        SidebarSpaceSwitcher(coordinator: coordinator)
+                    } else {
+                        Spacer(minLength: 0)
+                    }
+
+                    SidebarMoreMenu(coordinator: coordinator)
                 }
             }
         }
@@ -216,6 +248,11 @@ private struct SidebarPinnedCards: View {
 
     @State private var mediaHeight: CGFloat = 0
     @State private var measuredBanner: CGFloat = 0
+    @Environment(\.sidebarHidesMediaCard) private var hidesMediaCard
+
+    private var showsMedia: Bool {
+        coordinator.media.model.isActive && !hidesMediaCard
+    }
 
     private static let spacing: CGFloat = 6
 
@@ -231,7 +268,7 @@ private struct SidebarPinnedCards: View {
 
     var body: some View {
         VStack(spacing: Self.spacing) {
-            if coordinator.media.model.isActive {
+            if showsMedia {
                 MediaSidebarCard(
                     media: coordinator.media,
                     coordinator: coordinator,
@@ -247,8 +284,8 @@ private struct SidebarPinnedCards: View {
         .zIndex(1)
         .onAppear { obscuredHeight = stackedHeight }
         .onChange(of: stackedHeight) { _, height in obscuredHeight = height }
-        .onChange(of: coordinator.media.model.isActive) { _, isActive in
-            if !isActive {
+        .onChange(of: showsMedia) { _, shows in
+            if !shows {
                 mediaHeight = 0
             }
         }
@@ -574,30 +611,56 @@ struct SidebarDownloadsButton: View {
     }
 }
 
-struct SidebarHistoryButton: View {
+private struct SidebarInk: ViewModifier {
+    let browser: BrowserModel
     let coordinator: AppCoordinator
+    let wearsBand: Bool
 
-    var body: some View {
-        QuietIconButton(
-            symbol: "clock",
-            isOn: false,
-            help: String(localized: "History")
-        ) {
-            coordinator.showHistory()
+    @Environment(\.floatingGround) private var floatingGround
+    @Environment(\.colorScheme) private var scheme
+
+    private var inkColor: NSColor {
+        LoomChrome.sampledColor(
+            ChromeBand.measuredColor(browser: browser, coordinator: coordinator),
+            scheme: scheme
+        )
+    }
+
+    private var inkIsLight: Bool {
+        if let floatingGround {
+            return floatingGround.isLight
         }
+        return Sidebar.inkIsLight(browser: browser, coordinator: coordinator, scheme: scheme, wearsBand: wearsBand)
+    }
+
+    func body(content: Content) -> some View {
+        let inkIsLight = inkIsLight
+        return content
+            .environment(\.chromeIsLight, inkIsLight)
+            .environment(\.chromeWash, .of(floatingGround.map { $0.color } ?? inkColor, isLight: inkIsLight))
+            .environment(\.windowColorScheme, scheme)
+            .environment(\.colorScheme, inkIsLight ? .light : .dark)
+            .animation(nil, value: inkIsLight)
     }
 }
 
-struct SidebarSettingsRow: View {
-    let coordinator: AppCoordinator
+private struct SpaceEditorExit: ViewModifier {
+    let progress: CGFloat
 
-    var body: some View {
-        QuietIconButton(
-            symbol: "gearshape",
-            isOn: false,
-            help: String(localized: "Settings")
-        ) {
-            coordinator.openSettings()
-        }
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: 16 * progress)
+            .offset(y: -48 * progress)
+            .opacity(1 - progress)
+    }
+}
+
+private struct SpaceArrival: ViewModifier {
+    let progress: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .blur(radius: 12 * (1 - progress))
+            .offset(y: 18 * (1 - progress))
     }
 }

@@ -152,18 +152,6 @@ enum SettingsIndex {
         SettingsEntry("appearance.solidSidePanel", .appearance, "Solid side panel", "Make the side panel easier to read over busy websites.",
                       ["side panel", "transparency", "transparent", "opaque", "solid", "glass", "contrast", "assistant"]),
 
-        SettingsEntry("profiles.current", .profiles, "Current profile", "Edit the current profile.",
-                      ["profile", "current", "open now", "name", "color", "symbol"]),
-        SettingsEntry("profiles.list", .profiles, "Profiles", "Edit or switch profiles.",
-                      ["profile", "profiles", "work", "personal", "switch", "rename", "delete", "symbol",
-                       "icon", "colour", "color", "grey", "gray", "tint", "order", "reorder", "drag",
-                       "clear history",
-                       ]),
-        SettingsEntry("profiles.add", .profiles, "Add profile…", "A new profile starts with no history, tabs, or sign-ins.",
-                      ["profile", "new profile", "add", "create", "second", "another", "work", "school"]),
-        SettingsEntry("profiles.launch", .profiles, "Open at launch", "Choose which profile opens when Linen starts.",
-                      ["launch", "startup", "start up", "open", "default profile", "boot"]),
-
         SettingsEntry("privacy.clear", .privacy, "Clear browsing data", "Choose a time range to clear history, cookies, and cached files.",
                       ["cookies", "cache", "reset", "storage", "site data", "delete", "erase", "wipe",
                        "local storage", "clear", "history", "time range", "last hour",

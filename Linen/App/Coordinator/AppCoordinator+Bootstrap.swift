@@ -23,7 +23,7 @@ extension AppCoordinator {
         followSettings()
         timing.mark("profile and assistant")
         memoryPressure.onPressure = { [weak self] level in
-            self?.browser.relieveMemoryPressure(level)
+            self?.relieveMemoryPressure(level)
         }
         memoryPressure.start()
         if application == nil {
@@ -47,27 +47,6 @@ extension AppCoordinator {
         archiveSweeper.start()
         timing.mark("session")
         wireMedia()
-        browser.onSpaceAnchorChanged = { [weak self] from, to in
-            if self?.voiceConversation.spaceID == from {
-                self?.voiceConversation.session?.stop()
-            }
-            self?.agentTurns.reassignSpace(from: from, to: to)
-        }
-        browser.onLinkHovered = { [weak self] tab, url, modifiers, anchor in
-            guard let self else { return }
-            noteLinkModifiers(modifiers)
-            linkPeek.hovered(url, flags: modifiers, tabID: tab.id, anchor: anchor)
-        }
-        browser.onOpenInPeek = { [weak self] tab, url, origin in
-            self?.openPeek(url: url, from: tab, at: origin)
-        }
-        browser.onOpenInNewWindow = { [weak self] _, url, isPrivate in
-            self?.openLinkInNewWindow(url, isPrivate: isPrivate)
-        }
-        browser.onSummarizeLink = { [weak self] tab, url, anchor in
-            guard let self, let tab else { return }
-            linkPeek.show(url, tabID: tab.id, anchor: anchor)
-        }
         linkPeek.begin()
         if application == nil || application?.windows.count == 1 {
             onboarding.beginIfNeeded()

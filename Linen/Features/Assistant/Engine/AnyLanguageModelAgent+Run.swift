@@ -42,12 +42,12 @@ extension AnyLanguageModelAgent {
             }
             log.saveCheckpoint(state.checkpoint, taskID: task.id)
             log.recordContextEstimate(
-                tabID: task.spaceID,
+                tabID: task.anchorID,
                 tokens: (state.checkpoint.openAI?.contextTokens ?? Self.estimatedTokens(in: state.checkpoint.transcript)) + budget.toolSchemaTokens,
                 breakdown: Self.contextBreakdown(in: state.checkpoint.transcript, budget: budget)
             )
-            if !discardedTabIDs.contains(task.spaceID) {
-                sessions[task.spaceID] = makeSession(transcript: state.checkpoint.transcript)
+            if !discardedTabIDs.contains(task.anchorID) {
+                sessions[task.anchorID] = makeSession(transcript: state.checkpoint.transcript)
             }
         }
 
@@ -55,13 +55,13 @@ extension AnyLanguageModelAgent {
             let text = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2_000))
             guard !Task.isCancelled, !text.isEmpty else { return }
             log.updateLiveProgress(nil, taskID: task.id)
-            if log.latestTrace(forTab: task.spaceID)?.response == text {
+            if log.latestTrace(forTab: task.anchorID)?.response == text {
                 state.reply.update(text: "")
                 log.updateResponse("", taskID: task.id, closingSteps: false)
             }
             guard state.checkpoint.progressUpdates?.last?.text != text else { return }
             state.checkpoint.progressUpdates?.append(AgentProgressUpdate(
-                text: text, afterStepCount: log.latestTrace(forTab: task.spaceID)?.steps.count ?? 0
+                text: text, afterStepCount: log.latestTrace(forTab: task.anchorID)?.steps.count ?? 0
             ))
             event("progress_update", ["status": "completed"])
             save()
@@ -400,11 +400,11 @@ extension AnyLanguageModelAgent {
             self.utterance = utterance
             self.reply = reply
             diagnostics = AgentRunDiagnostics(model: agent.modelID, reasoningEffort: agent.reasoningEffort)
-            checkpoint = agent.log.checkpoint(forTab: task.spaceID) ?? AgentCheckpoint()
+            checkpoint = agent.log.checkpoint(forTab: task.anchorID) ?? AgentCheckpoint()
             nativeState = agent.openAI?.restoring(checkpoint.openAI)
             nativeState?.presentation = .init()
             checkpoint.progressUpdates = []
-            session = agent.session(for: task.spaceID)
+            session = agent.session(for: task.anchorID)
             var policy = agent.executionPolicy ?? .current
             if !agent.budget.tracksOutcomes {
                 policy.requiresOutcomeVerification = false

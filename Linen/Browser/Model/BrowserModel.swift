@@ -79,17 +79,24 @@ final class BrowserModel {
             }
             activeTab?.measureBandUnderBar()
             onActiveTabChanged?(activeTab, previous)
+            if let tab = activeTabID.flatMap({ tabsByID[$0] }), let space = tab.spaceID, space != currentSpaceID {
+                onActiveTabLeftSpace?(tab)
+            }
         }
     }
     var extensionPageHost: ((URL) -> ExtensionPageHost?)?
     var onTabOpened: ((BrowserTab) -> Void)?
     var onNavigationStarted: ((BrowserTab, URL) -> Void)?
     var onTabClosed: ((BrowserTab) -> Void)?
+    var onTabReopened: ((UUID, BrowserTab) -> Void)?
+    var onClosedTabForgotten: ((UUID) -> Void)?
     var onTabWillTransferOut: ((BrowserTab) -> Void)?
     var onTabTransferredOut: ((BrowserTab, Int) -> Void)?
     var onTabTransferredIn: ((BrowserTab, BrowserModel, Int) -> Void)?
     var onActiveTabChanged: ((BrowserTab?, BrowserTab?) -> Void)?
-    var onSpaceAnchorChanged: ((UUID, UUID) -> Void)?
+    var onPageColorWillChange: ((BrowserTab) -> Void)?
+    var onAnchorChanged: ((UUID, UUID) -> Void)?
+    var onActiveTabLeftSpace: ((BrowserTab) -> Void)?
     var onContentProcessTerminated: ((BrowserTab) -> Void)?
     var onPictureInPictureChanged: ((BrowserTab, Bool) -> Void)?
     var onLinkHovered: ((BrowserTab, URL?, NSEvent.ModifierFlags, CGPoint) -> Void)?
@@ -98,9 +105,46 @@ final class BrowserModel {
     var onSummarizeLink: ((BrowserTab?, URL, CGPoint) -> Void)?
     var onPictureReturnExpected: ((BrowserTab) -> Void)?
 
+    private(set) var currentSpaceID: UUID? {
+        didSet {
+            guard oldValue != currentSpaceID else { return }
+            sidebarDidChange()
+        }
+    }
+
+    var knownSpaceIDs: Set<UUID> = [] {
+        didSet {
+            guard oldValue != knownSpaceIDs else { return }
+            sidebarDidChange()
+        }
+    }
+
     var activeTab: BrowserTab? {
-        guard let activeTabID else { return tabs.first }
-        return tabsByID[activeTabID] ?? tabs.first
+        guard let activeTabID else { return tabs.first(where: isInCurrentSpace) }
+        return tabsByID[activeTabID] ?? tabs.first(where: isInCurrentSpace)
+    }
+
+    func switchSpace(to id: UUID, showing tab: BrowserTab? = nil) {
+        guard id != currentSpaceID else { return }
+        cancelTabSwitching()
+        sidebarSelection.clear()
+        currentSpaceID = id
+        let target = tab
+            ?? recentlyActive.lazy.compactMap { self.tabsByID[$0] }.first { $0.spaceID == id }
+            ?? sidebarTree.flattenedTabs(known: Set(tabsByID.keys)).first.flatMap { tabsByID[$0] }
+        if let target {
+            activate(target)
+        } else {
+            activeTabID = nil
+            newTab()
+        }
+    }
+
+    func adoptSpaces(_ owned: [UUID]) {
+        if !owned.contains(where: { $0 == currentSpaceID }) {
+            currentSpaceID = owned.first
+        }
+        knownSpaceIDs = Set(owned)
     }
     // MARK: - Tab management
 
@@ -173,6 +217,10 @@ final class BrowserModel {
         }
         tab.onSummarizeLink = { [weak self, weak tab] url, anchor in
             self?.onSummarizeLink?(tab, url, anchor)
+        }
+        tab.onPageColorWillChange = { [weak self, weak tab] in
+            guard let tab else { return }
+            self?.onPageColorWillChange?(tab)
         }
         tab.onCloseRequested = { [weak self, weak tab] in
             guard let tab else { return }
@@ -319,9 +367,9 @@ final class BrowserModel {
     }
 
     private func insertionAnchor(after opener: BrowserTab) -> BrowserTab? {
-        let space = Set(spaceTabs(spaceID(of: opener.id)).map(\.id))
-        guard !space.isEmpty else { return tabs.contains { $0 === opener } ? opener : nil }
-        return tabs.last { space.contains($0.id) }
+        let anchor = Set(anchorTabs(anchorID(of: opener.id)).map(\.id))
+        guard !anchor.isEmpty else { return tabs.contains { $0 === opener } ? opener : nil }
+        return tabs.last { anchor.contains($0.id) }
     }
 
     @discardableResult
@@ -362,6 +410,7 @@ final class BrowserModel {
         }
         copy.pinnedURL = tab.pinnedURL
         copy.pinnedTitle = tab.pinnedTitle
+        copy.spaceID = tab.spaceID
 
         let at = (tabs.firstIndex { $0 === tab }).map { $0 + 1 } ?? tabs.endIndex
         tabs.insert(copy, at: at)
@@ -375,7 +424,7 @@ final class BrowserModel {
 
     var splits = TabSplits()
 
-    var spaceAnchors: [UUID: UUID] = [:]
+    var tabAnchors: [UUID: UUID] = [:]
 
     var paneInAir: UUID? {
         didSet {
@@ -387,6 +436,7 @@ final class BrowserModel {
     var closedTabs: [ClosedTab] = []
 
     var sidebarTree = SidebarTree()
+    var spaceRoots: [UUID: [SidebarItem]] = [:]
 
     var tabsByID: [UUID: BrowserTab] = [:]
     var foldersByID: [UUID: TabFolder] = [:]

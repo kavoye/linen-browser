@@ -32,7 +32,7 @@ struct SidebarTabRow: View {
         context.isSelected(item)
     }
     private var isActive: Bool {
-        coordinator.sidebarDestination == .tab(tab.id)
+        context.isActive(tab.id)
     }
 
     @Environment(\.sidebarStyle) private var sidebarStyle
@@ -41,7 +41,7 @@ struct SidebarTabRow: View {
     @State private var isRenaming = false
     @State private var draftTitle = ""
     @FocusState private var renameFocused: Bool
-    @State private var windowFrame: CGRect = .zero
+    @State private var windowFrame = SidebarRowAnchor()
     @State private var controlsWidth: CGFloat = 0
 
     private var showsTrailingControls: Bool {
@@ -189,8 +189,11 @@ struct SidebarTabRow: View {
                         .font(Theme.Font.title)
                         .foregroundStyle(isActive ? Color.primary : Color.secondary)
                         .lineLimit(1)
-                        .contentShape(Rectangle())
-                        .onTapGesture { titleTapped() }
+                        .sidebarInteraction(context.isInteractive) { title in
+                            title
+                                .contentShape(Rectangle())
+                                .onTapGesture { titleTapped() }
+                        }
                     Spacer(minLength: 0)
                 }
             }
@@ -235,7 +238,9 @@ struct SidebarTabRow: View {
             .overlay(alignment: .trailing) {
                 if sidebarStyle == .full {
                     HStack(spacing: 4) {
-                        trailingControls
+                        if context.isInteractive {
+                            trailingControls
+                        }
                         if let peekedTab {
                             PeekRowBadge(tab: peekedTab, coordinator: coordinator)
                         }
@@ -257,33 +262,36 @@ struct SidebarTabRow: View {
             radius: depth == 0 ? Theme.Radius.hover : FolderSection.rowRadius(depth: depth - 1)
         )
         .opacity(isLifted ? 0 : 1)
-        .contentShape(Rectangle())
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
-            context.frames.record(item, at: $0)
-        }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-            windowFrame = frame
-            coordinator.tabPreview.moved(tab.id, anchor: frame)
-        }
-        .onTapGesture { tapped() }
-        .onMiddleClick {
-            coordinator.tabPreview.dismiss()
-            coordinator.closeAskingIfPinned(tab)
-        }
-        .onHover { over in
-            withAnimation(Theme.Motion.quick) { hovering = over }
-            if over, !isRenaming {
-                coordinator.tabPreview.hover(tab, anchor: windowFrame)
-            } else {
-                coordinator.tabPreview.unhover(tab.id)
+        .sidebarInteraction(context.isInteractive) { row in
+            row
+            .contentShape(Rectangle())
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
+                context.frames.record(item, at: $0)
             }
-        }
-        .onDisappear { coordinator.tabPreview.unhover(tab.id) }
-        .contextMenu {
-            if selected.isEmpty {
-                menu
-            } else {
-                SidebarSelectionMenuItems(items: selected, browser: browser, coordinator: coordinator)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                windowFrame.frame = frame
+                coordinator.tabPreview.moved(tab.id, anchor: frame)
+            }
+            .onTapGesture { tapped() }
+            .onMiddleClick {
+                coordinator.tabPreview.dismiss()
+                coordinator.closeAskingIfPinned(tab)
+            }
+            .onHover { over in
+                withAnimation(Theme.Motion.quick) { hovering = over }
+                if over, !isRenaming {
+                    coordinator.tabPreview.hover(tab, anchor: windowFrame.frame)
+                } else {
+                    coordinator.tabPreview.unhover(tab.id)
+                }
+            }
+            .onDisappear { coordinator.tabPreview.unhover(tab.id) }
+            .contextMenu {
+                if selected.isEmpty {
+                    menu
+                } else {
+                    SidebarSelectionMenuItems(items: selected, browser: browser, coordinator: coordinator)
+                }
             }
         }
     }
@@ -321,6 +329,7 @@ struct SidebarTabRow: View {
         SidebarPinMenuItems(tab: tab, browser: browser)
         SidebarAudioMenuItems(tab: tab, coordinator: coordinator)
         SidebarFolderMenuItems(items: [item], browser: browser)
+        SidebarSpaceMenuItems(items: [item], coordinator: coordinator)
         SidebarWindowMenuItems(tab: tab, coordinator: coordinator)
         Divider()
 

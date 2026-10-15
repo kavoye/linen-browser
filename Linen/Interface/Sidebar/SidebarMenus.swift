@@ -108,7 +108,10 @@ struct SidebarFolderMenuItems: View {
     }
 
     private var targets: [TabFolder] {
-        browser.folders.filter { browser.sidebarTree.canHold($0.id, items) }
+        browser.folders.filter { folder in
+            (browser.currentSpaceID == nil || folder.spaceID == browser.currentSpaceID)
+                && browser.sidebarTree.canHold(folder.id, items)
+        }
     }
 
     var body: some View {
@@ -141,6 +144,38 @@ struct SidebarFolderMenuItems: View {
     }
 }
 
+struct SidebarSpaceMenuItems: View {
+    let items: [SidebarItem]
+    let coordinator: AppCoordinator
+
+    private var targets: [Space] {
+        guard coordinator.showsSpaces else { return [] }
+        return coordinator.spaceStore.spaces(for: coordinator.profiles.current.id).filter {
+            $0.id != coordinator.browser.currentSpaceID
+        }
+    }
+
+    var body: some View {
+        if !targets.isEmpty {
+            Menu {
+                ForEach(targets) { space in
+                    Button {
+                        coordinator.moveToSpace(items, space: space)
+                    } label: {
+                        Label {
+                            Text(verbatim: space.name)
+                        } icon: {
+                            Image(systemName: space.symbol)
+                        }
+                    }
+                }
+            } label: {
+                Label("Move to Space", systemImage: "square.on.square")
+            }
+        }
+    }
+}
+
 struct SidebarSelectionMenuItems: View {
     let items: [SidebarItem]
     let browser: BrowserModel
@@ -153,6 +188,7 @@ struct SidebarSelectionMenuItems: View {
     var body: some View {
         SidebarLinkMenuItems(tabs: tabs, coordinator: coordinator)
         SidebarFolderMenuItems(items: items, browser: browser)
+        SidebarSpaceMenuItems(items: items, coordinator: coordinator)
         Divider()
         SidebarCloseTabsButton(items: items, browser: browser)
     }

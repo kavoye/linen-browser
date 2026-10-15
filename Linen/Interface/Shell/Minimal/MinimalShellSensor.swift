@@ -126,18 +126,11 @@ struct MinimalShellSensor: NSViewRepresentable {
         override func mouseEntered(with event: NSEvent) {
             switch event.trackingArea?.userInfo?["edge"] as? String {
             case "top":
-                setWindowControlsHidden(false)
                 onEdge?(.top)
             case "bottom":
                 onEdge?(.bottom)
             default:
                 break
-            }
-        }
-
-        override func mouseExited(with event: NSEvent) {
-            if event.trackingArea?.userInfo?["edge"] as? String == "top" {
-                setWindowControlsHidden(true)
             }
         }
 

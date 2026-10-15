@@ -44,13 +44,6 @@ struct BrowserView: View {
         mountsMinimal && !mountsStandard
     }
 
-    private var chromeSitsOnALightPage: Bool {
-        PageInk.isLight(
-            ChromeBand.pageColor(browser: browser, coordinator: coordinator),
-            scheme: scheme
-        )
-    }
-
     private var panel: SidePanelModel {
         coordinator.sidePanel
     }
@@ -105,7 +98,7 @@ struct BrowserView: View {
         )
         .environment(\.pageMorphCovers, morphCovers)
         .environment(\.pageMorphCoverFading, isCoverFading)
-        .blur(radius: isPageBlurred ? 18 : 0, opaque: true)
+        .blur(radius: isPageBlurred ? 18 : 0)
         .frame(width: pageSize?.width, height: pageSize?.height)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, !isMorphing && sidebar.isVisible && !isPageFull ? sidebar.openWidth(in: containerWidth) : 0)
@@ -146,8 +139,6 @@ struct BrowserView: View {
     }
 
     @ViewBuilder private var standardChrome: some View {
-        let loom = ChromeBand.loomWash(browser: browser, coordinator: coordinator, scheme: scheme)
-        let loomScheme: ColorScheme = loom.isLight ? .light : .dark
         let width = sidebar.openWidth(in: containerWidth)
         let sidebarIn = sidebar.isShowing && !isRetracted
         let isExpanded = showsPanel && panel.isExpanded
@@ -168,18 +159,20 @@ struct BrowserView: View {
             .offset(x: showsPanel ? 0 : shell.panelWidth + LoomChrome.canvasInset + 24)
 
             if showsPanel && !isExpanded {
-                LoomColumnResizeHandle(
-                    grabWidth: LoomChrome.resizeGrabWidth,
-                    onLightPage: chromeSitsOnALightPage,
-                    isDragging: panel.isDragging,
-                    onDragChanged: {
-                        panel.dragChanged(translation: $0, available: roomBesideSidebar)
-                    },
-                    onDragEnded: {
-                        panel.dragEnded(translation: $0, available: roomBesideSidebar)
-                    },
-                    onReset: { panel.resetWidth() }
-                )
+                LoomPageInkReader(browser: browser, coordinator: coordinator) { onLightPage in
+                    LoomColumnResizeHandle(
+                        grabWidth: LoomChrome.resizeGrabWidth,
+                        onLightPage: onLightPage,
+                        isDragging: panel.isDragging,
+                        onDragChanged: {
+                            panel.dragChanged(translation: $0, available: roomBesideSidebar)
+                        },
+                        onDragEnded: {
+                            panel.dragEnded(translation: $0, available: roomBesideSidebar)
+                        },
+                        onReset: { panel.resetWidth() }
+                    )
+                }
                 .padding(.top, isPageFull ? LoomChrome.canvasInset : LoomChrome.canvasTop)
                 .padding(.bottom, LoomChrome.canvasInset)
                 .offset(x: shell.panelResizeLeading)
@@ -199,6 +192,7 @@ struct BrowserView: View {
             .environment(\.sidebarWidth, width)
             .environment(\.sidebarIsFloating, sidebar.isFloating)
             .environment(\.sidebarTopRowShift, CGSize(width: -slide, height: lift))
+            .environment(\.sidebarHidesMediaCard, isRetracted)
             .compositingGroup()
             .shadow(
                 color: .black.opacity(sidebar.isFloating ? 0.45 : 0),
@@ -225,18 +219,20 @@ struct BrowserView: View {
             }
 
             if sidebarIn {
-                LoomColumnResizeHandle(
-                    grabWidth: LoomChrome.resizeGrabWidth,
-                    onLightPage: chromeSitsOnALightPage,
-                    isDragging: sidebar.isDragging,
-                    onDragChanged: {
-                        sidebar.dragChanged(translation: $0, container: containerWidth)
-                    },
-                    onDragEnded: {
-                        sidebar.dragEnded(translation: $0, container: containerWidth)
-                    },
-                    onReset: { sidebar.resetWidth() }
-                )
+                LoomPageInkReader(browser: browser, coordinator: coordinator) { onLightPage in
+                    LoomColumnResizeHandle(
+                        grabWidth: LoomChrome.resizeGrabWidth,
+                        onLightPage: onLightPage,
+                        isDragging: sidebar.isDragging,
+                        onDragChanged: {
+                            sidebar.dragChanged(translation: $0, container: containerWidth)
+                        },
+                        onDragEnded: {
+                            sidebar.dragEnded(translation: $0, container: containerWidth)
+                        },
+                        onReset: { sidebar.resetWidth() }
+                    )
+                }
                 .padding(.top, LoomChrome.canvasTop)
                 .padding(.bottom, LoomChrome.canvasInset)
                 .offset(
@@ -253,20 +249,20 @@ struct BrowserView: View {
                 sidebarEdge: sidebar.isShowing ? width : 0,
                 github: coordinator.settings.showsGitHub && coordinator.github.canPreview ? coordinator.github : nil
             )
-            .environment(\.colorScheme, loomScheme)
+            .modifier(LoomInk(browser: browser, coordinator: coordinator, reach: .scheme))
 
             GitHubPreviewOverlay(presenter: coordinator.githubPreview, model: coordinator.github)
-                .environment(\.colorScheme, loomScheme)
+                .modifier(LoomInk(browser: browser, coordinator: coordinator, reach: .scheme))
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
-                .environment(\.windowColorScheme, loomScheme)
+                .modifier(LoomInk(browser: browser, coordinator: coordinator, reach: .window))
                 .environment(\.sidebarStyle, sidebar.style)
 
             DownloadFlightLayer(flights: coordinator.downloadFlights)
                 .environment(\.sidebarStyle, sidebar.style)
 
             PaneDragOverlay(browser: browser, model: coordinator.sidebarDrag)
-                .environment(\.windowColorScheme, loomScheme)
+                .modifier(LoomInk(browser: browser, coordinator: coordinator, reach: .window))
 
             if browser.isSwitchingTabs {
                 TabSwitcherOverlay(
@@ -274,7 +270,7 @@ struct BrowserView: View {
                     onClose: { coordinator.closeAskingIfPinned($0) },
                     onToggleMute: { coordinator.toggleMute(tab: $0) }
                 )
-                .environment(\.colorScheme, loomScheme)
+                .modifier(LoomInk(browser: browser, coordinator: coordinator, reach: .scheme))
             }
 
             if !sidebar.isShowing && !isRetracted {
@@ -292,14 +288,10 @@ struct BrowserView: View {
             }
 
             CommandPaletteLayer(browser: browser, coordinator: coordinator)
-                .environment(\.chromeIsLight, loom.isLight)
-                .environment(\.chromeWash, loom)
-                .environment(\.colorScheme, loomScheme)
+                .modifier(LoomInk(browser: browser, coordinator: coordinator))
 
             ProfileSwitcherLayer(coordinator: coordinator)
-                .environment(\.chromeIsLight, loom.isLight)
-                .environment(\.chromeWash, loom)
-                .environment(\.colorScheme, loomScheme)
+                .modifier(LoomInk(browser: browser, coordinator: coordinator))
         }
     }
 
@@ -346,13 +338,7 @@ struct BrowserView: View {
     private var shell: some View {
         ZStack(alignment: .leading) {
             if mountsStandard {
-                LoomAmbientBackdrop(
-                    sampledPageColor: ChromeBand.pageColor(
-                        browser: browser,
-                        coordinator: coordinator
-                    ),
-                    settings: coordinator.settings
-                )
+                LoomSpaceBackdrop(browser: browser, coordinator: coordinator)
             }
 
             page
@@ -410,12 +396,27 @@ struct BrowserView: View {
                 isPageBlurred = true
             } completion: {
                 guard generation == switchGeneration else { return }
-                withAnimation(.easeOut(duration: 0.2)) {
-                    isPageBlurred = false
-                    isCoverFading = true
-                } completion: {
+                cut {
+                    mountsStandard = !toMinimal
+                    mountsMinimal = toMinimal
+                    isLeavingMinimal = false
+                    isPageFull = toMinimal
+                }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(120))
                     guard generation == switchGeneration else { return }
-                    settle()
+                    cut {
+                        morphCovers = [:]
+                        isCoverFading = false
+                    }
+                    try? await Task.sleep(for: .milliseconds(32))
+                    guard generation == switchGeneration else { return }
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        isPageBlurred = false
+                    } completion: {
+                        guard generation == switchGeneration else { return }
+                        settle()
+                    }
                 }
             }
         }
@@ -540,6 +541,7 @@ extension EnvironmentValues {
     @Entry var paletteIsMoving = false
     @Entry var paletteIsLeaving = false
     @Entry var sidebarTopRowShift = CGSize.zero
+    @Entry var sidebarHidesMediaCard = false
     @Entry var pageMorphCovers: [UUID: NSImage] = [:]
     @Entry var pageMorphCoverFading = false
 }

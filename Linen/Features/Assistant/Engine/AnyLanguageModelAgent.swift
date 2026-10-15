@@ -101,7 +101,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         var checkpoint = original
         var nativeState = openAI?.restoring(original.openAI)
         var diagnostics = trace.diagnostics
-        let task = AgentTaskContext(id: trace.id, tabID: tabID, spaceID: tabID)
+        let task = AgentTaskContext(id: trace.id, tabID: tabID, anchorID: tabID)
         func event(_ kind: String, _ values: [String: String]) {
             recordEvent(kind, values, diagnostics: &diagnostics, task: task)
         }
@@ -169,9 +169,9 @@ final class AnyLanguageModelAgent: AgentRunner {
         let observation = AgentEvaluationEvent(kind: kind, values: values)
         diagnostics.record(observation)
         if kind == "generation" {
-            log.recordModelRequest(tabID: task.spaceID)
+            log.recordModelRequest(tabID: task.anchorID)
         } else if kind == "provider_usage" {
-            log.recordUsage(tabID: task.spaceID, input: Int(values["input_tokens"] ?? "") ?? 0,
+            log.recordUsage(tabID: task.anchorID, input: Int(values["input_tokens"] ?? "") ?? 0,
                             cached: Int(values["cached_tokens"] ?? "") ?? 0, output: Int(values["output_tokens"] ?? "") ?? 0,
                             countRequest: false)
         }

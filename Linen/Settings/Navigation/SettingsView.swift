@@ -157,9 +157,6 @@ struct SettingsView: View {
                     set: { workspace.select($0) }
                 ),
                 query: $workspace.query,
-                profileName: coordinator.profiles.current.name,
-                profileSymbol: coordinator.profiles.current.symbol,
-                profileTint: coordinator.profiles.current.color.tint,
                 badges: badges,
                 showsNames: showsNamedNavigator,
                 onOpen: workspace.open
@@ -223,8 +220,6 @@ private struct SettingsDetail: View {
                             preferences: coordinator.voicePreferences,
                             onOpenAssistant: { onReveal("provider.connected") }
                         )
-                    case .profiles:
-                        ProfileSettings(coordinator: coordinator)
                     case .autofill:
                         AutofillSettings(coordinator: coordinator, settings: coordinator.settings, highlight: highlight)
                     case .privacy:

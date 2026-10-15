@@ -290,6 +290,8 @@ struct PullIndicator: View {
     static let size: CGFloat = 32
 
     let state: PullState
+    var symbol = "arrow.clockwise"
+    var turnsWithPull = true
 
     private var emergence: Double {
         min(1, max(0, (Double(state.progress) - 0.18) * 2.2))
@@ -306,10 +308,10 @@ struct PullIndicator: View {
                 .stroke(Theme.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .opacity(state.armed ? 0 : 1)
-            Image(systemName: "arrow.clockwise")
+            Image(systemName: symbol)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(state.armed ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
-                .rotationEffect(.degrees(Double(min(state.progress, 1)) * 180))
+                .rotationEffect(.degrees(turnsWithPull ? Double(min(state.progress, 1)) * 180 : 0))
         }
         .frame(width: Self.size, height: Self.size)
         .shadow(color: .black.opacity(0.35), radius: 8, y: 3)

@@ -11,23 +11,23 @@ import Testing
 struct AgentActivityScopeTests {
     // MARK: - The toolbar preview (the reply strip)
 
-    @Test func aReplyOnlySurfacesInTheSpaceItBelongsTo() {
+    @Test func aReplyOnlySurfacesInTheAnchorItBelongsTo() {
         let reply = AgentReplyModel()
         let controlled = UUID()
         let other = UUID()
 
-        reply.bind(toSpace: controlled)
+        reply.bind(toAnchor: controlled)
         reply.beginStream()
         reply.setActivity("Searching the web")
 
-        #expect(reply.message(inSpace: controlled) == "Searching the web")
-        #expect(reply.message(inSpace: other) == nil)
-        #expect(reply.message(inSpace: nil) == nil)
+        #expect(reply.message(inAnchor: controlled) == "Searching the web")
+        #expect(reply.message(inAnchor: other) == nil)
+        #expect(reply.message(inAnchor: nil) == nil)
 
         reply.setActivity(nil)
         reply.update(text: "Found it.")
-        #expect(reply.message(inSpace: controlled) == "Found it.")
-        #expect(reply.message(inSpace: other) == nil)
+        #expect(reply.message(inAnchor: controlled) == "Found it.")
+        #expect(reply.message(inAnchor: other) == nil)
     }
 
     @Test func anUnboundReplySurfacesNowhere() {
@@ -35,21 +35,21 @@ struct AgentActivityScopeTests {
         reply.beginStream()
         reply.update(text: "Orphan reply")
 
-        #expect(reply.message(inSpace: UUID()) == nil)
+        #expect(reply.message(inAnchor: UUID()) == nil)
     }
 
-    @Test func aTurnBindsItsReplyToTheSessionSpace() async throws {
+    @Test func aTurnBindsItsReplyToTheSessionAnchor() async throws {
         let browser = FakeScopeBrowser()
         let log = FakeScopeLog()
         let model = AgentTurnModel(browser: browser, log: log, speech: FakeScopeSpeech())
         model.use(FakeScopeRunner())
 
         #expect(model.run(utterance: "look this up"))
-        #expect(model.reply.spaceID == browser.tabID)
+        #expect(model.reply.anchorID == browser.tabID)
 
         #expect(await waitUntil { !model.isRunning })
         #expect(!model.isRunning)
-        #expect(model.reply.spaceID == browser.tabID)
+        #expect(model.reply.anchorID == browser.tabID)
     }
 
     // MARK: - The log's tab boundary
@@ -104,36 +104,36 @@ struct AgentActivityScopeTests {
 
         let attention = newAttention()
         #expect(attention.needsAttention(
-            failureCount: log.failureCount(forTab: tabA), inSpace: tabA, isShowing: false
+            failureCount: log.failureCount(forTab: tabA), inAnchor: tabA, isShowing: false
         ))
         #expect(!attention.needsAttention(
-            failureCount: log.failureCount(forTab: tabB), inSpace: tabB, isShowing: false
+            failureCount: log.failureCount(forTab: tabB), inAnchor: tabB, isShowing: false
         ))
     }
 
     @Test func anUnseenFailureTurnsTheDotOrangeUntilTheColumnOpens() {
         let attention = newAttention()
-        let space = UUID()
+        let anchor = UUID()
 
-        #expect(!attention.needsAttention(failureCount: 0, inSpace: space, isShowing: false))
-        #expect(attention.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
+        #expect(!attention.needsAttention(failureCount: 0, inAnchor: anchor, isShowing: false))
+        #expect(attention.needsAttention(failureCount: 1, inAnchor: anchor, isShowing: false))
         #expect(AgentActivityDot.state(isWorking: false, needsAttention: true) == .attention)
 
-        attention.review(1, inSpace: space, isShowing: true)
-        #expect(!attention.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
+        attention.review(1, inAnchor: anchor, isShowing: true)
+        #expect(!attention.needsAttention(failureCount: 1, inAnchor: anchor, isShowing: false))
 
         #expect(AgentActivityDot.state(isWorking: true, needsAttention: false) == .working)
     }
 
-    @Test func reviewingOneSpaceLeavesAnotherUnseen() {
+    @Test func reviewingOneAnchorLeavesAnotherUnseen() {
         let attention = newAttention()
         let seen = UUID()
         let unseen = UUID()
 
-        attention.review(1, inSpace: seen, isShowing: true)
+        attention.review(1, inAnchor: seen, isShowing: true)
 
-        #expect(!attention.needsAttention(failureCount: 1, inSpace: seen, isShowing: false))
-        #expect(attention.needsAttention(failureCount: 1, inSpace: unseen, isShowing: false))
+        #expect(!attention.needsAttention(failureCount: 1, inAnchor: seen, isShowing: false))
+        #expect(attention.needsAttention(failureCount: 1, inAnchor: unseen, isShowing: false))
     }
 
     @Test func attentionOutranksTheWorkingPulse() {
@@ -143,64 +143,64 @@ struct AgentActivityScopeTests {
 
     @Test func aFailureWhileTheColumnIsOpenLeavesNoStaleOrange() {
         let attention = newAttention()
-        let space = UUID()
+        let anchor = UUID()
 
-        attention.review(1, inSpace: space, isShowing: true)
+        attention.review(1, inAnchor: anchor, isShowing: true)
 
-        #expect(!attention.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
-        #expect(attention.needsAttention(failureCount: 2, inSpace: space, isShowing: false))
+        #expect(!attention.needsAttention(failureCount: 1, inAnchor: anchor, isShowing: false))
+        #expect(attention.needsAttention(failureCount: 2, inAnchor: anchor, isShowing: false))
     }
 
     @Test func reviewingWhileTheColumnIsHiddenChangesNothing() {
         let attention = newAttention()
-        let space = UUID()
+        let anchor = UUID()
 
-        attention.review(3, inSpace: space, isShowing: false)
+        attention.review(3, inAnchor: anchor, isShowing: false)
 
-        #expect(attention.needsAttention(failureCount: 3, inSpace: space, isShowing: false))
+        #expect(attention.needsAttention(failureCount: 3, inAnchor: anchor, isShowing: false))
     }
 
     @Test func theDotNeverLightsWhileYouAreLookingAtTheColumn() {
         let attention = newAttention()
 
-        #expect(!attention.needsAttention(failureCount: 9, inSpace: UUID(), isShowing: true))
+        #expect(!attention.needsAttention(failureCount: 9, inAnchor: UUID(), isShowing: true))
     }
 
     // MARK: - What was seen stays seen
 
     @Test func aFailureSeenInOneLaunchIsStillSeenInTheNext() {
         let defaults = scratch()
-        let space = UUID()
-        AgentAttention(defaults: defaults).review(1, inSpace: space, isShowing: true)
+        let anchor = UUID()
+        AgentAttention(defaults: defaults).review(1, inAnchor: anchor, isShowing: true)
 
         let relaunched = AgentAttention(defaults: defaults)
 
-        #expect(!relaunched.needsAttention(failureCount: 1, inSpace: space, isShowing: false))
+        #expect(!relaunched.needsAttention(failureCount: 1, inAnchor: anchor, isShowing: false))
         #expect(
-            relaunched.needsAttention(failureCount: 2, inSpace: space, isShowing: false),
+            relaunched.needsAttention(failureCount: 2, inAnchor: anchor, isShowing: false),
             "a later failure is news again"
         )
     }
 
-    @Test func aSpaceThatIsGoneTakesWhatWasSeenWithIt() {
+    @Test func anAnchorThatIsGoneTakesWhatWasSeenWithIt() {
         let defaults = scratch()
         let attention = AgentAttention(defaults: defaults)
-        attention.review(1, inSpace: UUID(), isShowing: true)
+        attention.review(1, inAnchor: UUID(), isShowing: true)
 
-        attention.retainSpaces([UUID()])
+        attention.retainAnchors([UUID()])
 
         #expect(attention.seenFailures.isEmpty)
         #expect(AgentAttention(defaults: defaults).seenFailures.isEmpty)
     }
 
-    @Test func aSpaceThatIsStillOpenKeepsWhatWasSeen() {
-        let space = UUID()
+    @Test func anAnchorThatIsStillOpenKeepsWhatWasSeen() {
+        let anchor = UUID()
         let attention = newAttention()
-        attention.review(1, inSpace: space, isShowing: true)
+        attention.review(1, inAnchor: anchor, isShowing: true)
 
-        attention.retainSpaces([space, UUID()])
+        attention.retainAnchors([anchor, UUID()])
 
-        #expect(attention.seenFailures[space] == 1)
+        #expect(attention.seenFailures[anchor] == 1)
     }
 
     // MARK: - The footer disclaimer
@@ -224,13 +224,13 @@ private final class FakeScopeBrowser: AgentTurnBrowsing {
     func ensureAgentTabID() -> UUID {
         tabID
     }
-    func agentSpaceID(forTab tabID: UUID) -> UUID {
+    func agentAnchorID(forTab tabID: UUID) -> UUID {
         tabID
     }
     func agentContextSummary(mentionedTabIDs: [UUID]) -> String? {
         nil
     }
-    func setAgentWorking(_ isWorking: Bool, inSpace spaceID: UUID) {}
+    func setAgentWorking(_ isWorking: Bool, inAnchor anchorID: UUID) {}
 }
 
 @MainActor

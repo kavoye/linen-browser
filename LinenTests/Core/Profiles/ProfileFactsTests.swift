@@ -142,22 +142,3 @@ struct ProfileLastUsedTests {
         #expect(ProfileStore(file: file).lastUsed.isEmpty)
     }
 }
-
-@MainActor
-struct ProfileAppearanceTests {
-    @Test func everyOfferedSymbolExists() {
-        let missing = ProfileAppearance.symbols.filter {
-            NSImage(systemSymbolName: $0, accessibilityDescription: nil) == nil
-        }
-        #expect(missing.isEmpty, "\(missing)")
-    }
-
-    @Test func theGridFillsWholeRows() {
-        #expect(ProfileAppearance.symbols.count % 16 == 0)
-        #expect(Set(ProfileAppearance.symbols).count == ProfileAppearance.symbols.count)
-    }
-
-    @Test func theDefaultSymbolIsOffered() {
-        #expect(ProfileAppearance.symbols.contains(ProfileAppearance.defaultSymbol))
-    }
-}

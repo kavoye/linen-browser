@@ -118,6 +118,17 @@ final class SidebarDragModel {
 
     var floatOrigin: CGPoint?
 
+    var springSpaceID: UUID?
+
+    @ObservationIgnored var spaceDotFrames: [UUID: CGRect] = [:]
+
+    @ObservationIgnored var spaceSwitcherFrame: CGRect = .zero
+
+    func spaceDot(at pointInWindow: CGPoint) -> UUID? {
+        guard spaceSwitcherFrame.contains(pointInWindow) else { return nil }
+        return spaceDotFrames.first { $0.value.contains(pointInWindow) }?.key
+    }
+
     var incoming: SidebarIncomingDrop? {
         didSet {
             if incoming == nil {
@@ -278,6 +289,10 @@ final class SidebarDragFloat {
 }
 
 @MainActor
+final class SidebarRowAnchor {
+    var frame: CGRect = .zero
+}
+
 final class SidebarFrames {
     private var slots: [SidebarItem: CGRect] = [:]
 
@@ -295,6 +310,7 @@ final class SidebarFrames {
             folderIDs: Set(browser.folders.map(\.id))
         )
         .filter { item, _ in
+            guard browser.isInCurrentSpace(item) else { return false }
             var parent = browser.sidebarTree.parent(of: item)
             while let id = parent {
                 guard browser.folder(id: id)?.isExpanded == true else { return false }
@@ -327,6 +343,15 @@ struct SidebarRowContext {
     let pinsCarried: Bool
     let space: String
     let frames: SidebarFrames
+    var litTab: UUID?
+    var isInteractive = true
+
+    func isActive(_ tabID: UUID) -> Bool {
+        if let litTab {
+            return litTab == tabID
+        }
+        return coordinator.sidebarDestination == .tab(tabID)
+    }
 
     var refractsTabColor: Bool {
         coordinator.settings.refractsTabColor
@@ -499,6 +524,17 @@ struct SidebarRows: View {
                     SidebarTabRow(tab: tab, depth: depth, context: context)
                 }
             }
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func sidebarInteraction(_ isInteractive: Bool, @ViewBuilder _ apply: (Self) -> some View) -> some View {
+        if isInteractive {
+            apply(self)
+        } else {
+            self
         }
     }
 }

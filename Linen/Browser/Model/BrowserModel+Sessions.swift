@@ -71,6 +71,29 @@ extension BrowserModel {
         }) ?? 0
     }
 
+    static func forgetSpace(_ spaceID: UUID, in database: AppDatabase) {
+        try? database.writer.write { db in
+            try db.execute(sql: "DELETE FROM sessionTab WHERE spaceID = ?", arguments: [spaceID])
+            try db.execute(sql: "DELETE FROM sessionFolder WHERE spaceID = ?", arguments: [spaceID])
+        }
+    }
+
+    func reopenSession() {
+        sessionClosedAt = nil
+        try? database.writer.write { db in
+            try db.execute(sql: "UPDATE sessionWindow SET closedAt = NULL WHERE id = ?", arguments: [windowID])
+        }
+        let candidate = currentSpaceID.map(lastActiveTab(inSpace:))
+            ?? recentlyActive.lazy.compactMap { self.tabsByID[$0] }.first
+        if activeTabID == nil, let id = candidate?.id {
+            activeTabID = id
+            for pane in activeTab.map({ splitOthers(of: $0) }) ?? [] {
+                pane.realizeDeferredSession()
+            }
+        }
+        scheduleSave()
+    }
+
     func markSessionClosed() {
         sessionClosedAt = Date()
         saveBlocking()
@@ -91,6 +114,7 @@ extension BrowserModel {
         var internalPage: BrowserTab.InternalPage?
         var isActive: Bool
         var lastActiveAt: Date?
+        var spaceID: UUID?
     }
 
     private nonisolated struct FolderRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -103,6 +127,7 @@ extension BrowserModel {
         var name: String
         var color: TabFolderColor
         var isExpanded: Bool
+        var spaceID: UUID?
     }
 
     private nonisolated struct ItemRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -267,7 +292,8 @@ extension BrowserModel {
                 pinnedTitle: tab.pinnedTitle.isEmpty ? nil : tab.pinnedTitle,
                 internalPage: tab.internalPage,
                 isActive: tab.id == activeTabID,
-                lastActiveAt: tab.lastActiveAt
+                lastActiveAt: tab.lastActiveAt,
+                spaceID: tab.spaceID
             )
         }
         writtenStateGeneration = writtenStateGeneration.filter { id, _ in
@@ -281,7 +307,8 @@ extension BrowserModel {
                 position: position,
                 name: folder.name,
                 color: folder.color,
-                isExpanded: folder.isExpanded
+                isExpanded: folder.isExpanded,
+                spaceID: folder.spaceID
             )
         }
         let known = Set(persisted.map(\.id))
@@ -353,8 +380,8 @@ extension BrowserModel {
                 sql: """
                     INSERT INTO sessionTab
                         (id, windowID, title, customTitle, url, state, pinnedURL, pinnedTitle,
-                         internalPage, isActive, lastActiveAt)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         internalPage, isActive, lastActiveAt, spaceID)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         windowID = excluded.windowID,
                         title = excluded.title,
@@ -365,12 +392,13 @@ extension BrowserModel {
                         pinnedTitle = excluded.pinnedTitle,
                         internalPage = excluded.internalPage,
                         isActive = excluded.isActive,
-                        lastActiveAt = excluded.lastActiveAt
+                        lastActiveAt = excluded.lastActiveAt,
+                        spaceID = excluded.spaceID
                     """,
                 arguments: [
                     tab.id, tab.windowID, tab.title, tab.customTitle, tab.url, tab.state,
                     tab.pinnedURL, tab.pinnedTitle,
-                    tab.internalPage?.rawValue, tab.isActive, tab.lastActiveAt,
+                    tab.internalPage?.rawValue, tab.isActive, tab.lastActiveAt, tab.spaceID,
                 ]
             )
         }
@@ -412,12 +440,16 @@ extension BrowserModel {
         }
     }
 
-    func restoreSession() {
+    func restoreSession(lazily: Bool = false) {
         guard tabs.isEmpty else { return }
-        sessionClosedAt = nil
         let belongsToWindow = Column("windowID") == windowID
-        try? database.writer.write { db in
-            try db.execute(sql: "UPDATE sessionWindow SET closedAt = NULL WHERE id = ?", arguments: [windowID])
+        if lazily {
+            sessionClosedAt = Date()
+        } else {
+            sessionClosedAt = nil
+            try? database.writer.write { db in
+                try db.execute(sql: "UPDATE sessionWindow SET closedAt = NULL WHERE id = ?", arguments: [windowID])
+            }
         }
 
         let stored = try? database.writer.read { db in
@@ -469,7 +501,7 @@ extension BrowserModel {
             let tab = makeTab(
                 for: restoredURL,
                 id: record.id,
-                restoring: !onScreen.contains(record.id)
+                restoring: lazily || !onScreen.contains(record.id)
             )
             tab.pageTitle = restoredURL == nil || SystemPages.isStart(restoredURL)
                 ? SystemPages.startTitle
@@ -478,6 +510,7 @@ extension BrowserModel {
             tab.urlString = restoredURL.map(\.absoluteString) ?? record.url
             tab.pinnedURL = record.pinnedURL
             tab.pinnedTitle = record.pinnedTitle ?? ""
+            tab.spaceID = record.spaceID
             tab.lastActiveAt = record.lastActiveAt.map { min($0 + closedFor, now) } ?? now
             tab.deferRestore(state: record.state, url: restoredURL)
             if let host = URL(string: record.url)?.host() {
@@ -493,6 +526,7 @@ extension BrowserModel {
             let folder = TabFolder(name: record.name)
             folder.color = record.color
             folder.isExpanded = record.isExpanded
+            folder.spaceID = record.spaceID
             foldersByStoredID[record.id] = folder
             folders.append(folder)
         }
@@ -519,7 +553,16 @@ extension BrowserModel {
         splits = TabSplits(grids)
         sidebarDidChange()
 
-        activeTabID = tabs[min(activeIndex, tabs.count - 1)].id
+        guard !lazily else {
+            recentlyActive = [tabs[min(activeIndex, tabs.count - 1)].id]
+            return
+        }
+        let restored = tabs[min(activeIndex, tabs.count - 1)]
+        if let space = restored.spaceID, space != currentSpaceID {
+            switchSpace(to: space, showing: restored)
+        } else {
+            activeTabID = restored.id
+        }
         for pane in activeTab.map({ splitOthers(of: $0) }) ?? [] {
             pane.realizeDeferredSession()
         }

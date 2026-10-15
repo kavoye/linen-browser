@@ -17,6 +17,11 @@ final class ShellOverlays {
     var isProfileSwitcherOpen = false
     var profileButtonFrame: CGRect?
     var isTabListOpen = false
+    var spaceEditor: SpaceEditorTarget?
+    var spaceEditorExit: CGFloat = 0
+    var spaceEditorRevealsList = false
+    var spaceAppearance: CGFloat = 1
+    let spaceSlide = SpaceSlide()
 
     private var pointerCovers: Set<PageCover> = []
     @ObservationIgnored var onCoverChange: () -> Void = {}

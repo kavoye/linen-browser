@@ -67,14 +67,14 @@ extension BrowserModel {
 
     private func moveToPinnedBoundary(_ tab: BrowserTab) {
         let item = SidebarItem.tab(tab.id)
-        let rest = reconciledTree().root.filter { $0 != item }
+        let rest = reconciledTree().root.filter { $0 != item && isInCurrentSpace($0) }
         let boundary = pinnedBoundary(in: rest, ignoring: [])
         move([item], into: nil, before: rest.indices.contains(boundary) ? rest[boundary] : nil)
     }
 
     func pinAtTop(_ items: [SidebarItem]) {
         let moved = Set(items)
-        let rest = reconciledTree().root.filter { !moved.contains($0) }
+        let rest = reconciledTree().root.filter { !moved.contains($0) && isInCurrentSpace($0) }
         let boundary = pinnedBoundary(in: rest, ignoring: [])
         move(items, into: nil, before: rest.indices.contains(boundary) ? rest[boundary] : nil)
         setPinned(true, for: items)
@@ -123,17 +123,17 @@ extension BrowserModel {
         activeSplit?.contains(tab.id) == true
     }
 
-    func spaceID(of tabID: UUID) -> UUID {
+    func anchorID(of tabID: UUID) -> UUID {
         splits.split(containing: tabID)?.leader ?? tabID
     }
 
-    var activeSpaceID: UUID? {
-        activeTabID.map(spaceID(of:))
+    var activeAnchorID: UUID? {
+        activeTabID.map(anchorID(of:))
     }
 
-    func spaceTabs(_ spaceID: UUID) -> [BrowserTab] {
-        guard let split = splits.splitLed(by: spaceID) else {
-            return tabsByID[spaceID].map { [$0] } ?? []
+    func anchorTabs(_ anchorID: UUID) -> [BrowserTab] {
+        guard let split = splits.splitLed(by: anchorID) else {
+            return tabsByID[anchorID].map { [$0] } ?? []
         }
         return split.tabs.compactMap { tabsByID[$0] }
     }
@@ -220,7 +220,7 @@ extension BrowserModel {
             gather(split.tabs)
         }
         refreshTopBarCoverage()
-        reconcileSpaces()
+        reconcileAnchors()
         scheduleSave()
     }
 
@@ -246,14 +246,17 @@ extension BrowserModel {
         tab.autofillSave.clear()
         if recordForReopening, !tab.isPrivate {
             closedTabs.append(ClosedTab(
+                tabID: tab.id,
                 title: tab.title,
                 url: tab.urlString,
                 state: tab.sessionState,
                 folderID: folder(containing: tab)?.id,
+                spaceID: tab.spaceID,
                 index: tabs.firstIndex { $0 === tab } ?? 0
             ))
             if closedTabs.count > Self.closedTabMemory {
-                closedTabs.removeFirst()
+                let forgotten = closedTabs.removeFirst()
+                onClosedTabForgotten?(forgotten.tabID)
             }
         }
 
@@ -282,12 +285,13 @@ extension BrowserModel {
     }
 
     private func neighbor(of tab: BrowserTab) -> BrowserTab? {
-        guard let index = tabs.firstIndex(where: { $0 === tab }) else {
-            return tabs.first { $0 !== tab }
+        let peers = tabs.filter { $0.spaceID == tab.spaceID }
+        guard let index = peers.firstIndex(where: { $0 === tab }) else {
+            return peers.first { $0 !== tab }
         }
         let hidden = hiddenSidebarTabIDs
-        let below = tabs[tabs.index(after: index)...]
-        let above = tabs[..<index].reversed()
+        let below = peers[peers.index(after: index)...]
+        let above = peers[..<index].reversed()
         return below.first { !hidden.contains($0.id) }
             ?? above.first { !hidden.contains($0.id) }
             ?? below.first
@@ -295,7 +299,7 @@ extension BrowserModel {
     }
 
     func closeOthers(_ kept: BrowserTab) {
-        for tab in tabs.reversed() where tab !== kept {
+        for tab in tabs.reversed() where tab !== kept && tab.spaceID == kept.spaceID {
             close(tab)
         }
     }
@@ -308,10 +312,12 @@ extension BrowserModel {
     // MARK: - Reopening and cycling
 
     struct ClosedTab {
+        let tabID: UUID
         let title: String
         let url: String
         let state: Data?
         let folderID: UUID?
+        let spaceID: UUID?
         let index: Int
     }
 
@@ -326,6 +332,7 @@ extension BrowserModel {
         let tab = makeTab(for: URL(string: record.url))
         tab.title = record.title
         tab.urlString = record.url
+        tab.spaceID = record.spaceID
         if let state = record.state {
             tab.webView.interactionState = state
         } else if let url = URL(string: record.url) {
@@ -342,22 +349,25 @@ extension BrowserModel {
         }
         sidebarDidChange()
         onTabOpened?(tab)
+        onTabReopened?(record.tabID, tab)
         activeTabID = tab.id
         scheduleSave()
     }
 
     func activateTab(at index: Int) {
+        let tabs = currentSpaceTabs
         guard tabs.indices.contains(index) else { return }
         activate(tabs[index])
     }
 
     func activateLastTab() {
-        if let last = tabs.last {
+        if let last = currentSpaceTabs.last {
             activate(last)
         }
     }
 
     func cycleTab(forward: Bool) {
+        let tabs = currentSpaceTabs
         guard tabs.count > 1, let current = tabs.firstIndex(where: { $0.id == activeTab?.id }) else { return }
         let next = forward
             ? (current + 1) % tabs.count
@@ -537,23 +547,37 @@ extension BrowserModel {
     func sidebarDidChange() {
         tabsByID = Dictionary(tabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         foldersByID = Dictionary(folders.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        sidebarTree = reconciledTree()
+        let tree = reconciledTree()
+        settleSpaces(in: tree)
+        let shown = currentSpaceID == nil ? tree : tree.keepingRoot(where: isInCurrentSpace)
+        if shown != sidebarTree {
+            sidebarTree = shown
+        }
+        var roots: [UUID: [SidebarItem]] = [:]
+        for item in tree.root {
+            if let space = spaceID(ofItem: item) {
+                roots[space, default: []].append(item)
+            }
+        }
+        if roots != spaceRoots {
+            spaceRoots = roots
+        }
         splits = splits.reconciled(against: Set(tabsByID.keys))
-        reconcileSpaces()
+        reconcileAnchors()
     }
 
-    private func reconcileSpaces() {
-        let current = Dictionary(tabs.map { ($0.id, spaceID(of: $0.id)) }, uniquingKeysWith: { first, _ in first })
-        let previous = spaceAnchors
-        spaceAnchors = current
-        guard !previous.isEmpty, let onSpaceAnchorChanged else { return }
+    private func reconcileAnchors() {
+        let current = Dictionary(tabs.map { ($0.id, anchorID(of: $0.id)) }, uniquingKeysWith: { first, _ in first })
+        let previous = tabAnchors
+        tabAnchors = current
+        guard !previous.isEmpty, let onAnchorChanged else { return }
 
         let names = Set(current.values)
         for name in Set(previous.values) where !names.contains(name) {
             let members = previous.filter { $0.value == name }.keys
             let successors = Set(members.compactMap { current[$0] })
             guard successors.count == 1, let successor = successors.first, successor != name else { continue }
-            onSpaceAnchorChanged(name, successor)
+            onAnchorChanged(name, successor)
         }
     }
 

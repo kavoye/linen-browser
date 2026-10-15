@@ -43,9 +43,11 @@ struct AskSurface: View {
         }
     }
 
+    let browser: BrowserModel
     @State private var model: AskSurfaceModel
 
     init(placement: Placement, browser: BrowserModel, coordinator: AppCoordinator) {
+        self.browser = browser
         _model = State(initialValue: AskSurfaceModel(
             placement: placement,
             browser: browser,
@@ -151,6 +153,9 @@ struct AskSurface: View {
         .animation(Theme.Motion.settle, value: model.pendingQuestion)
         .animation(Theme.Motion.settle, value: model.coordinator.notice.text)
         .onAppear { model.prepare() }
+        .onChange(of: ObjectIdentifier(browser)) { _, _ in
+            model.browserDidChange(browser)
+        }
         .onChange(of: model.currentURL) { _, url in
             model.currentURLDidChange(url)
         }

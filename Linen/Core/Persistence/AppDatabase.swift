@@ -248,6 +248,7 @@ struct AppDatabase: Sendable {
         try defineSessionSplits(in: db)
         try defineWindowSessions(in: db)
         try defineTabArchive(in: db)
+        try defineSessionSpaces(in: db)
         try defineContextClears(in: db)
     }
 
@@ -255,6 +256,15 @@ struct AppDatabase: Sendable {
         guard try !db.columns(in: "agentTrace").contains(where: { $0.name == "clearsContext" }) else { return }
         try db.alter(table: "agentTrace") { t in
             t.add(column: "clearsContext", .boolean).notNull().defaults(to: false)
+        }
+    }
+
+    private nonisolated static func defineSessionSpaces(in db: Database) throws {
+        for table in ["sessionTab", "sessionFolder"] {
+            guard try !db.columns(in: table).contains(where: { $0.name == "spaceID" }) else { continue }
+            try db.alter(table: table) { t in
+                t.add(column: "spaceID", .blob)
+            }
         }
     }
 

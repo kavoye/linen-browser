@@ -16,7 +16,7 @@ final class AgentQuestionModel {
     struct Ask: Identifiable, Equatable {
         let id = UUID()
         let questions: [Question]
-        let spaceID: UUID?
+        let anchorID: UUID?
     }
 
     enum Reply: Equatable {
@@ -57,8 +57,8 @@ final class AgentQuestionModel {
         index + 1 < count
     }
 
-    func ask(inSpace spaceID: UUID?) -> Ask? {
-        guard let ask, let spaceID, ask.spaceID == spaceID else { return nil }
+    func ask(inAnchor anchorID: UUID?) -> Ask? {
+        guard let ask, let anchorID, ask.anchorID == anchorID else { return nil }
         return ask
     }
 
@@ -70,14 +70,14 @@ final class AgentQuestionModel {
         reply(at: index).text
     }
 
-    func put(_ questions: [Question], inSpace spaceID: UUID?) async -> String {
-        await result(for: present(questions, inSpace: spaceID))
+    func put(_ questions: [Question], inAnchor anchorID: UUID?) async -> String {
+        await result(for: present(questions, inAnchor: anchorID))
     }
 
     @discardableResult
-    func present(_ questions: [Question], inSpace spaceID: UUID?) -> Ask {
+    func present(_ questions: [Question], inAnchor anchorID: UUID?) -> Ask {
         finish()
-        let presented = Ask(questions: questions, spaceID: spaceID)
+        let presented = Ask(questions: questions, anchorID: anchorID)
         ask = presented
         index = 0
         replies = Array(repeating: .none, count: questions.count)

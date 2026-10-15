@@ -38,23 +38,6 @@ final class ProfileStore {
 
     private(set) var lastPersistentID: UUID
 
-    private var storedLaunchProfileID: UUID?
-    private(set) var launchProfileID: UUID? {
-        get {
-            if let catalog {
-                return catalog.launchProfileID
-            }
-            return storedLaunchProfileID
-        }
-        set {
-            if let catalog {
-                catalog.launchProfileID = newValue
-            } else {
-                storedLaunchProfileID = newValue
-            }
-        }
-    }
-
     private var storedLastUsed: [UUID: Date] = [:]
     private(set) var lastUsed: [UUID: Date] {
         get {
@@ -84,10 +67,6 @@ final class ProfileStore {
         profiles.first { $0.id == lastPersistentID } ?? profiles[0]
     }
 
-    var hasMultiple: Bool {
-        profiles.count > 1
-    }
-
     init(file: URL? = nil) {
         self.file = file ?? Self.defaultFile
         let stored = (try? Data(contentsOf: self.file))
@@ -100,11 +79,7 @@ final class ProfileStore {
         let remembered = stored.map(\.currentID).flatMap { id in
             loaded.contains { $0.id == id } ? id : nil
         }
-        let pinned = stored?.launchProfileID.flatMap { id in
-            loaded.contains { $0.id == id } ? id : nil
-        }
-        let opening = pinned ?? remembered ?? Profile.originalID
-        storedLaunchProfileID = pinned
+        let opening = remembered ?? Profile.originalID
         currentID = opening
         lastPersistentID = opening
         storedLastUsed = (stored?.lastUsed ?? [:]).filter { id, _ in
@@ -142,24 +117,6 @@ final class ProfileStore {
         save()
     }
 
-    func move(_ profile: Profile, to destination: Int) {
-        guard let index = index(of: profile) else { return }
-        let bounded = min(max(destination, 0), profiles.count - 1)
-        guard bounded != index else { return }
-        let moved = profiles.remove(at: index)
-        profiles.insert(moved, at: bounded)
-        save()
-    }
-
-    func setLaunchProfile(_ id: UUID?) {
-        let resolved = id.flatMap { candidate in
-            profiles.contains { $0.id == candidate } ? candidate : nil
-        }
-        guard resolved != launchProfileID else { return }
-        launchProfileID = resolved
-        save()
-    }
-
     var deletableProfiles: [Profile] {
         profiles.filter { !$0.isOriginal }
     }
@@ -169,9 +126,6 @@ final class ProfileStore {
         profiles.remove(at: index)
         if currentID == profile.id {
             currentID = Profile.originalID
-        }
-        if launchProfileID == profile.id {
-            launchProfileID = nil
         }
         lastUsed[profile.id] = nil
         BrowserProfileContext.forget(profile.id)
@@ -200,7 +154,6 @@ final class ProfileStore {
     private nonisolated struct Stored: Codable, Sendable {
         var profiles: [Profile]
         var currentID: UUID
-        var launchProfileID: UUID?
         var lastUsed: [UUID: Date]?
     }
 
@@ -217,7 +170,6 @@ final class ProfileStore {
             Stored(
                 profiles: profiles,
                 currentID: currentID,
-                launchProfileID: launchProfileID,
                 lastUsed: lastUsed
             ),
             to: file,

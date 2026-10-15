@@ -8,7 +8,7 @@ import Observation
 @Observable
 final class AskSurfaceModel {
     let placement: AskSurface.Placement
-    let browser: BrowserModel
+    private(set) var browser: BrowserModel
     let coordinator: AppCoordinator
     let suggestions = SearchSuggestions()
 
@@ -44,8 +44,8 @@ final class AskSurfaceModel {
     var activeTabID: UUID? {
         browser.activeTab?.id
     }
-    var activeSpaceID: UUID? {
-        browser.activeSpaceID
+    var activeAnchorID: UUID? {
+        browser.activeAnchorID
     }
     var currentURL: String {
         browser.activeTab?.urlString ?? ""
@@ -100,7 +100,7 @@ final class AskSurfaceModel {
     }
 
     var agentMessage: String? {
-        coordinator.agentReply.message(inSpace: activeSpaceID)
+        coordinator.agentReply.message(inAnchor: activeAnchorID)
     }
 
     var restingContent: AskRestingContent? {
@@ -125,10 +125,10 @@ final class AskSurfaceModel {
     }
 
     var activity: AskSurfaceActivity {
-        guard let activeSpaceID,
-              coordinator.agentReply.showsInChrome(inSpace: activeSpaceID)
+        guard let activeAnchorID,
+              coordinator.agentReply.showsInChrome(inAnchor: activeAnchorID)
         else { return .none }
-        let traces = coordinator.conversationLog.traces(forTab: activeSpaceID)
+        let traces = coordinator.conversationLog.traces(forTab: activeAnchorID)
         guard let last = traces.last else { return .none }
         let isRunning = last.state == .running
         let isThinking = isRunning
@@ -216,6 +216,12 @@ final class AskSurfaceModel {
         if !isFocused, placement.mirrorsPageURL {
             interaction.text = url
         }
+    }
+
+    func browserDidChange(_ browser: BrowserModel) {
+        guard browser !== self.browser else { return }
+        self.browser = browser
+        activeTabDidChange()
     }
 
     func activeTabDidChange() {

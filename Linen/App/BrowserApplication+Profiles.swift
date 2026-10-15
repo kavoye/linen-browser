@@ -15,6 +15,9 @@ extension BrowserApplication {
                 coordinator.windowDidClose()
             }
         }
+        for window in windows {
+            window.forgetTabModel(for: profile.id)
+        }
         forgetProfile(profile.id)
     }
 }

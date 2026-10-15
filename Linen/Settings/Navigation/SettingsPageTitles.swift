@@ -28,8 +28,6 @@ enum SettingsPageTitles {
             return String(localized: "Acknowledgements")
         case .websites:
             return website(path)
-        case .profiles:
-            return profile(path, coordinator: coordinator)
         case .provider:
             return assistant(path, coordinator: coordinator)
         default:
@@ -57,14 +55,6 @@ enum SettingsPageTitles {
         guard path.count >= 2, path[0] == "site" else { return nil }
         let scheme = path.count == 3 ? path[2] : "https"
         return SitePermissions.displayName(for: "\(scheme)://\(path[1])")
-    }
-
-    private static func profile(_ path: [String], coordinator: AppCoordinator) -> String? {
-        if path == ["new"] {
-            return String(localized: "New Profile")
-        }
-        let id = UUID(uuidString: path[0])
-        return coordinator.profiles.profiles.first { $0.id == id }?.name
     }
 
     private static func assistant(_ path: [String], coordinator: AppCoordinator) -> String? {

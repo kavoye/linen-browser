@@ -189,20 +189,29 @@ extension OnboardingUI {
                 Spacer(minLength: 0)
 
                 HStack(spacing: 6) {
-                    Image(systemName: "person")
-                        .font(.system(size: 13, weight: .medium))
+                    Image(systemName: "arrow.down")
+                        .font(Theme.Font.rowTitle)
                         .foregroundStyle(.secondary)
                         .frame(width: 28, height: 28)
-                        .padding(.leading, SidebarMetrics.profileLeading)
 
-                    Spacer(minLength: 0)
-
-                    ForEach(["arrow.down.circle", "clock", "gearshape"], id: \.self) { symbol in
-                        Image(systemName: symbol)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, height: 28)
+                    HStack(spacing: 0) {
+                        ForEach(0..<6, id: \.self) { index in
+                            SpaceDotGlyph(
+                                symbol: "person.fill",
+                                growth: index == 0 ? 1 : 0,
+                                isHovered: false,
+                                isHoverActive: false,
+                                motion: .follow
+                            )
+                            .frame(width: 20, height: 28)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+
+                    Image(systemName: "text.menu")
+                        .font(Theme.Font.rowTitle)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
                 }
             }
             .padding(.top, Theme.topBarHeight)

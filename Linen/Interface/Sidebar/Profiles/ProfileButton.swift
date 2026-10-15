@@ -3,26 +3,6 @@
 
 import SwiftUI
 
-struct ProfileGlyph: View {
-    let profile: Profile
-    var size: CGFloat = 22
-
-    var body: some View {
-        Circle()
-            .fill(profile.color.tint.opacity(0.16))
-            .overlay(
-                Circle()
-                    .strokeBorder(profile.color.tint.opacity(0.22), lineWidth: 1)
-            )
-            .overlay {
-                Image(systemName: profile.symbol)
-                    .font(.system(size: size * 0.52, weight: .medium))
-                    .foregroundStyle(profile.color.tint)
-            }
-            .frame(width: size, height: size)
-    }
-}
-
 struct ProfileSwitcherLayer: View {
     let coordinator: AppCoordinator
 
@@ -67,18 +47,22 @@ struct ProfileMenuRows: View {
     let coordinator: AppCoordinator
     @Binding var isPresented: Bool
 
-    private var profiles: ProfileStore {
-        coordinator.profiles
-    }
-
     var body: some View {
-        if !profiles.isPrivate {
-            ForEach(profiles.profiles) { profile in
-                PopoverMenuRow(title: profile.name, isChecked: profile.id == profiles.current.id) {
-                    ProfileGlyph(profile: profile, size: 20)
+        if coordinator.showsSpaces {
+            ForEach(coordinator.spaceStore.spaces) { space in
+                PopoverMenuRow(title: space.name, isChecked: space.id == coordinator.browser.currentSpaceID) {
+                    Circle()
+                        .fill(Color(nsColor: space.color == .gray ? .systemGray : space.color.nsTint))
+                        .frame(width: 20, height: 20)
+                        .overlay {
+                            Image(systemName: space.symbol)
+                                .symbolVariant(.fill)
+                                .font(.system(size: 9.5, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
                 } action: {
                     isPresented = false
-                    Task { await coordinator.switchProfile(to: profile) }
+                    coordinator.switchSpace(to: space)
                 }
                 .disabled(coordinator.isSwitchingProfile)
             }
@@ -91,11 +75,6 @@ struct ProfileMenuRows: View {
             coordinator.enterPrivateBrowsing()
         }
         .disabled(coordinator.isSwitchingProfile)
-
-        PopoverMenuRow(symbol: "person.2", title: String(localized: "Manage Profiles…")) {
-            isPresented = false
-            coordinator.openSettings(.profiles)
-        }
     }
 }
 

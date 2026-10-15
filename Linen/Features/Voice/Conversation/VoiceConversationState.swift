@@ -9,7 +9,7 @@ final class VoiceConversationState {
     var session: OpenAIRealtimeConversation?
     var isPresented = false
     var message: String?
-    @ObservationIgnored var spaceID: UUID?
+    @ObservationIgnored var anchorID: UUID?
 
     var isActive: Bool {
         session?.isActive == true

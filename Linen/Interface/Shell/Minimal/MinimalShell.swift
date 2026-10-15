@@ -50,7 +50,7 @@ struct MinimalShell: View {
     private var chromeIsBusy: Bool {
         coordinator.state == .listening
             || coordinator.statusMessage != nil
-            || coordinator.agentReply.message(inSpace: browser.activeSpaceID) != nil
+            || coordinator.agentReply.message(inAnchor: browser.activeAnchorID) != nil
             || coordinator.pendingAgentQuestion(inChrome: true) != nil
     }
 
@@ -117,7 +117,7 @@ struct MinimalShell: View {
             .visualEffect { [drop = isLeaving ? islandDrop : 0] content, _ in content.offset(y: drop) }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: barOnTop ? .top : .bottom)
 
-            if coordinator.media.model.isActive, !isTabListMounted {
+            if coordinator.media.model.isActive, !isTabListMounted, !isLeaving {
                 MediaSidebarCard(
                     media: coordinator.media,
                     coordinator: coordinator,

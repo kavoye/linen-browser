@@ -19,26 +19,26 @@ final class AgentAttention {
         self.defaults = defaults
         let stored = defaults.dictionary(forKey: Key.seen) as? [String: Int] ?? [:]
         seenFailures = stored.reduce(into: [:]) { found, entry in
-            guard let spaceID = UUID(uuidString: entry.key) else { return }
-            found[spaceID] = entry.value
+            guard let anchorID = UUID(uuidString: entry.key) else { return }
+            found[anchorID] = entry.value
         }
     }
 
-    func review(_ count: Int, inSpace spaceID: UUID?, isShowing: Bool) {
-        guard isShowing, let spaceID else { return }
-        let seen = max(seenFailures[spaceID] ?? 0, count)
-        guard seenFailures[spaceID] != seen else { return }
-        seenFailures[spaceID] = seen
+    func review(_ count: Int, inAnchor anchorID: UUID?, isShowing: Bool) {
+        guard isShowing, let anchorID else { return }
+        let seen = max(seenFailures[anchorID] ?? 0, count)
+        guard seenFailures[anchorID] != seen else { return }
+        seenFailures[anchorID] = seen
         persist()
     }
 
-    func needsAttention(failureCount: Int, inSpace spaceID: UUID?, isShowing: Bool) -> Bool {
-        guard !isShowing, let spaceID else { return false }
-        return failureCount > (seenFailures[spaceID] ?? 0)
+    func needsAttention(failureCount: Int, inAnchor anchorID: UUID?, isShowing: Bool) -> Bool {
+        guard !isShowing, let anchorID else { return false }
+        return failureCount > (seenFailures[anchorID] ?? 0)
     }
 
-    func retainSpaces(_ spaceIDs: Set<UUID>) {
-        let kept = seenFailures.filter { spaceIDs.contains($0.key) }
+    func retainAnchors(_ anchorIDs: Set<UUID>) {
+        let kept = seenFailures.filter { anchorIDs.contains($0.key) }
         guard kept.count != seenFailures.count else { return }
         seenFailures = kept
         persist()
@@ -52,12 +52,12 @@ final class AgentAttention {
 
 extension AppCoordinator {
     var agentMark: AgentActivityDot.State? {
-        let spaceID = browser.activeSpaceID
+        let anchorID = browser.activeAnchorID
         return AgentActivityDot.state(
             isWorking: browser.activeTab?.isAgentWorking == true,
             needsAttention: attention.needsAttention(
-                failureCount: spaceID.map { conversationLog.failureCount(forTab: $0) } ?? 0,
-                inSpace: spaceID,
+                failureCount: anchorID.map { conversationLog.failureCount(forTab: $0) } ?? 0,
+                inAnchor: anchorID,
                 isShowing: sidePanel.isShowing(.activity)
             )
         )
@@ -65,8 +65,8 @@ extension AppCoordinator {
 
     func retainAgentMemory() {
         let live = Set(browser.context.extensions.windowAdapters.flatMap { adapter in
-            adapter.browser?.tabs.map(\.id) ?? []
-        }).union(browser.tabs.map(\.id))
+            (adapter.browser?.tabs.map(\.id) ?? []) + (adapter.browser?.closedTabs.map(\.tabID) ?? [])
+        }).union(browser.tabs.map(\.id)).union(browser.closedTabs.map(\.tabID))
         conversationLog.retainSessionTabs(including: live)
     }
 }
@@ -93,18 +93,18 @@ struct AgentInspector: View {
         browser.activeTab?.id
     }
 
-    private var activeSpaceID: UUID? {
-        browser.activeSpaceID
+    private var activeAnchorID: UUID? {
+        browser.activeAnchorID
     }
 
     private var traces: [ConversationLog.TaskTrace] {
-        guard let activeSpaceID else { return [] }
-        return coordinator.conversationLog.traces(forTab: activeSpaceID)
+        guard let activeAnchorID else { return [] }
+        return coordinator.conversationLog.traces(forTab: activeAnchorID)
     }
 
     private var failureCount: Int {
-        guard let activeSpaceID else { return 0 }
-        return coordinator.conversationLog.failureCount(forTab: activeSpaceID)
+        guard let activeAnchorID else { return 0 }
+        return coordinator.conversationLog.failureCount(forTab: activeAnchorID)
     }
 
     @State private var seed: ConversationLog.TaskTrace?
@@ -127,10 +127,10 @@ struct AgentInspector: View {
                                 traces: traces,
                                 tabID: activeTabID,
                                 browser: browser,
-                                isCompacting: coordinator.agentTurns.compactingSpaceID == activeSpaceID
-                                    && coordinator.agentTurns.compactingSpaceID != nil
-                                    || coordinator.agentReply.isCompacting && coordinator.agentReply.spaceID == activeSpaceID,
-                                compactionMessage: coordinator.agentTurns.compactionMessageSpaceID == activeSpaceID
+                                isCompacting: coordinator.agentTurns.compactingAnchorID == activeAnchorID
+                                    && coordinator.agentTurns.compactingAnchorID != nil
+                                    || coordinator.agentReply.isCompacting && coordinator.agentReply.anchorID == activeAnchorID,
+                                compactionMessage: coordinator.agentTurns.compactionMessageAnchorID == activeAnchorID
                                     ? coordinator.agentTurns.compactionMessage : nil,
                                 onRetry: { trace in
                                     let resumes = trace.canContinue && trace.id == traces.last?.id
@@ -194,7 +194,7 @@ struct AgentInspector: View {
         .onChange(of: isShowing, initial: true) { _, _ in
             review()
         }
-        .onChange(of: activeSpaceID) { _, _ in
+        .onChange(of: activeAnchorID) { _, _ in
             review()
         }
         .onChange(of: failureCount) { _, _ in
@@ -207,7 +207,7 @@ struct AgentInspector: View {
     }
 
     private func review() {
-        coordinator.attention.review(failureCount, inSpace: activeSpaceID, isShowing: isShowing)
+        coordinator.attention.review(failureCount, inAnchor: activeAnchorID, isShowing: isShowing)
     }
 }
 

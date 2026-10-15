@@ -61,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isRunningTests else { return }
         for coordinator in application.windows {
             coordinator.browser.saveBlocking()
+            coordinator.saveParkedTabModels()
             coordinator.conversationLog.saveBlocking()
         }
         application.finishTermination()

@@ -128,24 +128,24 @@ extension AppCoordinator {
         agentTurns.cancel()
         mcpServer.cancelActiveCall()
         let tab = browser.ensureActiveTab()
-        let spaceID = browser.spaceID(of: tab.id)
-        voiceConversation.spaceID = spaceID
+        let anchorID = browser.anchorID(of: tab.id)
+        voiceConversation.anchorID = anchorID
         let settings = OpenAISettingsStore.load(providerID: provider.id).voice
         let conversation = OpenAIRealtimeConversation(
             settings: settings,
             connect: OpenAIRealtimeConversation.connection(endpoint: endpoint, key: key, model: settings.conversationModel)
         ) { [weak self] request in
-            guard let self, browser.activeSpaceID == spaceID else { throw CancellationError() }
+            guard let self, browser.activeAnchorID == anchorID else { throw CancellationError() }
             mcpServer.cancelActiveCall()
             let result = try await agentTurns.perform(utterance: request)
             let state = conversationLog.traces.first { $0.id == result.taskID }?.state.rawValue ?? "unknown"
             let output: OpenAIJSON = ["state": .string(state), "result": .string(result.text)]
             return try output.text()
         }
-        conversation.onTranscriptChanged = conversationLog.voiceTranscriptWriter(tabID: spaceID, providerID: provider.id)
+        conversation.onTranscriptChanged = conversationLog.voiceTranscriptWriter(tabID: anchorID, providerID: provider.id)
         conversation.onUsage = { [weak self] usage in
             self?.conversationLog.recordUsage(
-                tabID: spaceID, input: max(0, usage["input_tokens"].int ?? 0),
+                tabID: anchorID, input: max(0, usage["input_tokens"].int ?? 0),
                 cached: max(0, usage["input_token_details"]["cached_tokens"].int ?? 0),
                 output: max(0, usage["output_tokens"].int ?? 0)
             )

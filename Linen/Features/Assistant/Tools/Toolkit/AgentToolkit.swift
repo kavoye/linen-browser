@@ -573,7 +573,7 @@ final class AgentToolkit {
     private var visibleTaskTab: BrowserTab? {
         guard let tab = browser.activeTab else { return nil }
         guard let task else { return tab }
-        guard browser.spaceID(of: tab.id) == task.spaceID || agentOpenedTabIDs.contains(tab.id) else { return nil }
+        guard browser.anchorID(of: tab.id) == task.anchorID || agentOpenedTabIDs.contains(tab.id) else { return nil }
         return tab
     }
 
@@ -729,7 +729,7 @@ final class AgentToolkit {
             return (nil, String(localized: "The active tab changed before the assistant could use it."))
         }
         if requiresTaskTab, mentioned == nil, let task,
-           browser.spaceID(of: tab.id) != task.spaceID,
+           browser.anchorID(of: tab.id) != task.anchorID,
            !agentOpenedTabIDs.contains(tab.id) {
             return (nil, String(localized: "The active tab changed before the assistant could use it."))
         }
@@ -847,7 +847,7 @@ extension AgentToolkit {
         if let output = cancellationOutput(for: step) {
             return output
         }
-        let answers = await questions.put(put, inSpace: task?.spaceID)
+        let answers = await questions.put(put, inAnchor: task?.anchorID)
         let trimmed = answers.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             let output = "Nothing was answered. Carry on with what you have."

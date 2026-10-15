@@ -30,10 +30,6 @@ enum SidebarMetrics {
         LoomChrome.canvasInset - LoomChrome.sidebarContentBalanceOffset
     }
 
-    static var profileLeading: CGFloat {
-        max(0, rowContentPadding(style: .full) + rowIconSize / 2 - 14)
-    }
-
     static let rowHeight: CGFloat = 32
 
     static func rowContentPadding(style: SidebarStyle) -> CGFloat {

@@ -7,18 +7,22 @@ import os
 extension AppCoordinator {
     // MARK: - Profiles
 
-    func switchProfile(to profile: Profile) async {
+    func switchProfile(
+        to profile: Profile,
+        landingIn spaceID: UUID? = nil,
+        onCommit: (() -> Void)? = nil
+    ) async {
         guard !isClosed else { return }
         if profile.isPrivate {
             requestNewWindow(isPrivate: true)
             return
         }
         await profileSwitches.run { [weak self] in
-            await self?.performProfileSwitch(to: profile)
+            await self?.performProfileSwitch(to: profile, landingIn: spaceID, onCommit: onCommit)
         }
     }
 
-    private func performProfileSwitch(to profile: Profile) async {
+    private func performProfileSwitch(to profile: Profile, landingIn spaceID: UUID?, onCommit: (() -> Void)?) async {
         guard !isClosed, profile.id != profiles.current.id else { return }
         switchingTo = profile
         mcpServer.disconnect(browser: browser)
@@ -38,43 +42,52 @@ extension AppCoordinator {
         closePalette()
         timing.mark("quiesce")
 
-        browser.markSessionClosed()
-        if profiles.isPrivate {
-            browser.downloads.forgetPrivateDownloads()
-        }
-        timing.mark("save session")
-
+        let outgoing = browser
+        let incoming = tabModel(for: profile)
+        onCommit?()
+        outgoing.markSessionClosed()
         closePeekImmediately()
-        extensions.unregister(browser: browser)
-        browser.closeAllTabs(saving: false)
+        extensions.unregister(browser: outgoing)
+        outgoing.cancelTabSwitching()
         if profiles.isPrivate {
-            let context = browser.context
+            outgoing.downloads.forgetPrivateDownloads()
+            outgoing.closeAllTabs(saving: false)
+            let context = outgoing.context
             if let application {
                 application.endPrivateSession(context)
             } else {
                 Task { await context.endPrivateSession() }
             }
+        } else {
+            park(outgoing)
         }
-        timing.mark("close tabs")
+        parkedModels[profile.id] = nil
+        timing.mark("park")
 
+        show(incoming)
         applyProfileStores(profile)
         profiles.markCurrent(profile)
         application?.configureExtensions(extensions, profile: profile)
         timing.mark("adopt stores")
 
-        extensions.register(browser: browser, window: nativeWindow)
+        extensions.register(browser: incoming, window: nativeWindow)
         configureWindowCallbacks()
         prepareWindowWebServices()
         followSettings()
         updateWindowAppearance()
         timing.mark("extensions")
 
-        browser.restoreSession()
+        if let spaceID {
+            spaceSlider.land(in: spaceID)
+        }
+        incoming.reopenSession()
         retainAgentMemory()
-        browser.ensureActiveTab()
-        timing.mark("restore session")
+        incoming.ensureActiveTab()
+        timing.mark("show")
 
-        notice.show(profile.name)
+        if spaceID == nil {
+            notice.show(profile.name)
+        }
         timing.log(isPrivate: profile.isPrivate)
 
         await extensions.start()
@@ -92,9 +105,11 @@ extension AppCoordinator {
         } else {
             context = .shared(for: profile, settingsOwner: owner)
         }
-        browser.context = context
+        if browser.context !== context {
+            browser.context = context
+            browser.adopt(database: context.database, sitePermissions: context.sitePermissions, privately: profile.isPrivate)
+        }
         linkPeek.use(settings: context.settings)
-        browser.adopt(database: context.database, sitePermissions: context.sitePermissions, privately: profile.isPrivate)
         agentTurns.adopt(context: context)
         if profile.isPrivate {
             privateSession = PrivateBrowsingSession(database: context.database, dataStore: context.dataStore)
@@ -102,6 +117,7 @@ extension AppCoordinator {
             privateSession = nil
         }
         configureEngines()
+        adoptSpaces(for: profile)
     }
 
 }

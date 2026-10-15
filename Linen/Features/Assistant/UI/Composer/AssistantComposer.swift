@@ -69,7 +69,7 @@ struct AssistantComposer: View {
             field
         }
         .onDrop(of: [UTType.fileURL, UTType.image], isTargeted: $dropTargeted, perform: attachments.drop)
-        .onChange(of: coordinator.browser.activeSpaceID) { _, _ in
+        .onChange(of: coordinator.browser.activeAnchorID) { _, _ in
             attachments.clear()
             draft = ""
             mentions = []

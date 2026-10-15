@@ -41,7 +41,7 @@ struct SidebarSplitRow: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
 
     @State private var hoveringRow = false
-    @State private var windowFrame: CGRect = .zero
+    @State private var windowFrame = SidebarRowAnchor()
 
     private var interaction: SplitRowInteraction {
         .mode(isOnScreen: isOnScreen)
@@ -106,24 +106,27 @@ struct SidebarSplitRow: View {
             radius: radius
         )
         .opacity(isLifted ? 0 : 1)
-        .contentShape(Rectangle())
-        .onHover { over in
-            withAnimation(Theme.Motion.quick) { hoveringRow = over }
-            if over {
-                coordinator.tabPreview.hover(.split(split, panes), anchor: windowFrame)
-            } else {
-                coordinator.tabPreview.unhover(panes.first?.id ?? leading.id)
+        .sidebarInteraction(context.isInteractive) { row in
+            row
+            .contentShape(Rectangle())
+            .onHover { over in
+                withAnimation(Theme.Motion.quick) { hoveringRow = over }
+                if over {
+                    coordinator.tabPreview.hover(.split(split, panes), anchor: windowFrame.frame)
+                } else {
+                    coordinator.tabPreview.unhover(panes.first?.id ?? leading.id)
+                }
             }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
+                context.frames.record(item, at: $0)
+            }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                windowFrame.frame = frame
+                coordinator.tabPreview.moved(panes.first?.id ?? leading.id, anchor: frame)
+            }
+            .onDisappear { coordinator.tabPreview.unhover(panes.first?.id ?? leading.id) }
+            .contextMenu { menu }
         }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
-            context.frames.record(item, at: $0)
-        }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-            windowFrame = frame
-            coordinator.tabPreview.moved(panes.first?.id ?? leading.id, anchor: frame)
-        }
-        .onDisappear { coordinator.tabPreview.unhover(panes.first?.id ?? leading.id) }
-        .contextMenu { menu }
     }
 
     private func seamLine(_ seam: SplitSeam) -> some View {
@@ -203,6 +206,7 @@ struct SidebarSplitRow: View {
         Divider()
 
         SidebarFolderMenuItems(items: carried, browser: browser)
+        SidebarSpaceMenuItems(items: carried, coordinator: coordinator)
         Divider()
 
         Button(role: .destructive) {
@@ -226,7 +230,7 @@ private struct SplitRowCell: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @State private var hovering = false
     @State private var controlsWidth: CGFloat = 0
-    @State private var windowFrame: CGRect = .zero
+    @State private var windowFrame = SidebarRowAnchor()
 
     private var browser: BrowserModel {
         context.browser
@@ -236,7 +240,7 @@ private struct SplitRowCell: View {
     }
 
     private var isFocused: Bool {
-        coordinator.sidebarDestination == .tab(tab.id) && browser.isVisibleInSplit(tab)
+        context.isActive(tab.id) && browser.isVisibleInSplit(tab)
     }
 
     private var showsPinReturn: Bool {
@@ -292,25 +296,28 @@ private struct SplitRowCell: View {
         .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sidebarHoverFill(isHovering: answersAlone && hovering, in: shape)
-        .contentShape(Rectangle())
-        .onTapGesture { onTap(tab) }
-        .onMiddleClick {
-            coordinator.tabPreview.dismiss()
-            coordinator.closeAskingIfPinned(tab)
-        }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-            windowFrame = frame
-            coordinator.tabPreview.moved(tab.id, anchor: frame)
-        }
-        .onHover { over in
-            withAnimation(Theme.Motion.quick) { hovering = over }
-            if over {
-                coordinator.tabPreview.hover(tab, anchor: windowFrame)
-            } else {
-                coordinator.tabPreview.unhover(tab.id)
+        .sidebarInteraction(context.isInteractive) { row in
+            row
+            .contentShape(Rectangle())
+            .onTapGesture { onTap(tab) }
+            .onMiddleClick {
+                coordinator.tabPreview.dismiss()
+                coordinator.closeAskingIfPinned(tab)
             }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                windowFrame.frame = frame
+                coordinator.tabPreview.moved(tab.id, anchor: frame)
+            }
+            .onHover { over in
+                withAnimation(Theme.Motion.quick) { hovering = over }
+                if over {
+                    coordinator.tabPreview.hover(tab, anchor: windowFrame.frame)
+                } else {
+                    coordinator.tabPreview.unhover(tab.id)
+                }
+            }
+            .onDisappear { coordinator.tabPreview.unhover(tab.id) }
         }
-        .onDisappear { coordinator.tabPreview.unhover(tab.id) }
     }
 }
 

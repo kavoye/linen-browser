@@ -129,21 +129,25 @@ struct ProfileSwitchTests {
 
         await coordinator.switchProfile(to: fixture.work)
 
+        let workBrowser = coordinator.browser
         let workManager = coordinator.extensions
-        let workWindow = try #require(workManager.adapter(for: browser))
+        let workWindow = try #require(workManager.adapter(for: workBrowser))
+        #expect(workBrowser !== browser)
         #expect(personalManager !== workManager)
         #expect(personalManager.adapter(for: browser) == nil)
         #expect(originalWindow.browser == nil)
-        #expect(personalTab.isClosed)
+        #expect(!personalTab.isClosed)
+        #expect(coordinator.parkedModels[Profile.originalID] === browser)
         #expect(departingPeek.isClosed && visiblePeek.isClosed)
         #expect(coordinator.peek.tab == nil)
         #expect(visiblePeek.onOpenInNewTab == nil)
 
         await coordinator.switchProfile(to: .original())
 
+        #expect(coordinator.browser === browser)
         #expect(coordinator.extensions === personalManager)
         #expect(personalManager.adapter(for: browser) !== originalWindow)
-        #expect(workManager.adapter(for: browser) == nil)
+        #expect(workManager.adapter(for: workBrowser) == nil)
         #expect(workWindow.browser == nil)
         #expect(browser.activeTab?.id == personalTabID)
         #expect(!coordinator.isSwitchingProfile)

@@ -16,7 +16,7 @@ struct FolderSection: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.windowColorScheme) private var windowColorScheme
     @State private var hovering = false
-    @State private var windowFrame: CGRect = .zero
+    @State private var windowFrame = SidebarRowAnchor()
 
     private var browser: BrowserModel {
         context.browser
@@ -135,38 +135,41 @@ struct FolderSection: View {
                 hoverTint: folder.color.tint,
                 radius: showsOutline ? Self.rowRadius(depth: depth) : Theme.Radius.hover
             )
-            .contentShape(Rectangle())
-            .onHover { over in
-                hovering = over
-                if over {
-                    context.coordinator.tabPreview.hover(
-                        .folder(folder, browser.tabs(in: folder)),
-                        anchor: windowFrame
-                    )
-                } else {
-                    context.coordinator.tabPreview.unhover(folder.id)
+            .sidebarInteraction(context.isInteractive) { row in
+                row
+                .contentShape(Rectangle())
+                .onHover { over in
+                    hovering = over
+                    if over {
+                        context.coordinator.tabPreview.hover(
+                            .folder(folder, browser.tabs(in: folder)),
+                            anchor: windowFrame.frame
+                        )
+                    } else {
+                        context.coordinator.tabPreview.unhover(folder.id)
+                    }
                 }
-            }
-            .onDisappear { context.coordinator.tabPreview.unhover(folder.id) }
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
-                context.frames.record(item, at: $0)
-            }
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-                windowFrame = frame
-                context.coordinator.tabPreview.moved(folder.id, anchor: frame)
-            }
-            .onTapGesture { tapped() }
-            .overlay {
-                FolderContextMenuCatcher {
-                    FolderContextMenu.make(
-                        folder: folder,
-                        browser: browser,
-                        coordinator: context.coordinator,
-                        selected: context.selection.count > 1 && isSelected
-                            ? Array(context.selection.items)
-                            : [],
-                        onRename: beginRename
-                    )
+                .onDisappear { context.coordinator.tabPreview.unhover(folder.id) }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
+                    context.frames.record(item, at: $0)
+                }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                    windowFrame.frame = frame
+                    context.coordinator.tabPreview.moved(folder.id, anchor: frame)
+                }
+                .onTapGesture { tapped() }
+                .overlay {
+                    FolderContextMenuCatcher {
+                        FolderContextMenu.make(
+                            folder: folder,
+                            browser: browser,
+                            coordinator: context.coordinator,
+                            selected: context.selection.count > 1 && isSelected
+                                ? Array(context.selection.items)
+                                : [],
+                            onRename: beginRename
+                        )
+                    }
                 }
             }
 

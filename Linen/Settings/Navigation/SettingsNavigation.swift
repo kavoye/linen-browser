@@ -9,7 +9,6 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case search
     case provider
     case voice
-    case profiles
     case privacy
     case autofill
     case websites
@@ -35,8 +34,6 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "Assistant"
         case .voice:
             "Voice"
-        case .profiles:
-            "Profiles"
         case .autofill:
             "Autofill"
         case .privacy:
@@ -68,8 +65,6 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             "sparkles"
         case .voice:
             "waveform"
-        case .profiles:
-            "person.2"
         case .autofill:
             "text.rectangle"
         case .privacy:
@@ -99,8 +94,6 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             .browsing
         case .advanced, .experiments, .about:
             .system
-        case .profiles:
-            nil
         }
     }
 
@@ -116,8 +109,6 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             Color(nsColor: .systemPurple)
         case .voice:
             Color(nsColor: .systemRed)
-        case .profiles:
-            Color(nsColor: .systemCyan)
         case .autofill:
             Color(nsColor: .systemPink)
         case .privacy:
@@ -151,8 +142,6 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
             ["voice", "speech", "spoken", "read aloud", "push to talk", "microphone", "dictation", "shortcut",
              "conversation", "text to speech", "transcription", "billing", "cost",
              ]
-        case .profiles:
-            ["profile", "profiles", "work", "personal", "separate", "account", "switch", "identity"]
         case .autofill:
             ["contacts", "addresses", "name", "email", "phone", "passwords", "passkeys", "cards", "apple pay", "wallet"]
         case .privacy:
@@ -210,15 +199,6 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
         }
     }
 
-    var header: LocalizedStringResource? {
-        switch self {
-        case .setup, .intelligence:
-            nil
-        case .browsing, .system:
-            title
-        }
-    }
-
     var categories: [SettingsCategory] {
         SettingsCategory.allCases.filter { $0.group == self }
     }
@@ -227,9 +207,6 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 struct SettingsNavigator: View {
     @Binding var selection: SettingsCategory
     @Binding var query: String
-    var profileName: String
-    var profileSymbol: String
-    var profileTint: Color
     var badges: [SettingsCategory: String] = [:]
     var showsNames = true
     var onOpen: (SettingsEntry) -> Void = { _ in }
@@ -266,20 +243,7 @@ struct SettingsNavigator: View {
     private var iconsOnly: some View {
         ScrollView {
             VStack(spacing: 4) {
-                NavigatorIcon(
-                    symbol: profileSymbol,
-                    tint: profileTint,
-                    title: profileName,
-                    isSelected: selection == .profiles
-                ) {
-                    selection = .profiles
-                }
-
-                Divider()
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-
-                ForEach(SettingsCategory.allCases.filter { $0 != .profiles }) { category in
+                ForEach(SettingsCategory.allCases) { category in
                     NavigatorIcon(
                         symbol: category.symbol,
                         tint: category.tint,
@@ -299,20 +263,9 @@ struct SettingsNavigator: View {
 
     private var named: some View {
         VStack(alignment: .leading, spacing: 0) {
-            NavigatorProfileBlock(
-                name: profileName,
-                symbol: profileSymbol,
-                tint: profileTint,
-                isSelected: selection == .profiles
-            ) {
-                selection = .profiles
-            }
-            .padding(.horizontal, 10)
-            .padding(.top, 10)
-
             search
                 .padding(.horizontal, 10)
-                .padding(.top, 12)
+                .padding(.top, 10)
                 .padding(.bottom, 14)
 
             ScrollView {
@@ -337,10 +290,6 @@ struct SettingsNavigator: View {
     private var categoryList: some View {
         ForEach(groups, id: \.group.id) { entry in
             VStack(alignment: .leading, spacing: 1) {
-                if let title = entry.group.header {
-                    header(title)
-                }
-
                 ForEach(entry.categories) { category in
                     NavigatorRow(
                         category: category,
@@ -519,56 +468,6 @@ private struct NavigatorRow: View {
             }
             .padding(.horizontal, 7)
             .frame(height: 35)
-            .selectionBackground(
-                isSelected: isSelected,
-                isHovering: hovering,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(Theme.Motion.quick, value: hovering)
-    }
-}
-
-private struct NavigatorProfileBlock: View {
-    let name: String
-    let symbol: String
-    let tint: Color
-    let isSelected: Bool
-    let action: () -> Void
-
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 9) {
-                Circle()
-                    .fill(tint)
-                    .frame(width: 30, height: 30)
-                    .overlay {
-                        Image(systemName: symbol)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.white)
-                    }
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(verbatim: name)
-                        .font(.system(size: 12.5, weight: .semibold))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    Text("Manage profiles")
-                        .font(Theme.Font.micro)
-                        .foregroundStyle(.tertiary)
-                }
-
-                Spacer(minLength: 6)
-            }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 6)
             .selectionBackground(
                 isSelected: isSelected,
                 isHovering: hovering,

@@ -40,12 +40,20 @@ final class BrowserMCPServer {
         #endif
     }
 
-    init(
+    convenience init(
         browser: BrowserModel, endpoint: String = LocalMCPEndpoint.path,
         defaults: UserDefaults? = nil, canListen: (() -> Bool)? = nil,
         available: @escaping () -> Bool
     ) {
-        target = { browser }
+        self.init(following: { browser }, endpoint: endpoint, defaults: defaults, canListen: canListen, available: available)
+    }
+
+    init(
+        following current: @escaping () -> BrowserModel?, endpoint: String = LocalMCPEndpoint.path,
+        defaults: UserDefaults? = nil, canListen: (() -> Bool)? = nil,
+        available: @escaping () -> Bool
+    ) {
+        target = current
         self.endpoint = endpoint
         self.available = { _ in available() }
         self.canListen = canListen ?? available

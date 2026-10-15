@@ -52,7 +52,7 @@ struct OpenAIMCPLiveTests {
             }
             let approval = try OpenAIMCPApproval(pending, destination: "https://mcp.deepwiki.com/mcp")
             let questions = AgentQuestionModel()
-            let ask = questions.present([.init(text: approval.question, options: [OpenAIMCPApproval.deny, OpenAIMCPApproval.approve])], inSpace: UUID())
+            let ask = questions.present([.init(text: approval.question, options: [OpenAIMCPApproval.deny, OpenAIMCPApproval.approve])], inAnchor: UUID())
             questions.answer(OpenAIMCPApproval.approve)
             let answer = await questions.result(for: ask)
             let output = Transcript.ToolOutput(id: approval.id, toolName: "askUser", segments: [.text(.init(content: answer))])

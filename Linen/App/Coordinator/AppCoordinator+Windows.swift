@@ -5,8 +5,8 @@ import AppKit
 import WebKit
 
 extension AppCoordinator {
-    func tabDidClose(_ tab: BrowserTab) {
-        if voiceConversation.spaceID == tab.id {
+    func tabDidClose(_ tab: BrowserTab, in model: BrowserModel) {
+        if voiceConversation.anchorID == tab.id {
             endVoiceConversation()
         }
         mediaDock.forget(tab.id)
@@ -18,7 +18,7 @@ extension AppCoordinator {
             media.releaseControl()
             dockSuccessor(to: tab.id)
         }
-        if agentTurns.closeTab(tab.id) {
+        if agentTurns.closeTab(tab.id, keepingConversation: model.closedTabs.last?.tabID == tab.id) {
             voiceInput.clearTranscript()
             statusMessage = nil
         }
@@ -26,15 +26,17 @@ extension AppCoordinator {
 
     func configureWindowCallbacks() {
         let extensionTabClosed = browser.onTabClosed
-        browser.onTabClosed = { [weak self] tab in
+        browser.onTabClosed = { [weak self, weak browser] tab in
             extensionTabClosed?(tab)
-            self?.tabDidClose(tab)
+            guard let browser else { return }
+            self?.tabDidClose(tab, in: browser)
         }
+        followReopening(in: browser)
         let extensionTabChanged = browser.onActiveTabChanged
         browser.onActiveTabChanged = { [weak self] newTab, previousTab in
             extensionTabChanged?(newTab, previousTab)
             guard let self else { return }
-            if voiceConversation.spaceID != browser.activeSpaceID {
+            if voiceConversation.anchorID != browser.activeAnchorID {
                 voiceConversation.session?.stop()
             }
             followMedia(to: newTab, from: previousTab)
@@ -124,15 +126,20 @@ extension AppCoordinator {
     private func crossfadeAppearanceChange(in window: NSWindow, to appearance: NSAppearance?) {
         let before = window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua])
         let after = (appearance ?? NSApp.effectiveAppearance).bestMatch(from: [.aqua, .darkAqua])
-        if window.isVisible, before != after,
-           let layer = window.contentView?.superview?.layer ?? window.contentView?.layer {
-            let fade = CATransition()
-            fade.type = .fade
-            fade.duration = 0.3
-            fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            layer.add(fade, forKey: "appearance")
+        if before != after {
+            crossfadeNextFrame(in: window)
         }
         window.appearance = appearance
+    }
+
+    func crossfadeNextFrame(in window: NSWindow? = nil) {
+        guard let window = window ?? nativeWindow, window.isVisible,
+              let layer = window.contentView?.superview?.layer ?? window.contentView?.layer else { return }
+        let fade = CATransition()
+        fade.type = .fade
+        fade.duration = 0.3
+        fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        layer.add(fade, forKey: "appearance")
     }
 
     var handoffURL: URL? {
@@ -192,6 +199,7 @@ extension AppCoordinator {
         browser.cancelPendingSave()
         closePeekImmediately()
         browser.closeAllTabs(saving: false)
+        closeParkedTabModels()
         application?.didClose(self)
         nativeWindow?.userActivity?.invalidate()
         releaseWindowHost()

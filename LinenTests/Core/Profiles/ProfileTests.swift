@@ -43,7 +43,6 @@ struct ProfileTests {
 
         #expect(store.profiles.count == 1)
         #expect(store.current.isOriginal)
-        #expect(!store.hasMultiple)
     }
 
     /// The whole no-migration claim. If these paths ever move, every existing
@@ -79,14 +78,6 @@ struct ProfileTests {
         #expect(work.databaseURL != school.databaseURL)
         #expect(work.zoomFile != school.zoomFile)
         #expect(work.permissionsFile != school.permissionsFile)
-    }
-
-    @Test func addingAProfileMakesTheSwitcherWorthShowing() {
-        let (store, _) = makeStore()
-        #expect(!store.hasMultiple)
-
-        store.add(name: "Work")
-        #expect(store.hasMultiple)
     }
 
     @Test func anUnnamedProfileStillGetsAName() {
@@ -162,64 +153,25 @@ struct ProfileTests {
         #expect(reopened.profiles.contains { $0.isOriginal })
     }
 
-    // MARK: - Order and launch
+    // MARK: - Launch
 
-    @Test func theOrderOfProfilesIsTheUsersToArrange() throws {
-        let (store, file) = makeStore()
-        let work = store.add(name: "Work")
-        store.add(name: "School")
-
-        store.move(work, to: 0)
-        #expect(store.profiles.first?.id == work.id)
-
-        let reopened = ProfileStore(file: file)
-        #expect(reopened.profiles.map(\.name) == ["Work", "Personal", "School"])
-    }
-
-    @Test func movingPastTheEndsStaysInTheList() {
-        let (store, _) = makeStore()
-        let work = store.add(name: "Work")
-
-        store.move(work, to: 99)
-        #expect(store.profiles.last?.id == work.id)
-        store.move(work, to: -5)
-        #expect(store.profiles.first?.id == work.id)
-    }
-
-    /// A pinned profile beats where the browser happened to be when it quit.
-    @Test func aPinnedProfileIsWhatTheNextLaunchOpens() {
-        let (store, file) = makeStore()
-        let work = store.add(name: "Work")
-        store.setLaunchProfile(work.id)
-        store.markCurrent(Profile.original())
-
-        let reopened = ProfileStore(file: file)
-        #expect(reopened.currentID == work.id)
-        #expect(reopened.launchProfileID == work.id)
-    }
-
-    @Test func noPinnedProfileReopensTheLastOneUsed() {
+    @Test func theNextLaunchOpensTheLastProfileUsed() {
         let (store, file) = makeStore()
         let work = store.add(name: "Work")
         store.markCurrent(work)
 
-        #expect(store.launchProfileID == nil)
         #expect(ProfileStore(file: file).currentID == work.id)
     }
 
-    /// Deleting the profile the browser was told to open must not leave a
-    /// launch pointing at nothing.
-    @Test func deletingThePinnedProfileForgetsThePin() async {
+    @Test func aLaunchPinFromAnEarlierVersionIsIgnored() throws {
         let (store, file) = makeStore()
         let work = store.add(name: "Work")
-        store.setLaunchProfile(work.id)
+        store.markCurrent(Profile.original())
+        var stored = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        stored["launchProfileID"] = work.id.uuidString
+        try JSONSerialization.data(withJSONObject: stored).write(to: file)
 
-        await store.remove(work)
-        #expect(store.launchProfileID == nil)
-
-        let reopened = ProfileStore(file: file)
-        #expect(reopened.launchProfileID == nil)
-        #expect(reopened.current.isOriginal)
+        #expect(ProfileStore(file: file).current.isOriginal)
     }
 
     @Test func aNewProfileStartsGrey() {

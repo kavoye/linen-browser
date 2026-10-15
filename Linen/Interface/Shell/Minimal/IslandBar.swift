@@ -188,7 +188,7 @@ struct IslandBar: View {
             )
 
             ToolbarButton(
-                symbol: "ellipsis",
+                symbol: "text.menu",
                 enabled: true,
                 isOn: isMoreOpen,
                 help: String(localized: "More")
@@ -229,6 +229,9 @@ struct IslandBar: View {
         .environment(\.chromeWash, .of(floating.color, isLight: onLight))
         .environment(\.colorScheme, onLight ? .light : .dark)
         .animation(nil, value: onLight)
+        .onChange(of: ObjectIdentifier(browser)) { _, _ in
+            surface.browserDidChange(browser)
+        }
     }
 }
 

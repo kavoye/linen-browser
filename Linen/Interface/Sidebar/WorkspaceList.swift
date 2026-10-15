@@ -10,6 +10,7 @@ private nonisolated enum WorkspaceListCoordinateSpace {
 
 private enum SpringLoad {
     static let dwell: Duration = .milliseconds(250)
+    static let spaceDwell: Duration = .milliseconds(450)
 }
 
 private struct WorkspaceListFadeMask: View {
@@ -45,9 +46,11 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
     let contentInsets: EdgeInsets
 
     @State private var pinsCarried = false
+    @State private var scrollPosition = ScrollPosition(edge: .top)
     @State private var reopening: [UUID] = []
     @State private var dwelling: UUID?
     @State private var dwell: Task<Void, Never>?
+    @State private var spaceDwell: Task<Void, Never>?
 
     private var model: SidebarDragModel {
         coordinator.sidebarDrag
@@ -74,6 +77,10 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
     }
 
     private var sections: (kept: [SidebarItem], loose: [SidebarItem]) {
+        if let held = coordinator.overlays.spaceSlide.held {
+            let kept = held.prefix { browser.isKept($0) }
+            return (Array(kept), Array(held.dropFirst(kept.count)))
+        }
         let items = browser.sidebarItems
         let cut = plan.cut(pinsCarried: pinsCarried)
         guard cut > 0 else { return ([], items) }
@@ -140,8 +147,34 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             }
             .padding(.leading, contentInsets.leading)
             .padding(.trailing, contentInsets.trailing)
+            .modifier(SpaceListInk(browser: browser, coordinator: coordinator))
+            .modifier(SpaceSlideOffset(slide: coordinator.overlays.spaceSlide))
+            .opacity(coordinator.overlays.spaceSlide.isGliding ? 0 : 1)
+            .animation(nil, value: coordinator.overlays.spaceSlide.isGliding)
         }
         .scrollIndicators(.never)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .scrollDisabled(coordinator.overlays.spaceSlide.isSliding)
+        .scrollPosition($scrollPosition)
+        .onChange(of: browser.currentSpaceID) { _, _ in
+            scrollPosition.scrollTo(edge: .top)
+        }
+        .overlay(alignment: .top) {
+            SpacePeerList(
+                browser: browser,
+                coordinator: coordinator,
+                slide: coordinator.overlays.spaceSlide,
+                contentInsets: contentInsets
+            )
+            .opacity(coordinator.overlays.spaceSlide.isGliding ? 0 : 1)
+            .animation(nil, value: coordinator.overlays.spaceSlide.isGliding)
+        }
+        .overlay {
+            SpaceGlideStage(coordinator: coordinator, contentInsets: contentInsets)
+        }
+        .overlay(alignment: .trailing) {
+            SpaceCreatePull(slide: coordinator.overlays.spaceSlide)
+        }
         .scrollEdgeEffectHidden(true, for: .bottom)
         .onGeometryChange(for: CGRect.self) { proxy in
             let frame = proxy.frame(in: .named(WorkspaceListCoordinateSpace.name))
@@ -153,6 +186,9 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
                 height: max(0, frame.height - insets.top - insets.bottom)
             )
         } action: { model.listViewport = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
+            coordinator.overlays.spaceSlide.width = $0 + 24
+        }
         .mask {
             WorkspaceListFadeMask()
         }
@@ -262,6 +298,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
                 model.target = nil
             }
             rest()
+            settleSpaceSpring()
             return
         }
         coordinator.aimWindowDrag(at: nil)
@@ -294,6 +331,11 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             return
         }
 
+        if springSpace(at: inWindow) {
+            rest()
+            return
+        }
+
         if drag != nil {
             react(at: value.location, in: slots)
         }
@@ -311,6 +353,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             coordinator.tabPreview.endSuppression()
             coordinator.aimWindowDrag(at: nil)
             model.clearDrop()
+            settleSpaceSpring()
         }
         guard let drag, !drag.landing else { return }
         let lead = drag.lead
@@ -462,6 +505,44 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             browser.folder(id: target)?.isExpanded = true
             dwelling = nil
             dwell = nil
+        }
+    }
+
+    private func springSpace(at point: CGPoint) -> Bool {
+        guard let id = model.spaceDot(at: point) else {
+            settleSpaceSpring()
+            return false
+        }
+        guard id != model.springSpaceID else { return true }
+        spaceDwell?.cancel()
+        spaceDwell = nil
+        guard let space = coordinator.spaceStore.space(id: id), space.id != browser.currentSpaceID,
+              space.profileID == coordinator.profiles.current.id
+        else {
+            model.springSpaceID = nil
+            return true
+        }
+        model.springSpaceID = id
+        spaceDwell = Task {
+            try? await Task.sleep(for: SpringLoad.spaceDwell)
+            guard !Task.isCancelled, model.springSpaceID == id, let drag = model.drag, !drag.landing,
+                  !coordinator.spaceSlider.isLanding
+            else {
+                model.springSpaceID = nil
+                return
+            }
+            spaceDwell = nil
+            coordinator.moveToSpace(drag.items, space: space)
+            coordinator.switchSpace(to: space)
+        }
+        return true
+    }
+
+    private func settleSpaceSpring() {
+        spaceDwell?.cancel()
+        spaceDwell = nil
+        if model.springSpaceID != nil {
+            model.springSpaceID = nil
         }
     }
 

@@ -4,6 +4,15 @@
 import AppKit
 import WebKit
 
+enum SpaceShortcut {
+    static let slots = 1...9
+    static let modifiers: NSEvent.ModifierFlags = [.control]
+
+    static func label(at index: Int) -> String? {
+        slots.contains(index + 1) ? "⌃\(index + 1)" : nil
+    }
+}
+
 @MainActor
 enum ShortcutPriority {
     private static let leftArrow = String(UnicodeScalar(NSLeftArrowFunctionKey)!)
@@ -293,6 +302,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             menu.items.last?.tag = slot - 1
         }
         menu.addItem(hidden(command("Show Last Tab", #selector(showLastTab), key: "9")))
+        for slot in SpaceShortcut.slots {
+            menu.addItem(hidden(command("Show Space \(slot)", #selector(showSpaceAtIndex(_:)), key: "\(slot)", modifiers: SpaceShortcut.modifiers)))
+            menu.items.last?.tag = slot - 1
+        }
         menu.addItem(.separator())
         menu.addItem(chain("Bring All to Front", #selector(NSApplication.arrangeInFront(_:))))
         return menu
@@ -469,6 +482,11 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func showLastTab() {
         coordinator.browser.activateLastTab()
     }
+    @objc private func showSpaceAtIndex(_ sender: NSMenuItem) {
+        let spaces = coordinator.spaceStore.spaces
+        guard spaces.indices.contains(sender.tag) else { return }
+        coordinator.switchSpace(to: spaces[sender.tag])
+    }
 
     @objc private func clearHistory() {
         coordinator.confirmClearHistory()
@@ -558,9 +576,11 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             return coordinator.browser.canReopenClosedTab
         case #selector(nextTab), #selector(previousTab), #selector(showLastTab),
              #selector(switchToNextTab), #selector(switchToPreviousTab):
-            return coordinator.browser.tabs.count > 1
+            return coordinator.browser.currentSpaceTabs.count > 1
         case #selector(showTabAtIndex(_:)):
-            return coordinator.browser.tabs.indices.contains(menuItem.tag)
+            return coordinator.browser.currentSpaceTabs.indices.contains(menuItem.tag)
+        case #selector(showSpaceAtIndex(_:)):
+            return coordinator.showsSpaces && coordinator.spaceStore.spaces.indices.contains(menuItem.tag)
         case #selector(clearHistory):
             return coordinator.browser.history.count > 0
         case #selector(checkForUpdates):

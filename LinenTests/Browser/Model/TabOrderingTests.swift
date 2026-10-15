@@ -200,6 +200,31 @@ struct TabOrderingTests {
         #expect(model.closedTabs.count == 1)
     }
 
+    @Test func reopeningReportsWhichClosedTabCameBack() {
+        let model = makeModel()
+        let doomed = model.newTab()
+        var reopened: [UUID] = []
+        model.onTabReopened = { old, tab in
+            reopened.append(old)
+            #expect(tab.id != old)
+        }
+        model.close(doomed)
+        model.reopenLastClosedTab()
+        #expect(reopened == [doomed.id])
+    }
+
+    @Test func aClosedTabThatFallsOffTheListIsReported() {
+        let model = makeModel()
+        var forgotten: [UUID] = []
+        model.onClosedTabForgotten = { forgotten.append($0) }
+        let first = model.newTab()
+        model.close(first)
+        for _ in 0..<20 {
+            model.close(model.newTab())
+        }
+        #expect(forgotten == [first.id])
+    }
+
     @Test func reopeningEmptiesTheEntryItUsed() {
         let model = makeModel()
         let doomed = model.newTab()

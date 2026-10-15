@@ -65,13 +65,6 @@ struct SettingsSearchTests {
         #expect(!SettingsIndex.all.contains { $0.id == "websites.alwaysActive" })
     }
 
-    /// The toggle became the grey swatch in the profile editor, so searching
-    /// for it lands on the profile list instead.
-    @Test func theProfileColourToggleIsGoneButGreyStillFindsProfiles() {
-        #expect(!SettingsIndex.all.contains { $0.id == "profiles.sidebarColor" })
-        #expect(SettingsIndex.search("grey").contains { $0.id == "profiles.list" })
-    }
-
     /// The time range moved inside the clear alert; it is not a row of its
     /// own, but searching for it still finds the clear section.
     @Test func timeRangeIsFoundInsideClearBrowsingData() {

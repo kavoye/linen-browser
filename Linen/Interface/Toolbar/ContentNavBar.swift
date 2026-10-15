@@ -200,6 +200,20 @@ enum ChromeBand {
     }
 
     static func pageColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
+        tint(browser: browser, coordinator: coordinator).color
+    }
+
+    static func tint(browser: BrowserModel, coordinator: AppCoordinator) -> LoomTint {
+        let live = livePageColor(browser: browser, coordinator: coordinator)
+        let slide = coordinator.overlays.spaceSlide
+        if let glide = slide.gliding {
+            return .solid(glide.loom)
+        }
+        guard slide.loomTravel > 0 else { return .solid(live) }
+        return LoomTint(from: live, to: slide.peerLoom, fraction: slide.loomTravel)
+    }
+
+    static func livePageColor(browser: BrowserModel, coordinator: AppCoordinator) -> NSColor? {
         guard !coordinator.isShowingSettings, !showsStartPage(browser: browser) else { return nil }
         guard browser.activeSplit == nil else { return nil }
         if let tab = browser.activeTab, tab.reader.isActive {

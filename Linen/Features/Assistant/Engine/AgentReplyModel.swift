@@ -11,7 +11,7 @@ final class AgentReplyModel {
     private(set) var activity: String?
     private(set) var isStreaming = false
     private(set) var isCompacting = false
-    private(set) var spaceID: UUID?
+    private(set) var anchorID: UUID?
     private(set) var showsInChrome = true
 
     private var fadeTask: Task<Void, Never>?
@@ -25,18 +25,18 @@ final class AgentReplyModel {
         text != nil || activity != nil
     }
 
-    func showsInChrome(inSpace spaceID: UUID?) -> Bool {
-        guard let spaceID, spaceID == self.spaceID else { return true }
+    func showsInChrome(inAnchor anchorID: UUID?) -> Bool {
+        guard let anchorID, anchorID == self.anchorID else { return true }
         return showsInChrome
     }
 
-    func bind(toSpace spaceID: UUID, showsInChrome: Bool = true) {
-        self.spaceID = spaceID
+    func bind(toAnchor anchorID: UUID, showsInChrome: Bool = true) {
+        self.anchorID = anchorID
         self.showsInChrome = showsInChrome
     }
 
-    func message(inSpace spaceID: UUID?) -> String? {
-        guard showsInChrome, let spaceID, spaceID == self.spaceID else { return nil }
+    func message(inAnchor anchorID: UUID?) -> String? {
+        guard showsInChrome, let anchorID, anchorID == self.anchorID else { return nil }
         if let activity, !activity.isEmpty {
             return activity
         }

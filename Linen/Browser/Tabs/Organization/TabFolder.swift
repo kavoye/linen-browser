@@ -26,6 +26,7 @@ final class TabFolder: Identifiable {
     let id = UUID()
     var name: String
     var color = TabFolderColor.gray
+    var spaceID: UUID?
     var isExpanded = true
     var isNaming = false
 

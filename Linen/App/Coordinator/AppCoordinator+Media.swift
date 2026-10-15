@@ -145,19 +145,6 @@ extension AppCoordinator {
             Pipeline.log.notice("media: the picture came home, making room for it")
             makeRoomForPicture(in: webView)
         }
-        browser.onContentProcessTerminated = { [weak self] tab in
-            tab.hasVideo = false
-            self?.media.pageDidReset(tab.webView)
-        }
-        browser.onPictureInPictureChanged = { [weak self] tab, isOut in
-            Pipeline.log.notice("media: WebKit reports the picture \(isOut ? "out" : "home", privacy: .public)")
-            self?.media.setPictureInPicture(isOut, for: tab.webView, source: .webKit)
-        }
-        browser.onPictureReturnExpected = { [weak self] tab in
-            guard let self, media.notePictureReturnAsk(for: tab.webView) else { return }
-            Pipeline.log.notice("media: the floating window wants to hand the video back")
-            makeRoomForPicture(in: tab.webView)
-        }
         NotificationCenter.default.addObserver(
             forName: NSApplication.willResignActiveNotification,
             object: nil,
