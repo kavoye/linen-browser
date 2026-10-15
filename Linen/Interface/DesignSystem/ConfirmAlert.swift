@@ -67,6 +67,35 @@ enum ConfirmAlert {
         return alert.suppressionButton?.state == .on ? .closeTabs : .keepTabs
     }
 
+    enum ContextClearing {
+        case contextOnly
+        case conversation
+    }
+
+    static func clearContext() async -> ContextClearing? {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Clear the assistant’s context?")
+        alert.informativeText = String(localized: "The assistant starts fresh in this chat. Earlier messages stay visible but are no longer sent to the model.")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: String(localized: "Clear Context")).hasDestructiveAction = true
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = String(localized: "Also delete the conversation")
+        alert.suppressionButton?.state = .off
+
+        let response: NSApplication.ModalResponse
+        if let window = NSApp.keyWindow {
+            response = await withCheckedContinuation { continuation in
+                alert.beginSheetModal(for: window) { continuation.resume(returning: $0) }
+            }
+        } else {
+            response = alert.runModal()
+        }
+
+        guard response == .alertFirstButtonReturn else { return nil }
+        return alert.suppressionButton?.state == .on ? .conversation : .contextOnly
+    }
+
     static func organize(folders: [(name: String, count: Int)]) async -> Bool {
         let alert = NSAlert()
         alert.messageText = String(localized: "Organize your tabs into folders?")

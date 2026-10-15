@@ -248,6 +248,14 @@ struct AppDatabase: Sendable {
         try defineSessionSplits(in: db)
         try defineWindowSessions(in: db)
         try defineTabArchive(in: db)
+        try defineContextClears(in: db)
+    }
+
+    private nonisolated static func defineContextClears(in db: Database) throws {
+        guard try !db.columns(in: "agentTrace").contains(where: { $0.name == "clearsContext" }) else { return }
+        try db.alter(table: "agentTrace") { t in
+            t.add(column: "clearsContext", .boolean).notNull().defaults(to: false)
+        }
     }
 
     private nonisolated static func defineTabArchive(in db: Database) throws {

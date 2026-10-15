@@ -116,12 +116,33 @@ final class AnyLanguageModelAgent: AgentRunner {
         checkpoint.openAI = nativeState
         log.saveCheckpoint(checkpoint, taskID: trace.id)
         sessions[tabID] = compacted
-        log.recordContextEstimate(tabID: tabID, tokens: nativeState?.contextTokens ?? (Self.estimatedTokens(in: compacted.transcript) + budget.toolSchemaTokens))
+        log.recordContextEstimate(
+            tabID: tabID,
+            tokens: (nativeState?.contextTokens ?? Self.estimatedTokens(in: compacted.transcript)) + budget.toolSchemaTokens,
+            breakdown: Self.contextBreakdown(in: compacted.transcript, budget: budget)
+        )
         return true
+    }
+
+    func refreshContextEstimates() {
+        for tabID in log.usageByTab.keys where !discardedTabIDs.contains(tabID) {
+            guard let checkpoint = log.checkpoint(forTab: tabID) else { continue }
+            let measured = openAI?.restoring(checkpoint.openAI).contextTokens
+            log.recordContextEstimate(
+                tabID: tabID,
+                tokens: (measured ?? Self.estimatedTokens(in: checkpoint.transcript)) + budget.toolSchemaTokens,
+                breakdown: Self.contextBreakdown(in: checkpoint.transcript, budget: budget)
+            )
+        }
     }
 
     func discardSession(forTab tabID: UUID) {
         discardedTabIDs.insert(tabID)
+        sessions.removeValue(forKey: tabID)
+        (openAI?.api.transport as? OpenAIWebSocketTransport)?.discardHistory(cancelActive: false)
+    }
+
+    func resetSession(forTab tabID: UUID) {
         sessions.removeValue(forKey: tabID)
         (openAI?.api.transport as? OpenAIWebSocketTransport)?.discardHistory(cancelActive: false)
     }
@@ -744,6 +765,37 @@ final class AnyLanguageModelAgent: AgentRunner {
         }
         let estimate = prose / 4 + machine / 3 + images * 1_600
         return prose + machine + images == 0 ? 0 : max(1, estimate)
+    }
+
+    static func contextBreakdown(in transcript: Transcript, budget: ContextBudget) -> ContextBreakdown {
+        var breakdown = ContextBreakdown(reservedTokens: max(0, budget.windowTokens - budget.inputTokens))
+        func add(_ category: ContextBreakdown.Category, _ tokens: Int) {
+            breakdown.tokens[category, default: 0] += tokens
+        }
+        add(.availableTools, budget.toolSchemaTokens)
+        for entry in transcript {
+            switch entry {
+            case .instructions(let value):
+                add(.instructions, text(in: value.segments).count / 4)
+            case .prompt(let value):
+                add(.messages, text(in: value.segments).count / 4)
+                add(.images, value.segments.count {
+                    if case .image = $0 {
+                        return true
+                    }
+                    return false
+                } * 1_600)
+            case .response(let value):
+                add(.messages, text(in: value.segments).count / 4)
+            case .reasoning(let value):
+                add(.reasoning, text(in: value.segments).count / 4)
+            case .toolCalls(let calls):
+                add(.toolActivity, calls.reduce(0) { $0 + $1.toolName.count + $1.arguments.jsonString.count } / 3)
+            case .toolOutput(let value):
+                add(.toolActivity, text(in: value.segments).count / 3)
+            }
+        }
+        return breakdown
     }
 
     static func isContextWindowError(_ error: any Error) -> Bool {

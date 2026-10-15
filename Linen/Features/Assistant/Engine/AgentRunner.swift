@@ -33,7 +33,9 @@ protocol AgentRunner: AnyObject {
     var supportsCompaction: Bool { get }
     func compactContext(forTab tabID: UUID) async throws -> Bool
     func prepare()
+    func refreshContextEstimates()
     func discardSession(forTab tabID: UUID)
+    func resetSession(forTab tabID: UUID)
     func discardAllSessions()
     func transferSession(from tabID: UUID, to newTabID: UUID)
     func run(
@@ -51,6 +53,8 @@ extension AgentRunner {
     func compactContext(forTab tabID: UUID) async throws -> Bool {
         false
     }
+    func refreshContextEstimates() {}
+    func resetSession(forTab tabID: UUID) {}
 }
 
 enum AgentInstructions {

@@ -43,7 +43,8 @@ extension AnyLanguageModelAgent {
             log.saveCheckpoint(state.checkpoint, taskID: task.id)
             log.recordContextEstimate(
                 tabID: task.spaceID,
-                tokens: (state.checkpoint.openAI?.contextTokens ?? Self.estimatedTokens(in: state.checkpoint.transcript)) + budget.toolSchemaTokens
+                tokens: (state.checkpoint.openAI?.contextTokens ?? Self.estimatedTokens(in: state.checkpoint.transcript)) + budget.toolSchemaTokens,
+                breakdown: Self.contextBreakdown(in: state.checkpoint.transcript, budget: budget)
             )
             if !discardedTabIDs.contains(task.spaceID) {
                 sessions[task.spaceID] = makeSession(transcript: state.checkpoint.transcript)

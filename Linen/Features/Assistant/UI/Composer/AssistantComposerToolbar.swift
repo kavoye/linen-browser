@@ -68,6 +68,9 @@ struct AssistantComposerToolbar: View {
                 tokens: coordinator.browser.activeSpaceID.map {
                     coordinator.conversationLog.usage(forTab: $0).estimatedContextTokens
                 } ?? 0,
+                breakdown: coordinator.browser.activeSpaceID.flatMap {
+                    coordinator.conversationLog.usage(forTab: $0).contextBreakdown
+                },
                 window: ContextWindow.resolve(for: contextProvider, model: contextModel, settings: coordinator.modelSettings),
                 providerNotice: coordinator.engine.isUsingSelectedProvider ? nil : String(localized: "Using \(contextProvider.name)"),
                 canCompact: coordinator.agentTurns.supportsCompaction
@@ -75,6 +78,10 @@ struct AssistantComposerToolbar: View {
                     && coordinator.agentTurns.compactingSpaceID == nil
                     && coordinator.browser.activeSpaceID.map {
                         coordinator.conversationLog.checkpoint(forTab: $0) != nil
+                    } == true,
+                canClear: !coordinator.agentTurns.isRunning
+                    && coordinator.browser.activeSpaceID.map {
+                        coordinator.conversationLog.hasActivity(forTab: $0)
                     } == true,
                 isCompacting: coordinator.agentTurns.compactingSpaceID != nil
                     && coordinator.agentTurns.compactingSpaceID == coordinator.browser.activeSpaceID
@@ -85,6 +92,13 @@ struct AssistantComposerToolbar: View {
                 onCompact: {
                     if let spaceID = coordinator.browser.activeSpaceID {
                         coordinator.agentTurns.compactContext(inSpace: spaceID)
+                    }
+                },
+                onClear: {
+                    guard let spaceID = coordinator.browser.activeSpaceID else { return }
+                    Task {
+                        guard let choice = await ConfirmAlert.clearContext() else { return }
+                        coordinator.agentTurns.clearContext(inSpace: spaceID, conversation: choice == .conversation)
                     }
                 }
             )

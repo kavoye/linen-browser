@@ -159,6 +159,16 @@ struct AgentContextCompactionTests {
         #expect(fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens == tokens)
     }
 
+    @Test func refreshReplacesAnotherModelsEstimate() async throws {
+        let fixture = HarnessFixture([.text("Done.")])
+        await fixture.run()
+        let checkpoint = try #require(fixture.log.checkpoint(forTab: fixture.tabID))
+        fixture.log.recordContextEstimate(tabID: fixture.tabID, tokens: 17_700)
+        fixture.agent.refreshContextEstimates()
+        #expect(fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens
+            == AnyLanguageModelAgent.estimatedTokens(in: checkpoint.transcript) + fixture.agent.budget.toolSchemaTokens)
+    }
+
     @Test func onDeviceBudgetCompactsRepeatedlyAndKeepsUserDecisions() async throws {
         let state = HarnessToolState()
         state.output = { call in

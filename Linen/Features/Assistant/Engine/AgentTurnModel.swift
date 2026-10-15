@@ -40,10 +40,14 @@ protocol AgentTurnLogging: AnyObject {
     func cancelTask(_ taskID: UUID)
     func removeTab(_ tabID: UUID)
     func reassign(from tabID: UUID, to newTabID: UUID)
+    func clearContext(forTab tabID: UUID)
+    func clearConversation(forTab tabID: UUID)
 }
 
 extension AgentTurnLogging {
     func setAttachments(_ attachments: [AssistantAttachment], textOnly: Bool, taskID: UUID) {}
+    func clearContext(forTab tabID: UUID) {}
+    func clearConversation(forTab tabID: UUID) {}
 }
 
 extension ConversationLog: AgentTurnLogging {}
@@ -131,6 +135,7 @@ final class AgentTurnModel {
         self.runner = runner
         runnerName = runner?.name ?? "none"
         supportsCompaction = runner?.supportsCompaction == true
+        runner?.refreshContextEstimates()
     }
 
     func compactContext(inSpace spaceID: UUID) {
@@ -154,6 +159,21 @@ final class AgentTurnModel {
             compactingSpaceID = nil
             compactionTask = nil
         }
+    }
+
+    func clearContext(inSpace spaceID: UUID, conversation: Bool) {
+        guard !isRunning, compactingSpaceID == nil else { return }
+        runner?.resetSession(forTab: spaceID)
+        if conversation {
+            log.clearConversation(forTab: spaceID)
+        } else {
+            log.clearContext(forTab: spaceID)
+        }
+        if reply.spaceID == spaceID {
+            reply = AgentReplyModel()
+        }
+        compactionMessageSpaceID = spaceID
+        compactionMessage = "Context cleared"
     }
 
     private func cancelCompaction() {

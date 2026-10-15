@@ -42,6 +42,9 @@ struct AgentActivityPanel: View {
                             isLatest: trace.id == traces.last?.id
                         )
                         .id(trace.id)
+                        if trace.clearsContext {
+                            ContextClearedDivider()
+                        }
                     }
 
                     if isCompacting {
@@ -197,5 +200,19 @@ private struct AgentActivityEmptyState: View {
         }
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct ContextClearedDivider: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Rectangle().fill(Theme.Wash.strong).frame(height: 1)
+            Text("Context cleared")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+            Rectangle().fill(Theme.Wash.strong).frame(height: 1)
+        }
+        .accessibilityElement(children: .combine)
     }
 }

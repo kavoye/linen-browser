@@ -15,6 +15,7 @@ final class ConversationLog {
         var cachedTokens = 0
         var outputTokens = 0
         var estimatedContextTokens = 0
+        var contextBreakdown: ContextBreakdown?
 
         static let zero = Usage()
     }
@@ -119,6 +120,7 @@ final class ConversationLog {
         var stopReason: AgentStopReason?
         var diagnostics = AgentRunDiagnostics()
         var checkpoint: AgentCheckpoint?
+        var clearsContext = false
 
         var progressUpdates: [AgentProgressUpdate] {
             checkpoint?.progressUpdates ?? []
@@ -153,6 +155,7 @@ final class ConversationLog {
         var providerID: String?
         var stopReason: AgentStopReason?
         var diagnostics: Data?
+        var clearsContext: Bool
     }
 
     private nonisolated struct MemoryRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -375,7 +378,39 @@ final class ConversationLog {
     }
 
     func checkpoint(forTab tabID: UUID) -> AgentCheckpoint? {
-        traces.last(where: { $0.tabID == tabID && $0.checkpoint != nil })?.checkpoint
+        currentContext(forTab: tabID).last(where: { $0.checkpoint != nil })?.checkpoint
+    }
+
+    private func currentContext(forTab tabID: UUID) -> ArraySlice<TaskTrace> {
+        let tab = traces.filter { $0.tabID == tabID }
+        guard let cleared = tab.lastIndex(where: \.clearsContext) else { return tab[...] }
+        return tab[(cleared + 1)...]
+    }
+
+    func clearContext(forTab tabID: UUID) {
+        guard let index = traces.lastIndex(where: { $0.tabID == tabID }),
+              traces[index].state != .running else { return }
+        traces[index].clearsContext = true
+        let trace = traces[index]
+        writeNow { db in
+            try Self.record(trace).save(db)
+        }
+        resetContextEstimate(forTab: tabID)
+    }
+
+    func clearConversation(forTab tabID: UUID) {
+        guard !traces.contains(where: { $0.tabID == tabID && $0.state == .running }) else { return }
+        traces.removeAll { $0.tabID == tabID }
+        forget([tabID])
+        resetContextEstimate(forTab: tabID)
+    }
+
+    private func resetContextEstimate(forTab tabID: UUID) {
+        guard var usage = usageByTab[tabID] else { return }
+        usage.estimatedContextTokens = 0
+        usage.contextBreakdown = nil
+        usageByTab[tabID] = usage
+        scheduleSave(usage: tabID)
     }
 
     func saveCheckpoint(_ checkpoint: AgentCheckpoint, taskID: UUID) {
@@ -442,10 +477,11 @@ final class ConversationLog {
         scheduleSave(usage: tabID)
     }
 
-    func recordContextEstimate(tabID: UUID, tokens: Int) {
+    func recordContextEstimate(tabID: UUID, tokens: Int, breakdown: ContextBreakdown? = nil) {
         guard !discardedTabIDs.contains(tabID) else { return }
         var usage = usageByTab[tabID, default: .zero]
         usage.estimatedContextTokens = tokens
+        usage.contextBreakdown = breakdown
         usageByTab[tabID] = usage
         scheduleSave(usage: tabID)
     }
@@ -475,8 +511,8 @@ final class ConversationLog {
     }
 
     func exchanges(forTab tabID: UUID, limit: Int? = nil) -> [Exchange] {
-        let exchanges = traces.lazy
-            .filter { $0.tabID == tabID && $0.state.isSpoken && !$0.response.isEmpty }
+        let exchanges = currentContext(forTab: tabID).lazy
+            .filter { $0.state.isSpoken && !$0.response.isEmpty }
             .map { Exchange(
                 prompt: $0.hasUserPrompt ? $0.prompt : "", response: $0.response,
                 attachments: $0.attachments, attachmentTextOnly: $0.attachmentTextOnly
@@ -684,6 +720,7 @@ final class ConversationLog {
                 providerID: record.providerID
             )
             trace.stopReason = record.stopReason
+            trace.clearsContext = record.clearsContext
             trace.diagnostics = record.diagnostics.flatMap {
                 try? JSONDecoder().decode(AgentRunDiagnostics.self, from: $0)
             } ?? AgentRunDiagnostics()
@@ -755,7 +792,8 @@ final class ConversationLog {
             finishedAt: trace.finishedAt,
             providerID: trace.providerID,
             stopReason: trace.stopReason,
-            diagnostics: try? JSONEncoder().encode(trace.diagnostics)
+            diagnostics: try? JSONEncoder().encode(trace.diagnostics),
+            clearsContext: trace.clearsContext
         )
     }
 

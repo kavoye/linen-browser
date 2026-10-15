@@ -113,6 +113,40 @@ struct ConversationLogTests {
         #expect(trace.steps.allSatisfy { $0.state != .running })
     }
 
+    @Test func clearingContextKeepsTheChatButNotTheModelsMemory() throws {
+        let (log, database) = makeLog()
+        let tab = UUID()
+        let first = log.beginTask("one", tabID: tab)
+        log.saveCheckpoint(AgentCheckpoint(), taskID: first)
+        log.completeTask(first, response: "1")
+        log.recordContextEstimate(tabID: tab, tokens: 900)
+        log.clearContext(forTab: tab)
+        log.completeTask(log.beginTask("two", tabID: tab), response: "2")
+        log.saveBlocking()
+
+        for subject in [log, ConversationLog(database: database)] {
+            #expect(subject.traces(forTab: tab).map(\.prompt) == ["one", "two"])
+            #expect(subject.exchanges(forTab: tab).map(\.prompt) == ["two"])
+            #expect(subject.checkpoint(forTab: tab) == nil)
+            #expect(subject.traces(forTab: tab).first?.clearsContext == true)
+        }
+        #expect(log.usage(forTab: tab).estimatedContextTokens == 0)
+    }
+
+    @Test func clearingTheConversationDeletesItEverywhere() {
+        let (log, database) = makeLog()
+        let tab = UUID()
+        log.completeTask(log.beginTask("one", tabID: tab), response: "1")
+        log.saveBlocking()
+        log.clearConversation(forTab: tab)
+        log.saveBlocking()
+
+        #expect(log.traces(forTab: tab).isEmpty)
+        #expect(ConversationLog(database: database).traces(forTab: tab).isEmpty)
+        log.completeTask(log.beginTask("fresh", tabID: tab), response: "ok")
+        #expect(log.exchanges(forTab: tab).map(\.prompt) == ["fresh"])
+    }
+
     @Test func survivesARelaunch() throws {
         let (log, database) = makeLog()
 
