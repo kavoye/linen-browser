@@ -466,8 +466,10 @@ struct SidebarDownloadsButton: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.chromeHoverLifts) private var hoverLifts
     @State private var hovering = false
-
-    private static let barWidth: CGFloat = 15
+    @State private var hoveringPreview = false
+    @State private var previewing = false
+    @State private var previewTask: Task<Void, Never>?
+    @State private var finishPulse = 0
 
     private var downloads: DownloadManager {
         coordinator.browser.downloads
@@ -475,35 +477,39 @@ struct SidebarDownloadsButton: View {
     private var isRunning: Bool {
         downloads.activeCount > 0
     }
+    private var fillFraction: CGFloat {
+        0.1 + 0.8 * max(0.06, min(downloads.activeFraction, 1))
+    }
+    private var finishedCount: Int {
+        downloads.items.count { $0.state == .finished }
+    }
 
     var body: some View {
         Button {
+            closePreview()
             coordinator.showDownloads()
         } label: {
-            VStack(spacing: isRunning ? 3 : 0) {
-                Image(systemName: "arrow.down")
-                    .font(Theme.Font.rowTitle)
-                    .foregroundStyle(hovering ? .primary : .secondary)
-
-                Capsule()
-                    .fill(Theme.Wash.strong)
-                    .frame(width: Self.barWidth, height: 2)
-                    .overlay(alignment: .leading) {
-                        Capsule()
-                            .fill(Theme.accent)
-                            .frame(
-                                width: Self.barWidth * max(0.06, min(downloads.activeFraction, 1)),
-                                height: 2
-                            )
-                            .animation(Theme.Motion.drift, value: downloads.activeFraction)
-                    }
-                    .opacity(isRunning ? 1 : 0)
-                    .frame(height: isRunning ? 2 : 0)
-            }
-            .hoverLift(hoverLifts && hovering)
-            .frame(width: 28, height: 28)
-            .hoverBackground(isActive: !hoverLifts && hovering)
-            .contentShape(Rectangle())
+            Image(systemName: "arrow.down")
+                .font(Theme.Font.rowTitle)
+                .foregroundStyle(hovering ? .primary : .secondary)
+                .overlay {
+                    Image(systemName: "arrow.down")
+                        .font(Theme.Font.rowTitle)
+                        .foregroundStyle(Theme.accent)
+                        .mask(alignment: .top) {
+                            GeometryReader { proxy in
+                                Rectangle()
+                                    .frame(height: proxy.size.height * fillFraction)
+                            }
+                        }
+                        .opacity(isRunning ? 1 : 0)
+                        .animation(Theme.Motion.drift, value: fillFraction)
+                }
+                .symbolEffect(.wiggle, value: finishPulse)
+                .hoverLift(hoverLifts && hovering)
+                .frame(width: 28, height: 28)
+                .hoverBackground(isActive: !hoverLifts && hovering)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onGeometryChange(for: CGPoint.self) { proxy in
@@ -511,12 +517,60 @@ struct SidebarDownloadsButton: View {
         } action: { point in
             coordinator.downloadFlights.target = point
         }
-        .onHover { hovering = $0 }
+        .onHover {
+            hovering = $0
+            schedulePreview()
+        }
         .animation(Theme.Motion.quick, value: hovering)
         .animation(Theme.Motion.settle, value: isRunning)
-        .help(isRunning
-              ? Text("Downloads — \(downloads.activeCount) in progress")
-              : Text("Downloads"))
+        .help(downloads.items.isEmpty ? helpText : Text(verbatim: ""))
+        .arrowlessPopover(isPresented: $previewing) {
+            DownloadsPreview(downloads: downloads) { item in
+                closePreview()
+                if item.state == .finished {
+                    downloads.open(item)
+                } else {
+                    coordinator.showDownloads()
+                }
+            }
+            .onHover {
+                hoveringPreview = $0
+                schedulePreview()
+            }
+        }
+        .onChange(of: previewing) {
+            if !previewing {
+                hoveringPreview = false
+            }
+        }
+        .onChange(of: finishedCount) { old, new in
+            if new > old {
+                finishPulse += 1
+            }
+        }
+    }
+
+    private var helpText: Text {
+        isRunning
+            ? Text("Downloads — \(downloads.activeCount) in progress")
+            : Text("Downloads")
+    }
+
+    private func schedulePreview() {
+        previewTask?.cancel()
+        let inside = hovering || hoveringPreview
+        guard inside != previewing, !inside || !downloads.items.isEmpty else { return }
+        previewTask = Task {
+            try? await Task.sleep(for: inside ? .milliseconds(450) : .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            previewing = inside
+        }
+    }
+
+    private func closePreview() {
+        previewTask?.cancel()
+        hoveringPreview = false
+        previewing = false
     }
 }
 

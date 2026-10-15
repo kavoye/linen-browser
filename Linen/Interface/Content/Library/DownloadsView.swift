@@ -3,7 +3,6 @@
 
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct DownloadsView: View {
     let browser: BrowserModel
@@ -79,11 +78,17 @@ private struct DownloadFileRow: View {
 
     var body: some View {
         HStack(spacing: 11) {
-            Image(systemName: hovering && item.state == .finished ? "arrow.up.forward.app" : symbol)
-                .font(.system(size: 14))
-                .foregroundStyle(item.state == .finished ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(.secondary))
-                .transaction { $0.animation = nil }
-                .frame(width: 20)
+            Group {
+                if item.state == .finished {
+                    DownloadThumbnail(item: item, size: 30)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .transaction { $0.animation = nil }
+            .frame(width: 30)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: item.filename)
@@ -156,10 +161,8 @@ private struct DownloadFileRow: View {
 
     private var symbol: String {
         switch item.state {
-        case .running:
+        case .running, .finished:
             "arrow.down"
-        case .finished:
-            Self.symbol(forFilename: item.filename)
         case .interrupted:
             "pause.circle"
         case .failed:
@@ -167,28 +170,6 @@ private struct DownloadFileRow: View {
         case .cancelled:
             "slash.circle"
         }
-    }
-
-    static func symbol(forFilename filename: String) -> String {
-        let ext = (filename as NSString).pathExtension
-        guard let type = UTType(filenameExtension: ext) else { return "doc" }
-        let symbols: [(UTType, String)] = [
-            (.pdf, "doc.richtext"),
-            (.image, "photo"),
-            (.movie, "film"),
-            (.audio, "music.note"),
-            (.diskImage, "externaldrive"),
-            (.archive, "doc.zipper"),
-            (.application, "app"),
-            (.applicationBundle, "app"),
-            (.presentation, "rectangle.on.rectangle"),
-            (.spreadsheet, "tablecells"),
-            (.font, "textformat"),
-            (.sourceCode, "chevron.left.forwardslash.chevron.right"),
-            (.html, "globe"),
-            (.text, "doc.text"),
-        ]
-        return symbols.first { type.conforms(to: $0.0) }?.1 ?? "doc"
     }
 
     private var subtitle: Text {
