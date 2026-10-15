@@ -22,7 +22,7 @@ nonisolated enum StageMode {
 
     static var defaults: UserDefaults {
         guard isActive, let suite = UserDefaults(suiteName: "app.linen.stage") else {
-            return .standard
+            return AppDatabase.isRunningTests ? AppDatabase.testDefaults : .standard
         }
         return suite
     }

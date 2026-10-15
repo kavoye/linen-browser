@@ -65,4 +65,19 @@ struct BrowserProfileContextTests {
         #expect(try Data(contentsOf: file) == saved)
         #expect(permissions.autoplay(for: "https://example.com") == .block)
     }
+
+    @Test func aTestProcessNeverReadsTheRealPreferences() {
+        let probe = "probe.\(UUID().uuidString)"
+        AppDatabase.testDefaults.set(true, forKey: probe)
+        defer { AppDatabase.testDefaults.removeObject(forKey: probe) }
+
+        #expect(StageMode.defaults.bool(forKey: probe))
+        #expect(ProfileSettingsStore.defaults(for: .original()).bool(forKey: probe))
+        #expect(UserDefaults.standard.object(forKey: probe) == nil)
+
+        let work = Profile(id: UUID(), name: "Work", symbol: "briefcase", color: .blue)
+        defer { ProfileSettingsStore.forget(work.id) }
+        ProfileSettingsStore.defaults(for: work).set(true, forKey: probe)
+        #expect(UserDefaults(suiteName: ProfileSettingsStore.suiteName(for: work.id))?.object(forKey: probe) == nil)
+    }
 }

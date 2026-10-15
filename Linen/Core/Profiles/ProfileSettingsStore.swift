@@ -15,11 +15,15 @@ enum ProfileSettingsStore {
             return StageMode.defaults
         }
         #endif
-        guard !profile.isOriginal else { return .standard }
-        return UserDefaults(suiteName: suiteName(for: profile.id)) ?? .standard
+        guard !profile.isOriginal else { return AppDatabase.isRunningTests ? AppDatabase.testDefaults : .standard }
+        return UserDefaults(suiteName: storageName(for: profile.id)) ?? .standard
     }
 
     static func forget(_ id: UUID) {
-        UserDefaults.standard.removePersistentDomain(forName: suiteName(for: id))
+        UserDefaults.standard.removePersistentDomain(forName: storageName(for: id))
+    }
+
+    private static func storageName(for id: UUID) -> String {
+        AppDatabase.isRunningTests ? AppDatabase.testDefaultsName(suiteName(for: id)) : suiteName(for: id)
     }
 }

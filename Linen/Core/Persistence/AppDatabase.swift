@@ -49,6 +49,12 @@ struct AppDatabase: Sendable {
         return url
     }()
 
+    nonisolated(unsafe) static let testDefaults = UserDefaults(suiteName: testDefaultsName("Preferences"))!
+
+    nonisolated static func testDefaultsName(_ name: String) -> String {
+        testSupportDirectory.appendingPathComponent(name).path
+    }
+
     static var defaultURL: URL {
         supportDirectory.appendingPathComponent("Linen.sqlite")
     }
