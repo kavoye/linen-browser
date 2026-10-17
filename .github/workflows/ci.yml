@@ -83,6 +83,9 @@ jobs:
       # Xcode 27 runner VMs cannot load Vision's OCR backend, even with CPU selection.
       # Exclude only these four integration tests in CI; they remain enabled locally.
       # Remove these exclusions when the runner image supports Vision OCR.
+      # The same VMs return exact canvas pixels even when WebKit is asked to add
+      # noise, so the readback check runs only locally. tabsAskWebKitToAddCanvasNoise
+      # still checks the setting in CI.
       - name: Test
         run: |
           python3 Tools/run-xcodebuild-with-watchdog.py -- xcodebuild test \
@@ -98,6 +101,7 @@ jobs:
             '-skip-testing:LinenTests/AttachmentTests/recognizesTextWithoutANeuralEngine()' \
             '-skip-testing:LinenTests/AttachmentTests/recognizesScannedPDFPages()' \
             '-skip-testing:LinenTests/AttachmentTests/pastingAnImageCreatesARemovableAttachment()' \
+            '-skip-testing:LinenTests/WebViewConfigurationTests/pagesReadBackANoisyCanvas()' \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY=- \
             CODE_SIGNING_REQUIRED=NO \

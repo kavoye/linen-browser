@@ -39,6 +39,17 @@ struct WebViewConfigurationTests {
         #expect(!allowed)
     }
 
+    @Test(.boundedWebViews) func tabsAskWebKitToAddCanvasNoise() throws {
+        func policy(_ view: WKWebView) throws -> UInt {
+            try #require(view.configuration.defaultWebpagePreferences.value(forKey: "_networkConnectionIntegrityPolicy") as? UInt)
+        }
+        let tab = WebViewPool.shared.makeColdView()
+        let plain = WKWebView(frame: .zero, configuration: WebViewPool.makeConfiguration())
+
+        #expect(try policy(tab) & (1 << 6) != 0)
+        #expect(try policy(plain) & (1 << 6) == 0)
+    }
+
     @Test(.boundedWebViews) func pagesReadBackANoisyCanvas() async throws {
         let tab = WebViewPool.shared.makeColdView()
         let plain = WKWebView(frame: .zero, configuration: WebViewPool.makeConfiguration())
