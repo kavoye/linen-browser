@@ -199,6 +199,44 @@ struct TabContextMenuTests {
         ])
     }
 
+    private final class WebKitTarget: NSObject {
+        var fired = 0
+        @objc func openLink(_ sender: Any?) { fired += 1 }
+    }
+
+    @Test(.boundedWebViews) func theNewTabItemIsOursAndFallsBackToWebKitWithoutALink() throws {
+        let view = TabWebView(
+            frame: NSRect(x: 0, y: 0, width: 400, height: 300),
+            configuration: WebViewPool.makeConfiguration()
+        )
+        let event = try #require(NSEvent.mouseEvent(
+            with: .rightMouseDown,
+            location: NSPoint(x: 10, y: 10),
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            eventNumber: 0,
+            clickCount: 1,
+            pressure: 1
+        ))
+        let webKit = WebKitTarget()
+        let menu = menu(["WKMenuItemIdentifierOpenLinkInNewWindow"])
+        let item = try #require(menu.items.first)
+        item.target = webKit
+        item.action = #selector(WebKitTarget.openLink(_:))
+        view.onOpenLinkInNewTab = { _ in
+            Issue.record("no link was hit, so there is nothing to open in the background")
+            return true
+        }
+        view.willOpenMenu(menu, with: event)
+
+        #expect(item.target === view)
+        let action = try #require(item.action)
+        NSApp.sendAction(action, to: item.target, from: item)
+        #expect(webKit.fired == 1)
+    }
+
     /// The tail is lifted out of the middle of the menu, and the rule that was
     /// holding it apart from what came before goes with it.
     @Test func theRuleTheTailLeavesBehindGoesWithIt() {

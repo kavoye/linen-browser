@@ -192,6 +192,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(chain("Select All", #selector(NSText.selectAll(_:)), key: "a"))
         menu.addItem(.separator())
         menu.addItem(command("Copy Link", #selector(copyPageURL), key: "c", modifiers: [.command, .shift]))
+        menu.addItem(command(
+            "Search with \(SearchURLBuilder.engine.name)",
+            #selector(searchSelection),
+            key: "l",
+            modifiers: [.command, .shift]
+        ))
         menu.addItem(.separator())
 
         let find = NSMenu(title: "Find")
@@ -366,6 +372,9 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func copyPageURL() {
         coordinator.copyCurrentURL()
     }
+    @objc private func searchSelection() {
+        (activeWebView as? TabWebView)?.searchSelection()
+    }
 
     @objc private func duplicateTab() {
         guard let tab = coordinator.browser.activeTab else { return }
@@ -536,6 +545,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         case #selector(copyPageURL):
             guard let tab = coordinator.pageCommandTab else { return false }
             return coordinator.linkURL(for: tab) != nil
+        case #selector(searchSelection):
+            guard let tab = coordinator.pageCommandTab else { return false }
+            menuItem.title = String(localized: "Search with \(SearchURLBuilder.engine(settings: tab.context.settings).name)")
+            return true
         case #selector(showWebInspector):
             return coordinator.pageCommandTab != nil && coordinator.settings.webInspectorEnabled
         case #selector(restartPage):

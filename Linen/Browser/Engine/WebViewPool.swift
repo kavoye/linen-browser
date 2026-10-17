@@ -59,8 +59,10 @@ final class TabWebView: WKWebView {
 
     var onContextDownload: ((WKDownload, URL?) -> Void)?
     var onOpenLinkInNewWindow: ((URL, Bool) -> Void)?
+    var onOpenLinkInNewTab: ((URL) -> Bool)?
     var onPeekLink: ((URL) -> Void)?
     var onSummarizeLink: ((URL, CGPoint?) -> Void)?
+    var onSearchSelection: ((URL) -> Void)?
     var onPageActivity: ((PageActivitySignal) -> Void)?
     var hasPageActivityMonitor = false
     var onScrollPosition: ((Double, URL?) -> Void)?
@@ -120,9 +122,12 @@ final class TabWebView: WKWebView {
     private var contextImageURL: URL?
     private var contextLinkURL: URL?
     private var contextLinkAnchor: CGPoint?
+    private weak var webKitLinkTarget: AnyObject?
+    private var webKitLinkAction: Selector?
 
     private static let reloadItem = "WKMenuItemIdentifierReload"
     private static let openLinkItem = "WKMenuItemIdentifierOpenLinkInNewWindow"
+    private static let searchWebItem = "WKMenuItemIdentifierSearchWeb"
 
     private static let downloadItems: Set<String> = [
         "WKMenuItemIdentifierDownloadImage",
@@ -163,6 +168,10 @@ final class TabWebView: WKWebView {
 
             if identifier == Self.openLinkItem {
                 linkIndex = index
+                webKitLinkTarget = item.target
+                webKitLinkAction = item.action
+                item.target = self
+                item.action = #selector(openContextLinkInNewTab(_:))
             }
 
             if let title = Self.newWindowItems[identifier] {
@@ -177,6 +186,13 @@ final class TabWebView: WKWebView {
             if Self.downloadItems.contains(identifier) {
                 item.target = self
                 item.action = #selector(startContextDownload(_:))
+            }
+
+            if identifier == Self.searchWebItem {
+                let engine = SearchURLBuilder.engine(settings: profileContext?.settings ?? .shared)
+                item.title = String(localized: "Search with \(engine.name)")
+                item.target = self
+                item.action = #selector(searchSelection)
             }
         }
 
@@ -224,6 +240,15 @@ final class TabWebView: WKWebView {
         ) + [peek, summary]
     }
 
+    @objc private func openContextLinkInNewTab(_ sender: NSMenuItem) {
+        if let url = contextLinkURL, onOpenLinkInNewTab?(url) == true {
+            return
+        }
+        if let webKitLinkAction {
+            NSApp.sendAction(webKitLinkAction, to: webKitLinkTarget, from: sender)
+        }
+    }
+
     @objc private func openContextLinkInNewWindow(_ sender: NSMenuItem) {
         guard let url = contextLinkURL else { return }
         onOpenLinkInNewWindow?(url, sender.tag == 1)
@@ -238,6 +263,27 @@ final class TabWebView: WKWebView {
         guard let url = contextLinkURL else { return }
         onSummarizeLink?(url, contextLinkAnchor)
     }
+
+    @objc func searchSelection() {
+        let settings = profileContext?.settings ?? .shared
+        evaluateJavaScript(Self.selectedText) { [weak self] value, _ in
+            guard let text = (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !text.isEmpty
+            else { return }
+            self?.onSearchSelection?(SearchURLBuilder.searchURL(for: text, settings: settings))
+        }
+    }
+
+    private static let selectedText = """
+        (function () {
+          var field = document.activeElement;
+          if (field && (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA')
+              && typeof field.selectionStart === 'number') {
+            return field.value.slice(field.selectionStart, field.selectionEnd);
+          }
+          return String(window.getSelection() || '');
+        })()
+        """
 
     private func pageItems() -> [NSMenuItem] {
         let save = NSMenuItem(

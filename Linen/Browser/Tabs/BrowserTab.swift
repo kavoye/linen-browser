@@ -292,6 +292,14 @@ final class BrowserTab: Identifiable {
         (webView as? TabWebView)?.onOpenLinkInNewWindow = { [weak self] url, isPrivate in
             self?.onOpenInNewWindow?(url, isPrivate, true)
         }
+        (webView as? TabWebView)?.onOpenLinkInNewTab = { [weak self] url in
+            guard let open = self?.onOpenInNewTab else { return false }
+            open(url, false)
+            return true
+        }
+        (webView as? TabWebView)?.onSearchSelection = { [weak self] url in
+            self?.onOpenInNewTab?(url, true)
+        }
         (webView as? TabWebView)?.onPeekLink = { [weak self] url in
             guard let self else { return }
             onOpenInPeek?(url, TabNavigationDelegate.pointer(in: webView))
@@ -459,6 +467,8 @@ final class BrowserTab: Identifiable {
         (outgoing as? TabWebView)?.onZoomChanged = nil
         (outgoing as? TabWebView)?.onContextDownload = nil
         (outgoing as? TabWebView)?.onOpenLinkInNewWindow = nil
+        (outgoing as? TabWebView)?.onOpenLinkInNewTab = nil
+        (outgoing as? TabWebView)?.onSearchSelection = nil
         (outgoing as? TabWebView)?.onPeekLink = nil
         (outgoing as? TabWebView)?.onSummarizeLink = nil
         (outgoing as? TabWebView)?.onPageActivity = nil
@@ -617,6 +627,8 @@ final class BrowserTab: Identifiable {
         view.uiDelegate = nil
         (view as? TabWebView)?.onContextDownload = nil
         (view as? TabWebView)?.onOpenLinkInNewWindow = nil
+        (view as? TabWebView)?.onOpenLinkInNewTab = nil
+        (view as? TabWebView)?.onSearchSelection = nil
         (view as? TabWebView)?.onPeekLink = nil
         (view as? TabWebView)?.onSummarizeLink = nil
         (view as? TabWebView)?.onZoomChanged = nil
