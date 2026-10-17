@@ -86,10 +86,11 @@ switch case’s body on the line after the label. Do not write a declaration or
 control-flow body inside single-line braces. Short closures, `guard … else
 { return }` and accessor lists (`{ get set }`) stay inline. CI also checks the
 blank-tab, tab-switching, command-palette, Start Page and Ask surface budgets in
-`Tools/check-performance.sh`. Each budget is about twice the measured
-baseline to allow for roughly 50% variation on shared runners. These checks
-detect large regressions rather than small percentage changes. Change a budget
-only with measurements that justify it.
+`Tools/check-performance.sh`. Each check compares the fastest iteration with a
+budget of about twice the measured baseline. A check that is over budget gives
+a warning and does not fail the run. These checks detect large regressions
+rather than small percentage changes. Change a budget only with measurements
+that justify it.
 
 A case that builds a live WebKit view takes `.boundedWebViews`. The trait takes
 one of a small number of slots, equal to half the machine’s cores. Starting every case
