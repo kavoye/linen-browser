@@ -8,9 +8,13 @@ enum LinkIntent: Equatable {
     case open
     case peek
     case newTab
+    case newWindow
 
     static func of(_ flags: NSEvent.ModifierFlags) -> LinkIntent {
-        let wanted = flags.intersection([.command, .shift])
+        let wanted = flags.intersection([.command, .shift, .option])
+        if wanted.isSuperset(of: [.command, .option]) {
+            return .newWindow
+        }
         if wanted.contains(.command) {
             return .newTab
         }
@@ -49,6 +53,8 @@ struct LinkPreview: View {
             return named(String(localized: "Open \(address) in Peek"), address: address)
         case .newTab:
             return named(String(localized: "Open \(address) in a new tab"), address: address)
+        case .newWindow:
+            return named(String(localized: "Open \(address) in a new window"), address: address)
         }
     }
 

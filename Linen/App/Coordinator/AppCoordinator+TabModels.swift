@@ -58,8 +58,8 @@ extension AppCoordinator {
         model.onOpenInPeek = { [weak self] tab, url, origin in
             self?.openPeek(url: url, from: tab, at: origin)
         }
-        model.onOpenInNewWindow = { [weak self] _, url, isPrivate in
-            self?.openLinkInNewWindow(url, isPrivate: isPrivate)
+        model.onOpenInNewWindow = { [weak self] _, url, isPrivate, activate in
+            self?.openLinkInNewWindow(url, isPrivate: isPrivate, activate: activate)
         }
         model.onSummarizeLink = { [weak self] tab, url, anchor in
             guard let self, let tab else { return }

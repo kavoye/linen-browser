@@ -178,6 +178,44 @@ struct NavigationPolicyTests {
         #expect(opened?.1 == true)
     }
 
+    @Test func commandOptionClickingOpensAWindowBehind() {
+        let (tab, delegate) = subject()
+        var opened: (URL, Bool, Bool)?
+        tab.onOpenInNewWindow = { opened = ($0, $1, $2) }
+        tab.onOpenInNewTab = { _, _ in Issue.record("command-option must not open a tab") }
+
+        let policy = decide(delegate, tab, action(
+            "https://example.com/target", type: .linkActivated, modifiers: [.command, .option]
+        ))
+
+        #expect(policy == .cancel)
+        #expect(opened?.0.absoluteString == "https://example.com/target")
+        #expect(opened?.1 == false)
+        #expect(opened?.2 == false)
+    }
+
+    @Test func commandOptionShiftClickingAsksForTheWindowToBeActivated() {
+        let (tab, delegate) = subject()
+        var opened: (URL, Bool, Bool)?
+        tab.onOpenInNewWindow = { opened = ($0, $1, $2) }
+
+        let policy = decide(delegate, tab, action(
+            "https://example.com/target", type: .linkActivated, modifiers: [.command, .option, .shift]
+        ))
+
+        #expect(policy == .cancel)
+        #expect(opened?.2 == true)
+    }
+
+    @Test func modifiersNameTheirLinkIntent() {
+        #expect(LinkIntent.of([]) == .open)
+        #expect(LinkIntent.of([.shift]) == .peek)
+        #expect(LinkIntent.of([.command]) == .newTab)
+        #expect(LinkIntent.of([.command, .shift]) == .newTab)
+        #expect(LinkIntent.of([.command, .option]) == .newWindow)
+        #expect(LinkIntent.of([.command, .option, .shift]) == .newWindow)
+    }
+
     @Test func shiftClickingALinkPeeksAtIt() {
         let (tab, delegate) = subject()
         var peeked: URL?

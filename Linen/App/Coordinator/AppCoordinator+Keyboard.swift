@@ -46,7 +46,7 @@ extension AppCoordinator {
     }
 
     func noteLinkModifiers(_ flags: NSEvent.ModifierFlags) {
-        let wanted = flags.intersection([.command, .shift])
+        let wanted = flags.intersection([.command, .shift, .option])
         guard wanted != linkModifiers else { return }
         linkModifiers = wanted
     }

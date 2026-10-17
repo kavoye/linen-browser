@@ -85,8 +85,8 @@ struct LinkWindowTests {
         let view = try #require(tab.webView as? TabWebView)
         var sourceRequests = 0
         var destinationRequests = 0
-        source.onOpenInNewWindow = { _, _, _ in sourceRequests += 1 }
-        destination.onOpenInNewWindow = { openedFrom, _, privately in
+        source.onOpenInNewWindow = { _, _, _, _ in sourceRequests += 1 }
+        destination.onOpenInNewWindow = { openedFrom, _, privately, _ in
             #expect(openedFrom === tab)
             #expect(privately)
             destinationRequests += 1

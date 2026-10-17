@@ -175,7 +175,7 @@ final class BrowserTab: Identifiable {
     var onNavigationOutsideExtension: ((URL) -> Void)?
     var onNewWindow: ((WKWebView, Bool) -> Void)?
     var onOpenInNewTab: ((URL, Bool) -> Void)?
-    var onOpenInNewWindow: ((URL, Bool) -> Void)?
+    var onOpenInNewWindow: ((URL, Bool, Bool) -> Void)?
     var onOpenInPeek: ((URL, CGPoint) -> Void)?
     var onSummarizeLink: ((URL, CGPoint) -> Void)?
     var onCloseRequested: (() -> Void)?
@@ -290,7 +290,7 @@ final class BrowserTab: Identifiable {
             self?.onDownload?(download, source)
         }
         (webView as? TabWebView)?.onOpenLinkInNewWindow = { [weak self] url, isPrivate in
-            self?.onOpenInNewWindow?(url, isPrivate)
+            self?.onOpenInNewWindow?(url, isPrivate, true)
         }
         (webView as? TabWebView)?.onPeekLink = { [weak self] url in
             guard let self else { return }

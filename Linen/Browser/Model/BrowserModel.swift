@@ -104,7 +104,7 @@ final class BrowserModel {
     var onPictureInPictureChanged: ((BrowserTab, Bool) -> Void)?
     var onLinkHovered: ((BrowserTab, URL?, NSEvent.ModifierFlags, CGPoint) -> Void)?
     var onOpenInPeek: ((BrowserTab?, URL, CGPoint) -> Void)?
-    var onOpenInNewWindow: ((BrowserTab, URL, Bool) -> Void)?
+    var onOpenInNewWindow: ((BrowserTab, URL, Bool, Bool) -> Void)?
     var onSummarizeLink: ((BrowserTab?, URL, CGPoint) -> Void)?
     var onPictureReturnExpected: ((BrowserTab) -> Void)?
 
@@ -211,9 +211,9 @@ final class BrowserModel {
             guard let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }
-        tab.onOpenInNewWindow = { [weak self, weak tab] url, isPrivate in
+        tab.onOpenInNewWindow = { [weak self, weak tab] url, isPrivate, activate in
             guard let tab, !tab.isClosed else { return }
-            self?.onOpenInNewWindow?(tab, url, isPrivate)
+            self?.onOpenInNewWindow?(tab, url, isPrivate, activate)
         }
         tab.onOpenInPeek = { [weak self, weak tab] url, origin in
             self?.onOpenInPeek?(tab, url, origin)

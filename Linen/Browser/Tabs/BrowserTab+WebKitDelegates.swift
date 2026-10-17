@@ -37,6 +37,15 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             }
             return
         }
+        if let tab, let onOpenInNewWindow = tab.onOpenInNewWindow,
+           navigationAction.navigationType == .linkActivated,
+           navigationAction.modifierFlags.isSuperset(of: [.command, .option]),
+           navigationAction.targetFrame?.isMainFrame != false,
+           let url = navigationAction.request.url {
+            decisionHandler(.cancel)
+            onOpenInNewWindow(url, false, navigationAction.modifierFlags.contains(.shift))
+            return
+        }
         if let tab, let onOpenInNewTab = tab.onOpenInNewTab,
            navigationAction.navigationType == .linkActivated,
            navigationAction.modifierFlags.contains(.command)

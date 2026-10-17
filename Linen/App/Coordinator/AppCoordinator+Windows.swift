@@ -69,14 +69,18 @@ extension AppCoordinator {
     }
 
     @discardableResult
-    func openLinkInNewWindow(_ url: URL, isPrivate: Bool = false) -> AppCoordinator? {
+    func openLinkInNewWindow(_ url: URL, isPrivate: Bool = false, activate: Bool = true) -> AppCoordinator? {
         guard !isClosed else { return nil }
         let app = application ?? BrowserApplication.shared
         let settingsOwner = profiles.isPrivate ? profiles.profileToReturnTo : profiles.current
-        return app.newWindow(
+        let opened = app.newWindow(
             profile: (isPrivate || profiles.isPrivate) ? .privateBrowsing() : profiles.current,
-            settingsOwner: settingsOwner, urls: [url]
+            settingsOwner: settingsOwner, show: activate, urls: [url]
         )
+        if !activate, let nativeWindow, let behind = opened.nativeWindow {
+            behind.order(.below, relativeTo: nativeWindow.windowNumber)
+        }
+        return opened
     }
 
     func closeWindow() {
