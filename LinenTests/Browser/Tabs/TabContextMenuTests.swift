@@ -201,7 +201,9 @@ struct TabContextMenuTests {
 
     private final class WebKitTarget: NSObject {
         var fired = 0
-        @objc func openLink(_ sender: Any?) { fired += 1 }
+        @objc func openLink(_ sender: Any?) {
+            fired += 1
+        }
     }
 
     @Test(.boundedWebViews) func theNewTabItemIsOursAndFallsBackToWebKitWithoutALink() throws {

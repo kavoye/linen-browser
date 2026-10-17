@@ -48,7 +48,9 @@ final class ChromeNotice {
         serial += 1
         shownAt = .now
         let shown = serial
-        if !queued.isEmpty { waitThenPresent(Self.dwell) }
+        if !queued.isEmpty {
+            waitThenPresent(Self.dwell)
+        }
         Task {
             try? await Task.sleep(for: .seconds(1.6))
             guard serial == shown else { return }
