@@ -56,6 +56,7 @@ final class SpaceDotGlyphView: NSView {
         let isDark: Bool
     }
 
+    private let stack = CALayer()
     private let dot = CAShapeLayer()
     private let glyph = CALayer()
     private var style: Style?
@@ -108,10 +109,17 @@ final class SpaceDotGlyphView: NSView {
     init() {
         super.init(frame: NSRect(x: 0, y: 0, width: 20, height: 28))
         wantsLayer = true
+        layerUsesCoreImageFilters = true
         dot.bounds = CGRect(x: 0, y: 0, width: 5, height: 5)
         dot.path = CGPath(ellipseIn: dot.bounds, transform: nil)
-        layer?.addSublayer(dot)
-        layer?.addSublayer(glyph)
+        if let blur = CIFilter(name: "CIGaussianBlur") {
+            blur.name = "blur"
+            blur.setValue(0, forKey: kCIInputRadiusKey)
+            stack.filters = [blur]
+        }
+        stack.addSublayer(dot)
+        stack.addSublayer(glyph)
+        layer?.addSublayer(stack)
     }
 
     @available(*, unavailable)
@@ -132,6 +140,7 @@ final class SpaceDotGlyphView: NSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        stack.frame = bounds
         dot.position = center
         glyph.position = center
         CATransaction.commit()
@@ -242,8 +251,12 @@ final class SpaceDotGlyphView: NSView {
         return image
     }
 
-    private static func targets(_ growth: CGFloat, lift: CGFloat) -> [CGFloat] {
-        [1 - 0.6 * growth, 1 - min(1, growth * 2), (0.4 + 0.6 * growth) * lift, min(1, growth / 0.6)]
+    private func targets(_ growth: CGFloat, lift: CGFloat) -> [CGFloat] {
+        let growth = min(1, max(0, growth))
+        let swap = min(1, growth / 0.15)
+        let side = max(glyph.bounds.width, glyph.bounds.height)
+        let floor = side > 0 ? min(1, dot.bounds.width / side) : 1
+        return [1, 1 - swap, (floor + (1 - floor) * growth) * lift, swap, sin(.pi * swap)]
     }
 
     private func render(from time: CFTimeInterval? = nil) {
@@ -253,8 +266,9 @@ final class SpaceDotGlyphView: NSView {
             (dot, "opacity"),
             (glyph, "transform.scale"),
             (glyph, "opacity"),
+            (stack, "filters.blur.inputRadius"),
         ]
-        let finals = Self.targets(growth.to, lift: lift.to)
+        let finals = targets(growth.to, lift: lift.to)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for ((layer, keyPath), value) in zip(layers, finals) {
@@ -271,7 +285,7 @@ final class SpaceDotGlyphView: NSView {
         let times = (0...steps).map { Double($0) / Double(steps) }
         let samples = times.map { fraction in
             let moment = time + fraction * duration
-            return Self.targets(growth.value(at: moment).value, lift: lift.value(at: moment).value)
+            return targets(growth.value(at: moment).value, lift: lift.value(at: moment).value)
         }
         for (index, (layer, keyPath)) in layers.enumerated() {
             let animation = CAKeyframeAnimation(keyPath: keyPath)

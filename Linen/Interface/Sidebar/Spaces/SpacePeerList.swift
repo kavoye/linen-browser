@@ -3,39 +3,6 @@
 
 import SwiftUI
 
-struct SpacePeerList: View {
-    let browser: BrowserModel
-    let coordinator: AppCoordinator
-    let slide: SpaceSlide
-    let contentInsets: EdgeInsets
-
-    private var ids: [UUID] {
-        guard let peer = slide.peer, !slide.mounted.contains(peer.id) else { return slide.mounted }
-        return slide.mounted + [peer.id]
-    }
-
-    var body: some View {
-        ZStack(alignment: .top) {
-            ForEach(ids, id: \.self) { id in
-                SpacePeerPage(coordinator: coordinator, slide: slide, spaceID: id, contentInsets: contentInsets)
-            }
-        }
-    }
-}
-
-private struct SpacePeerPage: View {
-    let coordinator: AppCoordinator
-    let slide: SpaceSlide
-    let spaceID: UUID
-    let contentInsets: EdgeInsets
-
-    var body: some View {
-        SpacePage(coordinator: coordinator, spaceID: spaceID, contentInsets: contentInsets)
-            .modifier(SpacePeerOffset(slide: slide, spaceID: spaceID))
-            .transition(.identity)
-    }
-}
-
 struct SpacePage: View {
     let coordinator: AppCoordinator
     let spaceID: UUID
@@ -60,20 +27,10 @@ struct SpacePage: View {
             }
         }
         .allowsHitTesting(false)
+        .environment(\.sidebarShowsHelp, false)
         .environment(\.chromeWash, wash)
         .environment(\.chromeIsLight, wash.isLight)
         .environment(\.colorScheme, wash.isLight ? .light : .dark)
-    }
-}
-
-private struct SpacePeerOffset: ViewModifier {
-    let slide: SpaceSlide
-    let spaceID: UUID
-
-    func body(content: Content) -> some View {
-        let shown = slide.peer?.id == spaceID ? slide.peer : nil
-        let offset = shown.map { slide.offset + ($0.forward ? slide.width : -slide.width) } ?? 4 * slide.width
-        return content.visualEffect { effect, _ in effect.offset(x: offset) }
     }
 }
 

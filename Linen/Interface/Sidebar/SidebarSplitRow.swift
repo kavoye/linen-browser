@@ -339,6 +339,6 @@ private struct SplitRowPinReturn: View {
         .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
         }
-        .help(Text(verbatim: help))
+        .sidebarHelp(Text(verbatim: help))
     }
 }

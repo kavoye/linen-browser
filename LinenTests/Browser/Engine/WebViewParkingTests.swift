@@ -77,6 +77,32 @@ struct WebViewParkingTests {
         )
     }
 
+    @Test func aParkedPageIsHiddenUntilAHostTakesItBack() async throws {
+        let window = makeWindow()
+        window.orderFront(nil)
+        defer { window.orderOut(nil) }
+        let webView = WKWebView(
+            frame: NSRect(x: 0, y: 0, width: 600, height: 400),
+            configuration: WebViewPool.makeConfiguration()
+        )
+        let container = host(webView, in: window)
+        webView.loadHTMLString("<title>Parked</title>", baseURL: URL(string: "https://example.com/"))
+        try #require(await waitUntil { !webView.isLoading && webView.title == "Parked" })
+        try #require(await waitUntil { await visibility(of: webView) == "visible" })
+
+        container.removeFromSuperview()
+
+        #expect(await waitUntil(timeout: .seconds(5)) { await visibility(of: webView) == "hidden" })
+
+        _ = host(webView, in: window)
+
+        #expect(await waitUntil(timeout: .seconds(5)) { await visibility(of: webView) == "visible" })
+    }
+
+    private func visibility(of webView: WKWebView) async -> String? {
+        try? await webView.evaluateJavaScript("document.visibilityState") as? String
+    }
+
     /// The other setting is for hosts that own their view outright, and it has
     /// to keep meaning what it says: leave, and take the page with you.
     @Test func aHostThatDoesNotParkLetsTheViewLeaveTheWindow() {

@@ -404,7 +404,7 @@ private struct PinReturnSegment: View {
                 isHovering = over
             }
         }
-        .help(Text(verbatim: help))
+        .sidebarHelp(Text(verbatim: help))
         .task(id: tab.pinnedURL) {
             pinnedFavicon = nil
             guard let pageURL = tab.pinnedURL, let host = pageURL.host() else { return }
@@ -451,6 +451,7 @@ struct PinBadge: View {
         if let tab, hasPage, !tab.isShowingSystemPage {
             ChromeIcon(
                 symbol: symbol(for: tab),
+                size: tab.isAwayFromPin ? 10.5 : 9.5,
                 weight: .semibold,
                 help: helpText(for: tab)
             ) {

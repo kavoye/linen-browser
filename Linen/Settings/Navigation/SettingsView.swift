@@ -120,7 +120,6 @@ struct SettingsView: View {
     let workspace: SettingsWorkspace
 
     @State private var surfaceWidth: CGFloat = SettingsMetrics.twoColumnMinWidth
-    @Environment(\.windowControlsInset) private var windowControlsInset
 
     private var showsNamedNavigator: Bool {
         surfaceWidth >= SettingsMetrics.twoColumnMinWidth
@@ -143,10 +142,6 @@ struct SettingsView: View {
         return badges
     }
 
-    private var navigatorTopInset: CGFloat {
-        coordinator.settings.isMinimal && windowControlsInset > 0 ? 30 : 0
-    }
-
     var body: some View {
         @Bindable var workspace = workspace
 
@@ -161,8 +156,6 @@ struct SettingsView: View {
                 showsNames: showsNamedNavigator,
                 onOpen: workspace.open
             )
-            .padding(.top, navigatorTopInset)
-            .animation(BrowserView.retractMotion, value: navigatorTopInset)
             .frame(width: showsNamedNavigator
                 ? SettingsMetrics.navWidth
                 : SettingsMetrics.navIconsWidth)

@@ -21,9 +21,9 @@ struct IslandMoreMenu: View {
 
             PopoverMenuDivider()
 
-            PopoverMenuRow(symbol: "arrow.down", title: String(localized: "Downloads…"), action: run { coordinator.showDownloads() })
-            PopoverMenuRow(symbol: "clock", title: String(localized: "History…"), action: run { coordinator.showHistory() })
-            PopoverMenuRow(symbol: "gearshape", title: String(localized: "Settings…"), action: run { coordinator.openSettings() })
+            PopoverMenuRow(symbol: "arrow.down", title: String(localized: "Downloads…"), shortcut: "⌥⌘L", action: run { coordinator.showDownloads() })
+            PopoverMenuRow(symbol: "clock", title: String(localized: "History…"), shortcut: "⌘Y", action: run { coordinator.showHistory() })
+            PopoverMenuRow(symbol: "gearshape", title: String(localized: "Settings…"), shortcut: "⌘,", action: run { coordinator.openSettings() })
         }
         .padding(PopoverMenuRow<EmptyView>.inset)
         .frame(width: PopoverMenuRow<EmptyView>.width)

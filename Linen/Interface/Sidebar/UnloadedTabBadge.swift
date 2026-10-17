@@ -17,7 +17,7 @@ struct UnloadedTabBadge: View {
         Image(systemName: "moon.zzz.fill")
             .font(.system(size: size, weight: .semibold))
             .foregroundStyle(Self.ink)
-            .help(help)
+            .sidebarHelp(help)
             .accessibilityLabel(help)
     }
 }

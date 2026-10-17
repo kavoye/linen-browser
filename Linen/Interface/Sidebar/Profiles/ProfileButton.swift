@@ -81,6 +81,7 @@ struct ProfileMenuRows: View {
 struct PopoverMenuRow<Icon: View>: View {
     let title: String
     var isChecked = false
+    var shortcut: String?
     @ViewBuilder let icon: Icon
     let action: () -> Void
 
@@ -103,6 +104,15 @@ struct PopoverMenuRow<Icon: View>: View {
                     .font(.system(size: 13))
                     .lineLimit(1)
                 Spacer(minLength: 8)
+                if let shortcut, let key = shortcut.last {
+                    HStack(spacing: 1) {
+                        Text(verbatim: String(shortcut.dropLast()))
+                        Text(verbatim: String(key))
+                            .frame(width: 12, alignment: .leading)
+                    }
+                    .font(.system(size: 13))
+                    .foregroundStyle(.tertiary)
+                }
                 if isChecked {
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .semibold))
@@ -130,8 +140,8 @@ struct PopoverMenuRow<Icon: View>: View {
 }
 
 extension PopoverMenuRow where Icon == PopoverMenuSymbol {
-    init(symbol: String, title: String, action: @escaping () -> Void) {
-        self.init(title: title, icon: { PopoverMenuSymbol(name: symbol) }, action: action)
+    init(symbol: String, title: String, shortcut: String? = nil, action: @escaping () -> Void) {
+        self.init(title: title, shortcut: shortcut, icon: { PopoverMenuSymbol(name: symbol) }, action: action)
     }
 }
 

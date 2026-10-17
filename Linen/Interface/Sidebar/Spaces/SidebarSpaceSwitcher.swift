@@ -41,6 +41,9 @@ struct SidebarSpaceSwitcher: View {
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
             coordinator.sidebarDrag.spaceSwitcherFrame = $0
         }
+        .onDisappear {
+            coordinator.sidebarDrag.spaceSwitcherFrame = .zero
+        }
         .onChange(of: coordinator.sidebarDrag.springSpaceID) { _, armed in
             withAnimation(.smooth(duration: 0.25)) { hoveredID = armed }
         }
@@ -200,6 +203,7 @@ private struct SpaceDotButtonStyle: ButtonStyle {
 
 struct SidebarMoreMenu: View {
     let coordinator: AppCoordinator
+    var includesSpacesAndDownloads = false
 
     @State private var hovering = false
     @State private var isOpen = false
@@ -227,25 +231,47 @@ struct SidebarMoreMenu: View {
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
         .help(String(localized: "More"))
-        .popover(isPresented: $isOpen, arrowEdge: .top) {
-            VStack(alignment: .leading, spacing: 1) {
-                if coordinator.showsSpaces {
-                    PopoverMenuRow(symbol: "plus", title: String(localized: "New Space…"), action: run {
-                        coordinator.spaceSlider.openEditor(.new)
-                    })
-                    PopoverMenuDivider()
-                }
+        .modifier(MoreMenuPopover(isOpen: $isOpen, isArrowless: includesSpacesAndDownloads) { menu })
+    }
+
+    private var menu: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            if coordinator.showsSpaces {
+                PopoverMenuRow(symbol: "plus", title: String(localized: "New Space…"), action: run {
+                    coordinator.spaceSlider.openEditor(.new)
+                })
+                PopoverMenuDivider()
+            }
+            if includesSpacesAndDownloads {
+                ProfileMenuRows(coordinator: coordinator, isPresented: $isOpen)
+                PopoverMenuDivider()
+                PopoverMenuRow(symbol: "arrow.down", title: String(localized: "Downloads…"), shortcut: "⌥⌘L", action: run { coordinator.showDownloads() })
+            } else {
                 PopoverMenuRow(symbol: "eyeglasses", title: String(localized: "New Private Window"), action: run {
                     coordinator.enterPrivateBrowsing()
                 })
                 .disabled(coordinator.isSwitchingProfile)
                 PopoverMenuDivider()
-                PopoverMenuRow(symbol: "clock", title: String(localized: "History…"), action: run { coordinator.showHistory() })
-                PopoverMenuRow(symbol: "gearshape", title: String(localized: "Settings…"), action: run { coordinator.openSettings() })
             }
-            .padding(PopoverMenuRow<EmptyView>.inset)
-            .frame(width: PopoverMenuRow<EmptyView>.width)
-            .chromePopoverAppearance()
+            PopoverMenuRow(symbol: "clock", title: String(localized: "History…"), shortcut: "⌘Y", action: run { coordinator.showHistory() })
+            PopoverMenuRow(symbol: "gearshape", title: String(localized: "Settings…"), shortcut: "⌘,", action: run { coordinator.openSettings() })
+        }
+        .padding(PopoverMenuRow<EmptyView>.inset)
+        .frame(width: PopoverMenuRow<EmptyView>.width)
+        .chromePopoverAppearance()
+    }
+}
+
+private struct MoreMenuPopover<Menu: View>: ViewModifier {
+    @Binding var isOpen: Bool
+    let isArrowless: Bool
+    @ViewBuilder let menu: () -> Menu
+
+    func body(content: Content) -> some View {
+        if isArrowless {
+            content.arrowlessPopover(isPresented: $isOpen, content: menu)
+        } else {
+            content.popover(isPresented: $isOpen, arrowEdge: .top, content: menu)
         }
     }
 }

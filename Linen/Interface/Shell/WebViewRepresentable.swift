@@ -83,6 +83,16 @@ final class WebViewParkingShelf: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? {
         nil
     }
+
+    override func didAddSubview(_ subview: NSView) {
+        super.didAddSubview(subview)
+        subview.isHidden = true
+    }
+
+    override func willRemoveSubview(_ subview: NSView) {
+        super.willRemoveSubview(subview)
+        subview.isHidden = false
+    }
 }
 
 final class WebViewContainer: NSView {

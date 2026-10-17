@@ -147,10 +147,8 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             }
             .padding(.leading, contentInsets.leading)
             .padding(.trailing, contentInsets.trailing)
-            .modifier(SpaceListInk(browser: browser, coordinator: coordinator))
-            .modifier(SpaceSlideOffset(slide: coordinator.overlays.spaceSlide))
-            .opacity(coordinator.overlays.spaceSlide.isGliding ? 0 : 1)
-            .animation(nil, value: coordinator.overlays.spaceSlide.isGliding)
+            .opacity(coordinator.overlays.spaceSlide.isStaged ? 0 : 1)
+            .animation(nil, value: coordinator.overlays.spaceSlide.isStaged)
         }
         .scrollIndicators(.never)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
@@ -159,15 +157,8 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         .onChange(of: browser.currentSpaceID) { _, _ in
             scrollPosition.scrollTo(edge: .top)
         }
-        .overlay(alignment: .top) {
-            SpacePeerList(
-                browser: browser,
-                coordinator: coordinator,
-                slide: coordinator.overlays.spaceSlide,
-                contentInsets: contentInsets
-            )
-            .opacity(coordinator.overlays.spaceSlide.isGliding ? 0 : 1)
-            .animation(nil, value: coordinator.overlays.spaceSlide.isGliding)
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: {
+            coordinator.overlays.spaceSlide.scroll = max(0, $1)
         }
         .overlay {
             SpaceGlideStage(coordinator: coordinator, contentInsets: contentInsets)

@@ -187,7 +187,7 @@ struct MinimalShell: View {
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
                 .environment(\.windowColorScheme, floating.isLight ? .light : .dark)
-                .environment(\.sidebarStyle, coordinator.sidebar.style)
+                .environment(\.sidebarStyle, .full)
 
             PaneDragOverlay(browser: browser, model: coordinator.sidebarDrag)
                 .environment(\.windowColorScheme, floating.isLight ? .light : .dark)
@@ -299,7 +299,7 @@ struct MinimalShell: View {
     }
 
     private var tabListWidth: CGFloat {
-        coordinator.sidebar.openWidth(in: containerWidth)
+        coordinator.sidebar.fullWidth(in: containerWidth)
     }
 
     private func closePanels(unlessAt windowPoint: CGPoint) {
@@ -331,10 +331,9 @@ struct MinimalShell: View {
     }
 
     private var tabList: some View {
-        let sidebar = coordinator.sidebar
         let shape = LoomChrome.canvasShape
         return Sidebar(browser: browser, coordinator: coordinator)
-            .environment(\.sidebarStyle, sidebar.style)
+            .environment(\.sidebarStyle, .full)
             .environment(\.sidebarWidth, tabListWidth)
             .environment(\.sidebarIsFloating, true)
             .environment(\.floatingGround, floating)

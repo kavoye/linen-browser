@@ -15,17 +15,41 @@ final class SpaceGlide {
         forward: Bool,
         offset: CGFloat,
         width: CGFloat,
+        scroll: CGFloat,
         velocity: Double,
         landed: @escaping () -> Void
     ) -> Bool {
-        guard let stage, stage.window != nil, stage.bounds.width > 0 else { return false }
-        stage.run(from: outgoing, to: incoming, forward: forward, offset: offset, width: width, velocity: velocity, landed: landed)
+        guard let stage, stage.isReady else { return false }
+        stage.run(
+            from: outgoing,
+            to: incoming,
+            forward: forward,
+            offset: offset,
+            width: width,
+            scroll: scroll,
+            velocity: velocity,
+            landed: landed
+        )
         return true
     }
 
-    func prepare(from outgoing: UUID, to incoming: UUID, forward: Bool, width: CGFloat) {
-        guard let stage, stage.window != nil, stage.bounds.width > 0 else { return }
-        stage.prepare(from: outgoing, to: incoming, forward: forward, width: width)
+    @discardableResult
+    func track(from outgoing: UUID, to incoming: UUID?, forward: Bool, offset: CGFloat, width: CGFloat, scroll: CGFloat) -> Bool {
+        guard let stage, stage.isReady else { return false }
+        stage.track(from: outgoing, to: incoming, forward: forward, offset: offset, width: width, scroll: scroll)
+        return true
+    }
+
+    func settleBack(settled: @escaping () -> Void) {
+        guard let stage else {
+            settled()
+            return
+        }
+        stage.settleBack(settled: settled)
+    }
+
+    func prewarm(_ ids: [UUID]) {
+        stage?.prewarm(ids)
     }
 
     func finish() {
@@ -33,11 +57,24 @@ final class SpaceGlide {
     }
 }
 
-private struct SpaceGlidePair: Equatable {
+private struct SpaceGlideLayout: Equatable {
     let from: UUID
-    let to: UUID
+    let to: UUID?
     let step: CGFloat
-    let size: CGSize
+    let scroll: CGFloat
+}
+
+private struct SpaceGlidePage: View {
+    let coordinator: AppCoordinator
+    let spaceID: UUID
+    let contentInsets: EdgeInsets
+    let environment: EnvironmentValues
+
+    var body: some View {
+        SpacePage(coordinator: coordinator, spaceID: spaceID, contentInsets: contentInsets)
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+            .environment(\.self, environment)
+    }
 }
 
 struct SpaceGlideStage: NSViewRepresentable {
@@ -51,8 +88,7 @@ struct SpaceGlideStage: NSViewRepresentable {
     }
 
     func updateNSView(_ view: SpaceGlideView, context: Context) {
-        view.contentInsets = contentInsets
-        view.environment = context.environment
+        view.update(contentInsets: contentInsets, environment: context.environment)
         coordinator.spaceSlider.glide.stage = view
     }
 
@@ -63,10 +99,10 @@ struct SpaceGlideStage: NSViewRepresentable {
 
 final class SpaceGlideView: NSView {
     private unowned let coordinator: AppCoordinator
-    var contentInsets = EdgeInsets()
-    var environment = EnvironmentValues()
-    private var pages: [NSView] = []
-    private var prepared: SpaceGlidePair?
+    private var contentInsets = EdgeInsets()
+    private var environment = EnvironmentValues()
+    private var pages: [UUID: NSHostingView<SpaceGlidePage>] = [:]
+    private var arrangement: SpaceGlideLayout?
     private var turn = 0
     private var pendingLanding: (() -> Void)?
 
@@ -91,24 +127,98 @@ final class SpaceGlideView: NSView {
         nil
     }
 
-    fileprivate func prepare(from outgoing: UUID, to incoming: UUID, forward: Bool, width: CGFloat) {
-        let step = forward ? width : -width
-        let pair = SpaceGlidePair(from: outgoing, to: incoming, step: step, size: bounds.size)
-        guard prepared != pair else { return }
-        clearPages()
-        pages = [(outgoing, 0), (incoming, step)].map { id, x in
-            let root = SpacePage(coordinator: coordinator, spaceID: id, contentInsets: contentInsets)
-                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
-                .environment(\.self, environment)
-            let host = NSHostingView(rootView: root)
-            host.safeAreaRegions = []
-            host.sizingOptions = []
-            host.frame = bounds.offsetBy(dx: x, dy: 0)
-            addSubview(host)
+    fileprivate var isReady: Bool {
+        window != nil && bounds.width > 0
+    }
+
+    private var isMoving: Bool {
+        alphaValue > 0
+    }
+
+    func update(contentInsets: EdgeInsets, environment: EnvironmentValues) {
+        self.contentInsets = contentInsets
+        self.environment = environment
+        guard !isMoving else { return }
+        for (id, host) in pages {
+            host.rootView = root(for: id)
+        }
+    }
+
+    override func layout() {
+        super.layout()
+        place()
+    }
+
+    private func root(for id: UUID) -> SpaceGlidePage {
+        SpaceGlidePage(coordinator: coordinator, spaceID: id, contentInsets: contentInsets, environment: environment)
+    }
+
+    private func page(for id: UUID) -> NSHostingView<SpaceGlidePage> {
+        if let host = pages[id] {
             return host
         }
+        let host = NSHostingView(rootView: root(for: id))
+        host.safeAreaRegions = []
+        host.sizingOptions = []
+        host.isHidden = true
+        host.frame = bounds
+        addSubview(host)
+        pages[id] = host
+        return host
+    }
+
+    fileprivate func prewarm(_ ids: [UUID]) {
+        guard !isMoving else { return }
+        for (id, host) in pages where !ids.contains(id) {
+            host.removeFromSuperview()
+            pages[id] = nil
+        }
+        for id in ids {
+            _ = page(for: id)
+        }
+        arrangement = nil
+        place()
+    }
+
+    private func arrange(_ next: SpaceGlideLayout) {
+        guard arrangement != next else { return }
+        arrangement = next
+        _ = page(for: next.from)
+        if let to = next.to {
+            _ = page(for: to)
+        }
+        place()
         layoutSubtreeIfNeeded()
-        prepared = pair
+    }
+
+    private func place() {
+        for (id, host) in pages {
+            guard let arrangement, id == arrangement.from || id == arrangement.to else {
+                host.isHidden = true
+                host.frame = bounds
+                continue
+            }
+            host.isHidden = false
+            host.frame = id == arrangement.from
+                ? CGRect(x: 0, y: -arrangement.scroll, width: bounds.width, height: bounds.height + arrangement.scroll)
+                : bounds.offsetBy(dx: arrangement.step, dy: 0)
+        }
+    }
+
+    private func show(translation: CGFloat) {
+        guard let layer else { return }
+        layer.removeAnimation(forKey: "glide")
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.sublayerTransform = CATransform3DMakeTranslation(translation, 0, 0)
+        CATransaction.commit()
+        alphaValue = 1
+    }
+
+    fileprivate func track(from outgoing: UUID, to incoming: UUID?, forward: Bool, offset: CGFloat, width: CGFloat, scroll: CGFloat) {
+        turn += 1
+        arrange(SpaceGlideLayout(from: outgoing, to: incoming, step: forward ? width : -width, scroll: scroll))
+        show(translation: offset)
     }
 
     fileprivate func run(
@@ -117,34 +227,49 @@ final class SpaceGlideView: NSView {
         forward: Bool,
         offset: CGFloat,
         width: CGFloat,
+        scroll: CGFloat,
         velocity: Double,
         landed: @escaping () -> Void
     ) {
         turn += 1
         let turn = turn
         let step = forward ? width : -width
-        prepare(from: outgoing, to: incoming, forward: forward, width: width)
-        alphaValue = 1
-
-        guard let layer else { return }
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        layer.sublayerTransform = CATransform3DMakeTranslation(-step, 0, 0)
-        CATransaction.commit()
-
+        arrange(SpaceGlideLayout(from: outgoing, to: incoming, step: step, scroll: scroll))
+        show(translation: -step)
         pendingLanding = landed
-        let spring = CASpringAnimation(perceptualDuration: 0.25, bounce: 0)
-        spring.keyPath = "sublayerTransform.translation.x"
-        spring.fromValue = offset
-        spring.toValue = -step
-        spring.initialVelocity = velocity
-        spring.duration = 0.34
-        CATransaction.begin()
-        CATransaction.setCompletionBlock { [weak self] in
+        animate(from: offset, to: -step, velocity: velocity) { [weak self] in
             guard let self, self.turn == turn, let landed = pendingLanding else { return }
             pendingLanding = nil
             landed()
         }
+    }
+
+    fileprivate func settleBack(settled: @escaping () -> Void) {
+        turn += 1
+        let turn = turn
+        guard let layer, isMoving else {
+            settled()
+            return
+        }
+        let from = (layer.presentation()?.sublayerTransform ?? layer.sublayerTransform).m41
+        show(translation: 0)
+        animate(from: from, to: 0, velocity: 0) { [weak self] in
+            guard let self, self.turn == turn else { return }
+            finish()
+            settled()
+        }
+    }
+
+    private func animate(from: CGFloat, to: CGFloat, velocity: Double, completion: @escaping () -> Void) {
+        guard let layer else { return }
+        let spring = CASpringAnimation(perceptualDuration: 0.25, bounce: 0)
+        spring.keyPath = "sublayerTransform.translation.x"
+        spring.fromValue = from
+        spring.toValue = to
+        spring.initialVelocity = velocity
+        spring.duration = 0.34
+        CATransaction.begin()
+        CATransaction.setCompletionBlock(completion)
         layer.add(spring, forKey: "glide")
         CATransaction.commit()
     }
@@ -152,17 +277,12 @@ final class SpaceGlideView: NSView {
     func finish() {
         turn += 1
         alphaValue = 0
-        clearPages()
         layer?.removeAnimation(forKey: "glide")
         layer?.sublayerTransform = CATransform3DIdentity
+        arrangement = nil
+        place()
         let landed = pendingLanding
         pendingLanding = nil
         landed?()
-    }
-
-    private func clearPages() {
-        pages.forEach { $0.removeFromSuperview() }
-        pages = []
-        prepared = nil
     }
 }

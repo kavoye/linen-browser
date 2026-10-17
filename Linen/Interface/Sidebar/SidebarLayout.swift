@@ -190,6 +190,10 @@ final class SidebarLayout {
         return SidebarMetrics.clampWidth(width, container: container)
     }
 
+    func fullWidth(in container: CGFloat) -> CGFloat {
+        SidebarMetrics.clampWidth(width, container: container)
+    }
+
     // MARK: - Visibility
 
     func toggleVisible() {
@@ -307,6 +311,28 @@ extension EnvironmentValues {
     @Entry var sidebarWidth: CGFloat = SidebarMetrics.defaultWidth
 
     @Entry var sidebarIsFloating: Bool = false
+
+    @Entry var sidebarShowsHelp: Bool = true
+}
+
+private struct SidebarHelp: ViewModifier {
+    let text: Text
+
+    @Environment(\.sidebarShowsHelp) private var showsHelp
+
+    func body(content: Content) -> some View {
+        if showsHelp {
+            content.help(text)
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func sidebarHelp(_ text: Text) -> some View {
+        modifier(SidebarHelp(text: text))
+    }
 }
 
 struct LoomColumnResizeHandle: View {

@@ -338,7 +338,6 @@ private struct WebPane: View {
                     .opacity(!showsStartPage && !tab.hasPresentedContent ? 1 : 0)
                     .transition(.identity)
             }
-            .overlay { PageMorphCover(tab: tab) }
             .offset(y: pull.offset)
             .overlay(alignment: .top) {
                 tab.surfaceColor

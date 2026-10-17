@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import AppKit
+import CoreImage
 import SwiftUI
-import WebKit
 
 struct BrowserView: View {
     let browser: BrowserModel
@@ -19,16 +19,14 @@ struct BrowserView: View {
     @State private var isRetracted: Bool
     @State private var isPageFull: Bool
     @State private var isLeavingMinimal = false
-    @State private var morphCovers: [UUID: NSImage] = [:]
-    @State private var isPageBlurred = false
-    @State private var isCoverFading = false
+    @State private var isInputLocked = false
     @State private var switchGeneration = 0
     @State private var sidebarFrame: CGRect = .zero
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     static let retractMotion = Animation.spring(duration: 0.34, bounce: 0)
-    private static let morphMotion = Animation.spring(duration: 0.35, bounce: 0.1)
+    static let morphMotion = Animation.spring(duration: 0.35, bounce: 0)
 
     init(browser: BrowserModel, coordinator: AppCoordinator) {
         self.browser = browser
@@ -80,13 +78,9 @@ struct BrowserView: View {
 
     private var page: some View {
         let barOnTop = coordinator.settings.minimalBarEdge == .top
-        let pageSize = isMorphing ? (isPageFull ? fullRect.size : standardRect.size) : nil
-        let ground = isMorphing
-            ? Color(nsColor: LoomChrome.sampledColor(
-                ChromeBand.pageColor(browser: browser, coordinator: coordinator),
-                scheme: scheme
-            ))
-            : .clear
+        let isNative = ContentArea.showsPanelFill(browser: browser)
+        let pageSize = isMorphing ? (isNative ? morphRect.size : isRetracted ? fullRect.size : standardRect.size) : nil
+        let ground = isMorphing && !isNative ? browser.activeTab?.surfaceColor ?? Theme.windowBackground : .clear
         return ContentArea(
             browser: browser,
             coordinator: coordinator,
@@ -94,12 +88,11 @@ struct BrowserView: View {
             canvasTrailingInset: isPageFull || isMorphing ? 0 : standardGeometry.canvasTrailingInset,
             isFullBleed: isSettledMinimal,
             retraction: isPageFull || isMorphing ? 1 : 0,
+            isFilled: isMorphing && isRetracted,
             findBarTop: isSettledMinimal && barOnTop ? IslandBar.edgeGap + IslandBar.height + 10 : 10
         )
-        .environment(\.pageMorphCovers, morphCovers)
-        .environment(\.pageMorphCoverFading, isCoverFading)
-        .blur(radius: isPageBlurred ? 18 : 0)
         .frame(width: pageSize?.width, height: pageSize?.height)
+        .animation(isNative ? Self.morphMotion : nil, value: isRetracted)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, !isMorphing && sidebar.isVisible && !isPageFull ? sidebar.openWidth(in: containerWidth) : 0)
         .background(ground)
@@ -108,10 +101,8 @@ struct BrowserView: View {
         }
         .clipShape(CanvasCutout(rect: morphRect, radius: isMorphing ? LoomChrome.canvasRadius : 0))
         .background {
-            CanvasCutout(rect: morphRect, radius: LoomChrome.canvasRadius)
-                .fill(Color.black.opacity(isMorphing && !isRetracted ? 0.18 : 0))
-                .blur(radius: 12)
-                .offset(y: 4)
+            CanvasShadow(rect: morphRect.offsetBy(dx: 0, dy: 4))
+                .opacity(isMorphing && !isRetracted ? 0.18 : 0)
         }
     }
 
@@ -345,7 +336,7 @@ struct BrowserView: View {
 
             if mountsStandard {
                 standardChrome
-                    .allowsHitTesting(!mountsMinimal)
+                    .allowsHitTesting(!isInputLocked && !isRetracted)
             }
 
             if mountsMinimal {
@@ -354,7 +345,7 @@ struct BrowserView: View {
                     coordinator: coordinator,
                     isLeaving: isLeavingMinimal
                 )
-                .allowsHitTesting(!mountsStandard)
+                .allowsHitTesting(!isInputLocked && isRetracted)
             }
         }
         .onGeometryChange(for: CGRect.self) {
@@ -376,56 +367,13 @@ struct BrowserView: View {
                 isLeavingMinimal = false
                 mountsStandard = !toMinimal
                 mountsMinimal = toMinimal
-                dropCover()
+                isInputLocked = false
             }
             return
         }
-        let settle = {
-            cut {
-                mountsStandard = !toMinimal
-                mountsMinimal = toMinimal
-                isLeavingMinimal = false
-                isPageFull = toMinimal
-                dropCover()
-            }
-        }
-        let morph = {
-            withAnimation(Self.morphMotion) {
-                isRetracted = toMinimal
-                isLeavingMinimal = !toMinimal
-                isPageBlurred = true
-            } completion: {
-                guard generation == switchGeneration else { return }
-                cut {
-                    mountsStandard = !toMinimal
-                    mountsMinimal = toMinimal
-                    isLeavingMinimal = false
-                    isPageFull = toMinimal
-                }
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(120))
-                    guard generation == switchGeneration else { return }
-                    cut {
-                        morphCovers = [:]
-                        isCoverFading = false
-                    }
-                    try? await Task.sleep(for: .milliseconds(32))
-                    guard generation == switchGeneration else { return }
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        isPageBlurred = false
-                    } completion: {
-                        guard generation == switchGeneration else { return }
-                        settle()
-                    }
-                }
-            }
-        }
         Task { @MainActor in
-            let covers = isMorphing ? morphCovers : await pageSnapshots()
-            guard generation == switchGeneration else { return }
             cut {
-                morphCovers = covers
-                isCoverFading = false
+                isInputLocked = true
                 isPageFull = toMinimal
                 if toMinimal, !mountsMinimal {
                     isLeavingMinimal = true
@@ -435,27 +383,26 @@ struct BrowserView: View {
                     mountsStandard = true
                 }
             }
-            try? await Task.sleep(for: .milliseconds(50))
+            await Task.yield()
             guard generation == switchGeneration else { return }
-            morph()
+            withAnimation(Self.morphMotion) {
+                isRetracted = toMinimal
+            } completion: {
+                guard generation == switchGeneration else { return }
+                isInputLocked = false
+            }
+            withAnimation(Self.morphMotion, completionCriteria: .removed) {
+                isLeavingMinimal = !toMinimal
+            } completion: {
+                guard generation == switchGeneration else { return }
+                cut {
+                    mountsStandard = !toMinimal
+                    mountsMinimal = toMinimal
+                    isLeavingMinimal = false
+                    isPageFull = toMinimal
+                }
+            }
         }
-    }
-
-    private func pageSnapshots() async -> [UUID: NSImage] {
-        let shown = browser.splitPanes ?? [browser.activeTab].compactMap(\.self)
-        var covers: [UUID: NSImage] = [:]
-        for tab in shown where PageMorphCover.covers(tab) {
-            let configuration = WKSnapshotConfiguration()
-            configuration.afterScreenUpdates = false
-            covers[tab.id] = try? await tab.webView.takeSnapshot(configuration: configuration)
-        }
-        return covers
-    }
-
-    private func dropCover() {
-        morphCovers = [:]
-        isPageBlurred = false
-        isCoverFading = false
     }
 
     private func cut(_ change: () -> Void) {
@@ -542,35 +489,50 @@ extension EnvironmentValues {
     @Entry var paletteIsLeaving = false
     @Entry var sidebarTopRowShift = CGSize.zero
     @Entry var sidebarHidesMediaCard = false
-    @Entry var pageMorphCovers: [UUID: NSImage] = [:]
-    @Entry var pageMorphCoverFading = false
 }
 
-struct PageMorphCover: View {
-    let tab: BrowserTab
+private struct CanvasShadow: View {
+    let rect: CGRect
 
-    @Environment(\.pageMorphCovers) private var covers
-    @Environment(\.pageMorphCoverFading) private var isFading
-
-    static func covers(_ tab: BrowserTab) -> Bool {
-        tab.internalPage == nil
-            && !ChromeBand.showsStartPage(for: tab)
-            && !tab.reader.isActive
-            && tab.isMaterialised
-            && !tab.isDeferred
-            && tab.webView.window != nil
-    }
+    private static let blur: CGFloat = 12
+    private static let spread = blur * 3
+    private static let cap = spread + LoomChrome.canvasRadius
+    private static let image = render()
 
     var body: some View {
-        if let cover = covers[tab.id] {
-            Image(nsImage: cover)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .clipped()
-                .opacity(isFading ? 0 : 1)
-                .allowsHitTesting(false)
-        }
+        Image(nsImage: Self.image)
+            .resizable(
+                capInsets: EdgeInsets(top: Self.cap, leading: Self.cap, bottom: Self.cap, trailing: Self.cap),
+                resizingMode: .stretch
+            )
+            .frame(width: rect.width + Self.spread * 2, height: rect.height + Self.spread * 2)
+            .offset(x: rect.minX - Self.spread, y: rect.minY - Self.spread)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .allowsHitTesting(false)
+    }
+
+    private static func render() -> NSImage {
+        let scale: CGFloat = 2
+        let side = (cap * 2 + 2) * scale
+        let pixels = Int(side)
+        guard let context = CGContext(
+            data: nil, width: pixels, height: pixels, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return NSImage() }
+        let inset = spread * scale
+        let shape = Path(
+            roundedRect: CGRect(x: inset, y: inset, width: side - inset * 2, height: side - inset * 2),
+            cornerRadius: LoomChrome.canvasRadius * scale,
+            style: .continuous
+        )
+        context.addPath(shape.cgPath)
+        context.setFillColor(.black)
+        context.fillPath()
+        guard let sharp = context.makeImage() else { return NSImage() }
+        let source = CIImage(cgImage: sharp)
+        let blurred = source.applyingGaussianBlur(sigma: blur * scale).cropped(to: source.extent)
+        guard let image = CIContext().createCGImage(blurred, from: source.extent) else { return NSImage() }
+        return NSImage(cgImage: image, size: NSSize(width: side / scale, height: side / scale))
     }
 }
 

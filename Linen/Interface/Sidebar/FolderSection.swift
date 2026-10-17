@@ -82,7 +82,7 @@ struct FolderSection: View {
                         .foregroundStyle(folder.color.tint)
                         .contentTransition(.symbolEffect(.replace))
                         .animation(Theme.Motion.settle, value: audible?.id)
-                        .help(audible.map { Text("“\($0.title)” is playing") } ?? Text(verbatim: ""))
+                        .sidebarHelp(audible.map { Text("“\($0.title)” is playing") } ?? Text(verbatim: ""))
                 }
 
                 if sidebarStyle == .icons {

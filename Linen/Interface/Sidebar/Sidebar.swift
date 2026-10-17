@@ -85,7 +85,7 @@ struct Sidebar: View {
                 .animation(nil, value: coordinator.overlays.spaceEditorRevealsList)
                 .modifier(SpaceArrival(progress: coordinator.overlays.spaceAppearance))
                 .allowsHitTesting(spaceEditor == nil)
-                .clipped()
+                .clipShape(WorkspaceClip(isClipping: spaceEditor != nil || coordinator.overlays.spaceAppearance < 1))
 
             ZStack {
                 if let spaceEditor {
@@ -209,6 +209,10 @@ private struct SidebarBottomChrome: View {
         SidebarDownloadsButton(coordinator: coordinator)
     }
 
+    private var showsSwitcher: Bool {
+        coordinator.showsSpaces && coordinator.spaceStore.spaces.count > 1
+    }
+
     var body: some View {
         VStack(spacing: 6) {
             SidebarPinnedCards(
@@ -217,18 +221,12 @@ private struct SidebarBottomChrome: View {
             )
 
             if sidebarStyle == .icons {
-                VStack(spacing: 6) {
-                    if coordinator.showsSpaces {
-                        SidebarSpaceSwitcher(coordinator: coordinator, axis: .vertical)
-                    }
-                    downloadsButton
-                    SidebarMoreMenu(coordinator: coordinator)
-                }
+                SidebarMoreMenu(coordinator: coordinator, includesSpacesAndDownloads: true)
             } else {
                 HStack(spacing: 6) {
                     downloadsButton
 
-                    if coordinator.showsSpaces {
+                    if showsSwitcher {
                         SidebarSpaceSwitcher(coordinator: coordinator)
                     } else {
                         Spacer(minLength: 0)
@@ -507,6 +505,9 @@ struct SidebarDownloadsButton: View {
     @State private var previewing = false
     @State private var previewTask: Task<Void, Never>?
     @State private var finishPulse = 0
+    @State private var startPulse = 0
+
+    private static let barWidth: CGFloat = 15
 
     private var downloads: DownloadManager {
         coordinator.browser.downloads
@@ -514,39 +515,50 @@ struct SidebarDownloadsButton: View {
     private var isRunning: Bool {
         downloads.activeCount > 0
     }
-    private var fillFraction: CGFloat {
-        0.1 + 0.8 * max(0.06, min(downloads.activeFraction, 1))
-    }
-    private var finishedCount: Int {
-        downloads.items.count { $0.state == .finished }
+    private var tally: Tally {
+        Tally(
+            manager: ObjectIdentifier(downloads),
+            active: downloads.activeCount,
+            finished: downloads.items.count { $0.state == .finished }
+        )
     }
 
+    private struct Tally: Equatable {
+        let manager: ObjectIdentifier
+        let active: Int
+        let finished: Int
+    }
     var body: some View {
         Button {
             closePreview()
             coordinator.showDownloads()
         } label: {
-            Image(systemName: "arrow.down")
-                .font(Theme.Font.rowTitle)
-                .foregroundStyle(hovering ? .primary : .secondary)
-                .overlay {
-                    Image(systemName: "arrow.down")
-                        .font(Theme.Font.rowTitle)
-                        .foregroundStyle(Theme.accent)
-                        .mask(alignment: .top) {
-                            GeometryReader { proxy in
-                                Rectangle()
-                                    .frame(height: proxy.size.height * fillFraction)
-                            }
-                        }
-                        .opacity(isRunning ? 1 : 0)
-                        .animation(Theme.Motion.drift, value: fillFraction)
-                }
-                .symbolEffect(.wiggle, value: finishPulse)
-                .hoverLift(hoverLifts && hovering)
-                .frame(width: 28, height: 28)
-                .hoverBackground(isActive: !hoverLifts && hovering)
-                .contentShape(Rectangle())
+            VStack(spacing: isRunning ? 3 : 0) {
+                Image(systemName: "arrow.down")
+                    .font(Theme.Font.rowTitle)
+                    .foregroundStyle(hovering ? .primary : .secondary)
+                    .symbolEffect(.bounce.down, value: startPulse)
+                    .symbolEffect(.wiggle, value: finishPulse)
+
+                Capsule()
+                    .fill(Theme.Wash.strong)
+                    .frame(width: Self.barWidth, height: 2)
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(Theme.accent)
+                            .frame(
+                                width: Self.barWidth * max(0.06, min(downloads.activeFraction, 1)),
+                                height: 2
+                            )
+                            .animation(Theme.Motion.drift, value: downloads.activeFraction)
+                    }
+                    .opacity(isRunning ? 1 : 0)
+                    .frame(height: isRunning ? 2 : 0)
+            }
+            .hoverLift(hoverLifts && hovering)
+            .frame(width: 28, height: 28)
+            .hoverBackground(isActive: !hoverLifts && hovering)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onGeometryChange(for: CGPoint.self) { proxy in
@@ -580,8 +592,12 @@ struct SidebarDownloadsButton: View {
                 hoveringPreview = false
             }
         }
-        .onChange(of: finishedCount) { old, new in
-            if new > old {
+        .onChange(of: tally) { old, new in
+            guard old.manager == new.manager else { return }
+            if new.active > old.active {
+                startPulse += 1
+            }
+            if new.finished > old.finished {
                 finishPulse += 1
             }
         }
@@ -652,6 +668,14 @@ private struct SpaceEditorExit: ViewModifier {
             .blur(radius: 16 * progress)
             .offset(y: -48 * progress)
             .opacity(1 - progress)
+    }
+}
+
+private nonisolated struct WorkspaceClip: Shape {
+    let isClipping: Bool
+
+    func path(in rect: CGRect) -> Path {
+        Path(isClipping ? rect : rect.insetBy(dx: -10_000, dy: -10_000))
     }
 }
 

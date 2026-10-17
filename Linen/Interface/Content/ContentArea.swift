@@ -11,6 +11,7 @@ struct ContentArea: View {
     let canvasTrailingInset: CGFloat
     var isFullBleed = false
     var retraction: CGFloat = 0
+    var isFilled = false
     var findBarTop: CGFloat = 10
 
     @State private var pull = PullToRefreshMonitor()
@@ -22,10 +23,14 @@ struct ContentArea: View {
     }
 
     private var showsPagePanelFill: Bool {
+        Self.showsPanelFill(browser: browser)
+    }
+
+    static func showsPanelFill(browser: BrowserModel) -> Bool {
         if let panes = browser.splitPanes {
             return panes.allSatisfy { ChromeBand.showsStartPage(for: $0) }
         }
-        return showStartPage || browser.activeTab?.internalPage != nil
+        return ChromeBand.showsStartPage(browser: browser) || browser.activeTab?.internalPage != nil
     }
 
     private var canvas: some View {
@@ -36,7 +41,7 @@ struct ContentArea: View {
             retraction: retraction
         ) {
             page
-                .background(Theme.windowBackground.opacity(showsPagePanelFill ? retraction : 0))
+                .background(Theme.windowBackground.opacity(showsPagePanelFill && (isFullBleed || isFilled) ? 1 : 0))
         }
     }
 
@@ -208,7 +213,6 @@ private struct ActiveWebSurface: View {
                         .transition(.identity)
                 }
             }
-            .overlay { PageMorphCover(tab: tab) }
             .overlay {
                 ReaderPresenter(tab: tab, listener: coordinator.readerListener, readsWithOpenAI: coordinator.voiceRoute.readsWithOpenAI)
             }

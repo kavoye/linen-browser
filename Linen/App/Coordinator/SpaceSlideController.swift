@@ -93,8 +93,7 @@ final class SpaceSlideController {
             for id in ids {
                 coordinator.preparePeerModel(for: id)
             }
-            guard slide.mounted != ids else { return }
-            snap { $0.mounted = ids }
+            glide.prewarm(ids)
         }
     }
 
@@ -182,25 +181,28 @@ final class SpaceSlideController {
             ? max(-60, min(60, travel * 0.15))
             : max(-slide.width, min(slide.width, travel))
         let pull = peer == nil && forward ? min(1, abs(travel) / max(slide.width * 0.45, 1)) : 0
-        let loomTravel = peer == nil ? 0 : min(1, abs(offset) / max(slide.width, 1))
+        let loomTravel = peer == nil ? 0 : (min(1, abs(offset) / max(slide.width, 1)) * 48).rounded() / 48
         let loom = slide.peer != peer ? neighbor.flatMap { coordinator.loomColor(forSpace: $0.id) } : slide.peerLoom
-        let blend: Double = loomTravel > 0.5 ? 1 : 0
-        if let peer, slide.peer != peer, let current = browser.currentSpaceID {
+        if let peer, slide.peer != peer {
             coordinator.preparePeerModel(for: peer.id)
-            glide.prepare(from: current, to: peer.id, forward: forward, width: slide.width)
         }
+        let staged = browser.currentSpaceID.map {
+            glide.track(from: $0, to: peer?.id, forward: forward, offset: offset, width: slide.width, scroll: slide.scroll)
+        } ?? false
         snap {
             if !$0.isSliding {
                 $0.isSliding = true
+            }
+            if $0.isStaged != staged {
+                $0.isStaged = staged
             }
             if $0.peer != peer {
                 $0.peer = peer
                 $0.peerLoom = loom
             }
-            if $0.loomBlend != blend {
-                $0.loomBlend = blend
+            if $0.loomTravel != loomTravel {
+                $0.loomTravel = loomTravel
             }
-            $0.loomTravel = loomTravel
             $0.offset = offset
             if $0.pull != pull {
                 $0.pull = pull
@@ -254,6 +256,7 @@ final class SpaceSlideController {
             forward: forward,
             offset: offset,
             width: slide.width,
+            scroll: slide.scroll,
             velocity: velocity
         ) {
             glided = true
@@ -265,7 +268,7 @@ final class SpaceSlideController {
         }
         isLanding = true
         snap {
-            $0.isGliding = true
+            $0.isStaged = true
             $0.isSliding = true
         }
         let target = SpaceGlideTarget(from: outgoing, to: space.id, loom: coordinator.loomColor(forSpace: space.id))
@@ -306,14 +309,16 @@ final class SpaceSlideController {
 
     func cancel() {
         let turn = nextTurn()
+        glide.settleBack { [weak self] in
+            self?.snap { $0.isStaged = false }
+            self?.mountPeers()
+        }
         withAnimation(Self.roll(), completionCriteria: .removed) {
             slide.offset = 0
-            slide.loomBlend = 0
             slide.loomTravel = 0
             slide.pull = 0
         } completion: { [weak self] in
             guard let self, self.turn == turn else { return }
-            glide.finish()
             snap {
                 $0.peer = nil
                 $0.isSliding = false
