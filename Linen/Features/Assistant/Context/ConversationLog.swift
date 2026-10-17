@@ -111,7 +111,6 @@ final class ConversationLog {
         let startedAt: Date
         var steps: [Step]
         var response: String
-        var liveProgress: String?
         var state: State
         var finishedAt: Date?
         let providerID: String?
@@ -124,6 +123,10 @@ final class ConversationLog {
 
         var progressUpdates: [AgentProgressUpdate] {
             checkpoint?.progressUpdates ?? []
+        }
+
+        var memoryUpdates: [AgentMemoryUpdate] {
+            checkpoint?.memoryUpdates ?? []
         }
 
         var hasUserPrompt: Bool {
@@ -326,12 +329,6 @@ final class ConversationLog {
         }
         traces[index].response = response
         scheduleSave(trace: taskID)
-    }
-
-    func updateLiveProgress(_ text: String?, taskID: UUID) {
-        guard let index = traces.firstIndex(where: { $0.id == taskID }),
-              traces[index].state == .running else { return }
-        traces[index].liveProgress = text
     }
 
     func completeTask(_ taskID: UUID, response: String) {

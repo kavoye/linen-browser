@@ -273,7 +273,9 @@ struct AgentAnchorTests {
         #expect((await toolkit.readPage(page: "arrivals")).contains("Arrivals board"))
         #expect((await toolkit.readPage(page: "left")).contains("Departure board"))
         #expect((await toolkit.readPage(page: "second")).contains("Arrivals board"))
-        #expect((await toolkit.readPage(page: "the moon")).contains("No page on screen or mentioned matches"))
+        let unknown = await toolkit.readPage(page: "the moon")
+        #expect(unknown.hasPrefix("No page matches “the moon”, so this is the active page"))
+        #expect(unknown.contains("Departure board"))
     }
 
     @Test func readPageAddressesEveryPaneOfAGridOfFour() async throws {

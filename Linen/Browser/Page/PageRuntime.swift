@@ -76,6 +76,11 @@ nonisolated enum PageRuntime {
         if (el.hasAttribute && el.hasAttribute('onclick')) return 'button';
         if (el.isContentEditable && !(el.parentElement && el.parentElement.isContentEditable)) return 'field';
         if (role === 'region' || (el.scrollHeight > el.clientHeight + 1 && ['auto','scroll'].includes(realm(el).getComputedStyle(el).overflowY))) return 'scrollarea';
+        if (el.hasAttribute && el.hasAttribute('tabindex') && el.tabIndex >= 0
+          && !['BODY', 'HTML', 'MAIN', 'ARTICLE', 'SECTION', 'NAV', 'ASIDE', 'HEADER', 'FOOTER', 'FORM', 'DIALOG', 'PRE', 'UL', 'OL', 'TABLE'].includes(tag)
+          && !['dialog', 'alertdialog', 'main', 'document', 'article', 'tabpanel', 'list', 'listbox', 'grid', 'tree', 'menu'].includes(role)
+          && (el.innerText || '').length <= 120
+          && !el.querySelector('button,a[href],input,select,textarea,[tabindex],[role=button]')) return 'button';
         return null;
       };
 
@@ -83,7 +88,13 @@ nonisolated enum PageRuntime {
         accessibleName(el) || el.innerText || el.value || el.title || el.querySelector('img[alt]')?.alt || ''
       ).slice(0, 60);
       const fieldLabel = el => {
-        const assoc = el.labels && el.labels.length ? el.labels[0].innerText : '';
+        const label = el.labels && el.labels.length ? el.labels[0] : null;
+        let assoc = label ? label.innerText : '';
+        if (label && label.contains(el)) {
+          const copy = label.cloneNode(true);
+          copy.querySelectorAll('select, textarea, option').forEach(node => node.remove());
+          assoc = copy.textContent;
+        }
         return norm(
           accessibleName(el) || assoc || el.placeholder || el.name || el.id || ''
         ).slice(0, 60);
@@ -156,7 +167,7 @@ nonisolated enum PageRuntime {
               entry.f = el.value ? 1 : 0;
             } else {
               entry.v = el.selectedIndex >= 0 ? norm(el.options[el.selectedIndex].text).slice(0, 100) : '';
-              entry.o = Array.from(el.options).slice(0, 3).map(o => norm(o.text).slice(0, 45));
+              entry.o = Array.from(el.options).slice(0, 8).map(o => norm(o.text).slice(0, 45));
               entry.oc = el.options.length;
             }
           }
@@ -174,6 +185,15 @@ nonisolated enum PageRuntime {
 
       const pageParts = (viewportOnly = false) => {
         const parts = [];
+        const blocks = new Map();
+        let lastBlock = null;
+        const blockOf = el => {
+          if (blocks.has(el)) return blocks.get(el);
+          const display = getComputedStyle(el).display;
+          const block = (!display.startsWith('inline') && display !== 'contents') || !el.parentElement ? el : blockOf(el.parentElement);
+          blocks.set(el, block);
+          return block;
+        };
         const visit = root => {
           if (!root) return;
           const doc = root.ownerDocument || document;
@@ -187,7 +207,11 @@ nonisolated enum PageRuntime {
             const field = el.closest('textarea,input,[contenteditable],[role=textbox],[role=searchbox]');
             if (field && isSensitiveField(field)) continue;
             const t = norm(node.textContent);
-            if (t) parts.push(t);
+            if (!t) continue;
+            const block = blockOf(el);
+            if (block === lastBlock && parts.length) parts[parts.length - 1] += ' ' + t;
+            else parts.push(t);
+            lastBlock = block;
           }
           for (const el of root.querySelectorAll('*')) {
             if (el.shadowRoot) visit(el.shadowRoot);
@@ -221,7 +245,8 @@ nonisolated enum PageRuntime {
       const resolve = (ref, label, kinds) => {
         if (ref > 0) {
           const el = window.__linenRefs[ref - 1];
-          if (!el || !el.isConnected || !kinds.includes(kindOf(el))) return { stale: true };
+          if (!el || !el.isConnected) return { stale: true };
+          if (!kinds.includes(kindOf(el))) return { wrongKind: kindOf(el) || 'element', label: labelOf(el, kindOf(el)) };
           return { el };
         }
         const t = norm(label).toLowerCase();
@@ -342,7 +367,7 @@ nonisolated enum PageRuntime {
       const observe = (query, textLimit, controlLimit, textOffset, controlOffset, scope, viewportOnly) => {
         const all = collect();
         const parts = pageParts();
-        const text = viewportOnly ? pageText(true) : norm(parts.join(' '));
+        const text = (viewportOnly ? pageParts(true) : parts).join('\n');
         const added = lastParts ? norm(parts.filter(part => !lastParts.has(part)).join(' ')).slice(0, 800) : '';
         lastParts = new Set(parts);
         const terms = norm(query).toLowerCase().split(/\s+/).filter(Boolean);
@@ -372,9 +397,23 @@ nonisolated enum PageRuntime {
           offset = 0; controlReset = 'query_changed';
         } else if (offset > 0 && offset >= candidates.length) {
           offset = 0; controlReset = 'out_of_range';
+        } else if (offset > 0 && candidates.length <= controlLimit) {
+          offset = 0;
         }
         lastControlQuery = controlQuery;
-        return { text: text.slice(start, end), textTotal: text.length, textStart: start, added,
+        const lowerText = text.toLowerCase();
+        const keyTerms = terms.filter(t => t.length >= 4);
+        const links = candidates.filter(c => c.k === 'link');
+        const inContent = t => lowerText.split(t).length - 1 > links.filter(c => c.l.toLowerCase().includes(t)).length
+          || candidates.some(c => c.k !== 'link' && c.l.toLowerCase().includes(t));
+        const matched = keyTerms.filter(inContent);
+        const found = !keyTerms.length || matched.length * 2 >= keyTerms.length;
+        const leadScore = c => keyTerms.filter(t => c.l.toLowerCase().includes(t.replace(/s$/, ''))).length;
+        const leads = found ? [] : links.filter(c => leadScore(c) > 0).sort((a, b) => leadScore(b) - leadScore(a))
+          .slice(0, 3).map(c => ({ r: c.r, l: c.l }));
+        const frames = document.querySelectorAll('iframe,frame').length;
+        const below = (document.scrollingElement || document.documentElement).scrollHeight - (window.scrollY + window.innerHeight) > 50;
+        return { text: text.slice(start, end), textTotal: text.length, textStart: start, added, found, leads, frames, below,
           controls: candidates.slice(offset, offset + controlLimit), controlTotal: candidates.length, controlStart: offset,
           controlReset,
           snapshot: window.__linenSnapshot, document: documentID, url: location.href };

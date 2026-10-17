@@ -8,29 +8,11 @@ import Testing
 
 @MainActor
 struct AgentProgressUpdateTests {
-    @Test func liveProgressIsVisibleButNotSavedAsACompletedUpdate() {
-        let database = AppDatabase.temporary()
-        let log = ConversationLog(database: database)
-        let tabID = UUID()
-        let taskID = log.beginTask("Inspect", tabID: tabID)
-
-        log.updateLiveProgress("I'll inspect", taskID: taskID)
-        #expect(log.latestTrace(forTab: tabID)?.liveProgress == "I'll inspect")
-        #expect(log.latestTrace(forTab: tabID)?.progressUpdates.isEmpty == true)
-        log.saveBlocking()
-        let restored = ConversationLog(database: database)
-        #expect(restored.latestTrace(forTab: tabID) != nil)
-        #expect(restored.latestTrace(forTab: tabID)?.liveProgress == nil)
-
-        log.updateLiveProgress(nil, taskID: taskID)
-        #expect(log.latestTrace(forTab: tabID)?.liveProgress == nil)
-    }
-
     @Test func commentaryIsInterleavedWithWorkAndSeparateFromTheFinalAnswer() async throws {
         let fixture = HarnessFixture([
             .commentary("I'll inspect the form first.", ["readPage"]),
-            .progress("The page requires one more field. I'll fill it next."),
-            .calls(["typeOnPage"]), .text("Finished."),
+            .commentary("The page requires one more field. I'll fill it next.", ["typeOnPage"]),
+            .text("Finished."),
         ])
         fixture.state.output = { _ in
             let id = try #require(fixture.log.latestTrace(forTab: fixture.tabID)?.id)
@@ -56,7 +38,7 @@ struct AgentProgressUpdateTests {
 
     @Test func updatesSurviveReloadOnlyInPrivateConversationStorage() async throws {
         let privateText = "fixture-private-progress-account-42"
-        let fixture = HarnessFixture([.progress(privateText), .calls(["readPage"]), .text("Done.")])
+        let fixture = HarnessFixture([.commentary(privateText, ["readPage"]), .text("Done.")])
         await fixture.run()
         let restored = ConversationLog(database: fixture.database)
         let trace = try #require(restored.latestTrace(forTab: fixture.tabID))
@@ -68,15 +50,15 @@ struct AgentProgressUpdateTests {
 
     @Test func consecutiveDuplicateUpdatesAreNotRepeated() async throws {
         let fixture = HarnessFixture([
-            .progress("I'll inspect the page."), .progress("I'll inspect the page."),
-            .calls(["readPage"]), .text("Done."),
+            .commentary("I'll inspect the page.", ["readPage"]), .commentary("I'll inspect the page.", ["typeOnPage"]),
+            .text("Done."),
         ])
         await fixture.run()
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.progressUpdates.count == 1)
     }
 
     @Test func newTurnDoesNotReplayOldProgress() async throws {
-        let fixture = HarnessFixture([.progress("I'll check."), .calls(["readPage"]), .text("Done."), .text("Yes.")])
+        let fixture = HarnessFixture([.commentary("I'll check.", ["readPage"]), .text("Done."), .text("Yes.")])
         await fixture.run()
         await fixture.run("Is that all?")
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.progressUpdates.isEmpty == true)
@@ -87,12 +69,5 @@ struct AgentProgressUpdateTests {
         await fixture.run("Hello")
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.progressUpdates.isEmpty == true)
         #expect(fixture.model.requests.count == 1)
-    }
-
-    @Test func progressWithoutActualWorkCannotLoopForever() async throws {
-        let fixture = HarnessFixture(Array(repeating: .progress("Working on it."), count: 10))
-        await fixture.run()
-        #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.stopReason == .noProgress)
-        #expect(fixture.state.calls == 0)
     }
 }

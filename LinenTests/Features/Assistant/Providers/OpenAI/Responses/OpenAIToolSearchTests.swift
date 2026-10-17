@@ -9,9 +9,20 @@ import Testing
 
 @MainActor
 struct OpenAIToolSearchTests {
+    @Test func theSwitchKeepsHostedSearchOffForAutomaticSettings() throws {
+        let endpoint = try #require(URL(string: "https://api.openai.com/v1"))
+        let on = OpenAIResponseSettings().forChat(endpoint: endpoint, model: "gpt-6-luna")
+        let off = OpenAIToolSearch.$isAllowed.withValue(false) {
+            OpenAIResponseSettings().forChat(endpoint: endpoint, model: "gpt-6-luna")
+        }
+
+        #expect(on.useToolSearch)
+        #expect(!off.useToolSearch)
+    }
+
     @Test func catalogPreservesEnabledToolsAndStrictSchemas() throws {
         let toolkit = AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: ConversationLog(database: .temporary()))
-        let tools = makeAgentTools(toolkit: toolkit) + [UpdateProgressTool()]
+        let tools = makeAgentTools(toolkit: toolkit)
         let definitions = try tools.map { tool -> OpenAIJSON in
             ["type": "function", "name": .string(tool.name), "description": .string(tool.description),
              "parameters": try OpenAISchema.strict(tool.parameters, dependencies: OpenAISchema.browserDependencies), "strict": true,
@@ -30,7 +41,6 @@ struct OpenAIToolSearchTests {
             #expect(namespace["tools"].array?.allSatisfy { $0["defer_loading"] == true } == true)
         }
         #expect(deferred.contains { $0["type"] == "function" && $0["name"] == "askUser" })
-        #expect(deferred.contains { $0["type"] == "function" && $0["name"] == "updateProgress" })
         let subset = definitions.filter { $0["name"] == "listTabs" }
         let reduced = OpenAIToolSearch.definitions(subset, enabled: true)
         #expect(reduced.first?["tools"].array?.map { $0["name"] } == ["listTabs"])
@@ -112,7 +122,7 @@ struct OpenAIToolSearchTests {
             name: "fixture", modelID: "gpt-5.6-luna", reasoningEffort: "low", executionPolicy: .init(maxModelRequests: 2),
             toolOverrides: [HarnessTool(name: "listTabs", state: state)], openAI: client, model: HarnessScript([]), options: GenerationOptions(),
             budget: ContextBudget(windowTokens: 128_000, responseTokens: 2_000, inputTokens: 100_000, toolSchemaTokens: 0,
-                                  instructionTier: .compact, toolTier: .full, toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),
+                                  toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),
             toolkit: toolkit, log: log
         )
         let tabID = UUID()

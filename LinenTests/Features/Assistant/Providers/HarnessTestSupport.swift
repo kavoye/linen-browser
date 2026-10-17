@@ -11,7 +11,6 @@ final class HarnessScript: LanguageModel, @unchecked Sendable {
         case text(String)
         case calls([String])
         case commentary(String, [String])
-        case progress(String)
         case failure(any Error)
     }
     private let lock = NSLock()
@@ -66,12 +65,6 @@ final class HarnessScript: LanguageModel, @unchecked Sendable {
             }
             entries = [.toolCalls(.init(calls))]
             if case .commentary(let message, _) = action { text = message } else { text = "" }
-        case .progress(let message):
-            entries = [.toolCalls(.init([Transcript.ToolCall(
-                id: UUID().uuidString, toolName: "updateProgress",
-                arguments: GeneratedContent(properties: ["message": GeneratedContent(message)])
-            ), ])), ]
-            text = ""
         }
         for entry in entries {
             if case .toolCalls(let calls) = entry, let delegate = session.toolExecutionDelegate {
@@ -96,6 +89,23 @@ final class HarnessScript: LanguageModel, @unchecked Sendable {
             fatalError("Fixture supports String output only")
         }
         return .init(content: content, rawContent: GeneratedContent("unexpected streaming"))
+    }
+}
+
+final class HarnessNoNotes: LanguageModel, @unchecked Sendable {
+    func respond<Content>(
+        within session: LanguageModelSession, to prompt: Prompt, generating type: Content.Type,
+        includeSchemaInPrompt: Bool, options: GenerationOptions
+    ) async throws -> LanguageModelSession.Response<Content> where Content: Generable {
+        let raw = try GeneratedContent(json: #"{"changes":[]}"#)
+        return .init(content: try Content(raw), rawContent: raw, transcriptEntries: [][...])
+    }
+
+    func streamResponse<Content>(
+        within session: LanguageModelSession, to prompt: Prompt, generating type: Content.Type,
+        includeSchemaInPrompt: Bool, options: GenerationOptions
+    ) -> sending LanguageModelSession.ResponseStream<Content> where Content: Generable {
+        fatalError("Memory notes never stream")
     }
 }
 
@@ -151,7 +161,7 @@ struct HarnessFixture {
     let tabID: UUID
 
     init(
-        _ actions: [HarnessScript.Action], policy: AgentExecutionPolicy = .init(requiresOutcomeVerification: false),
+        _ actions: [HarnessScript.Action], policy: AgentExecutionPolicy = .interactive,
         inputTokens: Int = 100_000, database: AppDatabase? = nil, tabID: UUID = UUID(),
         state: HarnessToolState? = nil, contextBudget: ContextBudget? = nil,
         openAI: OpenAIResponsesClient? = nil
@@ -173,12 +183,12 @@ struct HarnessFixture {
             model: model, options: GenerationOptions(),
             budget: contextBudget ?? ContextBudget(
                 windowTokens: 128_000, responseTokens: 2_000, inputTokens: inputTokens,
-                toolSchemaTokens: 0, instructionTier: .compact, toolTier: .full,
-                toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1
+                toolSchemaTokens: 0, toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1
             ),
             toolkit: AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: log),
             log: log
         )
+        agent.memoryModel = HarnessNoNotes()
     }
 
     @discardableResult

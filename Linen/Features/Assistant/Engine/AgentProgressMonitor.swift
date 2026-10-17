@@ -10,7 +10,16 @@ nonisolated struct AgentProgressMonitor {
     private var recoveryAttempts = 0
     private var stalledKeys: Set<String> = []
     private var progressKeys: Set<String> = []
+    private var readStreak = 0
+    private var answerRequests = 0
+    private var seenWords: Set<String> = []
     let policy: AgentExecutionPolicy
+
+    static let readOnlyTools: Set<String> = [
+        "readPage", "readArticle", "searchWeb", "inspectControl", "listTabs", "listFrames", "readFrame",
+        "listWatches", "inspectDownloads", "screenshotPage",
+    ]
+    static let readStreakLimit = 4
 
     init(policy: AgentExecutionPolicy) {
         self.policy = policy
@@ -19,6 +28,7 @@ nonisolated struct AgentProgressMonitor {
     enum Decision {
         case proceed
         case recover
+        case answer
         case pause
     }
 
@@ -29,9 +39,19 @@ nonisolated struct AgentProgressMonitor {
             recoveryAttempts = 0
             stalledKeys = []
             progressKeys = []
+            readStreak = 0
+            answerRequests = 0
             return .proceed
         }
         let comparison = Self.comparison(name: name, arguments: arguments, output: output)
+        if Self.readOnlyTools.contains(name) {
+            let words = Self.words(in: comparison.output)
+            let hasFresh = words.contains { word in !seenWords.contains(word) && !seenWords.contains { $0.contains(word) } }
+            readStreak = hasFresh ? 0 : readStreak + 1
+            seenWords.formUnion(words)
+        } else {
+            readStreak = 0
+        }
         let visualActions: Set<String> = ["clickAtPoint", "doubleClickAtPoint", "typeAtPointer", "dragOnPage"]
         let fingerprint: String
         if visualActions.contains(name), !images.isEmpty {
@@ -67,7 +87,13 @@ nonisolated struct AgentProgressMonitor {
             recent.removeFirst()
         }
         let repeated = recent.filter { $0 == key }.count >= policy.repeatedActionLimit
-        guard repeated || failures >= policy.consecutiveFailureLimit else { return .proceed }
+        guard repeated || failures >= policy.consecutiveFailureLimit else {
+            guard readStreak >= Self.readStreakLimit else { return .proceed }
+            readStreak = 0
+            answerRequests += 1
+            return answerRequests > 1 ? .pause : .answer
+        }
+        readStreak = 0
         if recoveryAttempts > 0, stalledKeys.contains(key) || failed {
             return .pause
         }
@@ -79,11 +105,22 @@ nonisolated struct AgentProgressMonitor {
         return .recover
     }
 
+    private static func words(in text: String) -> Set<String> {
+        Set(text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init).filter { word in
+            let letters = word.contains { $0.isLetter }
+            let digits = word.contains { $0.isNumber }
+            if letters, digits, word.count >= 6 {
+                return false
+            }
+            return word.count >= 3 || digits
+        })
+    }
+
     private static func comparison(name: String, arguments: String, output: String) -> (arguments: String, output: String) {
         let pageTools: Set<String> = [
             "readPage", "clickOnPage", "typeOnPage", "fillFields", "selectOption", "scrollPage", "goBack",
             "inspectControl", "setChecked", "waitForPage", "hoverOnPage", "pressKey",
-            "readFrame", "actInFrame", "verifyTaskOutcome",
+            "readFrame", "actInFrame",
         ]
         var stableArguments = arguments
         if let data = arguments.data(using: .utf8),

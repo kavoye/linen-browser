@@ -24,6 +24,117 @@ struct PageInteractionTests {
         try? await view.evaluateJavaScript(script)
     }
 
+    @Test func pageTextKeepsListItemsOnTheirOwnLines() async {
+        let view = await page("<h1>Dinner</h1><ul><li>Pie, <b>50</b> minutes</li><li>Risotto, vegetarian</li><li>Salmon</li></ul>")
+        let snapshot = await PageDriver.snapshot(view)
+
+        #expect(snapshot.contains("Dinner\nPie, 50 minutes\nRisotto, vegetarian\nSalmon"), "\(snapshot)")
+    }
+
+    @Test func valuesTheRequestGivesAreMatchedToTheFormControls() {
+        let party = PageDriver.FormControl(ref: 5, label: "Party size", kind: "select", value: "2", options: ["2", "3", "4", "5"])
+        let day = PageDriver.FormControl(ref: 6, label: "Day", kind: "select", value: "Thursday", options: ["Thursday", "Friday"])
+        let booking = PageDriver.pendingValues(request: "Book a table for 4 people on Friday at 19:00 under the name Ada.", controls: [party, day])
+        #expect(booking.map(\.value) == ["4", "Friday"])
+        #expect(booking.first?.tool == "selectOption")
+
+        let quantity = PageDriver.FormControl(ref: 5, label: "Quantity", kind: "number", value: "1")
+        #expect(PageDriver.pendingValues(request: "Add two Aster desk lamps to the cart", controls: [quantity]).first?.value == "2")
+        #expect(PageDriver.pendingValues(request: "Add the Aster lamp to the cart", controls: [quantity]).isEmpty)
+        #expect(PageDriver.pendingValues(request: "Add 2 lamps and 3 shades", controls: [quantity]).isEmpty)
+
+        let section = PageDriver.FormControl(ref: 7, label: "Section", kind: "select", value: "B", options: ["A", "B"])
+        #expect(PageDriver.pendingValues(request: "Book a table on Friday", controls: [section]).isEmpty)
+        #expect(PageDriver.pendingValues(request: "Find 2 rooms for the 2027 conference", controls: [quantity]).first?.value == "2")
+        #expect(PageDriver.pendingValues(request: "Show events in 2027", controls: [quantity]).isEmpty)
+
+        let price = PageDriver.FormControl(ref: 5, label: "Maximum price", kind: "number", value: "")
+        #expect(PageDriver.pendingValues(request: "Show only textiles under $50", controls: [price]).first?.value == "50")
+        #expect(PageDriver.pendingValues(request: "Show only textiles under $50", controls: [quantity]).isEmpty)
+    }
+
+    @Test func aFormIsHeldOnceUntilTheRequestedValuesAreSet() async {
+        let view = await page("""
+            <form onsubmit='window.sent=(window.sent||0)+1;return false'>\
+            <label>Day <select><option>Thursday</option><option>Friday</option></select></label><button>Next</button></form>
+            """)
+        _ = await PageDriver.snapshot(view)
+        let constraints = AgentRequestConstraints(request: "Book a table on Friday")
+
+        let held = await PageDriver.click(ref: 2, label: "Next", in: view, constraints: constraints)
+        let second = await PageDriver.click(ref: 2, label: "Next", in: view, constraints: constraints)
+
+        #expect(held.contains("“Day” to Friday (selectOption with ref 1)"), "\(held)")
+        #expect(held.hasSuffix("then use “Next” again."), "\(held)")
+        #expect(second.hasPrefix("Clicked"), "\(second)")
+    }
+
+    @Test func aQuantityFromTheRequestIsSetBeforeAddingToTheCart() async {
+        let view = await page("""
+            <header><nav><a href="/">Home</a> · <a href="/lamps">Lamps</a></nav></header><main><h1>Aster desk lamp</h1><p>Price $129</p>
+            <form onsubmit='window.sent=1;return false'><input type="hidden" name="product" value="aster">\
+            <label>Quantity <input type="number" name="qty" value="1" min="1"></label><button>Add to cart</button></form></main>
+            """)
+        _ = await PageDriver.snapshot(view)
+        let request = AgentRequestConstraints(request: "Add two Aster desk lamps to the cart, then tell me the cart total.")
+
+        let held = await PageDriver.click(ref: 4, label: "Add to cart", in: view, constraints: request)
+
+        #expect(held.contains("“Quantity” to 2 (typeOnPage with ref 3)"), "\(held)")
+
+    }
+
+    @Test func anEarlierReadOfTheSameDocumentStillWorks() async throws {
+        let view = await page("<button onclick='window.hit=true'>Lamps</button>")
+        _ = await PageDriver.snapshot(view)
+        let first = try #require(PageDriver.observation(in: view)?.id)
+        _ = await PageDriver.snapshot(view, lookingFor: "price")
+
+        let output = await PageDriver.$expectedObservation.withValue(first) {
+            await PageDriver.click(ref: 1, label: "Lamps", in: view)
+        }
+
+        #expect(output.hasPrefix("Clicked"), "\(output)")
+    }
+
+    @Test func aLinkFromThePreviousPageSuggestsGoingBack() async {
+        let view = await page("<a href='#a'>Aster desk lamp</a> <a href='#b'>Birch desk lamp</a>")
+        _ = await PageDriver.snapshot(view)
+        view.loadHTMLString("<!doctype html><body><h1>Aster desk lamp</h1><p>Price $129</p><button>Add to cart</button></body>", baseURL: nil)
+        _ = await PageSettle.untilIdle(view, timeout: .seconds(10))
+
+        let read = await PageDriver.snapshot(view, lookingFor: "Birch desk lamp price")
+        let click = await PageDriver.click(ref: 1, label: "Birch desk lamp", in: view)
+
+        #expect(read.contains("“Birch desk lamp” was a link on the previous page: use goBack"), "\(read)")
+        #expect(click.contains("“Birch desk lamp” was a link on the previous page"), "\(click)")
+    }
+
+    @Test func submittingFromAFieldIsHeldForTheRequestedValues() async {
+        let view = await page("""
+            <form onsubmit='window.sent=1;return false'><label>Guests <select><option>2</option><option>4</option></select></label>\
+            <label>Name <input></label></form>
+            """)
+        _ = await PageDriver.snapshot(view)
+
+        let held = await PageDriver.type(text: "Ada", intoField: "Name", ref: 2, submit: true, in: view,
+                                         constraints: AgentRequestConstraints(request: "Book for 4 guests under Ada"))
+
+        #expect(held.hasSuffix("Set them first, then submit again."), "\(held)")
+    }
+
+    @Test func onlyRecentReadsOfAPageStayValid() {
+        var observation = PageObservation(id: "0", documentID: "doc", url: "u", refs: [1])
+        for index in 1...10 {
+            observation = observation.next(id: String(index), refs: [index])
+        }
+
+        #expect(observation.listed("9") == [9])
+        #expect(observation.listed("2") == [2])
+        #expect(observation.listed("1") == nil)
+        #expect(observation.listed(nil) == [10])
+    }
+
     @Test func readOnlyDatePickerExposesClickableDays() async {
         let view = await page("""
             <input id='date' aria-label='Departure date' readonly value='September 23'>
@@ -141,6 +252,71 @@ struct PageInteractionTests {
         #expect(await js(view, "window.writes") as? Int == 1)
     }
 
+    @Test func fieldsInsideTheirLabelsCanBeFilled() async {
+        let view = await page("""
+            <form method="post" action="/contact">
+            <label>Name <input id="name" name="name"></label>
+            <label>Email <input id="email" name="email" type="email"></label>
+            <label>Message <textarea id="message" name="message"></textarea></label>
+            <button>Send</button></form>
+            """)
+        let observation = await PageDriver.snapshot(view, lookingFor: "contact form")
+        let result = await PageDriver.fillFields([
+            .init(ref: 1, value: "Ada Lovelace"), .init(ref: 2, value: "ada@example.com"),
+            .init(ref: 3, value: "Is it dimmable?"),
+        ], in: view)
+
+        #expect(result.hasPrefix("Filled 3 of 3 fields."), "\(observation)\n\(result)")
+    }
+
+    @Test func aFocusableElementIsListedSoItCanBeHovered() async {
+        let view = await page("<p>Lamp</p><span id='info' tabindex='0'>Delivery info</span><span tabindex='-1'>Hidden from tab order</span>")
+
+        let output = await PageDriver.snapshot(view)
+
+        #expect(output.contains("button \"Delivery info\""), "\(output)")
+        #expect(!output.contains("Hidden from tab order\""))
+    }
+
+    @Test func aFocusableContainerIsNotListedAsAButton() async {
+        let view = await page("<main tabindex='0'><h1>Lamps</h1><p>Brass and birch.</p></main><div tabindex='0'><a href='#a'>Aster</a></div>")
+
+        let output = await PageDriver.snapshot(view)
+
+        #expect(!output.contains("button \"Lamps"), "\(output)")
+        #expect(!output.contains("button \"Aster\""), "\(output)")
+        #expect(output.contains("link \"Aster\""), "\(output)")
+    }
+
+    @Test func aFileFieldIsListed() async {
+        let view = await page("<h1>Send us your report</h1><form method='post' action='/upload'><input type='file' id='file' name='file'><button>Upload</button></form>")
+
+        let output = await PageDriver.snapshot(view, lookingFor: "upload form")
+
+        #expect(output.contains("field \"file\" (file)"), "\(output)")
+    }
+
+    @Test func aClickWhoseRefAndLabelDisagreeDoesNothing() async {
+        let view = await page("<a href='#' onclick='window.clicked=1'>Home</a><button onclick='window.saved=1'>Save</button>")
+        _ = await PageDriver.snapshot(view)
+
+        let refused = await PageDriver.click(ref: 1, label: "Escape key", in: view)
+        let agreed = await PageDriver.click(ref: 2, label: "save button", in: view)
+
+        #expect(refused.hasPrefix("[1] is “Home”, not “Escape key”. Nothing was clicked."), "\(refused)")
+        #expect(await js(view, "window.clicked") == nil)
+        #expect(agreed.hasPrefix("Clicked"), "\(agreed)")
+    }
+
+    @Test func typingIntoALinkNamesTheLinkInsteadOfCallingItGone() async {
+        let view = await page("<a href='/home'>Home</a><input aria-label='Name'>")
+        _ = await PageDriver.snapshot(view)
+
+        let result = await PageDriver.type(text: "Ada", intoField: "", ref: 1, submit: false, in: view)
+
+        #expect(result.hasPrefix("[1] is a link “Home”, not a field."), "\(result)")
+    }
+
     @Test func rejectedSelectionAndEarlierBatchResetsAreNotCountedAsSuccess() async {
         let view = await page("""
             <input aria-label='First'>
@@ -151,7 +327,7 @@ struct PageInteractionTests {
         let selection = await PageDriver.selectOption("b", ref: 3, field: "", in: view)
         #expect(!selection.hasPrefix("Selected"))
         let result = await PageDriver.fillFields([
-            .init(ref: 1, value: "first", select: false), .init(ref: 2, value: "second", select: false),
+            .init(ref: 1, value: "first"), .init(ref: 2, value: "second"),
         ], in: view)
         #expect(result.hasPrefix("Filled 1 of 2 fields."), "\(result)")
         #expect(result.contains("[1] not verified"))
@@ -192,6 +368,86 @@ struct PageInteractionTests {
         let continued = await PageDriver.snapshot(view, lookingFor: "September calendar controls date 29", controlOffset: 40, viewportOnly: true)
         #expect(!continued.contains("pagination restarted"))
         #expect(!continued.contains("button \"29\""))
+    }
+
+    @Test func anOffsetCannotHideControlsWhenTheyAllFit() async {
+        let view = await page("<a href='/a'>Home</a><a href='/b'>Help</a><select aria-label='Size'><option>Small</option><option>Large</option></select>")
+        _ = await PageDriver.snapshot(view)
+
+        let page = await PageDriver.snapshot(view, controlOffset: 2)
+
+        #expect(page.contains("select \"Size"))
+        #expect(page.contains("link \"Home\""))
+    }
+
+    @Test func aMissingTopicIsReported() async {
+        let view = await page("<h1>Welcome</h1><p>New lamps are in.</p><a href='/help'>Help</a>")
+
+        let missing = await PageDriver.snapshot(view, lookingFor: "return policy")
+        let present = await PageDriver.snapshot(view, lookingFor: "lamps")
+
+        #expect(missing.contains("“return policy” is not on this page."))
+        #expect(!present.contains("is not on this page"))
+    }
+
+    @Test func aMenuInsideItsLabelIsNamedByTheLabelAlone() async {
+        let view = await page("<label>Delivery <select><option>Standard</option><option>Express</option><option>Next day</option><option>Collect in store</option></select></label>")
+
+        let output = await PageDriver.snapshot(view)
+
+        #expect(output.contains("select \"Delivery\" = \"Standard\" (options: Standard | Express | Next day | Collect in store)"), "\(output)")
+    }
+
+    @Test func aMissingTopicNamesTheLinksThatMayLeadThere() async {
+        let view = await page("<nav><a href='/'>Home</a> <a href='/lamps'>Lamps</a> <a href='/cart'>Cart</a></nav><h1>Linen Home</h1><p>Lamps and textiles for calm rooms.</p>")
+
+        let output = await PageDriver.snapshot(view, lookingFor: "Aster desk lamp price")
+
+        #expect(output.contains("“Aster desk lamp price” is not on this page. Links that may lead there: [2] “Lamps”."), "\(output)")
+    }
+
+    @Test func wordsThatOnlyAppearInLinksAreNotFoundOnThePage() async {
+        let view = await page("<nav><a href='/'>Home</a> <a href='/lamps'>Lamps</a></nav><h1>Lamps</h1><ul><li><a href='/a'>Aster desk lamp</a></li><li><a href='/b'>Birch desk lamp</a></li></ul>")
+
+        let output = await PageDriver.snapshot(view, lookingFor: "Aster desk lamp price")
+
+        #expect(output.contains("Links that may lead there: [3] “Aster desk lamp”, [4] “Birch desk lamp”"), "\(output)")
+    }
+
+    @Test func aWrongKindOfControlNamesTheToolForIt() async {
+        let view = await page("<input aria-label='Name'><button>Confirm booking</button>")
+        _ = await PageDriver.snapshot(view)
+
+        let output = await PageDriver.type(text: "", intoField: "Confirm booking", ref: 2, submit: true, in: view)
+
+        #expect(output.contains("To use it, call clickOnPage with ref 2."), "\(output)")
+    }
+
+    @Test func aWrongRefForANamedFieldPointsToThatField() async {
+        let view = await page("<a href='/lamps'>Lamps</a><label>City <input></label>")
+        _ = await PageDriver.snapshot(view)
+
+        let output = await PageDriver.type(text: "Lviv", intoField: "City", ref: 1, submit: false, in: view)
+
+        #expect(output.contains("“City” is [2]: use ref 2."), "\(output)")
+        #expect(!output.contains("clickOnPage"), "\(output)")
+    }
+
+    @Test func aTopicNotYetShownOnALongPagePointsToScrolling() async {
+        let view = await page("<h1>Journal</h1><div style='height:5000px'></div><div id='promo'></div>")
+
+        let output = await PageDriver.snapshot(view, lookingFor: "promo code")
+
+        #expect(output.contains("“promo code” is not on the page yet. More of the page is below; use scrollPage to see it."), "\(output)")
+    }
+
+    @Test func embeddedPagesAreReported() async {
+        let view = await page("<p>Your booking is below.</p><iframe srcdoc='<p>Code BK-1</p>'></iframe>")
+
+        let output = await PageDriver.snapshot(view, lookingFor: "confirmation code")
+
+        #expect(output.contains("This page has 1 embedded page. Use listFrames and readFrame"))
+        #expect(!output.contains("is not on this page"))
     }
 
     @Test func labelActionsRejectObservationsFromThePreviousDocument() async throws {
@@ -251,7 +507,7 @@ struct PageInteractionTests {
         #expect(interactionWaits == 8)
         interactionWaits = 0
         let batch = await PageSettle.$interactionObserver.withValue({ interactionWaits += 1 }) {
-            await PageDriver.fillFields((1...8).map { .init(ref: $0, value: "batch", select: false) }, in: view)
+            await PageDriver.fillFields((1...8).map { .init(ref: $0, value: "batch") }, in: view)
         }
         #expect(batch.hasPrefix("Filled 8 of 8"))
         #expect(batch.components(separatedBy: "observationID:").count == 2)

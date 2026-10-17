@@ -39,6 +39,7 @@ struct HarnessAdapterTests {
             budget: ContextBudget.resolve(windowTokens: 128_000, desiredResponseTokens: 2_000),
             toolkit: AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: log), log: log
         )
+        agent.memoryModel = HarnessNoNotes()
         let tab = UUID()
         let id = log.beginTask("Read the fixture pages", tabID: tab)
         let reply = AgentReplyModel()

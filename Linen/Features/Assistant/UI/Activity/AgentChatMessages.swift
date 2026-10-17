@@ -21,11 +21,11 @@ struct AgentTaskTraceView: View {
     @State private var hovering = false
 
     private var isThinking: Bool {
-        trace.state == .running && trace.response.isEmpty && trace.liveProgress == nil
+        trace.state == .running && trace.response.isEmpty
     }
 
     private var showsWorkHistory: Bool {
-        showsSteps || (trace.state == .running && (!trace.progressUpdates.isEmpty || trace.liveProgress != nil))
+        showsSteps || (trace.state == .running && !trace.progressUpdates.isEmpty)
     }
 
     var body: some View {
@@ -53,7 +53,7 @@ struct AgentTaskTraceView: View {
                 ChatTurnFooter(
                     label: workLabel,
                     providerID: trace.providerID,
-                    stepCount: trace.steps.filter(\.isVisibleInChat).count,
+                    stepCount: trace.steps.count,
                     hasDetails: !trace.progressUpdates.isEmpty
                         || !(trace.checkpoint?.openAI?.presentation?.summaries.isEmpty ?? true),
                     isThinking: isThinking,
@@ -80,6 +80,10 @@ struct AgentTaskTraceView: View {
                     onOpenLink: open(_:),
                     allowsContinuation: isLatest
                 )
+                if !trace.memoryUpdates.isEmpty {
+                    AgentMemoryLine(updates: trace.memoryUpdates, memory: browser.memory)
+                        .transition(.opacity)
+                }
                 if let output = trace.checkpoint?.openAI?.presentation {
                     OpenAIOutputView(output: output, providerID: trace.providerID, onOpenLink: open(_:))
                 }
@@ -148,12 +152,6 @@ struct AgentTaskTraceView: View {
         return Duration.seconds(seconds).formatted(
             .units(allowed: [.seconds], width: .narrow, fractionalPart: .show(length: places))
         )
-    }
-}
-
-extension ConversationLog.Step {
-    var isVisibleInChat: Bool {
-        !AgentToolCatalog.outcomeToolIDs.contains(toolName ?? "")
     }
 }
 

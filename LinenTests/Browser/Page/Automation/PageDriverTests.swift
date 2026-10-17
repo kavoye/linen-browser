@@ -438,6 +438,38 @@ struct PageDriverTests {
         #expect(await js(webView, "document.getElementById('news').checked") as? Bool == true)
     }
 
+    @Test func aCheckboxInsideItsLabelTogglesOncePerClick() async throws {
+        let webView = await loadedWebView("""
+        <label><input type="checkbox" id="news"> Send me the newsletter</label>
+        <script>
+          window.clicks = 0;
+          document.getElementById('news').addEventListener('click', () => window.clicks++);
+        </script>
+        """)
+        let observation = await PageDriver.readRenderedPage(webView)
+        #expect(observation.contains("checkbox \"Send me the newsletter\" (unchecked)"))
+
+        let ref = try #require(refs(in: observation, matching: "checkbox").first)
+        let result = await PageDriver.click(ref: ref, label: "", in: webView)
+        #expect(result.contains("checkbox \"Send me the newsletter\" (checked)"))
+        #expect(await js(webView, "document.getElementById('news').checked") as? Bool == true)
+        #expect(await js(webView, "window.clicks") as? Int == 1)
+    }
+
+    @Test func clickingAMenuPointsToSelectOptionInsteadOfClaimingSuccess() async throws {
+        let webView = await loadedWebView("""
+        <label>Size <select id="size"><option>Small</option><option>Large</option></select></label>
+        """)
+        let observation = await PageDriver.readRenderedPage(webView)
+        let ref = try #require(refs(in: observation, matching: "select").first)
+
+        let result = await PageDriver.click(ref: ref, label: "", in: webView)
+
+        #expect(!result.hasPrefix("Clicked"))
+        #expect(result.contains("selectOption"))
+        #expect(await js(webView, "document.getElementById('size').value") as? String == "Small")
+    }
+
     // MARK: - Scrolling and reading
 
     /// "Visible now" has to mean the viewport, not the top of the document -
@@ -675,9 +707,9 @@ extension PageDriverTests {
         let second = try #require(refs(in: page, matching: "field \"Second\"").first)
         let select = try #require(refs(in: page, matching: "select \"Choice\"").first)
         let result = await PageDriver.fillFields([
-            .init(ref: first, value: "fixture-one", select: false),
-            .init(ref: second, value: "fixture-two", select: false),
-            .init(ref: select, value: "B", select: true),
+            .init(ref: first, value: "fixture-one"),
+            .init(ref: second, value: "fixture-two"),
+            .init(ref: select, value: "B"),
         ], in: webView)
         #expect(result.hasPrefix("Filled 3 of 3 fields."))
         #expect(await js(webView, "document.querySelectorAll('input')[0].value") as? String == "fixture-one")
@@ -698,9 +730,9 @@ extension PageDriverTests {
         let second = try #require(refs(in: page, matching: "field \"Second\"").first)
         let third = try #require(refs(in: page, matching: "field \"Third\"").first)
         let result = await PageDriver.fillFields([
-            .init(ref: first, value: "Updated text", select: false),
-            .init(ref: second, value: "Updated notes", select: false),
-            .init(ref: third, value: "Last value", select: false),
+            .init(ref: first, value: "Updated text"),
+            .init(ref: second, value: "Updated notes"),
+            .init(ref: third, value: "Last value"),
         ], in: webView)
         #expect(result.hasPrefix("Filled 3 of 3 fields."))
         #expect(await js(webView, "document.querySelector('[contenteditable]').textContent") as? String == "Updated text")
@@ -718,8 +750,8 @@ extension PageDriverTests {
         let first = try #require(refs(in: page, matching: "field \"First\"").first)
         let second = try #require(refs(in: page, matching: "field \"Second\"").first)
         let result = await PageDriver.fillFields([
-            .init(ref: first, value: "Updated text", select: false),
-            .init(ref: second, value: "never-entered", select: false),
+            .init(ref: first, value: "Updated text"),
+            .init(ref: second, value: "never-entered"),
         ], in: webView)
         #expect(result.hasPrefix("Filled 1 of 2 fields."))
         #expect(result.contains("page changed"))
@@ -735,8 +767,8 @@ extension PageDriverTests {
         let first = try #require(refs(in: page, matching: "field \"First\"").first)
         let second = try #require(refs(in: page, matching: "field \"Second\"").first)
         let result = await PageDriver.fillFields([
-            .init(ref: first, value: "fixture-one", select: false),
-            .init(ref: second, value: "fixture-two", select: false),
+            .init(ref: first, value: "fixture-one"),
+            .init(ref: second, value: "fixture-two"),
         ], in: webView)
         #expect(result.hasPrefix("Filled 1 of 2 fields."))
         #expect(result.contains("page changed"))
@@ -749,8 +781,8 @@ extension PageDriverTests {
         let password = try #require(refs(in: page, matching: "field \"Password\"").first)
         let other = try #require(refs(in: page, matching: "field \"Other\"").first)
         let result = await PageDriver.fillFields([
-            .init(ref: password, value: "fixture-secret", select: false),
-            .init(ref: other, value: "safe-value", select: false),
+            .init(ref: password, value: "fixture-secret"),
+            .init(ref: other, value: "safe-value"),
         ], in: webView)
         #expect(result.hasPrefix("Filled 1 of 2 fields."))
         #expect(result.contains("sensitive field"))
@@ -763,8 +795,8 @@ extension PageDriverTests {
         let page = await PageDriver.readRenderedPage(webView)
         let first = try #require(refs(in: page, matching: "field \"First\"").first)
         let result = await PageDriver.fillFields([
-            .init(ref: first, value: "one", select: false),
-            .init(ref: first, value: "two", select: false),
+            .init(ref: first, value: "one"),
+            .init(ref: first, value: "two"),
         ], in: webView)
         #expect(result.contains("distinct"))
         #expect(await js(webView, "document.querySelector('input').value") as? String == "")
@@ -812,7 +844,7 @@ extension PageDriverTests {
                       ("Password", "never-write"), ("File", "never-write"), ("Disabled", "never-write"), ("Readonly", "never-write"),
         ]
         let fields = try values.map { label, value in
-            PageDriver.FieldValue(ref: try #require(refs(in: page, matching: "\"\(label)\"").first), value: value, select: false)
+            PageDriver.FieldValue(ref: try #require(refs(in: page, matching: "\"\(label)\"").first), value: value)
         }
         let result = await PageDriver.fillFields(fields, in: webView)
         #expect(result.hasPrefix("Filled 10 of 14 fields."), "\(result)")
@@ -835,8 +867,8 @@ extension PageDriverTests {
         _ = await PageDriver.readRenderedPage(webView)
         for value in ["11", "3", "", "NaN"] {
             let result = await PageDriver.fillFields([
-                .init(ref: 1, value: "red", select: false), .init(ref: 2, value: value, select: false),
-                .init(ref: 3, value: "Jordan", select: false),
+                .init(ref: 1, value: "red"), .init(ref: 2, value: value),
+                .init(ref: 3, value: "Jordan"),
             ], in: webView)
             #expect(result.hasPrefix("Filled 1 of 3 fields."), "\(result)")
             #expect(result.contains("[1] not filled") && result.contains("[2] not filled"))
@@ -850,7 +882,7 @@ extension PageDriverTests {
     @Test func oversizedBatchCannotPartiallyWrite() async {
         let webView = await loadedWebView("<input aria-label='First'>")
         _ = await PageDriver.readRenderedPage(webView)
-        let result = await PageDriver.fillFields((1...33).map { .init(ref: $0, value: "unexpected", select: false) }, in: webView)
+        let result = await PageDriver.fillFields((1...33).map { .init(ref: $0, value: "unexpected") }, in: webView)
         #expect(result.contains("one to 32"))
         #expect(await js(webView, "document.querySelector('input').value") as? String == "")
     }
@@ -861,7 +893,7 @@ extension PageDriverTests {
         """)
         _ = await PageDriver.readRenderedPage(webView)
         let result = await PageDriver.fillFields([
-            .init(ref: 1, value: "true", select: false), .init(ref: 2, value: "true", select: false),
+            .init(ref: 1, value: "true"), .init(ref: 2, value: "true"),
         ], in: webView)
         #expect(result.hasPrefix("Filled 1 of 2 fields."))
         #expect(result.contains("[1] not verified"))

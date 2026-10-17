@@ -11,8 +11,6 @@ struct ContextBudgetTests {
         let budget = ContextBudget.resolve(windowTokens: 4_096, desiredResponseTokens: 2_000)
 
         #expect(budget.responseTokens == 512)
-        #expect(budget.instructionTier == .compact)
-        #expect(budget.toolTier == .core)
         #expect(budget.toolOutput.pageTextCharacters <= 1_600)
         #expect(budget.toolOutput.controlLimit == 12)
         #expect(budget.retainedToolRounds == 1)
@@ -23,8 +21,6 @@ struct ContextBudgetTests {
         let budget = ContextBudget.resolve(windowTokens: 200_000, desiredResponseTokens: 8_892)
 
         #expect(budget.responseTokens == 8_892)
-        #expect(budget.instructionTier == .full)
-        #expect(budget.toolTier == .full)
         #expect(budget.toolOutput == .standard)
         #expect(budget.retainedExchanges == 12)
     }
@@ -65,9 +61,9 @@ struct ContextBudgetTests {
         #expect(few.toolOutput.pageTextCharacters >= many.toolOutput.pageTextCharacters)
     }
 
-    @Test func theToolTierFollowsTheWindow() {
-        #expect(ContextBudget.toolTier(forWindow: 4_096) == .core)
-        #expect(ContextBudget.toolTier(forWindow: 128_000) == .full)
+    @Test func onlyASmallWindowDefersTools() {
+        #expect(AgentToolDeferral.applies(toWindow: 4_096))
+        #expect(!AgentToolDeferral.applies(toWindow: 128_000))
     }
 
     private func provider(adapter: Provider.Adapter, isLocal: Bool = false) -> Provider {
@@ -147,7 +143,7 @@ struct ContextWindowOverrideTests {
             ContextBudget.resolve(
                 windowTokens: ContextWindow.tokens(for: local, model: "qwen3.5"),
                 desiredResponseTokens: 2_000
-            ).instructionTier == .full
+            ).toolOutput == .standard
         )
 
         LLMSettings.setContextWindow(nil, for: local)

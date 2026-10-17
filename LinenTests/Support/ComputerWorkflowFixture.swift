@@ -71,7 +71,7 @@ final class ComputerWorkflowFixture {
         let agent = AnyLanguageModelAgent(name: "computer fixture", modelID: client.model, executionPolicy: .init(maxModelRequests: 6),
             toolOverrides: [], openAI: client, model: HarnessScript([]), options: GenerationOptions(),
             budget: ContextBudget(windowTokens: 128_000, responseTokens: 2_048, inputTokens: 120_000,
-                toolSchemaTokens: 0, instructionTier: .compact, toolTier: .full, toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 10),
+                toolSchemaTokens: 0, toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 10),
             toolkit: toolkit, log: log)
         self.agent = agent
         let id = log.beginTask(prompt, tabID: tab.id)

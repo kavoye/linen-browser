@@ -14,15 +14,16 @@ struct OnDeviceImageTests {
         #expect(accepts == SystemLanguageModel.default.supportsImageInput)
     }
 
-    @Test func onDeviceModelGetsAttachmentsButNeverScreenshotTools() {
+    @Test func onDeviceModelGetsAttachmentsButNeverScreenshotTools() throws {
         let onDevice = agent(model: SystemLanguageModel.default)
         let hosted = agent(model: HarnessScript([]))
 
         #expect(onDevice.acceptsImages)
         #expect(!onDevice.seesScreenshots)
-        #expect(Set(onDevice.makeSession().tools.map(\.name)).isDisjoint(with: AgentToolCatalog.visualToolIDs))
+        let visual = try LoadToolsToolTests.loading(["screenshotPage", "clickAtPoint"])
+        #expect(Set(onDevice.makeSession(transcript: visual).tools.map(\.name)).isDisjoint(with: AgentToolCatalog.visualToolIDs))
         #expect(hosted.seesScreenshots)
-        #expect(!Set(hosted.makeSession().tools.map(\.name)).isDisjoint(with: AgentToolCatalog.visualToolIDs))
+        #expect(!Set(hosted.makeSession(transcript: visual).tools.map(\.name)).isDisjoint(with: AgentToolCatalog.visualToolIDs))
     }
 
     @Test func restoredToolOutputsDropScreenshotsButPromptsKeepAttachments() {
@@ -49,7 +50,7 @@ struct OnDeviceImageTests {
         return AnyLanguageModelAgent(
             name: "fixture", modelID: "fixture", model: model, options: GenerationOptions(),
             budget: ContextBudget(windowTokens: 128_000, responseTokens: 2_000, inputTokens: 100_000, toolSchemaTokens: 0,
-                                  instructionTier: .compact, toolTier: .full, toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),
+                                  toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),
             acceptsImages: true,
             enabledToolIDs: AgentToolCatalog.visualToolIDs,
             toolkit: AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: log),

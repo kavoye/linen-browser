@@ -29,6 +29,21 @@ struct SystemModelFailureTests {
         #expect(!SystemModelFailure.isContextOverflow(refusal))
     }
 
+    @available(macOS 27.0, *)
+    @Test func theMacOS27OverflowIsRecognised() {
+        let overflow = LanguageModelError.contextSizeExceeded(
+            .init(contextSize: 4_096, tokenCount: 4_098, debugDescription: "Content contains 4098 tokens")
+        )
+        #expect(SystemModelFailure.isContextOverflow(overflow))
+    }
+
+    @Test func anOverflowWhilePreparingToolsIsRecognised() {
+        let overflow = NSError(domain: "com.apple.GenerativeFunctionsFoundation.GenerativeError", code: 4_050_000)
+        let other = NSError(domain: "com.apple.GenerativeFunctionsFoundation.GenerativeError", code: 1)
+        #expect(SystemModelFailure.isContextOverflow(overflow))
+        #expect(!SystemModelFailure.isContextOverflow(other))
+    }
+
     @Test func anUnrelatedFailureIsNotAnOverflow() {
         #expect(!SystemModelFailure.isContextOverflow(URLError(.timedOut)))
     }

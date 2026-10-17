@@ -6,7 +6,7 @@ import WebKit
 
 @MainActor
 final class AgentToolkit {
-    private let browser: BrowserModel
+    let browser: BrowserModel
     private let media: MediaCenter
     private let log: ConversationLog
     private let services: Services
@@ -18,7 +18,18 @@ final class AgentToolkit {
     private var seededContextTabIDs: Set<UUID> = []
     private var agentOpenedTabIDs: Set<UUID> = []
     private(set) var lastToolFailed = false
-    var taskLedger = AgentTaskLedger()
+    private var taskStartedAt = Date()
+    var requestConstraints = AgentRequestConstraints.none
+    var askedUser = false
+    var preferenceReminded = false
+    var refusedActions = 0
+    var lastReads: [String: String] = [:]
+    var repeatedRead = false
+    var lastMiss: String?
+    var withheldTools: Set<String> = []
+    var checkedAnswers = 0
+    var memoryUpdates: [AgentMemoryUpdate] = []
+    var userWords: [String] = []
     var fileSelection: ((WKOpenPanelParameters) async -> [URL]?)? {
         services.chooseFiles
     }
@@ -39,7 +50,7 @@ final class AgentToolkit {
         guard let tab = onScreenTab(for: view) ?? mentionedTab(for: view) else { return [] }
         let origin = SitePermissions.origin(for: view.url)
         return browser.downloads.items.filter {
-            $0.sourceTabID == tab.id && $0.started >= taskLedger.startedAt &&
+            $0.sourceTabID == tab.id && $0.started >= taskStartedAt &&
                 $0.sourceOrigin == origin
         }
     }
@@ -170,6 +181,19 @@ final class AgentToolkit {
     // MARK: - Task lifecycle
 
     func beginTask(_ task: AgentTaskContext) {
+        if !task.isContinuation {
+            taskStartedAt = Date()
+        }
+        askedUser = false
+        preferenceReminded = false
+        refusedActions = 0
+        lastReads = [:]
+        repeatedRead = false
+        lastMiss = nil
+        withheldTools = []
+        checkedAnswers = 0
+        memoryUpdates = []
+        userWords = []
         embeddedAccessCenters = [:]
         computerObservation = nil
         hasSeenUntrustedContent = false
@@ -565,7 +589,7 @@ final class AgentToolkit {
 
     var targetWebView: WKWebView? {
         if let page = Self.requestedPage, !page.isEmpty {
-            return pageSurface(named: page)
+            return readableSurface(named: page)?.webView
         }
         return browser.activeTab?.webView
     }
@@ -588,7 +612,7 @@ final class AgentToolkit {
         return false
     }
 
-    private var onScreenTabs: [BrowserTab] {
+    var onScreenTabs: [BrowserTab] {
         guard let active = browser.activeTab else { return [] }
         return browser.splitPanes ?? [active]
     }
@@ -675,7 +699,14 @@ final class AgentToolkit {
         }
         if ["left", "right", "top", "bottom", "first", "second", "third", "fourth", "1", "2", "3", "4"].contains(needle),
            let positional = onScreenTab(named: needle) { return positional.webView }
-        let matches = candidates.filter { $0.title.lowercased().contains(needle) || $0.urlString.lowercased().contains(needle) }
+        let label = Self.contextLabel(needle)
+        if label.isActive, let active = browser.activeTab {
+            return active.webView
+        }
+        let matches = candidates.filter { tab in
+            tab.title.lowercased().contains(label.title) || tab.urlString.lowercased().contains(label.title)
+                || (label.host.map { tab.urlString.lowercased().contains($0) } ?? false)
+        }
         if matches.count == 1, let found = matches.first {
             found.realizeDeferredSession()
             return found.webView
@@ -683,7 +714,7 @@ final class AgentToolkit {
         return nil
     }
 
-    private var mentionedTabs: [BrowserTab] {
+    var mentionedTabs: [BrowserTab] {
         (task?.mentionedTabIDs ?? []).compactMap { id in
             browser.tabs.first { $0.id == id }
         }
@@ -699,15 +730,6 @@ final class AgentToolkit {
 
     private func mentionedTab(for webView: WKWebView) -> BrowserTab? {
         mentionedTabs.first { $0.webView === webView }
-    }
-
-    func onScreenPageDenial(for reference: String) -> String {
-        guard !browser.tabs.isEmpty else { return "No tab is open yet." }
-        var titles = onScreenTabs.map(\.title)
-        titles += mentionedTabs.map { "\($0.title) (mentioned)" }
-        let listed = titles.joined(separator: " | ")
-        guard !reference.isEmpty, !listed.isEmpty else { return "No tab is open yet." }
-        return "No page on screen or mentioned matches “\(reference)”. Readable: \(listed)"
     }
 
     struct VisiblePageAuthorization {
@@ -827,11 +849,11 @@ final class AgentToolkit {
         completeTool(stepID, output: output, failed: true)
         return output
     }
-
 }
 
 extension AgentToolkit {
     func askUser(_ asked: [(question: String, options: [String])]) async -> String {
+        askedUser = true
         let put = asked.compactMap { entry -> AgentQuestionModel.Question? in
             let text = entry.question.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { return nil }
@@ -849,6 +871,7 @@ extension AgentToolkit {
         }
         let answers = await questions.put(put, inAnchor: task?.anchorID)
         let trimmed = answers.trimmingCharacters(in: .whitespacesAndNewlines)
+        userWords.append(trimmed)
         guard !trimmed.isEmpty else {
             let output = "Nothing was answered. Carry on with what you have."
             completeTool(step, output: output, failed: true)

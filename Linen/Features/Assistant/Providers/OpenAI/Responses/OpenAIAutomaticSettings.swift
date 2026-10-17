@@ -10,7 +10,7 @@ extension OpenAIResponseSettings {
               endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == "v1" else { return self }
         var resolved = self
         resolved.useWebSocket = true
-        resolved.useToolSearch = OpenAIToolSearch.supports(model) && !model.lowercased().contains("-pro")
+        resolved.useToolSearch = OpenAIToolSearch.isAllowed && OpenAIToolSearch.supports(model) && !model.lowercased().contains("-pro")
         resolved.reasoningSummary = OpenAIModelSupport.reasoning(model)
         resolved.serviceTier = "auto"
         let model = model.lowercased()

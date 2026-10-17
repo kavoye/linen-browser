@@ -54,7 +54,7 @@ struct AgentToolsTests {
             }
             #expect((schema["required"] as? [String])?.contains("observationID") == true, "\(tool.name)")
         }
-        let actual = tools() + [UpdateProgressTool()]
+        let actual = tools()
         let measured = estimatedToolSchemaTokens(actual)
         let budget = ContextBudget.resolve(windowTokens: 128_000, desiredResponseTokens: 4000, measuredSchemaTokens: measured)
         #expect(budget.toolSchemaTokens == measured)
@@ -64,7 +64,6 @@ struct AgentToolsTests {
     @Test func theTableIncludesFormBatching() {
         #expect(Set(tools().map(\.name)) == [
             "askUser",
-            "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome",
             "doubleClickAtPoint", "dragOnPage", "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
             "searchWeb",
             "navigate",

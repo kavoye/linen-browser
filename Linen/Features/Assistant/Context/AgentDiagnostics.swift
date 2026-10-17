@@ -9,10 +9,10 @@ nonisolated enum AgentDiagnosticPrivacy {
         "selectOption", "scrollPage", "goBack", "askUser", "newTab", "listTabs",
         "switchTab", "closeTab", "playVideo", "closeVideo", "controlMedia",
         "inspectControl", "setChecked", "waitForPage", "screenshotPage", "movePointer", "clickAtPoint", "typeAtPointer", "hoverOnPage", "pressKey",
-        "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome", "doubleClickAtPoint", "dragOnPage",
+        "doubleClickAtPoint", "dragOnPage",
         "listFrames", "readFrame", "actInFrame", "chooseFilesOnPage", "inspectDownloads",
         "readArticle",
-        "watchPage", "listWatches", "stopWatch",
+        "watchPage", "listWatches", "stopWatch", "loadTools",
     ]
 
     static func tool(_ name: String) -> String {
@@ -38,9 +38,6 @@ nonisolated enum AgentDiagnosticPrivacy {
     }
 
     private static let toolTitles: [String: String] = [
-        "recordTaskOutcome": String(localized: "Record task outcome"),
-        "verifyTaskOutcome": String(localized: "Verify result"),
-        "blockTaskOutcome": String(localized: "Record Unfinished Work"),
         "doubleClickAtPoint": String(localized: "Double-click page"),
         "dragOnPage": String(localized: "Drag on Page"),
         "listFrames": String(localized: "List Embedded Pages"),
@@ -78,6 +75,7 @@ nonisolated enum AgentDiagnosticPrivacy {
         "watchPage": String(localized: "Watch page"),
         "listWatches": String(localized: "List Watched Pages"),
         "stopWatch": String(localized: "Stop watching page"),
+        "loadTools": String(localized: "Load tools"),
     ]
 
     static func title(for tool: String) -> String {

@@ -46,11 +46,21 @@ struct AgentToolkitPolicyTests {
         return (browser, tab, subject)
     }
 
+    @Test func aRepeatedReadReturnsOnlyTheControls() {
+        let subject = toolkit()
+        let read = "PAGE TEXT:\nA lamp\n\nCONTROLS:\n[1] select \"Colour\"\n\nurl: http://a\nobservationID: "
+
+        #expect(subject.unchangedRead(read + "1", page: "p") == read + "1")
+        #expect(subject.unchangedRead(read + "2", page: "p").hasPrefix(AgentToolkit.unchangedReadNote + "\n\nCONTROLS:\n[1]"))
+        #expect(subject.unchangedRead(read + "3", page: "q") == read + "3")
+        #expect(subject.unchangedRead(read + "4", page: "q", request: "another name") == read + "4")
+    }
+
     @Test func thePolicyMatrixNamesEveryRegisteredTool() {
         let names = makeAgentTools(toolkit: toolkit()).map(\.name)
 
         #expect(names == [
-            "askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome",
+            "askUser",
             "searchWeb", "navigate", "readPage", "readArticle", "clickOnPage", "typeOnPage",
             "scrollPage", "goBack", "newTab", "listTabs", "switchTab", "closeTab",
             "selectOption", "fillFields", "inspectControl", "setChecked", "waitForPage",
@@ -59,15 +69,6 @@ struct AgentToolkitPolicyTests {
             "typeAtPointer", "hoverOnPage", "pressKey",
             "playVideo", "closeVideo", "controlMedia",
             "watchPage", "listWatches", "stopWatch",
-        ])
-    }
-
-    @Test func theCoreTierKeepsResearchAndDropsTabAndMediaControl() {
-        let names = makeAgentTools(toolkit: toolkit(), tier: .core).map(\.name)
-
-        #expect(names == [
-            "askUser", "searchWeb", "navigate", "readPage", "readArticle", "clickOnPage",
-            "typeOnPage",
         ])
     }
 
@@ -399,6 +400,26 @@ struct AgentToolkitPolicyTests {
         let output = await subject.readPage(page: "nike")
         #expect(output.contains("No page on screen or mentioned matches"))
         #expect(!output.contains("<page-content"))
+        #expect(!output.contains("call navigate"))
+    }
+
+    @Test func keyNamesAreRecognisedForThePressKeyHint() {
+        #expect(AgentToolkit.namesAKey("Escape key"))
+        #expect(AgentToolkit.namesAKey("Esc"))
+        #expect(!AgentToolkit.namesAKey("Ada Lovelace"))
+        #expect(!AgentToolkit.namesAKey("Escaped"))
+    }
+
+    @Test func readingAnUnopenedURLPointsToNavigate() async {
+        let browser = BrowserModel(database: .temporary())
+        let taskTab = browser.newTab()
+        taskTab.title = "Home"
+        let subject = toolkit(browser: browser)
+        subject.beginTask(AgentTaskContext(id: UUID(), tabID: taskTab.id))
+
+        let output = await subject.readPage(page: "https://example.com/shipping")
+
+        #expect(output.contains("call navigate"))
     }
 
     @Test func aMentionedTabStaysBehindItsAccessTier() async {

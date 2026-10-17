@@ -17,15 +17,7 @@ final class AnyLanguageModelAgent: AgentRunner {
         return false
     }
 
-    static let continuationPrompt = "Continue the task using the tool result."
-    private static let resumeInstructionID = "linen.internal.resume"
-    static let answerPrompt = "Answer the user now, in plain words."
-    private static let scaffoldingPrompts: Set<String> = [continuationPrompt, answerPrompt]
-    static let recoveryPrompt = """
-        Recent actions returned the same result or failed repeatedly. Read the current page for \
-        fresh controls, inspect validation messages, and change your approach. Do not repeat the \
-        same unsuccessful action. If you need the user, ask a specific question with askUser.
-        """
+    static let resumeInstructionID = "linen.internal.resume"
     let modelID: String
     let reasoningEffort: String
     let executionPolicy: AgentExecutionPolicy?
@@ -34,7 +26,8 @@ final class AnyLanguageModelAgent: AgentRunner {
 
     var acceptsImages: Bool
     private let onImageInputUnsupported: () -> Void
-    private let model: any LanguageModel
+    let model: any LanguageModel
+    var memoryModel: (any LanguageModel)?
     let options: GenerationOptions
     let answerOptions: GenerationOptions
     let budget: ContextBudget
@@ -46,6 +39,7 @@ final class AnyLanguageModelAgent: AgentRunner {
     var sessions: [UUID: LanguageModelSession] = [:]
     var discardedTabIDs = RecentIDs()
     private var prewarmedSession: LanguageModelSession?
+    private var loadedToolCache: (key: [String], names: [String])?
 
     init(
         name: String,
@@ -118,8 +112,8 @@ final class AnyLanguageModelAgent: AgentRunner {
         sessions[tabID] = compacted
         log.recordContextEstimate(
             tabID: tabID,
-            tokens: (nativeState?.contextTokens ?? Self.estimatedTokens(in: compacted.transcript)) + budget.toolSchemaTokens,
-            breakdown: Self.contextBreakdown(in: compacted.transcript, budget: budget)
+            tokens: (nativeState?.contextTokens ?? Self.estimatedTokens(in: compacted.transcript)) + toolSchemaTokens(for: compacted.transcript),
+            breakdown: Self.contextBreakdown(in: compacted.transcript, budget: budget, toolTokens: toolSchemaTokens(for: compacted.transcript))
         )
         return true
     }
@@ -130,8 +124,8 @@ final class AnyLanguageModelAgent: AgentRunner {
             let measured = openAI?.restoring(checkpoint.openAI).contextTokens
             log.recordContextEstimate(
                 tabID: tabID,
-                tokens: (measured ?? Self.estimatedTokens(in: checkpoint.transcript)) + budget.toolSchemaTokens,
-                breakdown: Self.contextBreakdown(in: checkpoint.transcript, budget: budget)
+                tokens: (measured ?? Self.estimatedTokens(in: checkpoint.transcript)) + toolSchemaTokens(for: checkpoint.transcript),
+                breakdown: Self.contextBreakdown(in: checkpoint.transcript, budget: budget, toolTokens: toolSchemaTokens(for: checkpoint.transcript))
             )
         }
     }
@@ -181,15 +175,18 @@ final class AnyLanguageModelAgent: AgentRunner {
 
     func inspectProgress(
         _ decision: AgentProgressMonitor.Decision, event: (String, [String: String]) -> Void
-    ) -> (recovery: Bool, stop: AgentStopReason?) {
+    ) -> (recovery: Bool, answer: Bool, stop: AgentStopReason?) {
         switch decision {
         case .proceed:
-            return (false, nil)
+            return (false, false, nil)
         case .recover:
             event("progress_recovery", [:])
-            return (true, nil)
+            return (true, false, nil)
+        case .answer:
+            event("progress_recovery", [:])
+            return (false, true, nil)
         case .pause:
-            return (false, .noProgress)
+            return (false, false, .noProgress)
         }
     }
 
@@ -241,10 +238,14 @@ final class AnyLanguageModelAgent: AgentRunner {
         event: (String, [String: String]) -> Void
     ) async -> (Transcript.ToolOutput, Bool) {
         toolkit.resetToolOutcome()
-        let toolsByName = Dictionary(tools().map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
+        let available = availableTools()
+        let toolsByName = Dictionary((available + [loader(for: available)].compactMap { $0 }).map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         let output: Transcript.ToolOutput
         var failed = false
-        if let tool = toolsByName[call.toolName] {
+        if let refusal = toolkit.preferenceRefusal(for: call.toolName) {
+            failed = true
+            output = Transcript.ToolOutput(id: call.id, toolName: call.toolName, segments: [.text(.init(content: refusal))])
+        } else if let tool = toolsByName[call.toolName] {
             event("tool_accepted", ["name": call.toolName])
             let toolStarted = ContinuousClock.now
             reply.setActivity(AgentDiagnosticPrivacy.title(for: call.toolName))
@@ -302,8 +303,8 @@ final class AnyLanguageModelAgent: AgentRunner {
         images: [Transcript.ImageSegment],
         attachmentInput: OpenAIAttachmentInput?,
         options: GenerationOptions,
+        withoutTools: Bool = false,
         onText: @escaping @MainActor (String) -> Void,
-        onProgress: @escaping @MainActor (String) -> Void = { _ in },
         event: (String, [String: String]) -> Void
     ) async throws -> String {
         let started = ContinuousClock.now
@@ -312,12 +313,12 @@ final class AnyLanguageModelAgent: AgentRunner {
             let previous = session.transcript
             var submitted = Array(previous)
             submitted.append(.prompt(.init(segments: [.text(.init(content: prompt))] + images.map { .image($0) })))
-            session = makeSession(transcript: Transcript(entries: submitted))
+            session = makeSession(transcript: Transcript(entries: submitted), withoutTools: withoutTools)
             do {
                 let step = try await openAI.respond(
                     transcript: previous, prompt: prompt, images: images, state: state,
-                    tools: tools(), maxTokens: budget.responseTokens, attachmentInput: attachmentInput,
-                    onText: onText, onProgress: onProgress
+                    tools: withoutTools ? [] : tools(for: previous), maxTokens: budget.responseTokens, attachmentInput: attachmentInput,
+                    onText: onText
                 )
                 if let milliseconds = step.firstTextMilliseconds {
                     event("first_text", ["elapsed_ms": String(milliseconds)])
@@ -380,7 +381,7 @@ final class AnyLanguageModelAgent: AgentRunner {
     }
 
     func isOverBudget(_ session: LanguageModelSession, nativeState: OpenAIConversationState?, promptCharacters: Int) -> Bool {
-        (nativeState?.contextTokens ?? Self.estimatedTokens(in: session.transcript)) + max(1, promptCharacters / 4) + budget.toolSchemaTokens > budget.inputTokens
+        (nativeState?.contextTokens ?? Self.estimatedTokens(in: session.transcript)) + max(1, promptCharacters / 4) + toolSchemaTokens(for: session.transcript) > budget.inputTokens
     }
 
     func compact(
@@ -415,13 +416,13 @@ final class AnyLanguageModelAgent: AgentRunner {
         let entries = Array(settledTranscript(session.transcript)).filter { entry in
             if case .prompt(let prompt) = entry {
                 let text = Self.text(in: prompt.segments)
-                return !Self.scaffoldingPrompts.contains(text) && text != Self.recoveryPrompt
+                return !Self.isScaffolding(text)
             }
             return true
         }
         let prompts = entries.filter { if case .prompt = $0 { return true }; return false }
-        let instructions = Array(makeSession().transcript).filter { if case .instructions = $0 { return true }; return false }
-        let room = budget.inputTokens - budget.toolSchemaTokens
+        let instructions = Array(settledTranscript(session.transcript)).filter { if case .instructions = $0 { return true }; return false }
+        let room = budget.inputTokens - toolSchemaTokens(for: session.transcript)
         let limit = min(
             min(room * 3 / 4, room - pendingPromptTokens - 128),
             Self.estimatedTokens(in: session.transcript) * 3 / 4
@@ -668,71 +669,101 @@ final class AnyLanguageModelAgent: AgentRunner {
         return session
     }
 
-    private func tools() -> [any Tool] {
+    var instructionsText: String {
+        AgentInstructions.text + (defersTools ? "\n" + AgentInstructions.loaderGuidance : "")
+    }
+
+    var defersTools: Bool {
+        toolOverrides == nil && AgentToolDeferral.applies(toWindow: budget.windowTokens) && openAI?.defersTools != true
+    }
+
+    private func loader(for available: [any Tool]) -> LoadToolsTool? {
+        guard defersTools else { return nil }
+        let deferrable = available.filter { AgentToolDeferral.isDeferrable($0.name) }
+        return deferrable.isEmpty ? nil : LoadToolsTool(tools: deferrable)
+    }
+
+    fileprivate func loadedTools(for transcript: Transcript) -> [any Tool] {
+        let available = availableTools()
+        guard let loader = loader(for: available) else { return available }
+        let always = available.filter { !AgentToolDeferral.isDeferrable($0.name) } + [loader]
+        let byName = Dictionary(available.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
+        let key = Self.toolLoadingKey(for: transcript) + loader.toolNames
+        if let cached = loadedToolCache, cached.key == key {
+            return always + cached.names.compactMap { byName[$0] }
+        }
+        let names = Set(loader.toolNames)
+        var recent: [String] = []
+        var requested: [String] = []
+        func touch(_ ids: [String]) {
+            for id in AgentToolCatalog.withPrerequisites(ids, among: names) {
+                recent.removeAll { $0 == id }
+                recent.append(id)
+            }
+        }
+        for entry in transcript {
+            switch entry {
+            case .instructions(let instructions):
+                touch(instructions.toolDefinitions.map(\.name))
+            case .toolCalls(let calls):
+                for call in calls {
+                    touch(call.toolName == LoadToolsTool.toolName ? LoadToolsTool.requestedTools(in: call.arguments) : [call.toolName])
+                }
+            case .prompt(let prompt):
+                let text = Self.text(in: prompt.segments)
+                if !Self.isScaffolding(text) {
+                    requested = AgentToolCatalog.tools(forRequest: text)
+                }
+            case .toolOutput(let output):
+                let text = Self.text(in: output.segments)
+                let controls = ["readFrame", "actInFrame"].contains(output.toolName) ? [] : AgentToolCatalog.tools(forControlsIn: text)
+                let opens = output.toolName == "searchWeb" ? ["navigate"] : []
+                touch(controls + opens + AgentToolCatalog.tools(named: loader.toolNames, in: text))
+            default:
+                break
+            }
+        }
+        touch(requested)
+        let cap = budget.toolSchemaTokens - estimatedToolSchemaTokens(always)
+        var loaded = recent.compactMap { byName[$0] }
+        while loaded.count > 1, estimatedToolSchemaTokens(loaded) > cap {
+            loaded.removeFirst()
+        }
+        loadedToolCache = (key, loaded.map(\.name))
+        return always + loaded
+    }
+
+    private static func toolLoadingKey(for transcript: Transcript) -> [String] {
+        transcript.map { entry in
+            switch entry {
+            case .instructions(let instructions):
+                instructions.toolDefinitions.map(\.name).joined(separator: ",")
+            case .toolOutput(let output):
+                "\(output.id):\(text(in: output.segments).utf8.count)"
+            default:
+                entry.id
+            }
+        }
+    }
+
+    func toolSchemaTokens(for transcript: Transcript) -> Int {
+        defersTools ? estimatedToolSchemaTokens(tools(for: transcript)) : budget.toolSchemaTokens
+    }
+
+    private func availableTools() -> [any Tool] {
         let selected: [any Tool]
         if let toolOverrides {
             selected = toolOverrides
         } else if let enabledToolIDs {
-            selected = makeAgentTools(toolkit: toolkit, enabledIDs: enabledToolIDs, tier: budget.toolTier)
+            selected = makeAgentTools(toolkit: toolkit, enabledIDs: enabledToolIDs)
         } else {
-            selected = makeAgentTools(toolkit: toolkit, tier: budget.toolTier)
+            selected = makeAgentTools(toolkit: toolkit)
         }
-        let managed: [any Tool] = budget.tracksOutcomes
-            ? [UpdateProgressTool(), RecordTaskOutcomeTool(toolkit: toolkit), VerifyTaskOutcomeTool(toolkit: toolkit), BlockTaskOutcomeTool(toolkit: toolkit)]
-            : []
-        let excluded = Set(managed.map(\.name)).union(AgentToolCatalog.outcomeToolIDs).union([UpdateProgressTool.toolName])
-        return selected.filter { !excluded.contains($0.name) && (seesScreenshots || !AgentToolCatalog.visualToolIDs.contains($0.name)) }
-            + managed
+        return selected.filter { seesScreenshots || !AgentToolCatalog.visualToolIDs.contains($0.name) }
     }
 
     var seesScreenshots: Bool {
         acceptsImages && !(model is SystemLanguageModel)
-    }
-
-    func makeSession(transcript: Transcript? = nil) -> LanguageModelSession {
-        let tools: [any Tool] = model is SystemLanguageModel
-            ? tools().map { AgentProposalTool(name: $0.name, description: $0.description, parameters: $0.parameters) }
-            : tools()
-        if let transcript {
-            let current = currentInstructions(transcript)
-            let restored = acceptsImages ? current : ModelImageSupport.textOnly(current)
-            return LanguageModelSession(
-                model: model, tools: tools,
-                transcript: seesScreenshots ? restored : ModelImageSupport.withoutToolImages(restored)
-            )
-        }
-        return LanguageModelSession(
-            model: model,
-            tools: tools,
-            instructions: AgentInstructions.text(for: budget.instructionTier)
-        )
-    }
-
-    func currentInstructions(_ transcript: Transcript) -> Transcript {
-        var entries = Array(transcript)
-        guard let index = entries.firstIndex(where: { if case .instructions = $0 { return true }; return false }),
-              case .instructions(let stored) = entries[index],
-              case .instructions(var fresh)? = makeSession().transcript.first(where: {
-                  if case .instructions = $0 { return true }; return false
-              })
-        else { return transcript }
-        fresh.segments += stored.segments.filter {
-            if case .text(let text) = $0 {
-                return text.id == Self.resumeInstructionID
-            }
-            return false
-        }
-        entries[index] = .instructions(fresh)
-        return Transcript(entries: entries)
-    }
-
-    static func text(in segments: [Transcript.Segment]) -> String {
-        segments.compactMap { segment in
-            if case .text(let text) = segment {
-                return text.content
-            }
-            return nil
-        }.joined()
     }
 
     static func estimatedTokens(in transcript: Transcript) -> Int {
@@ -767,12 +798,12 @@ final class AnyLanguageModelAgent: AgentRunner {
         return prose + machine + images == 0 ? 0 : max(1, estimate)
     }
 
-    static func contextBreakdown(in transcript: Transcript, budget: ContextBudget) -> ContextBreakdown {
+    static func contextBreakdown(in transcript: Transcript, budget: ContextBudget, toolTokens: Int? = nil) -> ContextBreakdown {
         var breakdown = ContextBreakdown(reservedTokens: max(0, budget.windowTokens - budget.inputTokens))
         func add(_ category: ContextBreakdown.Category, _ tokens: Int) {
             breakdown.tokens[category, default: 0] += tokens
         }
-        add(.availableTools, budget.toolSchemaTokens)
+        add(.availableTools, toolTokens ?? budget.toolSchemaTokens)
         for entry in transcript {
             switch entry {
             case .instructions(let value):
@@ -832,5 +863,41 @@ private nonisolated struct AgentProposalTool: Tool {
             await observer.propose(name: name, arguments: arguments)
         }
         throw AgentProposalBoundary()
+    }
+}
+
+extension AnyLanguageModelAgent {
+    func makeSession(transcript: Transcript? = nil, withoutTools: Bool = false) -> LanguageModelSession {
+        let selected = withoutTools ? [] : tools(for: transcript ?? Transcript(entries: []))
+        let tools: [any Tool] = model is SystemLanguageModel
+            ? selected.map { AgentProposalTool(name: $0.name, description: $0.description, parameters: $0.parameters) }
+            : selected
+        if let transcript {
+            let current = currentInstructions(transcript, tools: tools)
+            let restored = acceptsImages ? current : ModelImageSupport.textOnly(current)
+            return LanguageModelSession(
+                model: model, tools: tools,
+                transcript: seesScreenshots ? restored : ModelImageSupport.withoutToolImages(restored)
+            )
+        }
+        return LanguageModelSession(
+            model: model,
+            tools: tools,
+            instructions: instructionsText
+        )
+    }
+
+    static func text(in segments: [Transcript.Segment]) -> String {
+        segments.compactMap { segment in
+            if case .text(let text) = segment {
+                return text.content
+            }
+            return nil
+        }.joined()
+    }
+
+    func tools(for transcript: Transcript) -> [any Tool] {
+        let loaded = loadedTools(for: transcript)
+        return toolkit.withheldTools.isEmpty ? loaded : loaded.filter { !toolkit.withheldTools.contains($0.name) }
     }
 }

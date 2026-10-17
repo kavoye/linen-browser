@@ -71,7 +71,7 @@ nonisolated struct ActInFrameTool: Tool {
             await toolkit.frameOperation(name: name, frameID: arguments.frameID, readOnly: false) { view in
                 switch arguments.action {
                 case "click":
-                    await PageDriver.click(ref: arguments.ref, label: "", in: view, announced: true)
+                    await PageDriver.click(ref: arguments.ref, label: "", in: view, announced: true, constraints: toolkit.requestConstraints)
                 case "type":
                     await PageDriver.type(text: arguments.text ?? "", intoField: "", ref: arguments.ref, submit: false, in: view, announced: true)
                 case "select":

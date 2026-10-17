@@ -3,21 +3,12 @@
 
 extension AgentToolkit {
     nonisolated enum Descriptions {
-        static let searchWeb = """
-            Search one to four queries concurrently, optionally restricted to a domain. Return deduplicated links and summaries without navigating the current page.
-            """
+        static let searchWeb = "Search the web for one to four queries, optionally on one domain. Return links and summaries without leaving the page."
         static let navigate = """
             Open a web URL in the active tab so the user can see it. Return its rendered text and controls.
             """
         static let newTab = "Open a new tab. Use this only when the user asks for another tab."
-        static let askUser = """
-            Ask everything you still need to know in ONE call and wait: the answers come back as \
-            this tool's result. ONE thing per question - never join two with "and", send them as \
-            separate questions and the person steps through them. Put the choices in options, \
-            never in the question text: ask "Where would you like to go?" with options, not \
-            "Where would you like to go - the park, a museum, or the shops?". Leave options empty \
-            only when the answer is open, like a date or a name. Ask once, then carry on.
-            """
+        static let askUser = "Ask everything you still need in one call and wait for the answers. One thing per question; put the choices in options."
         static let listTabs = """
             List every tab open in this window, with its title and site. Use this when the user \
             asks about their tabs as a whole. The list names every tab; reading one still needs \
@@ -25,47 +16,21 @@ extension AgentToolkit {
             """
         static let switchTab = """
             Switch to a page in this conversation - on screen, attached by the user, or opened \
-            during this task - by part of its title or site name.
+            during this task - by part of its title or site name. For any other tab, ask the user to \
+            attach it with @ or switch to it themselves.
             """
         static let closeTab = "Close the active tab, or close a tab in this conversation by part of its title."
-        static let readPage = """
-            Read a page on screen and list each control with a [ref] number. Use lookingFor to return \
-            the relevant part. Pass pageID when targeting another page. Use pagination for more content. \
-            Actions return fresh observations; read again when stale or missing needed content. \
-            Control offsets are list positions, not [ref] numbers. Start at 0 when changing the query, scope, or viewport filter.
-            """
-        static let readArticle = """
-            Read only the main article of a page, without navigation, ads, or controls. Much shorter than readPage. \
-            Use it to read, summarize, or quote articles, posts, and documentation. Returns NO ARTICLE when the page has none.
-            """
-        static let clickOnPage = """
-            Click a control by its [ref], or by its label when no ref is available. The browser asks \
-            before payments, money transfers, account deletion, or posting as the user. Stop if the \
-            user declines. Click a read-only date field to open its calendar, then click a day.
-            """
-        static let typeOnPage = """
-            Set text, a #RRGGBB color, or a numeric range value by [ref] or label, with optional submission. Use fillFields for multiple controls. The browser refuses \
-            passwords, payment details, codes, and account or identity numbers.
-            """
+        static let readPage = "Read the page text and list each control with a [ref] number. Use lookingFor to return only the relevant part."
+        static let readArticle = "Read only the main text of an article, post, or documentation page."
+        static let clickOnPage = "Click a control by its [ref], or by its label. The browser asks before payments and posting; stop if the user declines."
+        static let typeOnPage = "Type into a control by [ref] or label, optionally submitting. Use fillFields for several fields. The browser refuses passwords and payment details."
         static let fillFields = """
-            Fill up to 32 independent controls in one call without submitting. Prefer this over separate field actions. \
-            Supports text, textarea, editable content, dropdowns, dates, colors (#RRGGBB), ranges (numeric), \
-            checkboxes and radios (true/false). Set only the desired radio to true. Use dates in the field's format. \
-            Copy the exact latest observationID. Returns verified refs and per-field failures; never repeat verified fields. \
-            Skips sensitive, disabled, read-only, and file inputs; stops if the page changes. Do not retry sensitive fields. \
-            File selection needs chooseFilesOnPage. Set colors directly; native color popups are outside page screenshots and controls.
+            Fill up to 32 fields in one call without submitting: text, dropdowns, dates, #RRGGBB colors, numbers, and true/false \
+            for checkboxes and radios. Copy the latest observationID. Skips sensitive, read-only, and file fields.
             """
         static let selectOption = "Choose an option in a native select control by its [ref] or label. For custom dropdowns, use clickOnPage on a visible option."
         static let scrollPage = "Scroll up, down, left, or right. Supply a ref inside a container to scroll that container."
         static let goBack = "Go back one page."
-        static let compact: [String: String] = [
-            "askUser": "Ask everything you still need in one call and wait for the answers. One thing per question; put the choices in options.",
-            "searchWeb": "Search the web for one to four queries. Return links and summaries.",
-            "readPage": "Read the page text and list each control with a [ref] number. Use lookingFor to return only the relevant part.",
-            "readArticle": "Read only the main text of an article, post, or documentation page.",
-            "clickOnPage": "Click a control by its [ref], or by its label. Stop if the user declines a confirmation.",
-            "typeOnPage": "Type into a control by [ref] or label, optionally submitting. Never passwords or payment details.",
-        ]
         static let playVideo = "Find a video by topic and play it in a background tab."
         static let closeVideo = "Pause the video and close the media player. Keep its tab open."
         static let controlMedia = "Use pip to enter Picture in Picture, or exitPip to leave it."
@@ -73,8 +38,7 @@ extension AgentToolkit {
             Check a page in the background on a schedule and notify the person once when it shows \
             what they are waiting for, like a price drop, a restock or a finished build. Use this \
             only when the person asks to be told later. Open the page first; the watch reads it \
-            signed in as the person, from their own browser. If you recorded an outcome for \
-            the watch, pass its outcomeID: a started watch is its proof, so never verify or block it.
+            signed in as the person, from their own browser.
             """
         static let listWatches = "List the pages being watched, with what each watch is waiting for."
         static let stopWatch = "Stop watching a page, by watch ID or part of its title, address or condition."

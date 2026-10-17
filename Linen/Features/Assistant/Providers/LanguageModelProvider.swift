@@ -136,16 +136,17 @@ private struct AnyLanguageModelProvider: ModelProvider {
     ) -> any AgentRunner {
         let reasoningEffort = ReasoningCatalog.resolve(reasoningEffort, for: configuration, model: model)
         let window = ContextWindow.tokens(for: configuration, model: model)
-        let tier = ContextBudget.toolTier(forWindow: window)
-        let toolIDs = AgentToolCatalog.resolvedIDs(for: configuration, tier: tier)
+        let defers = AgentToolDeferral.applies(toWindow: window)
+        let toolIDs = AgentToolCatalog.resolvedIDs(for: configuration)
+        let measuredTools = makeAgentTools(toolkit: toolkit, enabledIDs: toolIDs)
         let budget = ContextBudget.resolve(
             windowTokens: window,
             desiredResponseTokens: LanguageModelRuntimeFactory.desiredResponseTokens(
                 for: reasoningEffort,
                 adapter: configuration.adapter
             ),
-            measuredSchemaTokens: estimatedToolSchemaTokens(makeAgentTools(toolkit: toolkit, enabledIDs: toolIDs, tier: tier) + (tier == .core ? [] : [UpdateProgressTool()])),
-            measuredInstructionTokens: AgentInstructions.text(for: tier == .core ? .compact : .full).count / 4
+            measuredSchemaTokens: defers ? AgentToolDeferral.schemaTokens(for: measuredTools) : estimatedToolSchemaTokens(measuredTools),
+            measuredInstructionTokens: (AgentInstructions.text + (defers ? "\n" + AgentInstructions.loaderGuidance : "")).count / 4
         )
         let runtime = LanguageModelRuntimeFactory.make(
             configuration: configuration,

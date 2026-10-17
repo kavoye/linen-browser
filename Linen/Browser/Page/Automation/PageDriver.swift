@@ -85,13 +85,37 @@ enum PageDriver {
                 ? "\nControl pagination restarted at 0 because the query or filters changed."
                 : "\nControl pagination restarted at 0 because the offset exceeds the available controls. Offsets are list positions, not [ref] numbers."
         }
+        if let frames = object["frames"] as? Int, frames > 0 {
+            result += "\nThis page has \(frames) embedded \(frames == 1 ? "page" : "pages"). Use listFrames and readFrame to read \(frames == 1 ? "it" : "them")."
+        }
+        let prior = observation(in: webView)
+        let previous = prior.flatMap { $0.documentID == documentID && $0.url == url ? $0 : nil }
+        let stored = previous?.next(id: id, refs: refs) ?? PageObservation(id: id, documentID: documentID, url: url, refs: refs)
+        let links = controls.compactMap { $0["k"] as? String == "link" ? $0["l"] as? String : nil }
+        stored.links = Array(Set((previous?.links ?? []) + links))
+        stored.previousLinks = previous?.previousLinks ?? prior?.links ?? []
+        observations.setObject(stored, forKey: webView)
+        let wholePage = (object["textTotal"] as? Int ?? 0) <= textLength && (object["controlTotal"] as? Int ?? 0) <= controls.count
+        if object["found"] as? Bool == false, (object["frames"] as? Int ?? 0) == 0, wholePage || (textOffset == 0 && controlOffset == 0) {
+            let leads = (object["leads"] as? [[String: Any]] ?? []).compactMap { lead -> String? in
+                guard let ref = lead["r"] as? Int, let label = lead["l"] as? String else { return nil }
+                return "[\(ref)] “\(label)”"
+            }
+            result += object["below"] as? Bool == true
+                ? "\n“\(lookingFor)” is not on the page yet. More of the page is below; use scrollPage to see it."
+                : "\n“\(lookingFor)” is not on this page." + (leads.isEmpty ? backLead(for: lookingFor, missingFrom: result, in: webView) : " Links that may lead there: "
+                    + leads.joined(separator: ", ") + ". Open one with clickOnPage.")
+        }
+        if object["found"] as? Bool != false, !lookingFor.isEmpty, wholePage {
+            let back = backLead(for: lookingFor, missingFrom: result, in: webView)
+            result += back.isEmpty ? "" : "\n“\(lookingFor)” is not on this page." + back
+        }
         if nextText < totalText {
             result += "\nMore text: readPage textOffset=\(nextText) (\(totalText) UTF-16 units total)."
         }
         if nextControl < totalControls {
             result += "\nMore controls: readPage controlOffset=\(nextControl) (\(totalControls) total); keep the same query and scope."
         }
-        observations.setObject(PageObservation(id: id, documentID: documentID, url: url, refs: refs), forKey: webView)
         return result
     }
 
@@ -179,12 +203,18 @@ enum PageDriver {
 
     // MARK: - Actions
 
-    static func click(ref: Int, label: String, in webView: WKWebView, announced: Bool = false, refreshControls: Bool = true) async -> String {
+    static func click(
+        ref: Int, label: String, in webView: WKWebView, announced: Bool = false, refreshControls: Bool = true,
+        constraints: AgentRequestConstraints = .none
+    ) async -> String {
         let resolved = await resolve(ref: ref, label: label, kinds: #"["button","link","checkbox","radio","field","select","combobox"]"#, in: webView)
         switch resolved {
         case .failure(let message):
             return message
         case .success(let found):
+            if let refusal = await clickRefusal(ref: ref, label: label, found: found, in: webView, constraints: constraints) {
+                return refusal
+            }
             if let category = SensitiveAction.category(of: found.label, context: found.context) {
                 let permitted = await AgentActionConsent.permit(
                     label: found.label,
@@ -265,11 +295,15 @@ enum PageDriver {
                   if (!el || !el.isConnected) { return JSON.stringify({ stale: true }); }
                   const error = R.actionable(el);
                   if (error) return JSON.stringify({ error });
+                  if (el.tagName === 'SELECT') return JSON.stringify({ menu: true });
                   el.click();
                   return JSON.stringify({ ok: true });
                 """)
             guard let object = await evaluateJSON(script, in: webView) else { return staleMessage }
             if let error = object["error"] as? String { return error }
+            if object["menu"] as? Bool == true {
+                return "“\(found.label)” is a menu. Clicking does not choose an option; use selectOption with the option you want."
+            }
             guard object["ok"] as? Bool == true else { return staleMessage }
             return "Clicked “\(found.label)”. " + (refreshControls ? await settleAndSnippet(webView) : "")
         }
@@ -282,14 +316,21 @@ enum PageDriver {
         submit: Bool,
         in webView: WKWebView,
         announced: Bool = false,
-        refreshControls: Bool = true
+        refreshControls: Bool = true,
+        constraints: AgentRequestConstraints = .none
     ) async -> String {
+        if submit, let refusal = constraints.submissionRefusal {
+            return refusal
+        }
         guard let encodedText = jsonString(text) else { return "Could not encode the input." }
         let resolved = await resolve(ref: ref, label: fieldLabel, kinds: #"["field"]"#, in: webView)
         switch resolved {
         case .failure(let message):
             return message
         case .success(let found):
+            if submit, let held = await requestValueRefusal(ref: found.ref, retry: "submit again", in: webView, constraints: constraints) {
+                return held
+            }
             if submit, let category = SensitiveAction.category(of: found.label, context: found.context) {
                 let permitted = await AgentActionConsent.permit(
                     label: found.label,
@@ -418,7 +459,10 @@ enum PageDriver {
             }
             if object["ok"] as? Bool != true {
                 if let options = object["options"] as? [String], !options.isEmpty {
-                    return PageOutputBudget.prefix("No option matches “\(option)” in “\(found.label)”. Options: \(options.joined(separator: " | "))", fitting: outputBudget.totalCharacters - 100)
+                    let mismatch = labelsAgree(field, found.label) ? ""
+                        : " [\(found.ref)] is “\(found.label)”, not “\(field)”. If “\(field)” is not on this page, it may be on an earlier step: use goBack."
+                    let message = "No option matches “\(option)” in “\(found.label)”.\(mismatch) Options: \(options.joined(separator: " | "))"
+                    return PageOutputBudget.prefix(message, fitting: outputBudget.totalCharacters - 100)
                 }
                 return Self.staleMessage
             }
@@ -500,6 +544,8 @@ enum PageDriver {
         let label: String
         let disabled: Bool
         let context: String
+        var submits = false
+        var isLink = false
     }
 
     enum Resolution {
@@ -507,14 +553,54 @@ enum PageDriver {
         case failure(String)
     }
 
+    private static func wrongKindMessage(
+        ref: Int, kind: String, actual: String, requested: String, kinds: String, wanted: String, in webView: WKWebView
+    ) async -> String {
+        let opening = "[\(ref)] is a \(kind) “\(actual)”, not a \(wanted)."
+        if !requested.isEmpty, !labelsAgree(requested, actual) {
+            if case .success(let match) = await resolve(ref: 0, label: requested, kinds: kinds, in: webView) {
+                return opening + " “\(match.label)” is [\(match.ref)]: use ref \(match.ref)."
+            }
+            return opening + " Use the ref of a \(wanted) from readPage."
+        }
+        let hint = toolForKind[kind].map { " To use it, call \($0) with ref \(ref)." } ?? ""
+        return opening + hint + " Otherwise use the ref of a \(wanted) from readPage."
+    }
+
+    static let toolForKind = [
+        "button": "clickOnPage", "link": "clickOnPage", "select": "selectOption", "checkbox": "setChecked",
+        "radio": "setChecked", "field": "typeOnPage",
+    ]
+
     static let staleMessage =
         "That element is gone - the page has changed since it was read. Use readPage and act on the fresh refs."
 
     static func staleMessage(ref: Int, in view: WKWebView) -> String {
-        guard let current = observation(in: view), expectedObservation == nil || expectedObservation == current.id,
-            !current.refs.contains(ref)
+        guard let current = observation(in: view), let listed = current.listed(expectedObservation),
+            !listed.contains(ref)
         else { return staleMessage }
-        return "[\(ref)] was not listed in that observation. Use a ref it listed, or readPage with lookingFor to find the control."
+        let page = view.title.map { $0.isEmpty ? "" : " The page is now “\($0)”." } ?? ""
+        return "[\(ref)] was not listed in that observation.\(page) Use a ref it listed, readPage with lookingFor to find the control, or goBack to return to the previous page."
+    }
+
+    private static func clickRefusal(ref: Int, label: String, found: Resolved, in webView: WKWebView, constraints: AgentRequestConstraints) async -> String? {
+        if ref > 0, !labelsAgree(label, found.label) {
+            let back = previousPageHint(for: label, in: webView)
+            return "[\(ref)] is “\(found.label)”, not “\(label)”. Nothing was clicked." + (back.isEmpty ? " Use the ref listed for the control you mean." : back)
+        }
+        if let refusal = constraints.refusal(clicking: found.label, submits: found.submits, isLink: found.isLink) {
+            return refusal
+        }
+        return found.submits ? await requestValueRefusal(ref: found.ref, retry: "use “\(found.label)” again", in: webView, constraints: constraints) : nil
+    }
+
+    nonisolated static func labelsAgree(_ requested: String, _ actual: String) -> Bool {
+        func words(_ text: String) -> Set<String> {
+            Set(text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init))
+        }
+        let wanted = words(requested)
+        let found = words(actual)
+        return wanted.isEmpty || found.isEmpty || !wanted.isDisjoint(with: found)
     }
 
     static func resolve(ref: Int, label: String, kinds: String, in webView: WKWebView) async -> Resolution {
@@ -535,6 +621,7 @@ enum PageDriver {
             """
               const found = R.resolve(\(ref), \(encodedLabel), \(kinds));
               if (found.stale) { return JSON.stringify({ stale: true }); }
+              if (found.wrongKind) { return JSON.stringify({ wrongKind: found.wrongKind, label: found.label }); }
               if (found.ambiguous) { return JSON.stringify({ ambiguous: true }); }
               if (found.options) { return JSON.stringify({ options: found.options }); }
               const el = found.el;
@@ -555,6 +642,9 @@ enum PageDriver {
                 ref: el.__linenRef || window.__linenRefs.push(el),
                 label: R.labelOf(el, kind),
                 disabled: R.disabled(el) ? 1 : 0,
+                submits: form && ((el.tagName === 'BUTTON' && (el.getAttribute('type') || 'submit') === 'submit')
+                  || (el.tagName === 'INPUT' && ['submit', 'image'].includes(el.type))) ? 1 : 0,
+                link: kind === 'link' ? 1 : 0,
                 context
               });
             """)
@@ -563,6 +653,11 @@ enum PageDriver {
         }
         if object["stale"] as? Bool == true {
             return .failure(staleMessage)
+        }
+        if let kind = object["wrongKind"] as? String {
+            let wanted = (try? JSONDecoder().decode([String].self, from: Data(kinds.utf8)))?.joined(separator: " or ") ?? "control"
+            let actual = object["label"] as? String ?? ""
+            return .failure(await wrongKindMessage(ref: ref, kind: kind, actual: actual, requested: label, kinds: kinds, wanted: wanted, in: webView))
         }
         if object["ambiguous"] as? Bool == true {
             return .failure("Several controls match. Use readPage and choose a specific ref.")
@@ -581,7 +676,9 @@ enum PageDriver {
                 ref: foundRef,
                 label: object["label"] as? String ?? label,
                 disabled: object["disabled"] as? Int == 1,
-                context: object["context"] as? String ?? ""
+                context: object["context"] as? String ?? "",
+                submits: object["submits"] as? Int == 1,
+                isLink: object["link"] as? Int == 1
             ))
     }
 

@@ -12,7 +12,7 @@ struct AgentWorkHistory: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             let inspections = showsDetails ? AgentToolInspection.forTrace(trace) : [:]
-            let visibleIndices = trace.steps.indices.filter { trace.steps[$0].isVisibleInChat }
+            let visibleIndices = Array(trace.steps.indices)
             if showsDetails,
                let summaries = trace.checkpoint?.openAI?.presentation?.summaries, !summaries.isEmpty {
                 AgentReasoningSummary(summaries: summaries)
@@ -27,15 +27,7 @@ struct AgentWorkHistory: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 9)
                 }
-                if index == trace.steps.count, trace.state == .running, let liveProgress = trace.liveProgress {
-                    Text(verbatim: liveProgress)
-                        .font(.system(size: 13))
-                        .lineSpacing(3)
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 9)
-                }
-                if showsDetails, index < trace.steps.count, trace.steps[index].isVisibleInChat {
+                if showsDetails, index < trace.steps.count {
                     let step = trace.steps[index]
                     let previous = visibleIndices.last { $0 < index }
                     let next = visibleIndices.first { $0 > index }

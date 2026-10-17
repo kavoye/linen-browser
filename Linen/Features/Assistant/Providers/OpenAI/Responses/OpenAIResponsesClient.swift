@@ -13,6 +13,10 @@ nonisolated struct OpenAIResponsesClient: Sendable {
     private let providerID: String
     private let oauthAuthorization: @Sendable (OpenAIMCPServer, String) async throws -> String
 
+    var defersTools: Bool {
+        settings.useToolSearch && OpenAIToolSearch.supports(model)
+    }
+
     init(endpoint: URL, apiKey: String, model: String, settings: OpenAIResponseSettings = .init(), transport: (any OpenAITransport)? = nil,
          providerID: String = "openai", authorization: (@Sendable (UUID) -> String?)? = nil,
          oauthAuthorization: (@Sendable (OpenAIMCPServer, String) async throws -> String)? = nil) {
@@ -82,7 +86,7 @@ nonisolated struct OpenAIResponsesClient: Sendable {
             includes.append("reasoning.encrypted_content")
         }
         body["include"] = .array(includes)
-        let local = OpenAIToolSearch.definitions(tools, enabled: settings.useToolSearch && OpenAIToolSearch.supports(model))
+        let local = OpenAIToolSearch.definitions(tools, enabled: defersTools)
         body["tools"] = .array(try local + OpenAIHostedShell.definitions(settings.hostedTools, state: state) + remoteTools(oauthTokens: oauthTokens))
         return body
     }
@@ -95,8 +99,7 @@ nonisolated struct OpenAIResponsesClient: Sendable {
     func respond(
         transcript: Transcript, prompt: String, images: [Transcript.ImageSegment], state: OpenAIConversationState,
         tools: [any Tool], maxTokens: Int, attachmentInput: OpenAIAttachmentInput? = nil,
-        onText: @escaping @MainActor (String) -> Void,
-        onProgress: @escaping @MainActor (String) -> Void = { _ in }
+        onText: @escaping @MainActor (String) -> Void
     ) async throws -> OpenAIModelStep {
         var entries = Array(transcript)
         entries.append(.prompt(.init(segments: [.text(.init(content: prompt))] + images.map { .image($0) })))
@@ -115,7 +118,7 @@ nonisolated struct OpenAIResponsesClient: Sendable {
         let request = try body(state: state, instructions: OpenAIConversationState.instructions(transcript), tools: definitions,
                                maxTokens: maxTokens, oauthTokens: oauthTokens)
         state.mcpDestinations = Dictionary(settings.mcpServers.map { ($0.label, $0.destination) }, uniquingKeysWith: { first, _ in first })
-        let streaming = OpenAIVisibleStream(onText: onText, onProgress: onProgress)
+        let streaming = OpenAIVisibleStream(onText: onText)
         let response = try await api.createResponse(request) { notification in await streaming.receive(notification) }
         let usage = OpenAIUsage(raw: response["usage"])
         guard response["status"].string == "completed" else {
@@ -224,35 +227,13 @@ private final class OpenAIVisibleStream {
     var text = ""
     private let started = ContinuousClock.now
     private var lastPublished: ContinuousClock.Instant?
-    private var lastProgressPublished: ContinuousClock.Instant?
-    private var progressArguments: [Int: String] = [:]
     private(set) var firstTextMilliseconds: Int?
     let onText: @MainActor (String) -> Void
-    let onProgress: @MainActor (String) -> Void
-    init(onText: @escaping @MainActor (String) -> Void, onProgress: @escaping @MainActor (String) -> Void) {
+    init(onText: @escaping @MainActor (String) -> Void) {
         self.onText = onText
-        self.onProgress = onProgress
     }
     func receive(_ event: OpenAIEvent) {
-        if event.type == "response.output_item.added",
-           event.payload["item"]["type"] == "function_call",
-           event.payload["item"]["name"].string == UpdateProgressTool.toolName,
-           let index = event.payload["output_index"].int {
-            progressArguments[index] = event.payload["item"]["arguments"].string ?? ""
-        } else if event.type == "response.function_call_arguments.delta",
-                  let index = event.payload["output_index"].int,
-                  let delta = event.payload["delta"].string,
-                  var arguments = progressArguments[index] {
-            guard arguments.count + delta.count <= 16_000 else { return }
-            arguments += delta
-            progressArguments[index] = arguments
-            publishProgress(arguments)
-        } else if event.type == "response.function_call_arguments.done",
-                  let index = event.payload["output_index"].int,
-                  progressArguments[index] != nil,
-                  let arguments = event.payload["arguments"].string {
-            publishProgress(arguments, force: true)
-        } else if event.type == "response.output_text.delta", let delta = event.payload["delta"].string {
+        if event.type == "response.output_text.delta", let delta = event.payload["delta"].string {
             text += delta
             let now = ContinuousClock.now
             if firstTextMilliseconds == nil, !delta.isEmpty {
@@ -265,18 +246,5 @@ private final class OpenAIVisibleStream {
             lastPublished = now
             onText(text)
         }
-    }
-
-    private func publishProgress(_ arguments: String, force: Bool = false) {
-        guard arguments.count <= 16_000,
-              let message = OpenAIProgressMessage.partial(arguments) else { return }
-        let visible = String(message.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2_000))
-        guard !visible.isEmpty else { return }
-        let now = ContinuousClock.now
-        if !force, let lastProgressPublished, now - lastProgressPublished < .milliseconds(50) {
-            return
-        }
-        lastProgressPublished = now
-        onProgress(visible)
     }
 }

@@ -4,30 +4,7 @@
 import Foundation
 
 nonisolated enum OpenAIToolSearch {
-    private struct Group {
-        let name: String
-        let description: String
-        let functions: Set<String>
-    }
-
-    private static let groups: [Group] = [
-        .init(name: "browser_research", description: "Search the web, open websites, read page text and controls or just the article, and go back.",
-              functions: ["searchWeb", "navigate", "readPage", "readArticle", "goBack"]),
-        .init(name: "browser_interaction", description: "Click page controls, fill forms, select options, set checkboxes, scroll, hover, and press keys.",
-              functions: ["clickOnPage", "typeOnPage", "fillFields", "selectOption", "setChecked", "scrollPage", "hoverOnPage", "pressKey"]),
-        .init(name: "browser_observation", description: "Inspect control state, full field values and dropdown options, wait for page changes, or capture the page viewport.",
-              functions: ["inspectControl", "waitForPage", "screenshotPage"]),
-        .init(name: "browser_visual", description: "Move, click, double-click, type, or dispatch drag events using screenshot coordinates.",
-              functions: ["movePointer", "clickAtPoint", "typeAtPointer", "doubleClickAtPoint", "dragOnPage"]),
-        .init(name: "browser_frames", description: "Find embedded websites, request access, and read or interact with their controls.",
-              functions: ["listFrames", "readFrame", "actInFrame"]),
-        .init(name: "browser_files", description: "Ask the user to choose files for upload or inspect this task's downloads.",
-              functions: ["chooseFilesOnPage", "inspectDownloads"]),
-        .init(name: "browser_tabs", description: "List, open, switch, and close browser tabs.", functions: ["listTabs", "newTab", "switchTab", "closeTab"]),
-        .init(name: "browser_media", description: "Play videos and control or close media playback.", functions: ["playVideo", "closeVideo", "controlMedia"]),
-        .init(name: "browser_watches", description: "Watch a page on a schedule and notify the user when it changes, list watches, or stop one.",
-              functions: ["watchPage", "listWatches", "stopWatch"]),
-    ]
+    @TaskLocal static var isAllowed = true
 
     static func supports(_ model: String) -> Bool {
         let parts = model.lowercased().split(separator: "-")
@@ -40,14 +17,14 @@ nonisolated enum OpenAIToolSearch {
     static func definitions(_ functions: [OpenAIJSON], enabled: Bool) -> [OpenAIJSON] {
         guard enabled else { return functions }
         var result = functions.filter { function in
-            !groups.contains { $0.functions.contains(function["name"].string ?? "") }
+            AgentToolCatalog.group(containing: function["name"].string ?? "") == nil
         }
         var deferred = false
-        for group in groups {
-            let members = functions.filter { $0["type"] == "function" && group.functions.contains($0["name"].string ?? "") }
+        for group in AgentToolCatalog.groups {
+            let members = functions.filter { $0["type"] == "function" && group.toolIDs.contains($0["name"].string ?? "") }
             guard !members.isEmpty else { continue }
             result.append([
-                "type": "namespace", "name": .string(group.name), "description": .string(group.description),
+                "type": "namespace", "name": .string("browser_" + group.name), "description": .string(group.description),
                 "tools": .array(members.map { function in
                     var function = function
                     function["defer_loading"] = true

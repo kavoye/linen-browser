@@ -8,7 +8,6 @@ nonisolated struct AgentExecutionPolicy: Equatable, Sendable {
     var maxModelRequests: Int?
     var repeatedActionLimit = 3
     var consecutiveFailureLimit = 3
-    var requiresOutcomeVerification = true
 
     static let interactive = Self()
 
@@ -30,15 +29,13 @@ nonisolated enum AgentStopReason: String, Codable, Sendable {
     case providerError = "provider_error"
     case rateLimited = "rate_limited"
     case interrupted
-    case verificationRequired = "verification_required"
-    case blocked
+
+    init(from decoder: any Decoder) throws {
+        self = Self(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .interrupted
+    }
 
     var message: String {
         switch self {
-        case .verificationRequired:
-            String(localized: "The assistant hasn’t confirmed the result yet. Choose Continue to check it.")
-        case .blocked:
-            String(localized: "This task needs your help before it can go on. Your progress is saved.")
         case .requestLimit:
             String(localized: "Paused at the request limit you set. Choose Continue to keep going.")
         case .noProgress:

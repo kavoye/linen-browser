@@ -9,7 +9,7 @@ extension AgentToolkit {
         browserContext.pageWatches
     }
 
-    func watchPage(condition rawCondition: String, everyMinutes: Int, outcomeID: String? = nil) async -> String {
+    func watchPage(condition rawCondition: String, everyMinutes: Int) async -> String {
         let condition = rawCondition.trimmingCharacters(in: .whitespacesAndNewlines)
         let view = targetWebView
         let place = view?.url?.displayHost ?? "this page"
@@ -57,10 +57,7 @@ extension AgentToolkit {
             return output
         }
         switch started {
-        case .watching(let watch):
-            if let outcomeID {
-                _ = taskLedger.confirm(id: outcomeID, url: watch.url.absoluteString, proof: "Watch \(watch.id.uuidString) started")
-            }
+        case .watching:
             let output = Self.output(for: started)
             completeTool(step, output: output)
             return output

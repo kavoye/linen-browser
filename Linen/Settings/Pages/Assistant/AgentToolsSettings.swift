@@ -41,26 +41,10 @@ struct AgentToolsPage: View {
                 }
             }
         }
-
-        if let warning = model.toolWarning {
-            StatusRow(
-                tint: Theme.warning,
-                symbol: "exclamationmark",
-                title: "More tools than recommended",
-                verbatimCaption: warning
-            ) {
-                EmptyView()
-            }
-            .padding(.top, 6)
-        }
     }
 
     @ViewBuilder private var resetButton: some View {
-        if model.toolWarning != nil {
-            SettingsButton(title: "Use Recommended", tint: Theme.warning) {
-                model.resetToolsToRecommended()
-            }
-        } else if !model.isUsingRecommendedTools {
+        if !model.isUsingRecommendedTools {
             SettingsButton(title: "Reset") {
                 model.resetToolsToRecommended()
             }
@@ -68,8 +52,8 @@ struct AgentToolsPage: View {
     }
 
     private func footnote(for category: AgentToolDescriptor.Category) -> LocalizedStringResource? {
-        guard model.tracksOutcomes, category == AgentToolDescriptor.Category.allCases.last else { return nil }
-        return "Linen always keeps track of task results. Models with large context windows can also use screenshots."
+        guard category == AgentToolDescriptor.Category.allCases.last else { return nil }
+        return "Models that accept images can also use screenshots."
     }
 
     private static func symbol(for category: AgentToolDescriptor.Category) -> String {

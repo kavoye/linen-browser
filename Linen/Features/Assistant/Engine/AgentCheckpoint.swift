@@ -7,11 +7,11 @@ import Foundation
 nonisolated struct AgentCheckpoint: Codable, Equatable, Sendable {
     var transcript = Transcript()
     var summary = ""
+    var request: String?
     var userAnswers: [String] = []
     var progressUpdates: [AgentProgressUpdate]?
     var openAI: OpenAIConversationState?
-    var taskLedger: AgentTaskLedger?
-    var completion: AgentTaskLedger.Completion?
+    var memoryUpdates: [AgentMemoryUpdate]?
 
     static let resumePrompt = """
         Continue the unfinished task from the saved conversation. First read the current page: \

@@ -26,29 +26,19 @@ struct AgentToolCatalogTests {
         #expect(AgentToolCatalog.all.count == registered.count - 1)
     }
 
-    @Test func theCoreDefaultsMatchTheCoreTier() {
-        let coreTier = Set(makeAgentTools(toolkit: toolkit(), tier: .core).map(\.name))
-            .subtracting([AskUserTool.toolName])
-
-        #expect(AgentToolCatalog.defaultIDs(for: .core) == coreTier)
-        #expect(AgentToolCatalog.defaultIDs(for: .full).count == AgentToolCatalog.all.count)
-    }
-
     @Test func anEnabledSetFiltersTheSessionToolsButNeverAsking() {
         let enabled: Set<String> = ["searchWeb", "readPage", "playVideo"]
         let names = makeAgentTools(toolkit: toolkit(), enabledIDs: enabled).map(\.name)
 
-        #expect(Set(names) == enabled.union([AskUserTool.toolName]).union(AgentToolCatalog.outcomeToolIDs))
-        #expect(names == ["askUser", "recordTaskOutcome", "verifyTaskOutcome", "blockTaskOutcome", "searchWeb", "readPage", "playVideo"])
+        #expect(names == ["askUser", "searchWeb", "readPage", "playVideo"])
     }
 
-    @Test func aSmallWindowLeavesOutOutcomeTrackingAndShortensDescriptions() throws {
-        let enabled = AgentToolCatalog.defaultIDs(for: .core)
-        let tools = makeAgentTools(toolkit: toolkit(), enabledIDs: enabled, tier: .core)
+    @Test func everyModelGetsTheSameReadPage() throws {
+        let readPage = try #require(makeAgentTools(toolkit: toolkit()).first { $0.name == "readPage" })
+        let schema = try #require(String(data: try JSONEncoder().encode(readPage.parameters), encoding: .utf8))
 
-        #expect(Set(tools.map(\.name)) == enabled.union([AskUserTool.toolName]))
-        let readPage = try #require(tools.first { $0.name == "readPage" })
-        #expect(readPage.description == AgentToolkit.Descriptions.compact["readPage"])
+        #expect(readPage.description == AgentToolkit.Descriptions.readPage)
+        #expect(!schema.contains("viewportOnly"))
     }
 
     @Test func everyCategoryListsItsToolsInCatalogOrder() {
@@ -63,7 +53,7 @@ struct AgentToolCatalogTests {
 
 @Suite(.serialized)
 struct AgentToolPreferencesTests {
-    @Test func aStoredSelectionWinsOverTheTierDefault() {
+    @Test func aStoredSelectionWinsOverTheDefault() {
         let previous = LLMSettings.defaults
         let suiteName = "agent-tool-preferences-tests"
         let defaults = UserDefaults(suiteName: suiteName)
@@ -84,20 +74,16 @@ struct AgentToolPreferencesTests {
 
         #expect(LLMSettings.enabledAgentTools(for: provider) == nil)
         #expect(
-            AgentToolCatalog.resolvedIDs(for: provider, tier: .core)
-                == AgentToolCatalog.defaultIDs(for: .core)
+            AgentToolCatalog.resolvedIDs(for: provider) == AgentToolCatalog.defaultIDs
         )
 
         let chosen: Set<String> = ["searchWeb", "readPage", "playVideo"]
         LLMSettings.setEnabledAgentTools(chosen, for: provider)
-        #expect(AgentToolCatalog.resolvedIDs(for: provider, tier: .core) == chosen)
-        #expect(AgentToolCatalog.resolvedIDs(for: provider, tier: .full)
-            == chosen.union(AgentToolCatalog.visualToolIDs))
+        #expect(AgentToolCatalog.resolvedIDs(for: provider) == chosen.union(AgentToolCatalog.visualToolIDs))
 
         LLMSettings.setEnabledAgentTools(["not-a-tool"], for: provider)
         #expect(
-            AgentToolCatalog.resolvedIDs(for: provider, tier: .core)
-                == AgentToolCatalog.defaultIDs(for: .core)
+            AgentToolCatalog.resolvedIDs(for: provider) == AgentToolCatalog.defaultIDs
         )
 
         LLMSettings.setEnabledAgentTools(nil, for: provider)

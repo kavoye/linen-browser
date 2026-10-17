@@ -8,7 +8,6 @@ extension PageDriver {
     nonisolated struct FieldValue: Codable, Equatable, Sendable {
         let ref: Int
         let value: String
-        let select: Bool
     }
 
     static func fillFields(_ fields: [FieldValue], in webView: WKWebView, announced: Bool = false) async -> String {
@@ -59,7 +58,7 @@ extension PageDriver {
                 }
                 result = await setChecked(ref: field.ref, checked: checked, in: webView,
                                           announced: announced && index == 0, refreshControls: false)
-            } else if field.select || kind == "select" {
+            } else if kind == "select" {
                 result = await selectOption(field.value, ref: field.ref, field: "", in: webView,
                                             announced: announced && index == 0, refreshControls: false)
             } else {

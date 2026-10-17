@@ -22,14 +22,11 @@ struct AgentToolInspectionTests {
         let firstCall = Transcript.ToolCall(id: "first", toolName: "clickOnPage", arguments: GeneratedContent(properties: [
             "selector": GeneratedContent("#origin")
         ]))
-        let progressCall = Transcript.ToolCall(id: "progress", toolName: "updateProgress", arguments: GeneratedContent(properties: [
-            "message": GeneratedContent("Working")
-        ]))
         let secondCall = Transcript.ToolCall(id: "second", toolName: "clickOnPage", arguments: GeneratedContent(properties: [
             "selector": GeneratedContent("#destination")
         ]))
         let entries: [Transcript.Entry] = [
-            .toolCalls(.init([firstCall, progressCall, secondCall])),
+            .toolCalls(.init([firstCall, secondCall])),
             .toolOutput(.init(id: "first", toolName: "clickOnPage", segments: [.text(.init(content: "Opened origin"))])),
             .toolOutput(.init(id: "second", toolName: "clickOnPage", segments: [.text(.init(content: "Opened destination"))])),
         ]
@@ -70,25 +67,5 @@ struct AgentToolInspectionTests {
         #expect(details.input?.contains("[hidden]") == true)
         #expect(details.input?.contains("private@example.test") == false)
         #expect(details.result == "Typed into Destination.")
-    }
-
-    @Test func hidesExpectedControlValueInOutcomeInspection() throws {
-        let log = ConversationLog(database: .temporary())
-        let tab = UUID()
-        let task = log.beginTask("Check a saved field", tabID: tab)
-        let step = try #require(log.beginTool(taskID: task, name: "verifyTaskOutcome", title: "Verify result"))
-        let call = Transcript.ToolCall(id: "verify", toolName: "verifyTaskOutcome", arguments: GeneratedContent(properties: [
-            "outcomeID": GeneratedContent("contact"),
-            "expectedValue": GeneratedContent("private@example.test"),
-            "expectedText": GeneratedContent("private@example.test"),
-        ]))
-        log.saveCheckpoint(AgentCheckpoint(transcript: Transcript(entries: [
-            .toolCalls(.init([call])),
-        ])), taskID: task)
-
-        let trace = try #require(log.latestTrace(forTab: tab))
-        let details = try #require(AgentToolInspection.forTrace(trace)[step])
-        #expect(details.input?.contains("[hidden]") == true)
-        #expect(details.input?.contains("private@example.test") == false)
     }
 }

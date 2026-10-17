@@ -67,9 +67,14 @@ extension PageDriver {
         let eligible = await evaluateJSON(scripted("""
             const el = window.__linenRefs[\(ref) - 1];
             const error = R.actionable(el);
-            return JSON.stringify({ ok: !error && el.ownerDocument === document && el.tagName === 'INPUT' && el.type === 'file' });
+            const files = window.__linenRefs.flatMap((input, index) =>
+              input?.isConnected && input.tagName === 'INPUT' && input.type === 'file' && !R.actionable(input) ? [index + 1] : []);
+            return JSON.stringify({ ok: !error && el.ownerDocument === document && el.tagName === 'INPUT' && el.type === 'file', files });
             """), in: view)
         guard eligible?["ok"] as? Bool == true, await prepareAction(ref: ref, in: view) == nil else {
+            if eligible?["ok"] as? Bool != true, let files = eligible?["files"] as? [Int], let file = files.first, !files.contains(ref) {
+                return "[\(ref)] is not a file input. The file input is [\(file)]: call chooseFilesOnPage with ref \(file)."
+            }
             return "Choose a visible file input from a fresh page observation."
         }
         let source = view.url
@@ -98,6 +103,6 @@ extension PageDriver {
         guard let count = await selection.wait(), selection.validate(), !Task.isCancelled else {
             return "File selection cancelled or the page changed. No upload result was verified."
         }
-        return "CONTROL: The user selected \(count) files. Check the page for upload completion.\n" + (await settleAndSnippet(view))
+        return "CONTROL: The user selected \(count) \(count == 1 ? "file" : "files"). The form has not been submitted.\n" + (await settleAndSnippet(view))
     }
 }

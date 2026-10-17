@@ -7,6 +7,41 @@ import Testing
 @testable import Linen
 
 struct AgentProgressMonitorTests {
+    @Test func readsThatBringNothingNewAskForTheAnswerThenPause() {
+        var monitor = AgentProgressMonitor(policy: .interactive)
+        let windows = [
+            "Aster desk lamp. Product code AST-4471. Price $129.", "esk lamp. Product code AST-4471. Price $129.",
+            "Product code AST-4471. Price $129. Aster desk", "lamp. Product code AST-4471",
+        ]
+        let decisions = (0..<9).map { index in
+            monitor.observe(name: "readPage", arguments: "{\"lookingFor\":\"price \(index)\"}",
+                            output: "PAGE TEXT: " + windows[index % windows.count], failed: false)
+        }
+        #expect(decisions == [.proceed, .proceed, .proceed, .proceed, .answer, .proceed, .proceed, .proceed, .pause])
+    }
+
+    @Test func identifiersInsideTheOutputAreNotNewInformation() {
+        var monitor = AgentProgressMonitor(policy: .interactive)
+        let decisions = (0..<5).map { index in
+            monitor.observe(name: "readPage", arguments: "{\"controlOffset\":\(index)}",
+                            output: "pageID: 77423B04-20D0-43FC\nobservationID: mvbkt\(index)s0.3skh3vfx\(index)b\nPAGE TEXT: Price $129",
+                            failed: false)
+        }
+        #expect(decisions.last == .answer)
+    }
+
+    @Test func anActionBetweenReadsKeepsTheStreakShort() {
+        var monitor = AgentProgressMonitor(policy: .interactive)
+        var decisions: [AgentProgressMonitor.Decision] = []
+        for index in 1...6 {
+            decisions.append(monitor.observe(name: "readPage", arguments: "{\"controlOffset\":\(index)}",
+                                             output: "PAGE TEXT: page \(index)", failed: false))
+            decisions.append(monitor.observe(name: "scrollPage", arguments: "{\"direction\":\"down\",\"step\":\(index)}",
+                                             output: "Scrolled to part \(index)", failed: false))
+        }
+        #expect(decisions.allSatisfy { $0 == .proceed })
+    }
+
     @Test func changedScreenshotsKeepRepeatedVisualActionsMoving() {
         var monitor = AgentProgressMonitor(policy: .interactive)
         for index in 1...8 {

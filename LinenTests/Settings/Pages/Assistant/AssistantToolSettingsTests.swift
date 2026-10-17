@@ -147,12 +147,12 @@ struct AssistantToolSettingsTests {
     @Test func toolsBelongToTheProviderOnScreen() {
         withCleanDefaults { model, _ in
             #expect(model.subject.id == Self.inUse.id)
-            #expect(model.enabledTools == AgentToolCatalog.defaultIDs(for: .full))
+            #expect(model.enabledTools == AgentToolCatalog.defaultIDs)
 
             model.open(Self.other)
 
             #expect(model.subject.id == Self.other.id)
-            #expect(model.enabledTools == AgentToolCatalog.defaultIDs(for: .core))
+            #expect(model.enabledTools == AgentToolCatalog.defaultIDs)
         }
     }
 
@@ -165,7 +165,7 @@ struct AssistantToolSettingsTests {
             #expect(LLMSettings.enabledAgentTools(for: Self.inUse) == nil)
 
             model.showOverview()
-            #expect(model.enabledTools == AgentToolCatalog.defaultIDs(for: .full))
+            #expect(model.enabledTools == AgentToolCatalog.defaultIDs)
         }
     }
 
@@ -184,38 +184,23 @@ struct AssistantToolSettingsTests {
     @Test func resetReturnsToTheRecommendedSetForThatProvider() {
         withCleanDefaults { model, _ in
             model.open(Self.other)
-            model.setTool("playVideo", enabled: true)
-            model.setTool("closeVideo", enabled: true)
+            model.setTool("playVideo", enabled: false)
+            model.setTool("closeVideo", enabled: false)
             #expect(!model.isUsingRecommendedTools)
-            #expect(model.toolWarning != nil)
 
             model.resetToolsToRecommended()
 
             #expect(model.isUsingRecommendedTools)
-            #expect(model.toolWarning == nil)
-            #expect(model.enabledTools == AgentToolCatalog.defaultIDs(for: .core))
+            #expect(model.enabledTools == AgentToolCatalog.defaultIDs)
             #expect(LLMSettings.enabledAgentTools(for: Self.other) == nil)
         }
     }
 
-    @Test func theWarningCountsOnlyToolsWithAToggle() {
+    @Test func everyProviderRecommendsEveryToolBecauseToolsLoadOnDemand() {
         withCleanDefaults { model, _ in
+            #expect(model.recommendedToolIDs == AgentToolCatalog.defaultIDs)
             model.open(Self.other)
-            let visible = AgentToolCatalog.defaultIDs(for: .core)
-                .intersection(AgentToolCatalog.configurableIDs).count
-
-            model.setTool("playVideo", enabled: true)
-
-            #expect(model.toolWarning?.contains("more than \(visible) tools") == true)
-        }
-    }
-
-    @Test func aLargeWindowProviderNeverWarns() {
-        withCleanDefaults { model, _ in
-            model.setTool("playVideo", enabled: true)
-
-            #expect(model.recommendedToolIDs == AgentToolCatalog.defaultIDs(for: .full))
-            #expect(model.toolWarning == nil)
+            #expect(model.recommendedToolIDs == AgentToolCatalog.defaultIDs)
         }
     }
 

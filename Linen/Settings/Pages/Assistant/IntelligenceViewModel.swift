@@ -327,29 +327,11 @@ final class IntelligenceViewModel {
     private(set) var enabledTools: Set<String> = []
 
     var recommendedToolIDs: Set<String> {
-        AgentToolCatalog.defaultIDs(for: ContextBudget.toolTier(forWindow: subjectWindowTokens))
-    }
-
-    var tracksOutcomes: Bool {
-        ContextBudget.toolTier(forWindow: subjectWindowTokens) == .full
+        AgentToolCatalog.defaultIDs
     }
 
     var isUsingRecommendedTools: Bool {
-        let current = enabledTools
-        return settings.enabledAgentTools(for: subject) == nil
-            || current == recommendedToolIDs
-    }
-
-    var toolWarning: String? {
-        let current = enabledTools.intersection(AgentToolCatalog.configurableIDs)
-        let recommended = recommendedToolIDs.intersection(AgentToolCatalog.configurableIDs)
-        guard recommended.count < AgentToolCatalog.configurableIDs.count,
-              current.count > recommended.count
-        else { return nil }
-        return String(localized: """
-            \(subject.name) has a small context window. Enabling more than \
-            \(recommended.count) tools leaves less room for page content and may reduce accuracy.
-            """)
+        settings.enabledAgentTools(for: subject) == nil || enabledTools == recommendedToolIDs
     }
 
     func isToolEnabled(_ id: String) -> Bool {
@@ -377,27 +359,11 @@ final class IntelligenceViewModel {
     }
 
     func refreshTools() {
-        enabledTools = AgentToolCatalog.resolvedIDs(
-            for: subject,
-            tier: ContextBudget.toolTier(forWindow: subjectWindowTokens), settings: settings
-        )
+        enabledTools = AgentToolCatalog.resolvedIDs(for: subject, settings: settings)
     }
 
     func enabledToolCount(for provider: Provider) -> Int {
-        AgentToolCatalog.resolvedIDs(
-            for: provider,
-            tier: ContextBudget.toolTier(
-                forWindow: ContextWindow.tokens(
-                    for: provider,
-                    model: settings.model(for: provider), settings: settings
-                )
-            ),
-            settings: settings
-        ).intersection(AgentToolCatalog.configurableIDs).count
-    }
-
-    private var subjectWindowTokens: Int {
-        ContextWindow.tokens(for: subject, model: settings.model(for: subject), settings: settings)
+        AgentToolCatalog.resolvedIDs(for: provider, settings: settings).intersection(AgentToolCatalog.configurableIDs).count
     }
 
     // MARK: - Context window

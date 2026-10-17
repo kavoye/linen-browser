@@ -30,12 +30,12 @@ struct AgentWebsiteCapabilityTests {
         let ref = try #require(observation.refs.first)
         let output = try await ChooseFilesOnPageTool(toolkit: fixture.toolkit).call(arguments: .init(page: nil, observationID: observation.id, ref: ref))
         #expect(selections == 1)
-        #expect(output.contains(cancelled ? "cancelled" : "selected 1 files"))
+        #expect(output.contains(cancelled ? "cancelled" : "selected 1 file. The form has not been submitted."))
         #expect(try await fixture.tab.webView.evaluateJavaScript("document.querySelector('input').files.length") as? Int == (cancelled ? 0 : 1))
         #expect(!output.contains(file.path))
     }
 
-    @Test func aFinishedDownloadIsVerifiedAndOtherTabsAreExcluded() async throws {
+    @Test func aFinishedDownloadIsListedAndOtherTabsAreExcluded() async throws {
         let fixture = try await ComputerWorkflowFixture()
         defer { fixture.close() }
         let server = try await HTTPFixtureServer.start(routes: [
@@ -52,36 +52,9 @@ struct AgentWebsiteCapabilityTests {
         _ = try await fixture.tab.webView.evaluateJavaScript("document.querySelector('a').click()")
         #expect(await waitUntil { downloads.items.contains { $0.sourceTabID == fixture.tab.id && $0.state == .finished } })
         let item = try #require(downloads.items.first { $0.sourceTabID == fixture.tab.id })
-        let recorded = fixture.toolkit.taskLedger.add(id: "download", requirement: "Download the document")
-        #expect(recorded)
-        let output = await fixture.toolkit.inspectDownloads(page: nil, downloadID: item.id.uuidString, outcomeID: "download")
-        #expect(output.contains("finished"))
+        let output = await fixture.toolkit.inspectDownloads(page: nil, downloadID: nil)
+        #expect(output.contains("\(item.id.uuidString) document.txt status=finished"))
         #expect(!output.contains(foreign.uuidString))
-        #expect(fixture.toolkit.taskLedger.completion == .verified)
-        try FileManager.default.removeItem(at: #require(item.destination))
-        let missing = await fixture.toolkit.inspectDownloads(page: nil, downloadID: item.id.uuidString, outcomeID: "download")
-        #expect(missing.contains("Verification failed"))
-        #expect(fixture.toolkit.taskLedger.completion == .unverified)
-    }
-
-    @Test func verificationRequiresTheCurrentURLAndFreshVisibleText() async throws {
-        let fixture = try await ComputerWorkflowFixture()
-        defer { fixture.close() }
-        let toolkit = fixture.toolkit
-        let acceptedOutcome1 = toolkit.taskLedger.add(id: "saved", requirement: "Save the record")
-        #expect(acceptedOutcome1)
-        let url = try #require(fixture.tab.webView.url?.absoluteString)
-        _ = try await fixture.tab.webView.evaluateJavaScript("document.querySelector('#status').textContent='Saved record 42'")
-        let verified = await toolkit.verifyOutcome(id: "saved", page: nil, expectedURL: url, expectedText: "Saved record 42")
-        #expect(verified.contains("Outcome verified"))
-        #expect(toolkit.taskLedger.completion == .verified)
-
-        _ = try await fixture.tab.webView.evaluateJavaScript("document.querySelector('#status').textContent='Save failed'")
-        let missing = await toolkit.verifyOutcome(id: "saved", page: nil, expectedURL: url, expectedText: "Saved record 42")
-        #expect(missing.contains("Verification failed"))
-        #expect(toolkit.taskLedger.completion == .unverified)
-        let wrongURL = await toolkit.verifyOutcome(id: "saved", page: nil, expectedURL: url + "other", expectedText: "Save failed")
-        #expect(wrongURL.contains("URL does not match"))
     }
 
     @Test func embeddedSitePermissionIsSeparateAndFrameActionsAreScoped() async throws {
@@ -116,11 +89,6 @@ struct AgentWebsiteCapabilityTests {
         #expect(clicked.contains("Clicked"))
         #expect(clicked.contains("Embedded saved record"))
         #expect(!fixture.toolkit.lastToolFailed)
-        let acceptedOutcome2 = fixture.toolkit.taskLedger.add(id: "frame", requirement: "Save embedded record")
-        #expect(acceptedOutcome2)
-        let verified = await fixture.toolkit.verifyOutcome(id: "frame", page: nil, frameID: target.id,
-            expectedURL: childURL.absoluteString, expectedText: "Embedded saved record")
-        #expect(verified.contains("Outcome verified"))
 
         _ = try await fixture.tab.webView.evaluateJavaScript("document.querySelector('iframe').remove()")
         #expect(await waitUntil { !(await PageFrameRegistry.shared.isLive(target, in: fixture.tab.webView)) })

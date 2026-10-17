@@ -1,14 +1,18 @@
 // SPDX-FileCopyrightText: 2026 Kavoye
 // SPDX-License-Identifier: Apache-2.0
 
+import Foundation
 import FoundationModels
 
 nonisolated enum SystemModelFailure {
     static func isContextOverflow(_ error: any Error) -> Bool {
-        guard let error = error as? LanguageModelSession.GenerationError else { return false }
-        if case .exceededContextWindowSize = error {
+        if #available(macOS 27.0, *), let error = error as? LanguageModelError, case .contextSizeExceeded = error {
             return true
         }
-        return false
+        if let error = error as? LanguageModelSession.GenerationError, case .exceededContextWindowSize = error {
+            return true
+        }
+        let bridged = error as NSError
+        return bridged.domain == "com.apple.GenerativeFunctionsFoundation.GenerativeError" && bridged.code == 4_050_000
     }
 }

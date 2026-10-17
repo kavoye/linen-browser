@@ -257,7 +257,7 @@ private struct MCPAgentFixture {
             name: "fixture", modelID: "fixture", reasoningEffort: "low", executionPolicy: .init(maxModelRequests: requestLimit), toolOverrides: [AskUserTool(toolkit: toolkit)], openAI: client,
             model: HarnessScript([]), options: GenerationOptions(),
             budget: ContextBudget(windowTokens: 128_000, responseTokens: 2_000, inputTokens: 100_000, toolSchemaTokens: 0,
-                                  instructionTier: .compact, toolTier: .full, toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),
+                                  toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),
             toolkit: toolkit, log: log
         )
     }

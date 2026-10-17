@@ -272,9 +272,9 @@ final class MCPBrowserSession: Identifiable {
             let fields =
                 arguments["fields"]?.arrayValue?.compactMap { value -> PageDriver.FieldValue? in
                     guard case .object(let field) = value, let ref = field["ref"]?.intValue,
-                        let value = field["value"]?.stringValue, let select = field["select"]?.boolValue
+                        let value = field["value"]?.stringValue
                     else { return nil }
-                    return .init(ref: ref, value: value, select: select)
+                    return .init(ref: ref, value: value)
                 } ?? []
             return await PageDriver.fillFields(fields, in: view, announced: true)
         case "inspectControl":

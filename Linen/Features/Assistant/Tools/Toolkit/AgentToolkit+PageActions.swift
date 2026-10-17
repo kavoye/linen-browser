@@ -14,7 +14,7 @@ extension AgentToolkit {
         if let output = cancellationOutput(for: step) {
             return output
         }
-        guard let webView = pageSurface(named: page) else {
+        guard let (webView, note) = readableSurface(named: page) else {
             let output = onScreenPageDenial(for: page)
             completeTool(step, output: output, failed: true)
             return output
@@ -47,7 +47,24 @@ extension AgentToolkit {
         remember(links: links)
         completeTool(step, output: output, links: links, failed: !output.hasPrefix("PAGE TEXT:"))
         let pageID = pageIdentifier(for: webView)
-        return fencedPageOutput("pageID: \(pageID)\n" + output)
+        let request = [page, lookingFor, String(textOffset), String(controlOffset), scope, String(viewportOnly)].joined(separator: "\u{1F}")
+        return note + fencedPageOutput("pageID: \(pageID)\n" + unchangedRead(output, page: pageID, request: request))
+    }
+
+    static let unchangedReadNote = "Nothing changed since your last read of this page. Act on a control below, or answer the user."
+
+    func unchangedRead(_ output: String, page: String, request: String = "") -> String {
+        let content = request + "\n" + output.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.hasPrefix("observationID:") }.joined(separator: "\n")
+        let missed = output.contains(" is not on this page.")
+        if missed, lastMiss == page {
+            repeatedRead = true
+        }
+        lastMiss = missed ? page : nil
+        defer { lastReads[page] = content }
+        guard lastReads[page] == content, let controls = output.range(of: "CONTROLS:\n") else { return output }
+        repeatedRead = true
+        return Self.unchangedReadNote + "\n\n" + output[controls.lowerBound...]
     }
 
     func clickOnPage(ref: Int, label: String) async -> String {
@@ -69,7 +86,7 @@ extension AgentToolkit {
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
-            await PageDriver.click(ref: ref, label: label, in: webView, announced: true)
+            await PageDriver.click(ref: ref, label: label, in: webView, announced: true, constraints: requestConstraints)
         }
         if let cancelled = cancellationOutput(for: step) {
             return cancelled
@@ -78,9 +95,22 @@ extension AgentToolkit {
             completeTool(step, output: output, failed: true)
             return output
         }
+        if AgentRequestConstraints.isRefusal(output) {
+            refusedActions += 1
+            completeTool(step, output: output, failed: true)
+            return output
+        }
         remember(links: links(in: output))
         completeTool(step, output: output, failed: !output.hasPrefix("Clicked"))
-        return fencedPageOutput(output)
+        guard !output.hasPrefix("Clicked"), Self.namesAKey(label) else { return fencedPageOutput(output) }
+        return Self.keyHint + "\n" + fencedPageOutput(output)
+    }
+
+    static let keyHint = "To press a key such as Escape, use pressKey."
+
+    nonisolated static func namesAKey(_ text: String) -> Bool {
+        let words = Set(text.lowercased().split { !$0.isLetter }.map(String.init))
+        return !words.isDisjoint(with: ["escape", "esc", "enter", "return", "tab", "key", "backspace", "arrowdown", "arrowup", "pagedown", "pageup"])
     }
 
     func typeOnPage(text: String, field: String, ref: Int, submit: Bool) async -> String {
@@ -112,7 +142,8 @@ extension AgentToolkit {
             ref: ref,
             submit: submit,
             in: webView,
-            announced: true
+            announced: true,
+            constraints: requestConstraints
         )
         }
         if let cancelled = cancellationOutput(for: step) {
@@ -122,9 +153,18 @@ extension AgentToolkit {
             completeTool(step, output: output, failed: true)
             return output
         }
+        if AgentRequestConstraints.isRefusal(output) {
+            refusedActions += 1
+            completeTool(step, output: output, failed: true)
+            return output
+        }
         remember(links: links(in: output))
         completeTool(step, output: output, failed: !output.hasPrefix("Typed"))
-        return fencedPageOutput(output)
+        if text.isEmpty, !submit, output.hasPrefix("Typed") {
+            return "The text was empty, so the field is now empty. " + Self.keyHint + "\n" + fencedPageOutput(output)
+        }
+        guard !output.hasPrefix("Typed"), Self.namesAKey(text) else { return fencedPageOutput(output) }
+        return Self.keyHint + "\n" + fencedPageOutput(output)
     }
 
     func fillFields(_ fields: [PageDriver.FieldValue]) async -> String {

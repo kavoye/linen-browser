@@ -105,46 +105,6 @@ nonisolated final class OpenAITransportFixture: OpenAITransport, @unchecked Send
 
 @MainActor
 struct OpenAIResponsesTests {
-    @Test func progressToolArgumentsStreamBeforeTheResponseCompletes() async throws {
-        let message = "I'll inspect the page."
-        let arguments = #"{"message":"I'll inspect the page."}"#
-        let call: OpenAIJSON = [
-            "type": "function_call", "id": "item_progress", "call_id": "call_progress",
-            "name": "updateProgress", "arguments": .string(arguments),
-        ]
-        let events: [OpenAIEvent] = [
-            .init(type: "response.output_item.added", payload: [
-                "output_index": 0, "item": ["type": "function_call", "name": "updateProgress", "arguments": ""],
-            ], id: nil),
-            .init(type: "response.function_call_arguments.delta", payload: [
-                "output_index": 0, "delta": #"{"message":"I'll inspect"#,
-            ], id: nil),
-            .init(type: "response.function_call_arguments.delta", payload: [
-                "output_index": 0, "delta": #" the page."}"#,
-            ], id: nil),
-            .init(type: "response.function_call_arguments.done", payload: [
-                "output_index": 0, "arguments": .string(arguments),
-            ], id: nil),
-        ]
-        let wire = OpenAITransportFixture([OpenAITransportFixture.response([call])], streamEvents: events)
-        var visible: [String] = []
-        let client = client(wire)
-        let step = try await client.respond(
-            transcript: Transcript(), prompt: "Inspect", images: [], state: client.restoring(nil),
-            tools: [UpdateProgressTool()], maxTokens: 100, onText: { _ in }, onProgress: { visible.append($0) }
-        )
-        #expect(visible.first == "I'll inspect")
-        #expect(visible.last == message)
-        #expect(step.calls.map(\.toolName) == ["updateProgress"])
-    }
-
-    @Test func partialProgressDecodesEscapesOnlyWhenComplete() {
-        #expect(OpenAIProgressMessage.partial(#"{"message":"Wait \"#) == "Wait ")
-        #expect(OpenAIProgressMessage.partial(#"{"message":"Wait \uD83D"#) == "Wait ")
-        #expect(OpenAIProgressMessage.partial(#"{"message":"Wait \uD83D\uDE00"#) == "Wait 😀")
-        #expect(OpenAIProgressMessage.partial(#"{"other":"secret"}"#) == nil)
-    }
-
     @Test func retriesInterruptedStreamBeforeFirstEvent() async throws {
         let wire = OpenAITransportFixture([OpenAITransportFixture.response([
             OpenAITransportFixture.message("Ready"),

@@ -135,26 +135,17 @@ nonisolated struct ReadPageTool: Tool {
     struct Arguments {
         @Guide(description: "What you are looking for; the text returned is the part of the page about this. Empty for the top of the page.")
         var lookingFor: String
-        @Guide(
-            description:
-                "Page ID, title, site, or split position. Empty for the active tab."
-        )
+        @Guide(description: "Page ID, title, site, or split position. Empty for the active tab.")
         var page: String
-        @Guide(description: "Continuation offset for page text; omit for the first excerpt.")
+        @Guide(description: "Only the textOffset a previous read suggested; omit otherwise.")
         var textOffset: Int?
-        @Guide(description: "Use the suggested next controlOffset, not a [ref] number. Omit or use 0 when changing lookingFor, scope, or viewportOnly.")
+        @Guide(description: "Only the controlOffset a previous read suggested; omit otherwise.")
         var controlOffset: Int?
-        @Guide(description: "Optional CSS selector restricting the control list.")
-        var scope: String?
-        @Guide(description: "Only controls in the viewport when true.")
-        var viewportOnly: Bool?
-
     }
 
     func call(arguments: Arguments) async throws -> String {
         await toolkit.readPage(
-            lookingFor: arguments.lookingFor, page: arguments.page, textOffset: arguments.textOffset ?? 0, controlOffset: arguments.controlOffset ?? 0,
-            scope: arguments.scope ?? "", viewportOnly: arguments.viewportOnly ?? false)
+            lookingFor: arguments.lookingFor, page: arguments.page, textOffset: arguments.textOffset ?? 0, controlOffset: arguments.controlOffset ?? 0)
     }
 }
 
@@ -252,8 +243,6 @@ nonisolated struct FillFieldsTool: Tool {
         var ref: Int
         @Guide(description: "Text, dropdown option, #RRGGBB color, numeric range value, or true/false for a checkbox or radio")
         var value: String
-        @Guide(description: "True for a dropdown; false for other controls")
-        var select: Bool
     }
 
     @Generable
@@ -272,7 +261,7 @@ nonisolated struct FillFieldsTool: Tool {
             return await toolkit.rejectTool(name: name, reason: "Read the page first and provide its observationID.")
         }
         return await toolkit.withPageContext(page: arguments.page, observationID: arguments.observationID) {
-            await toolkit.fillFields(arguments.fields.map { .init(ref: $0.ref, value: $0.value, select: $0.select) })
+            await toolkit.fillFields(arguments.fields.map { .init(ref: $0.ref, value: $0.value) })
         }
     }
 }
@@ -407,15 +396,11 @@ nonisolated struct WatchPageTool: Tool {
         var condition: String
         @Guide(description: "Minutes between checks, from 5 to 1440. Use 60 unless the person asks.")
         var everyMinutes: Int
-        @Guide(description: "The recorded outcome this watch fulfils, if any.")
-        var outcomeID: String?
     }
 
     func call(arguments: Arguments) async throws -> String {
         await toolkit.withPageContext(page: arguments.page, observationID: nil) {
-            await toolkit.watchPage(
-                condition: arguments.condition, everyMinutes: arguments.everyMinutes, outcomeID: arguments.outcomeID
-            )
+            await toolkit.watchPage(condition: arguments.condition, everyMinutes: arguments.everyMinutes)
         }
     }
 }
@@ -449,102 +434,52 @@ nonisolated struct StopWatchTool: Tool {
     }
 }
 
-nonisolated enum AgentToolTier: Hashable, Sendable {
-    case core
-    case full
+@MainActor
+func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>) -> [any Tool] {
+    makeAgentTools(toolkit: toolkit).filter { $0.name == AskUserTool.toolName || enabledIDs.contains($0.name) }
 }
 
 @MainActor
-func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>, tier: AgentToolTier = .full) -> [any Tool] {
-    makeAgentTools(toolkit: toolkit, tier: .full).filter {
-        if AgentToolCatalog.outcomeToolIDs.contains($0.name) {
-            return tier == .full
-        }
-        return $0.name == AskUserTool.toolName || enabledIDs.contains($0.name)
-    }.map { tier == .core ? compacted($0) : $0 }
-}
-
-private nonisolated struct CompactDescriptionTool<Base: Tool>: Tool {
-    let base: Base
-    let description: String
-
-    var name: String {
-        base.name
-    }
-
-    var parameters: GenerationSchema {
-        base.parameters
-    }
-
-    var includesSchemaInInstructions: Bool {
-        base.includesSchemaInInstructions
-    }
-
-    func call(arguments: Base.Arguments) async throws -> Base.Output {
-        try await base.call(arguments: arguments)
-    }
-}
-
-private func compacted(_ tool: any Tool) -> any Tool {
-    guard let description = AgentToolkit.Descriptions.compact[tool.name] else { return tool }
-    return describing(tool, as: description)
-}
-
-private func describing<Base: Tool>(_ base: Base, as description: String) -> any Tool {
-    CompactDescriptionTool(base: base, description: description)
-}
-
-@MainActor
-func makeAgentTools(toolkit: AgentToolkit, tier: AgentToolTier = .full) -> [any Tool] {
-    let core: [any Tool] = [
+func makeAgentTools(toolkit: AgentToolkit) -> [any Tool] {
+    [
         AskUserTool(toolkit: toolkit),
-        RecordTaskOutcomeTool(toolkit: toolkit),
-        VerifyTaskOutcomeTool(toolkit: toolkit),
-        BlockTaskOutcomeTool(toolkit: toolkit),
         WebSearchTool(toolkit: toolkit),
         NavigateTool(toolkit: toolkit),
         ReadPageTool(toolkit: toolkit),
         ReadArticleTool(toolkit: toolkit),
         ClickOnPageTool(toolkit: toolkit),
         TypeOnPageTool(toolkit: toolkit),
+        ScrollPageTool(toolkit: toolkit),
+        GoBackTool(toolkit: toolkit),
+        NewTabTool(toolkit: toolkit),
+        ListTabsTool(toolkit: toolkit),
+        SwitchTabTool(toolkit: toolkit),
+        CloseTabTool(toolkit: toolkit),
+        SelectOptionTool(toolkit: toolkit),
+        FillFieldsTool(toolkit: toolkit),
+        InspectControlTool(toolkit: toolkit),
+        SetCheckedTool(toolkit: toolkit),
+        WaitForPageTool(toolkit: toolkit),
+        ScreenshotPageTool(toolkit: toolkit),
+        MovePointerTool(toolkit: toolkit),
+        ClickAtPointTool(toolkit: toolkit),
+        DoubleClickAtPointTool(toolkit: toolkit),
+        DragOnPageTool(toolkit: toolkit),
+        ListFramesTool(toolkit: toolkit),
+        ReadFrameTool(toolkit: toolkit),
+        ActInFrameTool(toolkit: toolkit),
+        ChooseFilesOnPageTool(toolkit: toolkit),
+        InspectDownloadsTool(toolkit: toolkit),
+        TypeAtPointerTool(toolkit: toolkit),
+        HoverOnPageTool(toolkit: toolkit),
+        PressKeyTool(toolkit: toolkit),
+        PlayVideoTool(toolkit: toolkit),
+        CloseVideoTool(toolkit: toolkit),
+        ControlMediaTool(toolkit: toolkit),
+        WatchPageTool(toolkit: toolkit),
+        ListWatchesTool(toolkit: toolkit),
+        StopWatchTool(toolkit: toolkit),
     ]
-    switch tier {
-    case .core:
-        return core.filter { !AgentToolCatalog.outcomeToolIDs.contains($0.name) }.map(compacted)
-    case .full:
-        return core + [
-            ScrollPageTool(toolkit: toolkit),
-            GoBackTool(toolkit: toolkit),
-            NewTabTool(toolkit: toolkit),
-            ListTabsTool(toolkit: toolkit),
-            SwitchTabTool(toolkit: toolkit),
-            CloseTabTool(toolkit: toolkit),
-            SelectOptionTool(toolkit: toolkit),
-            FillFieldsTool(toolkit: toolkit),
-            InspectControlTool(toolkit: toolkit),
-            SetCheckedTool(toolkit: toolkit),
-            WaitForPageTool(toolkit: toolkit),
-            ScreenshotPageTool(toolkit: toolkit),
-            MovePointerTool(toolkit: toolkit),
-            ClickAtPointTool(toolkit: toolkit),
-            DoubleClickAtPointTool(toolkit: toolkit),
-            DragOnPageTool(toolkit: toolkit),
-            ListFramesTool(toolkit: toolkit),
-            ReadFrameTool(toolkit: toolkit),
-            ActInFrameTool(toolkit: toolkit),
-            ChooseFilesOnPageTool(toolkit: toolkit),
-            InspectDownloadsTool(toolkit: toolkit),
-            TypeAtPointerTool(toolkit: toolkit),
-            HoverOnPageTool(toolkit: toolkit),
-            PressKeyTool(toolkit: toolkit),
-            PlayVideoTool(toolkit: toolkit),
-            CloseVideoTool(toolkit: toolkit),
-            ControlMediaTool(toolkit: toolkit),
-            WatchPageTool(toolkit: toolkit),
-            ListWatchesTool(toolkit: toolkit),
-            StopWatchTool(toolkit: toolkit),
-        ]
-    }
 }
 
 nonisolated func estimatedToolSchemaTokens(_ tools: [any Tool]) -> Int {

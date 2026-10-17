@@ -40,7 +40,7 @@ struct OpenAICompatibilityTests {
     @Test func everyBuiltInToolHasCompleteStrictSchemaDefinitions() throws {
         let log = ConversationLog(database: .temporary())
         let toolkit = AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: log)
-        for tool in makeAgentTools(toolkit: toolkit) + [UpdateProgressTool()] {
+        for tool in makeAgentTools(toolkit: toolkit) {
             let schema = try OpenAISchema.strict(tool.parameters, dependencies: OpenAISchema.browserDependencies)
             #expect(schema["type"] == "object", "\(tool.name)")
             #expect(schema["additionalProperties"] == false, "\(tool.name)")

@@ -20,9 +20,6 @@ nonisolated struct ContextBudget: Hashable, Sendable {
     let responseTokens: Int
     let inputTokens: Int
     let toolSchemaTokens: Int
-    let instructionTier: AgentInstructions.Tier
-    let toolTier: AgentToolTier
-    var tracksOutcomes = true
     let toolOutput: ToolOutputBudget
     let retainedExchanges: Int
     let retainedToolRounds: Int
@@ -31,8 +28,8 @@ nonisolated struct ContextBudget: Hashable, Sendable {
         windowTokens >= 16_384
     }
 
-    static func toolTier(forWindow windowTokens: Int) -> AgentToolTier {
-        windowTokens < 16_384 ? .core : .full
+    static func isSmall(_ windowTokens: Int) -> Bool {
+        windowTokens < 16_384
     }
 
     static func resolve(
@@ -43,12 +40,12 @@ nonisolated struct ContextBudget: Hashable, Sendable {
         measuredInstructionTokens: Int? = nil
     ) -> Self {
         let window = max(2_048, windowTokens)
-        let compact = window < 16_384
+        let compact = isSmall(window)
         let response = max(256, min(desiredResponseTokens, compact ? min(512, window / 4) : window / 4))
         let safety = max(256, window / 16)
         let input = window - response - safety
 
-        let instructionTokens = measuredInstructionTokens ?? (compact ? 300 : 1_300)
+        let instructionTokens = measuredInstructionTokens ?? 650
         let schemaTokens = measuredSchemaTokens.map { max(150, $0) } ?? toolCount.map { max(150, $0 * 75) } ?? (compact ? 500 : 1_200)
         let conversation = max(512, input - instructionTokens - schemaTokens)
 
@@ -68,9 +65,6 @@ nonisolated struct ContextBudget: Hashable, Sendable {
             responseTokens: response,
             inputTokens: input,
             toolSchemaTokens: schemaTokens,
-            instructionTier: compact ? .compact : .full,
-            toolTier: compact ? .core : .full,
-            tracksOutcomes: !compact,
             toolOutput: output,
             retainedExchanges: compact ? max(1, min(4, conversation / 800)) : 12,
             retainedToolRounds: compact ? 1 : 3

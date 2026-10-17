@@ -11,7 +11,7 @@ extension AgentToolkit {
         if let output = cancellationOutput(for: step) {
             return output
         }
-        guard let webView = pageSurface(named: page) else {
+        guard let (webView, note) = readableSurface(named: page) else {
             let output = onScreenPageDenial(for: page)
             completeTool(step, output: output, failed: true)
             return output
@@ -39,7 +39,7 @@ extension AgentToolkit {
         }
         completeTool(step, output: output, failed: !output.hasPrefix("ARTICLE:"))
         let pageID = pageIdentifier(for: webView)
-        return fencedPageOutput("pageID: \(pageID)\n" + output)
+        return note + fencedPageOutput("pageID: \(pageID)\n" + output)
     }
 
     nonisolated static func articleOutput(_ article: ReaderArticle?, budget: Int, offset: Int) -> String {
