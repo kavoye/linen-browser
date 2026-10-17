@@ -8,11 +8,16 @@
   swipe between them, or press ⌃1 to ⌃9. A new space can share sign-ins and
   data with another space, or keep its own. Choose Move to Space to move tabs
   and folders. Your profiles now appear as spaces, and Linen opens the space
-  you used last.
+  you used last. The space switcher appears when you have more than one space.
 - **Recent downloads.** Hold the pointer over the Downloads button in the
-  sidebar to see your five most recent downloads.
+  sidebar to see your five most recent downloads. Stop a download or remove it
+  from the list without leaving the preview.
 - **Clear Context.** Clear the assistant's context to start fresh in a chat.
   Earlier messages stay visible but are no longer sent to the model.
+- **Assistant memory.** The assistant can remember things you tell it about
+  yourself, such as a preference, and use them later. See, edit, and forget
+  them in Settings > Assistant > Memory, or turn memory off. It never saves
+  page content, passwords, or payment details.
 - **Archived tabs in ⌘K.** Choose Show Archived Tabs, or type "archived" and
   press Tab, to search the tabs Linen archived. Each row shows when the tab was
   archived. Linen keeps your 30 most recent archived tabs.
@@ -20,6 +25,8 @@
   images you attach to a message.
 - **Site search in the address field.** Type a website name such as YouTube,
   then press Tab to search that website.
+- **Search with your search engine.** Select text on a page and press ⇧⌘L to
+  search for it.
 - **Reading speed.** Choose how fast Reader reads aloud, from 0.5× to 1.5×.
   Linen remembers your choice.
 - **Duplicate Tab shortcut.** Press ⇧⌘D to duplicate the current tab. Back to

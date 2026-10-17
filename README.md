@@ -43,6 +43,9 @@ for changes in published versions.
 - Browse in separate windows with tabs, folders, pins, and split view. Move tabs
   between windows and restore your windows after relaunch. Search your history
   and resume downloads. Play media in Picture in Picture and view synced lyrics.
+- Group your tabs into spaces. Switch spaces from the sidebar, swipe between
+  them, or press ⌃1 to ⌃9.
+- Choose the Standard or Minimal window style in the View menu.
 - Import bookmarks from another browser's HTML export in Settings › General.
 - Choose Open Link in New Window from a link's context menu. Hold Option to open
   it in a new private window. These actions are also available for history and
@@ -60,8 +63,9 @@ for changes in published versions.
   Unlock saved passwords and cards with Touch ID or your Mac password.
   To sign in with a passkey, follow the macOS sign-in prompt.
 - Install extensions from the Chrome Web Store or Firefox Add-ons.
-- Use profiles to keep cookies, history, tabs, permissions, and extensions
-  separate. Press ⇧⌘N to open a private window. Closing it ends that private session.
+- Let a space share sign-ins and data with another space, or keep its own
+  cookies, history, tabs, permissions, and extensions. Press ⇧⌘N to open a
+  private window. Closing it ends that private session.
 
 ### Choose a model
 

@@ -102,9 +102,19 @@ A tab transfer moves the existing tab and web view, rebinds callbacks, cancels
 source-window assistant work, and commits both windows together. A live tab may
 move only between windows sharing the same context.
 
-A profile switch closes the outgoing saved session, detaches its tabs, registers
-with the next context's extension manager, and restores that window's session
-from the new profile. Other windows keep their existing contexts and tasks.
+A space groups tabs and folders inside one profile. `SpaceStore` owns the list
+of spaces, and each `Space` names its profile. Tabs and folders store a
+`spaceID`. A switch between spaces of the same profile changes only the visible
+space. A space with its own data uses its own profile.
+
+Each window keeps one `BrowserModel` for each profile it has shown.
+`AppCoordinator.parkedModels` holds the models that are not visible. A parked
+model restores its session lazily and builds no web views. A profile switch
+closes the outgoing saved session, pauses its media and parks the model. It then
+registers the incoming model with the next context's extension manager and
+reopens that model's session. A private model is closed, not parked. Code that
+keeps a `BrowserModel` reference must follow `AppCoordinator.browser`, because a
+switch replaces it. Other windows keep their existing contexts and tasks.
 Visible and dismissing Peek pages detach immediately during a profile switch or
 window teardown, so their callbacks cannot reach the next profile.
 Extension window and tab adapters expire when their window unregisters. Toolbar
