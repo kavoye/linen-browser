@@ -57,17 +57,6 @@
     "%@ doesn’t offer suggestions." : {
 
     },
-    "%@ has a small context window. Enabling more than %lld tools leaves less room for page content and may reduce accuracy." : {
-      "comment" : "Warning on the Tools settings page. %@ is the provider name, %lld the recommended tool count.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@’s context is small, and every tool takes a share of it. More than %2$lld tools can push out page content and confuse smaller models."
-          }
-        }
-      }
-    },
     "%@ in use" : {
       "comment" : "Tooltip on the permission badge in the address bar while a website is actively using a capability. %@ is the permission's own name, itself localized: Camera, Microphone, Location or Notifications. The phrase continues from that noun, so it is a fragment rather than a sentence."
     },
@@ -545,6 +534,9 @@
           }
         }
       }
+    },
+    "%lld things" : {
+
     },
     "%lld visits" : {
       "comment" : "Caption on a frequently-visited site tile on the start page; %lld is how many times the user opened that site. One line in a narrow tile, sentence case.",
@@ -1050,6 +1042,9 @@
     "Assistant can read" : {
       "comment" : "Label before the list of pages the assistant is allowed to read for this question: the page or split panes on screen, plus any attached tabs."
     },
+    "Assistant closed “%@”" : {
+      "comment" : "Brief notice in the minimal window's bar when the assistant closes a tab. %@ is the page's title."
+    },
     "assistant has no access" : {
       "comment" : "Fragment in the one-line summary under a website, meaning the assistant may neither read nor use it. Lower case: joined with other fragments."
     },
@@ -1059,8 +1054,17 @@
     "assistant may read" : {
       "comment" : "Fragment in the one-line summary under a website, meaning the assistant may see the page text but not use its controls. Lower case: joined with other fragments by a separator, never shown alone."
     },
+    "Assistant opened %@" : {
+      "comment" : "Brief notice in the minimal window's bar when the assistant opens a tab. %@ is the website's host name, e.g. github.com."
+    },
+    "Assistant opened a tab" : {
+      "comment" : "Brief notice in the minimal window's bar when the assistant opens an empty tab."
+    },
     "Assistant speaking" : {
 
+    },
+    "Assistant switched to “%@”" : {
+      "comment" : "Brief notice in the minimal window's bar when the assistant switches tabs. %@ is the page's title."
     },
     "Attach a debugger to pages" : {
       "comment" : "One line in the bulleted list of what an extension will be able to do, in the install confirmation sheet. It completes the introduction “It will also be able to:”, so keep it a bare verb phrase."
@@ -1308,6 +1312,9 @@
     "Change…" : {
       "comment" : "Button that reopens the API key popover once a key is stored; it reads Add Key… when none is. A verb, with a real ellipsis (…) promising a popover."
     },
+    "Changed" : {
+
+    },
     "Changes" : {
       "comment" : "GitHub pull request detail chip. Opens the changed files of the pull request on GitHub."
     },
@@ -1348,9 +1355,6 @@
 
     },
     "Check the JSON and try again." : {
-
-    },
-    "Check the page for the requested result." : {
 
     },
     "Check this provider again" : {
@@ -1870,6 +1874,9 @@
     },
     "Couldn’t compact. Context unchanged." : {
 
+    },
+    "Couldn’t download %@" : {
+      "comment" : "Brief notice in the minimal window's bar when a download fails or stops. %@ is the file's name."
     },
     "Couldn’t Fill Saved Details" : {
 
@@ -2516,6 +2523,18 @@
     "Forever" : {
       "comment" : "Option in the Keep history for pop-up menu on the Privacy settings page, meaning history is never dropped. It completes “Keep history for …”."
     },
+    "Forget" : {
+
+    },
+    "Forget All" : {
+
+    },
+    "Forget All…" : {
+
+    },
+    "Forget everything the assistant remembers?" : {
+
+    },
     "Forward" : {
       "comment" : "The command that goes forward one page in a tab, in the History menu. A direction, the opposite of Back — not the verb “to forward” something."
     },
@@ -2804,6 +2823,9 @@
     "In use, allowed until you leave" : {
       "comment" : "Caption under a permission's name in the site permission panel: the site is using it right now, and the grant lasts only for this visit. Keep the comma, sentence case, one line."
     },
+    "Inactive tabs unload to save memory. They reload when you open them." : {
+      "comment" : "Caption under the Sleep inactive tabs setting in General settings."
+    },
     "Inbox" : {
       "comment" : "GitHub panel: the default view that groups pull requests by what needs you."
     },
@@ -2900,9 +2922,6 @@
     "Keep this website loaded" : {
 
     },
-    "Keep track of each requested result." : {
-
-    },
     "Keep track of your pull requests" : {
 
     },
@@ -2992,9 +3011,6 @@
     },
     "Linen" : {
 
-    },
-    "Linen always keeps track of task results. Models with large context windows can also use screenshots." : {
-      "comment" : "Footnote under the last section of the assistant Tools settings page. Explains the tools that have no toggle."
     },
     "Linen blocks third-party requests to known advertising, analytics, session-recording, social-pixel, and fingerprinting domains." : {
 
@@ -3096,6 +3112,9 @@
 
     },
     "Load more pull requests" : {
+
+    },
+    "Load tools" : {
 
     },
     "Loading details…" : {
@@ -3227,6 +3246,9 @@
     "Medium" : {
       "comment" : "The third of the four Thinking levels in Settings > Provider (None, Low, Medium, High). One segment of a segmented control, so space is tight."
     },
+    "Memory" : {
+
+    },
     "Mentioned you" : {
 
     },
@@ -3296,6 +3318,9 @@
     "Model: %@" : {
 
     },
+    "Models that accept images can also use screenshots." : {
+
+    },
     "Moderate reasoning for multi-step tasks." : {
 
     },
@@ -3345,9 +3370,6 @@
     },
     "More reasoning for complex tasks." : {
 
-    },
-    "More tools than recommended" : {
-      "comment" : "Title of the warning row on the Tools settings page."
     },
     "More transparent" : {
 
@@ -3736,6 +3758,21 @@
     "Nothing plays until you press play." : {
       "comment" : "Caption under Autoplay on the Websites settings page when it is set to Never. “Press play” means clicking the play button on the page."
     },
+    "Nothing remembered" : {
+
+    },
+    "notice.downloadStarted" : {
+      "comment" : "Brief notice in the minimal window's bar when a download starts. %@ is the file's name. Kept separate from other “Downloading” strings, where %@ is a version or a percentage.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Downloading %@"
+          }
+        }
+      }
+    },
     "notifications" : {
       "comment" : "Lowercase name of one website permission, inserted mid-sentence into the confirmation: Are you sure you want to remove the notifications setting for every website? Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Notifications is a separate string."
     },
@@ -3750,6 +3787,9 @@
     },
     "Now Playing" : {
       "comment" : "Fallback title in the media dock when the page never said what is playing. Apple's own term for this line — use the wording your platform uses. Title Case, one narrow line."
+    },
+    "Off" : {
+
     },
     "Offer to save contact details entered in forms." : {
 
@@ -3798,6 +3838,9 @@
     },
     "Open %@ in a new tab" : {
       "comment" : "Shown at the bottom of the page while the pointer rests on a link and Command is held: Command-clicking opens the link in a new tab. %@ is the link's address, which is shown in a lighter ink than the rest of the sentence. Sentence case, no full stop."
+    },
+    "Open %@ in a new window" : {
+      "comment" : "Shown at the bottom of the page while the pointer rests on a link and Command and Option are held: Command-Option-clicking opens the link in a new window. %@ is the link's address, which is shown in a lighter ink than the rest of the sentence. Sentence case, no full stop."
     },
     "Open %@ in Peek" : {
       "comment" : "Shown at the bottom of the page while the pointer rests on a link and Shift is held: Shift-clicking opens the link in a Peek. %@ is the link's address, which is shown in a lighter ink than the rest of the sentence. Sentence case, no full stop."
@@ -3942,6 +3985,9 @@
     },
     "Opened by %@" : {
       "comment" : "GitHub inbox row reason. %@ is the GitHub username of the pull request author."
+    },
+    "Opened in Background" : {
+      "comment" : "Brief notice in the minimal window's bar when a link opens a tab without switching to it."
     },
     "Opened Tab" : {
       "comment" : "Detail suffix on an address bar result row that stands for an already-open tab; it is joined after the host with “ · ”, giving “example.com · Opened Tab”. Adjective plus noun, Title Case, very tight."
@@ -4423,15 +4469,6 @@
     "Reconnect GitHub to show team names." : {
       "comment" : "Tooltip on the Show Team Names button."
     },
-    "Record task outcome" : {
-
-    },
-    "Record Task Outcomes" : {
-
-    },
-    "Record Unfinished Work" : {
-
-    },
     "Red" : {
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
     },
@@ -4491,6 +4528,25 @@
     },
     "Reload Page from Origin" : {
       "comment" : "Menu bar command under View, shortcut ⇧⌘R, which reloads while ignoring the cache. Origin means the web server the page came from. Title Case and established platform terminology."
+    },
+    "Remember" : {
+
+    },
+    "Remember things about me" : {
+
+    },
+    "Remembered %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Remembered %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "Remembered %lld things" : {
+
     },
     "Remove" : {
       "comment" : "Button beside a user-added endpoint in the Provider settings that deletes it from the list. Imperative verb; it opens a confirmation first."
@@ -4866,10 +4922,16 @@
     "Save suggestions" : {
 
     },
-    "Save why an outcome needs your help." : {
+    "Saved" : {
 
     },
-    "Saved" : {
+    "Saved %@ by the assistant" : {
+
+    },
+    "Saved %@ from your answer" : {
+
+    },
+    "Saved %@ from your message" : {
 
     },
     "Saved addresses" : {
@@ -4930,6 +4992,9 @@
       "comment" : "Placeholder in the search field of the History view. “Search” is the verb and “history” its object. Sentence case, narrow field."
     },
     "Search in current tab" : {
+
+    },
+    "Search memory" : {
 
     },
     "Search or ask" : {
@@ -5124,6 +5189,42 @@
         }
       }
     },
+    "settings.tabSleep.afterInactivity" : {
+      "comment" : "Menu choice in General settings for Sleep inactive tabs: a tab unloads after it has not been used for an hour.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "After an hour of inactivity"
+          }
+        }
+      }
+    },
+    "settings.tabSleep.never" : {
+      "comment" : "Menu choice in General settings for Sleep inactive tabs: tabs are never unloaded.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Never"
+          }
+        }
+      }
+    },
+    "settings.tabSleep.whenMemoryIsLow" : {
+      "comment" : "Menu choice in General settings for Sleep inactive tabs: background tabs unload only when the Mac runs low on memory.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "When memory is low"
+          }
+        }
+      }
+    },
     "Setup Options for %@" : {
       "comment" : "MCP client setup accessibility label. The placeholder is the client app name."
     },
@@ -5286,6 +5387,9 @@
     "Shows the whole address instead of just the website name." : {
       "comment" : "Caption under the Show full website address switch in General settings, and its Settings search description."
     },
+    "Shows what was remembered" : {
+
+    },
     "Shows where a link goes at the bottom of the window." : {
       "comment" : "Caption under the Show status bar switch in General settings, and its Settings search description."
     },
@@ -5337,8 +5441,8 @@
     "Sleep inactive tabs" : {
       "comment" : "Title of the switch in Settings > General that lets Linen release the pages of background tabs when the Mac runs short of memory, and the same row in Settings search. Off by default. Sentence case; “Sleep” is a verb the browser does to the tabs."
     },
-    "Sleep inactive tabs is off, so every website stays loaded." : {
-
+    "Sleep inactive tabs is set to Never, so every website stays loaded." : {
+      "comment" : "Caption on a website settings page. \"Sleep inactive tabs\" links to that setting; \"Never\" is its menu choice."
     },
     "Slower" : {
       "comment" : "Option in the Speed segmented control in Voice settings: 0.75 times normal reading speed."
@@ -5638,11 +5742,11 @@
     "The assistant can use tools from connected MCP services. Linen asks you to approve each tool call." : {
 
     },
-    "The assistant hasn’t confirmed the result yet. Choose Continue to check it." : {
-
-    },
     "The assistant may do these without asking: %@. Change this in Assistant settings." : {
       "comment" : "Note on a website's page when the assistant holds standing permission there. %@ is a list of action kinds already worded and joined, for example purchases and money transfers. Assistant is the name of a Settings page."
+    },
+    "The assistant saves what you tell it about yourself and uses it later. When this is off, it can’t save or recall anything." : {
+
     },
     "The assistant starts fresh in this chat. Earlier messages stay visible but are no longer sent to the model." : {
       "comment" : "Body of the alert shown before resetting what the assistant remembers in the current chat."
@@ -5665,6 +5769,9 @@
     },
     "The assistant will ask again before acting on this website." : {
       "comment" : "Message inside the dialog confirming that the assistant permissions saved for one website will be withdrawn. Singular counterpart of the plural sentence used for the withdraw-everything dialog."
+    },
+    "The assistant will ask again when it needs these details." : {
+
     },
     "The authorization server could not be reached. Try again." : {
 
@@ -5869,6 +5976,9 @@
     "These documents contain too much text. Attach a shorter selection." : {
 
     },
+    "Things appear here when you answer the assistant or ask it to remember something." : {
+
+    },
     "Things to try" : {
 
     },
@@ -6018,9 +6128,6 @@
     "This space has its own sign-ins and data." : {
 
     },
-    "This task needs your help before it can go on. Your progress is saved." : {
-
-    },
     "This website can open this app without asking." : {
 
     },
@@ -6085,6 +6192,9 @@
 
     },
     "Trip to Lisbon" : {
+
+    },
+    "Try a different word." : {
 
     },
     "Try Again" : {
@@ -6285,9 +6395,6 @@
     "Use Minimal Window Style" : {
       "comment" : "Command palette command. Switches the window to the Minimal window style: only the website and a floating bar. Title Case."
     },
-    "Use Recommended" : {
-
-    },
     "Use Standard Window Style" : {
       "comment" : "Command palette command. Switches the window back to the Standard window style with toolbar and sidebar. Title Case."
     },
@@ -6329,12 +6436,6 @@
     },
     "Using `%@` from the environment." : {
       "comment" : "Caption under the API key row when the key is being taken from an environment variable rather than the Keychain. %@ is the variable’s name, for example OPENAI_API_KEY — leave it exactly as it is. The backticks mark it as code and must be kept."
-    },
-    "Verify result" : {
-
-    },
-    "Verify Results" : {
-
     },
     "Version %@" : {
       "comment" : "Line beside the Linen heading on the About page in Settings. %@ is the version number of the running app, for example 1.4.2."
@@ -6510,6 +6611,9 @@
     "What the assistant may do in the browser." : {
       "comment" : "Settings search result detail for the Tools page."
     },
+    "What the assistant remembers about you. It saves your answers and what you ask it to remember, never page content, passwords, or payment details." : {
+
+    },
     "What’s on Hacker News?" : {
       "comment" : "Label on one of three example prompt chips on the start page; clicking it asks the assistant that question. “Hacker News” is the name of a website — keep it. Keep the curly apostrophe; the prompt actually sent to the model is separate and stays in English."
     },
@@ -6518,9 +6622,6 @@
     },
     "When the sidebar is hidden, move the pointer to the left edge of the window to see your tabs." : {
       "comment" : "Caption under the Show sidebar switch in Appearance settings, and its Settings search description."
-    },
-    "When your Mac runs low on memory, inactive tabs unload. They reload when you open them." : {
-
     },
     "Where" : {
       "comment" : "Section heading in the Qualifier menu of the GitHub filter editor: search terms about the repository, organization, branch, label, and milestone."
