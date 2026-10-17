@@ -106,6 +106,9 @@ struct ProfileSwitchTests {
         let coordinator = fixture.coordinator
 
         await coordinator.switchProfile(to: fixture.work)
+        for _ in 0..<40 where coordinator.notice.text != fixture.work.name {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
 
         #expect(coordinator.notice.text == fixture.work.name)
         coordinator.browser.cancelPendingSave()
