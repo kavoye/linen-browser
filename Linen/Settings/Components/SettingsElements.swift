@@ -144,7 +144,7 @@ struct DrillInRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                HStack(alignment: caption == nil ? .center : .top, spacing: 10) {
+                HStack(spacing: 10) {
                     if let symbol {
                         CategoryTile(symbol: symbol, tint: tint, size: 22)
                     }
@@ -392,7 +392,7 @@ struct StatusRow<Trailing: View>: View {
 
     private var row: some View {
         HStack(spacing: 11) {
-            HStack(alignment: caption == nil && verbatimCaption == nil ? .center : .top, spacing: 11) {
+            HStack(spacing: 11) {
                 CategoryTile(symbol: symbol, tint: tint, size: 26)
 
                 VStack(alignment: .leading, spacing: 2) {
