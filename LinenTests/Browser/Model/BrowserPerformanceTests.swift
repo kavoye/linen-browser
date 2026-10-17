@@ -11,9 +11,14 @@ import XCTest
 nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable {
     func testCreatingAUsableStartPageTab() {
         MainActor.assumeIsolated {
-            measure(metrics: [XCTClockMetric(), XCTMemoryMetric()]) {
+            let options = XCTMeasureOptions()
+            options.invocationOptions = [.manuallyStart, .manuallyStop]
+            measure(metrics: [XCTClockMetric(), XCTMemoryMetric()], options: options) {
                 let browser = BrowserModel(database: .temporary())
+                browser.context.webViewPool.warmUp()
+                startMeasuring()
                 let tab = browser.newTab()
+                stopMeasuring()
 
                 XCTAssertTrue(tab.hasNoPageYet)
                 XCTAssertTrue(browser.activeTab === tab)

@@ -764,6 +764,8 @@ final class BrowserSettings {
 
     func apply(to configuration: WKWebViewConfiguration) {
         configuration.defaultWebpagePreferences.allowsContentJavaScript = javaScriptEnabled
+        configuration.defaultWebpagePreferences.preferredHTTPSNavigationPolicy = .automaticFallbackToHTTP
+        FingerprintingProtection.enable(on: configuration.defaultWebpagePreferences)
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = !blocksPopups
         configuration.mediaTypesRequiringUserActionForPlayback = javaScriptEnabled ? [] : autoplay.mediaTypes
         configuration.preferences.isElementFullscreenEnabled = true
@@ -772,6 +774,7 @@ final class BrowserSettings {
         configuration.preferences.setValue(webInspectorEnabled, forKey: "developerExtrasEnabled")
         WebKitFeatures.apply(to: configuration.preferences)
         NativeApplePay.apply(to: configuration.preferences)
+        UserInstalledFonts.hide(from: configuration.preferences)
     }
 
     func apply(to webView: WKWebView) {

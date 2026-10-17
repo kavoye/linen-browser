@@ -339,15 +339,21 @@ final class WebViewPool {
     private(set) var dataStore: WKWebsiteDataStore
     private let settings: BrowserSettings
     private let contentBlocker: ContentBlocker
+    private let stripsClickIDs: Bool
 
     init(dataStore: WKWebsiteDataStore = .default(), settings: BrowserSettings = .shared,
-         contentBlocker: ContentBlocker = .shared) {
+         contentBlocker: ContentBlocker = .shared, stripsClickIDs: Bool = false) {
         self.dataStore = dataStore
         self.settings = settings
         self.contentBlocker = contentBlocker
+        self.stripsClickIDs = stripsClickIDs
     }
 
-    private static let configurationTemplate = WKWebViewConfiguration()
+    private static let configurationTemplate: WKWebViewConfiguration = {
+        let configuration = WKWebViewConfiguration()
+        ProcessPrewarming.install(in: configuration)
+        return configuration
+    }()
 
     static func makeConfiguration() -> WKWebViewConfiguration {
         guard let configuration = configurationTemplate.copy() as? WKWebViewConfiguration else {
@@ -485,6 +491,9 @@ final class WebViewPool {
         configuration.websiteDataStore = dataStore ?? self.dataStore
         configuration.webExtensionController = extensionController
         settings.apply(to: configuration)
+        if stripsClickIDs {
+            LinkTrackingProtection.enable(on: configuration.preferences)
+        }
         MediaCenter.enablePictureInPicture(on: configuration.preferences)
 
         let contentController = WKUserContentController()

@@ -77,7 +77,12 @@ final class BrowserProfileContext {
         if profile.isPrivate {
             favicons.schemeOverride = .dark
         }
-        webViewPool = WebViewPool(dataStore: dataStore, settings: settings, contentBlocker: contentBlocker)
+        webViewPool = WebViewPool(
+            dataStore: dataStore,
+            settings: settings,
+            contentBlocker: contentBlocker,
+            stripsClickIDs: profile.isPrivate
+        )
         settings.onContentBlockingChanged = { [weak contentBlocker] in contentBlocker?.refresh() }
     }
 

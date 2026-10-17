@@ -32,6 +32,80 @@ struct WebViewConfigurationTests {
         #expect(first.defaultWebpagePreferences !== second.defaultWebpagePreferences)
     }
 
+    @Test(.boundedWebViews) func pagesSeeOnlySystemAndWebFonts() throws {
+        let view = WebViewPool.shared.makeColdView()
+        let allowed = try #require(view.configuration.preferences.value(forKey: "shouldAllowUserInstalledFonts") as? Bool)
+
+        #expect(!allowed)
+    }
+
+    @Test(.boundedWebViews) func pagesReadBackANoisyCanvas() async throws {
+        let tab = WebViewPool.shared.makeColdView()
+        let plain = WKWebView(frame: .zero, configuration: WebViewPool.makeConfiguration())
+
+        let protected = try await canvasReadback(in: tab)
+        let exact = try await canvasReadback(in: plain)
+
+        #expect(protected != exact)
+    }
+
+    @Test(.boundedWebViews) func plainHTTPAddressesTryHTTPSFirst() {
+        let view = WebViewPool.shared.makeColdView()
+
+        #expect(view.configuration.defaultWebpagePreferences.preferredHTTPSNavigationPolicy == .automaticFallbackToHTTP)
+    }
+
+    @Test(.boundedWebViews) func onlyPrivateTabsDropClickIDs() async throws {
+        let server = try await HTTPFixtureServer.start(routes: ["/landing": .html("<title>Landing</title>")])
+        let address = try server.url("/landing?gclid=abc&fbclid=def&utm_source=news")
+        let privateTab = BrowserProfileContext.shared(for: .privateBrowsing()).webViewPool.makeColdView()
+        let regularTab = WebViewPool.shared.makeColdView()
+
+        for tab in [privateTab, regularTab] {
+            tab.load(URLRequest(url: address))
+            try #require(await waitUntil { !tab.isLoading && tab.title == "Landing" })
+        }
+
+        #expect(privateTab.url?.query == "utm_source=news")
+        #expect(regularTab.url?.query == "gclid=abc&fbclid=def&utm_source=news")
+    }
+
+    @Test(.boundedWebViews) func aLoadedTabLeavesAProcessReadyForTheNext() async throws {
+        let server = try await HTTPFixtureServer.start(routes: ["/first": .html("<title>First</title>")])
+        let model = BrowserModel(
+            database: .temporary(),
+            sitePermissions: SitePermissions(
+                storageURL: TestFiles.directory.appendingPathComponent("Prewarm-\(UUID().uuidString).json")
+            )
+        )
+        let tab = model.newTab(url: try server.url("/first"))
+        try #require(await waitUntil { !tab.webView.isLoading && tab.webView.title == "First" })
+
+        let pool = try #require(tab.webView.configuration.value(forKey: "processPool") as? NSObject)
+        #expect(await waitUntil(timeout: .seconds(5)) {
+            pool.value(forKey: "_hasPrewarmedWebProcess") as? Bool == true
+        })
+    }
+
+    private func canvasReadback(in view: WKWebView) async throws -> String {
+        view.loadHTMLString("<title>Canvas</title>", baseURL: URL(string: "https://example.com/"))
+        try #require(await waitUntil { !view.isLoading && view.title == "Canvas" })
+        let readback = try await view.callAsyncJavaScript(
+            """
+            const canvas = document.createElement('canvas');
+            canvas.width = 240;
+            canvas.height = 60;
+            const context = canvas.getContext('2d');
+            context.font = '16px Helvetica';
+            context.fillStyle = '#123';
+            context.fillText('Linen canvas readback', 4, 30);
+            return canvas.toDataURL();
+            """,
+            contentWorld: .page
+        )
+        return try #require(readback as? String)
+    }
+
     @Test func turningJavaScriptOffForOnePageLeavesTheOthersAlone() {
         let first = WebViewPool.makeConfiguration()
         let second = WebViewPool.makeConfiguration()

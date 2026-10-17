@@ -81,6 +81,11 @@ enum WebKitFeatures {
         }
     }
 
+    static func turnOnUnlessOverridden(_ key: String, in preferences: WKPreferences) {
+        guard overrides[key] == nil, let feature = known[key], preferences.responds(to: toggling) else { return }
+        unsafeBitCast(preferences, to: WebKitFeatureToggling.self).setEnabled(true, for: feature)
+    }
+
     private static func read() -> [String: AnyObject] {
         guard WKPreferences.responds(to: listing),
               let listed = WKPreferences.perform(listing)?.takeUnretainedValue() as? [AnyObject]
