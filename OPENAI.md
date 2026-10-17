@@ -109,13 +109,4 @@ The tool parses downloaded source without executing it. Review changed fields an
 variants before updating the baseline with `--record`. A matching snapshot does
 not establish support for every API operation.
 
-Scripted browser checks require the separate `browser-agent-bench` checkout:
-
-```sh
-Tools/build-benchmark-adapter.sh
-../browser-agent-bench/.venv/bin/python Tools/validate-agent-workflows.py \
-  --provider openai --output /tmp/linen-openai-validation
-```
-
-These checks use synthetic token values. They validate browser outcomes and
-accounting, not live cost or comparative model performance.
+To check browser outcomes with a real model, run the evals. See [EVALS.md](EVALS.md).

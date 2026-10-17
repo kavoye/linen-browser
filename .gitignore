@@ -43,3 +43,6 @@ DerivedData/
 # Python cache files
 __pycache__/
 *.py[cod]
+
+# Eval results
+/Evals/Results/

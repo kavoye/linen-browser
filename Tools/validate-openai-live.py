@@ -7,6 +7,7 @@ Credentials stay in the test host's Keychain or inherited process environment.
 """
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,16 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def source_hash():
+    paths = [*(ROOT / "Linen").rglob("*.swift"), *(ROOT / "LinenTests").rglob("*.swift"), ROOT / "Linen.xcodeproj/project.pbxproj",
+             ROOT / "Linen.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"]
+    digest = hashlib.sha256()
+    for path in sorted(paths):
+        digest.update(str(path.relative_to(ROOT)).encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
 
 
 def main():
@@ -52,9 +63,8 @@ def main():
     output.mkdir(parents=True, mode=0o700, exist_ok=False)
     derived = args.derived_data.resolve()
     env = dict(os.environ)
-    env["LINEN_BENCHMARK_DERIVED_DATA"] = str(derived)
     for key in list(env):
-        if key.startswith(("TEST_RUNNER_BAB_", "BAB_", "TEST_RUNNER_LINEN_OPENAI_")):
+        if key.startswith("TEST_RUNNER_LINEN_OPENAI_"):
             del env[key]
     base = ["xcodebuild", "-project", "Linen.xcodeproj", "-scheme", "Linen", "-destination",
             "platform=macOS,arch=arm64", "-derivedDataPath", str(derived),
@@ -62,24 +72,23 @@ def main():
     if args.adhoc:
         base += ["CODE_SIGN_STYLE=Manual", "CODE_SIGN_IDENTITY=-", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_ENTITLEMENTS="]
 
-    def provenance(action):
-        return subprocess.check_output([sys.executable, "Tools/benchmark-provenance.py", action],
-                                       cwd=ROOT, env=env, text=True).strip()
-
+    record = derived / "validation-build.json"
     if args.build:
-        before = provenance("hash")
+        before = source_hash()
         print("Building the native validation test host...", flush=True)
         with (output / "build.log").open("w") as log:
             result = subprocess.run(base + ["build-for-testing"], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
         if result.returncode:
             raise SystemExit(f"Build failed. See {output / 'build.log'}")
-        if before != provenance("hash"):
+        if before != source_hash():
             raise SystemExit("Sources changed during the build; rebuild before running live validation.")
-        provenance("write")
-    provenance("verify")
+        record.write_text(json.dumps({"source_sha256": before}) + "\n")
+    current = source_hash()
+    if not record.exists() or json.loads(record.read_text())["source_sha256"] != current:
+        raise SystemExit("The validation build is stale. Run again with --build.")
     config = {"report_path": str(output / "report.json"), "live": args.live,
               "hosted_tools": args.hosted_tools or args.hosted_only, "hosted_only": args.hosted_only,
-              "source_sha256": provenance("hash"), "voice_only": args.voice_only, "files_only": args.files_only, "conversation_only": args.conversation_only, "mcp_only": args.mcp_only, "tool_search_only": args.tool_search_only}
+              "source_sha256": current, "voice_only": args.voice_only, "files_only": args.files_only, "conversation_only": args.conversation_only, "mcp_only": args.mcp_only, "tool_search_only": args.tool_search_only}
     config["shell_only"] = args.shell_only
     if args.model:
         config["model"] = args.model

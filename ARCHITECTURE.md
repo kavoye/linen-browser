@@ -17,7 +17,8 @@ Main Actor default isolation are enabled for the app target.
 
 `LinenTests` uses the same folders. A test goes in the folder of the code it
 tests. `LinenTests/Support` holds shared helpers and fixtures.
-`LinenTests/Evals` holds live and benchmark tests.
+`LinenTests/Evals` holds the evals that `Tools/eval` runs. `Kit` holds the
+runner and the checks, and `Suites` holds the tasks. See [EVALS.md](EVALS.md).
 
 Put a new file in the folder of the feature or layer that owns it. If a feature
 has views, put them in a `UI` subfolder of that feature. If a folder holds more

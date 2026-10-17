@@ -1,0 +1,127 @@
+#!/bin/bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+usage() {
+  cat <<'EOF'
+Usage:
+  Tools/eval run [--provider ID] [--model MODEL] [--suite NAME] [--tasks a,b]
+                 [--attempts N] [--variants default,eager] [--effort low] [--foreground] [--no-build]
+  Tools/eval compare BASELINE CANDIDATE
+  Tools/eval compare RUN --variants BASELINE_VARIANT,CANDIDATE_VARIANT
+  Tools/eval list
+
+Provider IDs: apple, openai, anthropic, google, ollama, lmstudio, openrouter,
+groq, xai, deepseek, mistral. Keys come from the environment or from .env.
+EOF
+}
+
+command="${1:-}"
+[ $# -gt 0 ] && shift
+case "$command" in
+  compare)
+    exec swift Tools/eval-compare.swift "$@"
+    ;;
+  list)
+    bold=""; dim=""; reset=""
+    if [ -t 1 ]; then bold=$'\e[1m'; dim=$'\e[2m'; reset=$'\e[0m'; fi
+    total=0
+    for file in LinenTests/Evals/Suites/*.swift; do
+      suite=$(basename "$file" .swift | tr '[:upper:]' '[:lower:]')
+      rows=$(grep -oE 'id: "[a-z0-9-]+"(, version: [0-9]+)?(, family: "[a-z]+")?' "$file" \
+        | sed -E 's/id: "([^"]+)"(, version: [0-9]+)?(, family: "([^"]+)")?/\4 \1/')
+      count=$(printf '%s\n' "$rows" | grep -c .)
+      total=$((total + count))
+      printf '%s%s%s %s(%d)%s\n' "$bold" "$suite" "$reset" "$dim" "$count" "$reset"
+      printf '%s\n' "$rows" | awk -v suite="$suite" -v dim="$dim" -v reset="$reset" '
+        NF == 1 { $2 = $1; $1 = "" }
+        { family = $1 == "" ? "-" : $1
+          if (!(family in tasks)) order[++n] = family
+          tasks[family] = tasks[family] (tasks[family] == "" ? "" : "  ") $2 }
+        END { for (i = 1; i <= n; i++) {
+                f = order[i]
+                if (f == "-") printf "  %s\n", tasks[f]
+                else printf "  %s%-12s%s %s\n", dim, f, reset, tasks[f] } }'
+      echo
+    done
+    printf '%d tasks. Run one with: Tools/eval run --tasks <id>\n' "$total"
+    exit 0
+    ;;
+  run)
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+
+provider=apple model="" suite="" tasks="" attempts=1 variants=default effort=low build=1 foreground=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --provider) provider="$2"; shift 2 ;;
+    --model) model="$2"; shift 2 ;;
+    --suite) suite="$2"; shift 2 ;;
+    --tasks) tasks="$2"; shift 2 ;;
+    --attempts) attempts="$2"; shift 2 ;;
+    --variants) variants="$2"; shift 2 ;;
+    --effort) effort="$2"; shift 2 ;;
+    --no-build) build=0; shift ;;
+    --foreground) foreground=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage; exit 2 ;;
+  esac
+done
+
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
+revision="$(git rev-parse --short HEAD)"
+dirty=0
+[ -n "$(git status --porcelain)" ] && dirty=1
+slug="$(printf '%s' "${model:-default}" | tr -c 'A-Za-z0-9.-' '-')"
+output="$PWD/Evals/Results/$(date -u +%Y%m%d-%H%M%S)-$provider-$slug"
+mkdir -p "$output"
+
+export TEST_RUNNER_LINEN_EVAL=1
+export TEST_RUNNER_LINEN_EVAL_PROVIDER="$provider"
+export TEST_RUNNER_LINEN_EVAL_MODEL="$model"
+[ -z "$suite" ] && suite=$([ -n "$tasks" ] && echo all || echo tools)
+export TEST_RUNNER_LINEN_EVAL_SUITE="$suite"
+export TEST_RUNNER_LINEN_EVAL_TASKS="$tasks"
+export TEST_RUNNER_LINEN_EVAL_ATTEMPTS="$attempts"
+export TEST_RUNNER_LINEN_EVAL_VARIANTS="$variants"
+export TEST_RUNNER_LINEN_EVAL_EFFORT="$effort"
+export TEST_RUNNER_LINEN_EVAL_OUTPUT="$output"
+export TEST_RUNNER_LINEN_EVAL_REVISION="$revision"
+export TEST_RUNNER_LINEN_EVAL_DIRTY="$dirty"
+export TEST_RUNNER_LINEN_EVAL_FOREGROUND="$foreground"
+[ -z "$tasks" ] && unset TEST_RUNNER_LINEN_EVAL_TASKS
+for key in OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY OPENROUTER_API_KEY GROQ_API_KEY XAI_API_KEY DEEPSEEK_API_KEY MISTRAL_API_KEY; do
+  if [ -n "${!key:-}" ]; then
+    export "TEST_RUNNER_$key=${!key}"
+  fi
+done
+
+xcode=(-project Linen.xcodeproj -scheme Linen -destination 'platform=macOS,arch=arm64' -derivedDataPath build/DD)
+if [ "$build" = 1 ]; then
+  echo "Building…"
+  xcodebuild build-for-testing "${xcode[@]}" -quiet
+fi
+echo "Running $suite on $provider ${model:-(default model)}, variants $variants, $attempts attempt(s)."
+status=0
+xcodebuild test-without-building "${xcode[@]}" -only-testing:LinenTests/HarnessEvalTests \
+  -default-test-execution-time-allowance 14400 -maximum-test-execution-time-allowance 14400 \
+  > "$output/xcodebuild.log" 2>&1 || status=$?
+grep -E '^EVAL ' "$output/xcodebuild.log" || true
+if [ -f "$output/report.md" ]; then
+  echo
+  cat "$output/report.md"
+  echo "Results: $output"
+else
+  echo "No report was written. See $output/xcodebuild.log" >&2
+  grep -E 'error|recorded an issue' "$output/xcodebuild.log" | head -20 >&2 || true
+fi
+exit "$status"

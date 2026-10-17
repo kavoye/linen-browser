@@ -43,7 +43,7 @@ struct OpenAIToolSearchLiveTests {
         do {
             guard OpenAIToolSearch.supports(model) else { throw OpenAILiveFailure.invariant }
             let toolkit = AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: ConversationLog(database: .temporary()))
-            let tools = makeAgentTools(toolkit: toolkit) + [UpdateProgressTool()]
+            let tools = makeAgentTools(toolkit: toolkit)
             report["local_tool_count"] = .integer(Int64(tools.count))
             let scenarios: [Scenario] = [
                 .init(id: "tabs", prompt: "List the titles of all open browser tabs. Use the browser tool; do not ask a question or change tabs.",
