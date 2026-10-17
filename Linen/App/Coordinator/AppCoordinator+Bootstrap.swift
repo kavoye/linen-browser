@@ -43,6 +43,7 @@ extension AppCoordinator {
         retainAgentMemory()
         archiveSweeper.onSweep = { [weak self] in
             self?.browser.archiveStaleTabs()
+            self?.sleepIdleTabs()
         }
         archiveSweeper.start()
         timing.mark("session")

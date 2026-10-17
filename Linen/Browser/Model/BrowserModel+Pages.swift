@@ -71,11 +71,29 @@ extension BrowserModel {
 
     func relieveMemoryPressure(_ level: MemoryPressureMonitor.Level) {
         context.webViewPool.discardIdleForMemoryPressure()
-        guard context.settings.sleepsInactiveTabs else { return }
+        guard context.settings.tabSleep == .whenMemoryIsLow else { return }
         let keep = level == .critical ? 0 : Self.warningKeepsRecent
         let discarded = discardBackgroundTabs(keepingRecent: keep)
         guard discarded > 0 else { return }
         Pipeline.log.notice("memory pressure: discarded \(discarded, privacy: .public) background tabs")
+    }
+
+    @discardableResult
+    func sleepIdleTabs(now: Date = Date()) -> Int {
+        guard let interval = context.settings.tabSleep.idleInterval else { return 0 }
+        let cutoff = now.addingTimeInterval(-interval)
+        var slept = 0
+        for tab in tabs where tab.id != activeTabID
+            && tab.lastActiveAt < cutoff
+            && tab.canDiscardWebContent
+            && protectionReason(for: tab) == nil {
+            tab.discardWebContent()
+            slept += 1
+        }
+        if slept > 0 {
+            Pipeline.log.notice("inactivity: slept \(slept, privacy: .public) idle tabs")
+        }
+        return slept
     }
 
     func applyWebSettings() {

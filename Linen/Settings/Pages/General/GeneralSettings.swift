@@ -70,9 +70,12 @@ struct GeneralSettings: View {
         SettingsSection(title: "Tabs", symbol: "rectangle.on.rectangle") {
             DetailRow(
                 title: "Sleep inactive tabs",
-                caption: "When your Mac runs low on memory, inactive tabs unload. They reload when you open them."
+                caption: "Inactive tabs unload to save memory. They reload when you open them."
             ) {
-                SettingsToggle($settings.sleepsInactiveTabs)
+                SettingsMenu(
+                    options: TabSleep.allCases.map { .init(value: $0, label: String(localized: $0.label)) },
+                    selection: $settings.tabSleep
+                )
             }
             .settingsAnchor("general.sleepTabs")
 

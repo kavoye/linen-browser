@@ -124,6 +124,31 @@ enum TabArchiveDelay: String, CaseIterable, Identifiable {
     }
 }
 
+enum TabSleep: String, CaseIterable, Identifiable {
+    case never
+    case whenMemoryIsLow
+    case afterInactivity
+
+    var id: String {
+        rawValue
+    }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .never:
+            LocalizedStringResource("settings.tabSleep.never", defaultValue: "Never")
+        case .whenMemoryIsLow:
+            LocalizedStringResource("settings.tabSleep.whenMemoryIsLow", defaultValue: "When memory is low")
+        case .afterInactivity:
+            LocalizedStringResource("settings.tabSleep.afterInactivity", defaultValue: "After an hour of inactivity")
+        }
+    }
+
+    var idleInterval: TimeInterval? {
+        self == .afterInactivity ? 3600 : nil
+    }
+}
+
 enum HistoryRetention: String, CaseIterable, Identifiable {
     case day
     case week

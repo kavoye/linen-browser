@@ -294,7 +294,7 @@ private struct SiteDetailPage: View {
 
     private var keepAwakeCaption: AttributedString {
         SettingsIndex.caption(
-            "Sleep inactive tabs is off, so every website stays loaded.",
+            "Sleep inactive tabs is set to Never, so every website stays loaded.",
             naming: "Sleep inactive tabs",
             at: "general.sleepTabs"
         )

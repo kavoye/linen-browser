@@ -23,7 +23,7 @@ final class BrowserSettings {
         static let loomStyle = "appearance.loomStyle"
         static let transparency = "appearance.transparency"
         static let pageZoom = "content.defaultZoom"
-        static let sleepsInactiveTabs = "tabs.sleep"
+        static let tabSleep = "tabs.sleep"
         static let archiveTabsAfter = "tabs.archive"
         static let linkPreview = "content.linkPreview"
         static let fullAddress = "content.fullAddress"
@@ -145,8 +145,8 @@ final class BrowserSettings {
         switch key {
         case Key.pageZoom:
             pageZoom = source.pageZoom
-        case Key.sleepsInactiveTabs:
-            sleepsInactiveTabs = source.sleepsInactiveTabs
+        case Key.tabSleep:
+            tabSleep = source.tabSleep
         case Key.archiveTabsAfter:
             archiveTabsAfter = source.archiveTabsAfter
         case Key.downloadFolder:
@@ -245,11 +245,15 @@ final class BrowserSettings {
         }
     }
 
-    var sleepsInactiveTabs: Bool {
+    var tabSleep: TabSleep {
         didSet {
-            guard sleepsInactiveTabs != oldValue else { return }
-            write(sleepsInactiveTabs, forKey: Key.sleepsInactiveTabs)
+            guard tabSleep != oldValue else { return }
+            write(tabSleep.rawValue, forKey: Key.tabSleep)
         }
+    }
+
+    var sleepsInactiveTabs: Bool {
+        tabSleep != .never
     }
 
     var archiveTabsAfter: TabArchiveDelay {
@@ -655,7 +659,8 @@ final class BrowserSettings {
         isMinimal = store.object(Key.minimal) as? Bool ?? false
         minimalBarEdge = store.string(Key.minimalBar).flatMap(MinimalBarEdge.init(rawValue:)) ?? .bottom
         hidesMinimalBar = store.object(Key.minimalBarAutoHide) as? Bool ?? false
-        sleepsInactiveTabs = store.object(Key.sleepsInactiveTabs) as? Bool ?? false
+        tabSleep = store.string(Key.tabSleep).flatMap(TabSleep.init(rawValue:))
+            ?? (store.object(Key.tabSleep) as? Bool == true ? .whenMemoryIsLow : .never)
         archiveTabsAfter = store.string(Key.archiveTabsAfter)
             .flatMap(TabArchiveDelay.init(rawValue:)) ?? .never
         showsLinkPreview = store.object(Key.linkPreview) as? Bool ?? true

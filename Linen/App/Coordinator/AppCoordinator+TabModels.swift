@@ -147,4 +147,11 @@ extension AppCoordinator {
             model.relieveMemoryPressure(level)
         }
     }
+
+    func sleepIdleTabs() {
+        browser.sleepIdleTabs()
+        for model in parkedModels.values {
+            model.sleepIdleTabs()
+        }
+    }
 }

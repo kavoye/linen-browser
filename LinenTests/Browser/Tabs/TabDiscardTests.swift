@@ -128,9 +128,9 @@ struct TabDiscardTests {
     /// Critical means the app is about to be killed, so recency stops earning
     /// anything.
     @Test func criticalPressureTakesEveryBackgroundTab() {
-        let previousSleepSetting = BrowserSettings.shared.sleepsInactiveTabs
-        BrowserSettings.shared.sleepsInactiveTabs = true
-        defer { BrowserSettings.shared.sleepsInactiveTabs = previousSleepSetting }
+        let previousSleepSetting = BrowserSettings.shared.tabSleep
+        BrowserSettings.shared.tabSleep = .whenMemoryIsLow
+        defer { BrowserSettings.shared.tabSleep = previousSleepSetting }
 
         let model = makeModel()
         let first = model.newTab(url: URL(string: "https://example.com/1"))
@@ -145,6 +145,78 @@ struct TabDiscardTests {
         #expect(first.isDeferred)
         #expect(second.isDeferred)
         #expect(!active.isDeferred)
+    }
+
+    @Test func inactivitySleepsTabsUnusedForAnHour() {
+        let previousSleepSetting = BrowserSettings.shared.tabSleep
+        BrowserSettings.shared.tabSleep = .afterInactivity
+        defer { BrowserSettings.shared.tabSleep = previousSleepSetting }
+
+        let scene = makeIdleScene()
+
+        scene.model.sleepIdleTabs(now: scene.now)
+
+        #expect(scene.idle.isDeferred)
+        #expect(!scene.recent.isDeferred)
+        #expect(!scene.active.isDeferred)
+    }
+
+    @Test(arguments: [TabSleep.never, .whenMemoryIsLow])
+    func otherChoicesLeaveIdleTabsLoaded(_ choice: TabSleep) {
+        let previousSleepSetting = BrowserSettings.shared.tabSleep
+        BrowserSettings.shared.tabSleep = choice
+        defer { BrowserSettings.shared.tabSleep = previousSleepSetting }
+
+        let scene = makeIdleScene()
+
+        scene.model.sleepIdleTabs(now: scene.now)
+
+        #expect(!scene.idle.isDeferred)
+    }
+
+    @Test(arguments: [(TabSleep.never, false), (.whenMemoryIsLow, true), (.afterInactivity, false)])
+    func criticalPressureFollowsTheChoice(_ choice: TabSleep, sleeps: Bool) {
+        let previousSleepSetting = BrowserSettings.shared.tabSleep
+        BrowserSettings.shared.tabSleep = choice
+        defer { BrowserSettings.shared.tabSleep = previousSleepSetting }
+
+        let model = makeModel()
+        let background = model.newTab(url: URL(string: "https://example.com/1"))
+        let active = model.newTab(url: URL(string: "https://example.com/2"))
+        model.activate(active)
+
+        model.relieveMemoryPressure(.critical)
+
+        #expect(background.isDeferred == sleeps)
+    }
+
+    @Test func anEarlierOnSettingBecomesWhenMemoryIsLow() throws {
+        let name = TestDefaults.name("TabSleepTests")
+        let suite = try #require(UserDefaults(suiteName: name))
+        defer { suite.removePersistentDomain(forName: name) }
+        suite.set(true, forKey: "tabs.sleep")
+
+        #expect(BrowserSettings(defaults: suite).tabSleep == .whenMemoryIsLow)
+    }
+
+    private struct IdleScene {
+        let model: BrowserModel
+        let idle: BrowserTab
+        let recent: BrowserTab
+        let active: BrowserTab
+        let now: Date
+    }
+
+    private func makeIdleScene() -> IdleScene {
+        let model = makeModel()
+        let idle = model.newTab(url: URL(string: "https://example.com/idle"))
+        let recent = model.newTab(url: URL(string: "https://example.com/recent"))
+        let active = model.newTab(url: URL(string: "https://example.com/active"))
+        model.activate(active)
+        let now = Date()
+        idle.lastActiveAt = now.addingTimeInterval(-2 * 3600)
+        recent.lastActiveAt = now.addingTimeInterval(-10 * 60)
+        return IdleScene(model: model, idle: idle, recent: recent, active: active, now: now)
     }
 
     /// Activating a discarded tab is what brings it back, through the same
