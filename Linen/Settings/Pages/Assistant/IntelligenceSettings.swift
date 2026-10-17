@@ -26,6 +26,8 @@ struct AssistantSettings: View {
                 AgentToolsPage(model: model)
             case .grants:
                 AssistantGrantsPage(policy: coordinator.browser.context.actionPolicy, onBack: { model.showOverview() })
+            case .memory:
+                AssistantMemoryPage(memory: coordinator.browser.memory, onBack: { model.showOverview() })
             case .openAI(let page):
                 OpenAISettingsPageView(model: model, page: page)
             }
@@ -117,6 +119,13 @@ private struct AssistantOverview: View {
                 model.showGrants()
             }
             .settingsAnchor("privacy.assistant")
+        }
+
+        SettingsSection(title: "Memory", symbol: "square.and.pencil") {
+            DrillInRow(title: "Memory", detail: AssistantMemoryPage.summary(for: coordinator.browser.memory)) {
+                model.showMemory()
+            }
+            .settingsAnchor("assistant.memory")
         }
 
         Footnote(AIDisclosure.settingsCaption)

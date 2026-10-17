@@ -669,10 +669,12 @@ extension BrowserModel {
         if (context.database.writer as AnyObject) === (self.database.writer as AnyObject) {
             history = context.history
             tabArchive = context.tabArchive
+            memory = context.memory
             downloads = context.downloads
         } else {
             history = HistoryStore(database: self.database)
             tabArchive = TabArchive(database: self.database)
+            memory = AssistantMemory(database: self.database)
         }
         history.prune(retention: context.settings.historyRetention)
         tabArchive.prune(retention: context.settings.historyRetention)

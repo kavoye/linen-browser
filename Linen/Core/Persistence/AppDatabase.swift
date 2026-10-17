@@ -250,6 +250,17 @@ struct AppDatabase: Sendable {
         try defineTabArchive(in: db)
         try defineSessionSpaces(in: db)
         try defineContextClears(in: db)
+        try defineAssistantMemory(in: db)
+    }
+
+    private nonisolated static func defineAssistantMemory(in db: Database) throws {
+        try db.create(table: "assistantMemory", options: .ifNotExists) { t in
+            t.primaryKey("id", .blob)
+            t.column("subject", .text).notNull()
+            t.column("value", .text).notNull()
+            t.column("source", .text).notNull()
+            t.column("savedAt", .double).notNull()
+        }
     }
 
     private nonisolated static func defineContextClears(in db: Database) throws {

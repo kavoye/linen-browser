@@ -14,6 +14,7 @@ final class IntelligenceViewModel {
         case editor
         case tools
         case grants
+        case memory
         case openAI(OpenAISettingsPage)
     }
 
@@ -229,6 +230,12 @@ final class IntelligenceViewModel {
         destination = .grants
     }
 
+    func showMemory() {
+        customDraft = nil
+        customError = nil
+        destination = .memory
+    }
+
     func showOpenAI(_ page: OpenAISettingsPage) {
         customDraft = nil
         customError = nil
@@ -252,6 +259,8 @@ final class IntelligenceViewModel {
             return inspectedID.map { [$0, "tools"] } ?? ["tools"]
         case .grants:
             return ["allowed-websites"]
+        case .memory:
+            return ["memory"]
         case .openAI(let page):
             return [inspectedID ?? subject.id, page.slug]
         }
@@ -278,6 +287,8 @@ final class IntelligenceViewModel {
             showTools()
         case "allowed-websites":
             showGrants()
+        case "memory":
+            showMemory()
         case let id?:
             guard let provider = providers.first(where: { $0.id == id }) ?? catalog.provider(id: id) else {
                 showOverview()

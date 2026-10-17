@@ -19,6 +19,7 @@ final class BrowserModel {
     var storedTree = SidebarTree()
     var history: HistoryStore
     var tabArchive: TabArchive
+    var memory: AssistantMemory
     var sitePermissions: SitePermissions
     var downloads: DownloadManager
     private let webViewFactory: (@MainActor () -> WKWebView)?
@@ -46,8 +47,10 @@ final class BrowserModel {
         }
         if let context, (context.database.writer as AnyObject) === (selectedDatabase.writer as AnyObject) {
             tabArchive = context.tabArchive
+            memory = context.memory
         } else {
             tabArchive = TabArchive(database: selectedDatabase)
+            memory = AssistantMemory(database: selectedDatabase)
         }
         self.sitePermissions = sitePermissions ?? context?.sitePermissions ?? .shared
         self.downloads = downloads ?? context?.downloads ?? DownloadManager()

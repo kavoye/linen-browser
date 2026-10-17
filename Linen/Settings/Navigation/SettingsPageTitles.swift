@@ -67,6 +67,8 @@ enum SettingsPageTitles {
             return String(localized: "Tools")
         case ["allowed-websites"]:
             return String(localized: "Allowed without asking")
+        case ["memory"]:
+            return String(localized: "Memory")
         default:
             break
         }
