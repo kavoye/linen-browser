@@ -148,7 +148,11 @@ struct IslandBar: View {
                     .help(String(localized: "Private Window"))
             }
 
-            IslandAddress(tab: tab, resting: surface.restingContent) {
+            IslandAddress(
+                tab: tab,
+                resting: surface.restingContent,
+                notice: coordinator.notice
+            ) {
                 coordinator.focusAddressBar()
             }
             .contextMenu { IslandAddressMenu(browser: browser, coordinator: coordinator) }
@@ -292,6 +296,7 @@ private struct IslandAddressMenu: View {
 private struct IslandAddress: View {
     let tab: BrowserTab?
     let resting: AskRestingContent?
+    let notice: ChromeNotice
     let action: () -> Void
 
     @State private var hovering = false
@@ -326,12 +331,14 @@ private struct IslandAddress: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 switch resting {
-                case .notice(let notice, let symbol):
+                case .notice(let message, let symbol):
                     if let symbol {
                         Image(systemName: symbol)
                             .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(notice.isWarning ? AnyShapeStyle(Theme.warning) : AnyShapeStyle(.foreground))
+                            .noticePop(notice)
                     }
-                    Text(verbatim: notice)
+                    Text(verbatim: message)
                         .font(Theme.Font.control)
                         .lineLimit(1)
                 case .transcript(let live):
@@ -373,6 +380,7 @@ private struct IslandAddress: View {
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
             .frame(height: 28)
+            .noticeWash(notice, isShowing: resting?.isNotice ?? false, in: Capsule())
             .hoverBackground(isActive: hovering, in: Capsule())
         }
         .buttonStyle(.plain)

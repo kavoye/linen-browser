@@ -124,6 +124,13 @@ enum AskRestingContent: Equatable {
     case placeholder(String)
     case address(String, symbol: String? = nil)
 
+    var isNotice: Bool {
+        if case .notice = self {
+            return true
+        }
+        return false
+    }
+
     var isCentred: Bool {
         switch self {
         case .address, .notice:
@@ -167,11 +174,11 @@ enum AskRestingContent: Equatable {
             return .transcript(transcript)
         }
         let yieldsToTyping = mirrorsPageURL ? (!isFocused || typedText.isEmpty) : typedText.isEmpty
-        if let agentMessage, yieldsToTyping {
-            return .agent(agentMessage)
-        }
         if let notice, yieldsToTyping {
             return .notice(notice, symbol: noticeSymbol)
+        }
+        if let agentMessage, yieldsToTyping {
+            return .agent(agentMessage)
         }
         if let status, yieldsToTyping {
             return .status(status)

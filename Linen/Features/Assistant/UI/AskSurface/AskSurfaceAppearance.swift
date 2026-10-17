@@ -165,6 +165,7 @@ struct AskRestingLine: View {
     let placement: AskSurface.Placement
     let content: AskRestingContent
     let security: PageSecurity
+    let notice: ChromeNotice
 
     @Environment(\.chromeIsLight) private var chromeIsLight
 
@@ -203,14 +204,15 @@ struct AskRestingLine: View {
                     .id(message)
                     .transition(.opacity)
 
-            case .notice(let notice, let symbol):
+            case .notice(let message, let symbol):
                 if let symbol {
                     Image(systemName: symbol)
                         .font(.system(size: placement.textSize - 1, weight: .semibold))
-                        .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight))
+                        .foregroundStyle(notice.isWarning ? AnyShapeStyle(Theme.warning) : ChromeInk.glyph(onLight: chromeIsLight))
+                        .noticePop(notice)
                         .transition(.opacity)
                 }
-                Text(verbatim: notice)
+                Text(verbatim: message)
                     .font(.system(size: placement.textSize, weight: .medium))
                     .foregroundStyle(noticeStyle(symbol: symbol))
                     .lineLimit(1)

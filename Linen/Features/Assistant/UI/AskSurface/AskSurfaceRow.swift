@@ -94,7 +94,8 @@ struct AskSurfaceRow: View {
                     AskRestingLine(
                         placement: placement,
                         content: restingContent,
-                        security: security
+                        security: security,
+                        notice: model.coordinator.notice
                     )
                     .matchedGeometryEffect(
                         id: restingContent.isCentred ? "centred" : "leading",
@@ -139,7 +140,8 @@ struct AskSurfaceRow: View {
                 AskRestingLine(
                     placement: placement,
                     content: restingContent,
-                    security: security
+                    security: security,
+                    notice: model.coordinator.notice
                 )
                 .fixedSize()
                 .hidden()
@@ -157,7 +159,8 @@ struct AskSurfaceRow: View {
                         AskRestingLine(
                             placement: placement,
                             content: restingContent,
-                            security: security
+                            security: security,
+                            notice: model.coordinator.notice
                         )
                         .matchedGeometryEffect(id: "centred", in: restingLineSpace)
                         .padding(.horizontal, Self.centredAddressInset)
@@ -168,6 +171,11 @@ struct AskSurfaceRow: View {
             }
         }
         .frame(minHeight: placement.rowHeight)
+        .noticeWash(
+            model.coordinator.notice,
+            isShowing: restingContent?.isNotice ?? false,
+            in: RoundedRectangle(cornerRadius: placement.cornerRadius, style: .continuous)
+        )
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
             model.interaction.rowHeight = $0
         }

@@ -61,6 +61,8 @@ final class DownloadManager: NSObject {
     }
 
     @ObservationIgnored var onFinished: ((String) -> Void)?
+    @ObservationIgnored var onStarted: ((String) -> Void)?
+    @ObservationIgnored var onFailed: ((String) -> Void)?
 
     @ObservationIgnored private var live: [UUID: WKDownload] = [:]
     @ObservationIgnored private var identifiers: [ObjectIdentifier: UUID] = [:]
@@ -302,12 +304,17 @@ final class DownloadManager: NSObject {
             self.resumeData[id] = resumeData
         }
         let resumable = self.resumeData[id] != nil
+        var failed: String?
         update(id) {
             guard $0.state == .running else { return }
             $0.state = resumable ? .interrupted(reason) : .failed(reason)
             $0.isResumable = resumable
+            failed = $0.filename
         }
         finish(id, keepingResumeState: resumable)
+        if let failed {
+            onFailed?(failed)
+        }
     }
 
     func noteCancelRequested(_ id: UUID) {
@@ -516,6 +523,7 @@ extension DownloadManager: WKDownloadDelegate {
 
         if let id = id(for: download) {
             noteDestination(destination, expectedLength: response.expectedContentLength, for: id)
+            onStarted?(destination.lastPathComponent)
         }
         return destination
     }

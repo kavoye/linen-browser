@@ -107,6 +107,14 @@ final class BrowserModel {
     var onOpenInNewWindow: ((BrowserTab, URL, Bool, Bool) -> Void)?
     var onSummarizeLink: ((BrowserTab?, URL, CGPoint) -> Void)?
     var onPictureReturnExpected: ((BrowserTab) -> Void)?
+    var onTabAlert: ((TabAlert) -> Void)?
+
+    enum TabAlert {
+        case openedInBackground
+        case agentOpened(BrowserTab)
+        case agentSwitched(BrowserTab)
+        case agentClosed(String)
+    }
 
     private(set) var currentSpaceID: UUID? {
         didSet {
@@ -202,12 +210,18 @@ final class BrowserModel {
         }
         tab.onNewWindow = { [weak self, weak tab] view, activate in
             let opened = self?.newTab(activate: activate, adopting: view, after: tab)
+            if !activate {
+                self?.onTabAlert?(.openedInBackground)
+            }
             guard let self, let opened, let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }
         tab.onOpenInNewTab = { [weak self, weak tab] url, activate in
             guard let self else { return }
             let opened = newTab(url: url, activate: activate, after: tab, transition: .link)
+            if !activate {
+                onTabAlert?(.openedInBackground)
+            }
             guard let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }

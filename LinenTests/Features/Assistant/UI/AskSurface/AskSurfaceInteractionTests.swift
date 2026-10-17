@@ -156,6 +156,24 @@ struct AskSurfaceInteractionTests {
         #expect(address?.accessibilityValue(fallback: "https://www.example.com/path") == "https://www.example.com/path")
     }
 
+    @Test func aNoticeShowsOverTheAgentLine() {
+        let resolved = AskRestingContent.resolve(
+            isListening: false,
+            transcript: "",
+            agentMessage: "Thinking…",
+            mirrorsPageURL: true,
+            isFocused: false,
+            typedText: "",
+            notice: "Opened in Background",
+            noticeSymbol: "plus.square.on.square",
+            status: nil,
+            placeholder: "Search",
+            currentURL: "https://www.example.com/path"
+        )
+        #expect(resolved == .notice("Opened in Background", symbol: "plus.square.on.square"))
+        #expect(resolved?.isNotice == true)
+    }
+
     @Test func theFullAddressLeavesTheFieldShowingTheURL() {
         func resolve(_ url: String, notice: String? = nil) -> AskRestingContent? {
             AskRestingContent.resolve(

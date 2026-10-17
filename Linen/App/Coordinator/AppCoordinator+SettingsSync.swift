@@ -76,7 +76,17 @@ extension AppCoordinator {
         browser.downloads.onFinished = { filename in
             let windows = targets()
             (windows.first { $0.isKeyWindow } ?? windows.last)?
-                .notice.show(String(localized: "Downloaded \(filename)"))
+                .notice.show(String(localized: "Downloaded \(filename)"), symbol: "arrow.down.circle")
+        }
+        browser.downloads.onStarted = { filename in
+            let windows = targets()
+            (windows.first { $0.isKeyWindow } ?? windows.last)?
+                .notice.show(String(localized: "notice.downloadStarted", defaultValue: "Downloading \(filename)"), symbol: "arrow.down.circle")
+        }
+        browser.downloads.onFailed = { filename in
+            let windows = targets()
+            (windows.first { $0.isKeyWindow } ?? windows.last)?
+                .notice.show(String(localized: "Couldn’t download \(filename)"), symbol: "arrow.down.circle", isWarning: true)
         }
         browser.downloads.onBegin = {
             targets().first { $0.isKeyWindow }?.downloadFlights.launch()

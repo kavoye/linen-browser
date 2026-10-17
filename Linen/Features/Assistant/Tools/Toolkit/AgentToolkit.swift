@@ -389,6 +389,7 @@ final class AgentToolkit {
             }
             let tab = browser.newTab(url: url, transition: .agent)
             agentOpenedTabIDs.insert(tab.id)
+            browser.onTabAlert?(.agentOpened(tab))
             tab.assistantAccess.pageChanged(url: url)
             let access = await authorize(.read, in: tab.webView, requiresTaskTab: false)
             if let output = cancellationOutput(for: step) {
@@ -428,6 +429,7 @@ final class AgentToolkit {
         }
         let tab = browser.newTab()
         agentOpenedTabIDs.insert(tab.id)
+        browser.onTabAlert?(.agentOpened(tab))
         let output = "New empty tab opened and active."
         completeTool(step, output: output)
         return output
@@ -444,6 +446,7 @@ final class AgentToolkit {
             return output
         }
         browser.activate(tab)
+        browser.onTabAlert?(.agentSwitched(tab))
         let output = "Switched to “\(tab.title)”."
         completeTool(step, output: output)
         return output
@@ -464,6 +467,7 @@ final class AgentToolkit {
                 return output
             }
             browser.close(tab)
+            browser.onTabAlert?(.agentClosed(tab.title))
             let output = "Closed “\(tab.title)”."
             completeTool(step, output: output)
             return output
@@ -479,6 +483,7 @@ final class AgentToolkit {
             return output
         }
         browser.close(active)
+        browser.onTabAlert?(.agentClosed(active.title))
         let output = "Closed the active tab."
         completeTool(step, output: output)
         return output
@@ -502,6 +507,7 @@ final class AgentToolkit {
         if let videoID = resolved.videoID, let watch = Self.watchURL(videoID: videoID) {
             let tab = browser.newTab(url: watch, activate: !media.isEnabled, transition: .agent)
             agentOpenedTabIDs.insert(tab.id)
+            browser.onTabAlert?(.agentOpened(tab))
             media.controlTab(
                 webView: tab.webView,
                 title: topic,
@@ -521,6 +527,7 @@ final class AgentToolkit {
         }
         let fallbackTab = browser.newTab(url: fallbackURL, transition: .agent)
         agentOpenedTabIDs.insert(fallbackTab.id)
+        browser.onTabAlert?(.agentOpened(fallbackTab))
         let output = "Couldn't resolve a video directly; opened the results in a tab instead."
         completeTool(
             step,

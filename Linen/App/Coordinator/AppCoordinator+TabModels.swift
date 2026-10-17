@@ -74,10 +74,31 @@ extension AppCoordinator {
             Pipeline.log.notice("media: WebKit reports the picture \(isOut ? "out" : "home", privacy: .public)")
             self?.media.setPictureInPicture(isOut, for: tab.webView, source: .webKit)
         }
+        model.onTabAlert = { [weak self, weak model] alert in
+            guard let self, model === browser else { return }
+            showTabAlert(alert)
+        }
         model.onPictureReturnExpected = { [weak self] tab in
             guard let self, media.notePictureReturnAsk(for: tab.webView) else { return }
             Pipeline.log.notice("media: the floating window wants to hand the video back")
             makeRoomForPicture(in: tab.webView)
+        }
+    }
+
+    private func showTabAlert(_ alert: BrowserModel.TabAlert) {
+        switch alert {
+        case .openedInBackground:
+            notice.show(String(localized: "Opened in Background"), symbol: "plus.square.on.square")
+        case .agentOpened(let tab):
+            let address = AskRestingContent.displayAddress(for: tab.urlString)
+            notice.show(
+                address.isEmpty ? String(localized: "Assistant opened a tab") : String(localized: "Assistant opened \(address)"),
+                symbol: "plus.square.on.square"
+            )
+        case .agentSwitched(let tab):
+            notice.show(String(localized: "Assistant switched to “\(tab.title)”"), symbol: "square.on.square")
+        case .agentClosed(let title):
+            notice.show(String(localized: "Assistant closed “\(title)”"), symbol: "xmark.square")
         }
     }
 
