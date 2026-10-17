@@ -4,11 +4,12 @@
 import SwiftUI
 
 enum AutofillSuggestionLayout {
-    static let footerHeight: CGFloat = 34
-    static let rowHeight: CGFloat = 46
-    static let rowSpacing: CGFloat = 2
+    static let footerHeight: CGFloat = 24
+    static let rowHeight: CGFloat = 42
+    static let rowSpacing: CGFloat = 0
     static let listPadding: CGFloat = 5
-    static let chromeHeight = footerHeight + 1
+    static let cornerRadius: CGFloat = 10
+    static let chromeHeight = footerHeight + 1 + listPadding * 2
     static let minimumHeight = chromeHeight + rowHeight + listPadding * 2
 
     static func height(for count: Int) -> CGFloat {
@@ -41,6 +42,13 @@ struct AutofillSuggestionList: View {
         }
     }
 
+    @State private var hoveredID: UUID?
+    @State private var footerHovered = false
+
+    private var highlightedID: UUID? {
+        footerHovered ? nil : hoveredID ?? selection.keyboardID
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollViewReader { proxy in
@@ -49,28 +57,50 @@ struct AutofillSuggestionList: View {
                         ForEach(suggestions) { suggestion in
                             AutofillSuggestionRow(
                                 suggestion: suggestion, symbol: symbol,
-                                selected: selection.keyboardID == suggestion.id,
-                                choose: { choose(suggestion.id) }
+                                highlighted: highlightedID == suggestion.id,
+                                choose: { choose(suggestion.id) },
+                                hover: { inside in
+                                    if inside {
+                                        hoveredID = suggestion.id
+                                    } else if hoveredID == suggestion.id {
+                                        hoveredID = nil
+                                    }
+                                }
                             )
                             .id(suggestion.id)
                         }
                     }
                     .padding(AutofillSuggestionLayout.listPadding)
                 }
+                .scrollIndicators(.never)
                 .onChange(of: selection.keyboardID) { _, id in
                     if let id {
+                        hoveredID = nil
                         proxy.scrollTo(id)
                     }
                 }
             }
-            Divider()
-            Button("Autofill Settings…", action: manage)
-                .buttonStyle(.plain).focusable(false).font(.system(size: 12))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12).frame(height: AutofillSuggestionLayout.footerHeight)
+            Divider().padding(.horizontal, AutofillSuggestionLayout.listPadding + 9)
+            Button(action: manage) {
+                Text("Autofill Settings…")
+                    .font(.system(size: 13))
+                                        .padding(.horizontal, 9)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .contentShape(.rect)
+                    .background(footerHovered ? Color.primary.opacity(0.1) : .clear, in: .rect(cornerRadius: 5))
+            }
+            .buttonStyle(.plain).focusable(false)
+            .frame(height: AutofillSuggestionLayout.footerHeight)
+            .padding([.horizontal, .bottom], AutofillSuggestionLayout.listPadding)
+            .padding(.top, AutofillSuggestionLayout.listPadding)
+            .onHover { footerHovered = $0 }
         }
-        .background(.regularMaterial, in: .rect(cornerRadius: 10))
-        .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(.primary.opacity(0.12)) }
+        .background { VisualEffectView(material: .menu) }
+        .clipShape(.rect(cornerRadius: AutofillSuggestionLayout.cornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: AutofillSuggestionLayout.cornerRadius)
+                .strokeBorder(.primary.opacity(0.1), lineWidth: 0.5)
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Autofill suggestions for \(origin)")
     }
@@ -79,16 +109,21 @@ struct AutofillSuggestionList: View {
 private struct AutofillSuggestionRow: View {
     let suggestion: AutofillSuggestion
     let symbol: String
-    let selected: Bool
+    let highlighted: Bool
     let choose: () -> Void
-    @State private var hovered = false
+    let hover: (Bool) -> Void
 
     var body: some View {
         Button(action: choose) {
-            HStack(spacing: 10) {
-                Image(systemName: symbol).frame(width: 20).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: suggestion.title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+            HStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .symbolVariant(.fill)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 20)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: suggestion.title).font(.system(size: 13)).lineLimit(1)
                     if !suggestion.detail.isEmpty {
                         Text(verbatim: suggestion.detail).font(.system(size: 11)).lineLimit(1)
                             .foregroundStyle(.secondary)
@@ -99,10 +134,10 @@ private struct AutofillSuggestionRow: View {
             .padding(.horizontal, 9)
             .frame(height: AutofillSuggestionLayout.rowHeight)
             .contentShape(.rect)
-            .background(selected || hovered ? Color.accentColor.opacity(0.18) : .clear, in: .rect(cornerRadius: 6))
+            .background(highlighted ? Color.primary.opacity(0.1) : .clear, in: .rect(cornerRadius: 5))
         }
         .buttonStyle(.plain)
         .focusable(false)
-        .onHover { hovered = $0 }
+        .onHover(perform: hover)
     }
 }

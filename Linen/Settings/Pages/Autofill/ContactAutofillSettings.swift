@@ -28,7 +28,7 @@ struct ContactAutofillSettings: View {
         AutofillSavePromptReset(kind: .contact, profileID: store.profile.id)
         SettingsSection(title: "Saved addresses", symbol: "person.crop.rectangle", accessory: {
             SettingsButton(title: "Add Address", symbol: "plus") { editing = AutofillContact() }
-                .disabled(!store.isLoaded || store.isBusy || store.contacts.count >= 100)
+                .disabled(!store.isLoaded || store.contacts.count >= 100)
         }, content: {
             if store.isLoaded && store.contacts.isEmpty {
                 SettingsEmptyState(symbol: "person.crop.rectangle", title: "No saved addresses", caption: "Save an address to fill forms.")
@@ -42,7 +42,7 @@ struct ContactAutofillSettings: View {
                     .buttonStyle(.bordered).fixedSize()
                 }
             }
-            AutofillPageStatus(isBusy: store.isBusy, error: store.error ?? saveError, kind: .contact)
+            AutofillPageStatus(isBusy: store.isBusy && !store.isLoaded, error: store.error ?? saveError, kind: .contact)
         })
         .task { await store.load() }
         .onDisappear { store.lock(); editing = nil }

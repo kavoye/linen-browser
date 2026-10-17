@@ -73,7 +73,7 @@ struct PasswordSettings: View {
                     ToolbarSearchField(query: $query, placeholder: "Search passwords")
                 }
                 ToolbarChip(symbol: "plus", label: "Add Password") { showsAdd = true }
-                    .disabled(!model.isLoaded || model.isBusy || provider != nil)
+                    .disabled(!model.isLoaded || provider != nil)
             }
         }, content: {
             if model.isLoaded {
@@ -88,14 +88,13 @@ struct PasswordSettings: View {
                     SiteRow(host: entry.origin, summary: entry.username) {
                         HStack(spacing: 8) {
                             Button("Edit…") { Task { editing = await model.password(entry.id) } }
-                                .disabled(provider != nil || model.isBusy)
+                                .disabled(provider != nil)
                             Button("Remove", role: .destructive) { removing = entry }
-                                .disabled(model.isBusy)
                         }
                         .buttonStyle(.bordered).fixedSize()
                     }
                 }
-                AutofillPageStatus(isBusy: model.isBusy, error: model.error, kind: .password)
+                AutofillPageStatus(isBusy: false, error: model.error, kind: .password)
             } else {
                 PasswordSettingsAccess(model: model)
             }

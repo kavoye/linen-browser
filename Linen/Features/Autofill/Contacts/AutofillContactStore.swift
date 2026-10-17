@@ -59,7 +59,14 @@ final class AutofillContactStore {
 
     @discardableResult
     func remove(_ id: UUID) async -> Bool {
-        await change { $0.filter { $0.id != id } }
+        let previous = contacts
+        let revision = revision
+        contacts.removeAll { $0.id == id }
+        let removed = await change { $0.filter { $0.id != id } }
+        if !removed, self.revision == revision {
+            contacts = previous
+        }
+        return removed
     }
 
     private func change(_ transform: @escaping @Sendable ([AutofillContact]) -> [AutofillContact]) async -> Bool {

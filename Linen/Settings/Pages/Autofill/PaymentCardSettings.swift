@@ -34,7 +34,7 @@ struct PaymentCardSettings: View {
         AutofillSavePromptReset(kind: .card, profileID: model.profileID)
         SettingsSection(title: "Saved cards", symbol: "creditcard", accessory: {
             SettingsButton(title: "Add Card", symbol: "plus") { showsAddCard = true }
-                .disabled(model.cards == nil || model.isBusy)
+                .disabled(model.cards == nil)
         }, content: {
             if let cards = model.cards {
                 if cards.isEmpty {
@@ -47,7 +47,6 @@ struct PaymentCardSettings: View {
                             Button("Remove", role: .destructive) { removing = card }
                         }
                         .buttonStyle(.bordered).fixedSize()
-                        .disabled(model.isBusy)
                     }
                 }
             } else if !model.isBusy, model.profileID != Profile.privateID {
@@ -60,7 +59,7 @@ struct PaymentCardSettings: View {
                 .frame(maxWidth: .infinity, minHeight: 140)
                 .padding(24)
             }
-            AutofillPageStatus(isBusy: model.isBusy, error: model.error, kind: .card)
+            AutofillPageStatus(isBusy: model.isBusy && model.cards == nil, error: model.error, kind: .card)
         })
         .task { await model.unlock() }
         .onDisappear(perform: lock)

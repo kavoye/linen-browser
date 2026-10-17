@@ -205,7 +205,7 @@ final class AutofillSuggestions {
             page = page.intersection(screen.visibleFrame)
         }
         guard !page.isNull, !page.isEmpty, page.intersects(field) else { return }
-        let width = min(360.0, page.width - 16)
+        let width = min(max(field.width, 240), 420, page.width - 16)
         let availableBelow = max(0, field.minY - page.minY - 12)
         let availableAbove = max(0, page.maxY - field.maxY - 12)
         let desiredHeight = AutofillSuggestionLayout.height(for: records.count)
@@ -232,7 +232,7 @@ final class AutofillSuggestions {
             }
         )
         .frame(width: frame.width, height: frame.height, alignment: .topLeading)
-        .clipShape(.rect(cornerRadius: 10)))
+        .clipShape(.rect(cornerRadius: AutofillSuggestionLayout.cornerRadius)))
         content.sizingOptions = []
         content.safeAreaRegions = []
         content.frame = NSRect(origin: .zero, size: frame.size)

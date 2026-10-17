@@ -47,7 +47,12 @@ final class PaymentCardSettingsModel {
     }
 
     func remove(_ id: UUID) async {
-        _ = await perform { try await vault.remove(id, using: $0) }
+        let previous = cards
+        let revision = revision
+        cards?.removeAll { $0.id == id }
+        if await !perform({ try await vault.remove(id, using: $0) }), self.revision == revision {
+            cards = previous
+        }
     }
 
     func lock() {

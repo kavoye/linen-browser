@@ -74,7 +74,12 @@ final class PasswordSettingsModel {
     }
 
     func remove(_ id: UUID) async {
-        _ = await change { $0.filter { $0.id != id } }
+        let previous = entries
+        let revision = revision
+        entries.removeAll { $0.id == id }
+        if await !change({ $0.filter { $0.id != id } }), self.revision == revision {
+            entries = previous
+        }
     }
 
     private func change(_ transform: @escaping @Sendable ([SavedPassword]) -> [SavedPassword]) async -> Bool {
