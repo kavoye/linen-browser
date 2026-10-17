@@ -50,14 +50,19 @@ private struct DownloadsPreviewRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 6)
+            .padding(.trailing, showsControl ? 22 : 0)
             .padding(.vertical, 5)
             .contentShape(Rectangle())
-            .hoverBackground(
-                isActive: hovering,
-                in: RoundedRectangle(cornerRadius: Self.rowRadius, style: .continuous)
-            )
         }
         .buttonStyle(.plain)
+        .overlay(alignment: .trailing) {
+            control
+                .padding(.trailing, 6)
+        }
+        .hoverBackground(
+            isActive: hovering,
+            in: RoundedRectangle(cornerRadius: Self.rowRadius, style: .continuous)
+        )
         .contextMenu { menu }
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
@@ -65,6 +70,22 @@ private struct DownloadsPreviewRow: View {
 
     private static var rowRadius: CGFloat {
         Theme.Radius.nested(in: Theme.Radius.systemPopover, inset: PopoverMenuRow<EmptyView>.inset)
+    }
+
+    private var showsControl: Bool {
+        item.isRunning || hovering
+    }
+
+    @ViewBuilder private var control: some View {
+        if item.isRunning {
+            ChromeIcon.rowControl(symbol: "stop.fill", help: String(localized: "Stop")) {
+                downloads.cancel(item)
+            }
+        } else if hovering {
+            CloseButton(help: String(localized: "Remove from List")) {
+                downloads.remove(item)
+            }
+        }
     }
 
     @ViewBuilder private var menu: some View {

@@ -113,7 +113,7 @@ private struct DownloadFileRow: View {
                     Spinner(size: 12)
                         .foregroundStyle(.secondary)
                 }
-                ChromeIcon.rowControl(symbol: "xmark", help: String(localized: "Stop")) {
+                ChromeIcon.rowControl(symbol: "stop.fill", help: String(localized: "Stop")) {
                     downloads.cancel(item)
                 }
             } else {
