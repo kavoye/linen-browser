@@ -16,16 +16,6 @@
     "%@" : {
 
     },
-    "%@\n%@\n\nChoose access:\n• Read Only: read page content.\n• Allow Control: also click, type, and navigate." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@\n%2$@\n\nChoose access:\n• Read Only: read page content.\n• Allow Control: also click, type, and navigate."
-          }
-        }
-      }
-    },
     "%@ — %@" : {
       "localizations" : {
         "en" : {
@@ -56,6 +46,9 @@
     },
     "%@ doesn’t offer suggestions." : {
 
+    },
+    "%@ finished working." : {
+      "comment" : "Message that ends an external assistant’s task in the assistant conversation. %@ is the connected app’s name, e.g. Claude Code."
     },
     "%@ in use" : {
       "comment" : "Tooltip on the permission badge in the address bar while a website is actively using a capability. %@ is the permission's own name, itself localized: Camera, Microphone, Location or Notifications. The phrase continues from that noun, so it is a fragment rather than a sentence."
@@ -93,16 +86,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ wants to open %2$@."
-          }
-        }
-      }
-    },
-    "%@ wants to open %@.\n\nIt will be able to read the page, click, type, and navigate." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ wants to open %2$@.\n\nIt will be able to read the page, click, type, and navigate."
           }
         }
       }
@@ -280,29 +263,6 @@
         }
       }
     },
-    "%lld links" : {
-      "comment" : "Label on the disclosure control of one step row in the agent activity panel; %lld is how many links that step collected. Alternates with “Inspect” when there are none. Narrow column — keep it short.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld link"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld links"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld loaded unread notifications" : {
 
     },
@@ -433,9 +393,6 @@
           }
         }
       }
-    },
-    "%lld questions" : {
-
     },
     "%lld skipped" : {
       "comment" : "GitHub checks summary part, joined into a list like “4 successful, 1 skipped”."
@@ -593,15 +550,6 @@
     "1 tab" : {
 
     },
-    "100 requests" : {
-
-    },
-    "250 requests" : {
-
-    },
-    "500 requests" : {
-
-    },
     "A blocked pop-up appears in the toolbar so you can open it." : {
       "comment" : "Caption for the Block and Notify pop-up choice. One sentence."
     },
@@ -673,9 +621,6 @@
     },
     "Acknowledgements" : {
       "comment" : "Row on the About settings page, and the title of the page it opens: the open source packages that ship inside Linen, with the license text of each. Use the established word for a credits list of this kind; Title Case."
-    },
-    "Acting on websites" : {
-
     },
     "Actions" : {
       "comment" : "Section heading in the ⌘K palette over the app's own commands (New Tab, Settings, Clear History…). Plural noun, Title Case."
@@ -803,9 +748,6 @@
     "All pull requests" : {
 
     },
-    "all time" : {
-      "comment" : "Lowercase phrase naming the widest time range, inserted mid-sentence into the confirmation before clearing browsing data, which reads roughly: browsing history will be cleared for all time. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised menu label All time is a separate string."
-    },
     "All time" : {
       "comment" : "Option in the Time range pop-up menu on the Privacy settings page, meaning there is no limit on how far back data is cleared."
     },
@@ -815,17 +757,11 @@
     "Allow “%@” on %@?" : {
       "comment" : "Heading of the alert asking whether the assistant may click a control that would buy, transfer, delete or post something. The first %@ is the control's label taken from the web page (in the page's own language, inside curly quotes); the second is the website's hostname, e.g. example.com."
     },
+    "Allow “%@” to Use Linen?" : {
+      "comment" : "Title of the prompt shown when an external app connects through MCP. %@ is the app’s name, e.g. Claude Code."
+    },
     "Allow “%@”?" : {
       "comment" : "Heading of the alert asking whether the assistant may click a control that would buy, transfer, delete or post something, used when no website can be named. %@ is the control's label taken from the web page, in the page's own language and inside curly quotes."
-    },
-    "Allow %@ to Access These Tabs?" : {
-
-    },
-    "Allow %@ to Access This Tab?" : {
-
-    },
-    "Allow a hosted shell to run commands and create files. Extra charges may apply." : {
-
     },
     "Allow Assistant on %@?" : {
 
@@ -865,9 +801,6 @@
     },
     "Already installed in Linen" : {
 
-    },
-    "Also clears your start page tiles and your conversations with the assistant." : {
-      "comment" : "Caption under the Browsing history checkbox in the Clear browsing data section, naming the two other things that go with the history. Start page tiles are the frequently visited websites shown on a new tab; the assistant is the AI feature."
     },
     "Also clears your start page tiles." : {
       "comment" : "Message in the Clear history dialog, which clears history only. Start page tiles are the frequently visited websites shown on a new tab, and they go because they are built from history. Third person singular."
@@ -925,9 +858,6 @@
     "Any server that uses the OpenAI chat API." : {
       "comment" : "Settings → Assistant → Add a provider. Caption on the row for connecting a server the user runs themselves."
     },
-    "API configuration" : {
-
-    },
     "API JSON" : {
 
     },
@@ -945,6 +875,9 @@
     },
     "Apple Intelligence unavailable, using OpenAI" : {
       "comment" : "Status message shown when the on-device model cannot answer and Linen falls back to OpenAI. Both are product/vendor names — leave as is."
+    },
+    "Applies to every page on %@." : {
+      "comment" : "Caption under Assistant Access in a website’s settings. %@ is the site the setting covers, e.g. google.com."
     },
     "Apply" : {
       "comment" : "Button beside the field where a model identifier is typed by hand in Settings > Provider. A verb (a command)."
@@ -1159,9 +1092,6 @@
     "background scripts" : {
       "comment" : "The same kind of data named partway through a sentence, joined with others into a summary under a website's name. Lower case; never shown alone."
     },
-    "Background scripts" : {
-      "comment" : "One kind of data a website stores: service workers, which are scripts a website leaves behind to run when it is not open. Named for what it does rather than by its technical name."
-    },
     "balanced · default" : {
       "comment" : "Short note beside one suggested model in the model pop-up menu, marking it as the balanced choice and the one used unless another is picked. The middle dot separates the two words and should be kept. Lowercase, and the space is very tight."
     },
@@ -1369,9 +1299,6 @@
     "Checking for updates…" : {
       "comment" : "Status line in the update row on the About settings page while a check is running."
     },
-    "Checking the connection" : {
-
-    },
     "Checking this page…" : {
 
     },
@@ -1444,8 +1371,8 @@
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
-    "Choose how Linen listens and speaks. Voices on this Mac are free. OpenAI voices are billed to your API key." : {
-      "comment" : "Voice settings page caption."
+    "Choose how Linen listens and speaks. Voices on this Mac are free. OpenAI charges its voices to your API key." : {
+      "comment" : "Settings, Voice: page description."
     },
     "Choose how websites behave by default. Websites with custom settings are listed below." : {
       "comment" : "Caption under the Websites settings page title. The list it mentions is the Custom settings section further down the page."
@@ -1467,6 +1394,9 @@
     },
     "Choose the bookmarks file you exported from another browser." : {
       "comment" : "Message at the top of the macOS file panel that Choose File… opens. It tells the user which file to pick."
+    },
+    "Choose the models for listening and speech." : {
+      "comment" : "Settings, Assistant, OpenAI developer options: caption for the Voice models page."
     },
     "Choose the OpenAI voice that reads answers aloud." : {
       "comment" : "Settings search result detail for the OpenAI reading voice."
@@ -1722,20 +1652,14 @@
     "Configure one hosted shell with an automatic container or an existing container ID. Local shell execution is not supported." : {
 
     },
-    "Connect an external assistant to tabs you choose." : {
-
-    },
     "Connect any server that uses the OpenAI chat API. Its base URL usually ends in /v1." : {
 
-    },
-    "Connect external assistants to tabs you choose. Private tabs are never shared." : {
-      "comment" : "MCP settings: private browsing pauses access without changing the saved enabled preference."
     },
     "Connect GitHub" : {
 
     },
-    "Connect services your assistant can use." : {
-
+    "Connect services the assistant can use." : {
+      "comment" : "Settings, Assistant, OpenAI: caption for the Connections page (remote MCP services)."
     },
     "Connected clients" : {
 
@@ -1745,12 +1669,6 @@
     },
     "Connection actions" : {
 
-    },
-    "Connection is not secure" : {
-      "comment" : "Label for the open-padlock glyph in the address bar on a plain http page. Complete sentence in sentence case, no final period."
-    },
-    "Connection is secure" : {
-      "comment" : "Label for the padlock in the address bar on an https page. Complete sentence in sentence case, with no final period."
     },
     "Connections" : {
 
@@ -1811,9 +1729,6 @@
     },
     "cookies" : {
       "comment" : "The same kind of data named partway through a sentence, joined with others into a summary under a website's name. Lower case; never shown alone."
-    },
-    "Cookies" : {
-      "comment" : "One kind of data a website stores, shown beside a website's name in the Website data list. The standard web term; keep the word browsers use in this language."
     },
     "cookies and site data" : {
       "comment" : "Lowercase name of one kind of browsing data, inserted mid-sentence into the confirmation before clearing, which reads roughly: cookies and site data will be cleared for the last hour. Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Cookies and site data is a separate string."
@@ -2171,9 +2086,6 @@
     "Edit a custom provider’s server address." : {
 
     },
-    "Edit additional parameters and hosted tool definitions." : {
-
-    },
     "Edit connection" : {
 
     },
@@ -2197,6 +2109,9 @@
     },
     "Edit Question" : {
 
+    },
+    "Edit request parameters and hosted tool definitions." : {
+      "comment" : "Settings, Assistant, OpenAI developer options: caption for the API JSON editor."
     },
     "Edit Space…" : {
 
@@ -2370,8 +2285,8 @@
     "Explain this GitHub pull request and summarize any visible check failures or review requests. Say which details are unavailable." : {
 
     },
-    "Export your bookmarks as an HTML file in the other browser first." : {
-
+    "Export your bookmarks as an HTML file from Safari, Chrome, Firefox, or Edge, then import it here." : {
+      "comment" : "Settings, General: caption for the bookmark import row. Browser names stay in English."
     },
     "Extended reasoning for difficult tasks." : {
 
@@ -2544,9 +2459,6 @@
     "Free space" : {
       "comment" : "Row label in the context window popover next to the assistant composer: part of the context window that is still unused."
     },
-    "Frees up space. Pages load more slowly the next time." : {
-      "comment" : "Caption under Cached files on the Privacy settings page. Only the next visit to a website is slower."
-    },
     "Frequently Visited" : {
       "comment" : "Title of the start page block showing the sites you open most. Title Case, matching the other block titles."
     },
@@ -2709,9 +2621,6 @@
     "History" : {
       "comment" : "Used in two places: the title of the History block on the start page, and the heading of the full browsing-history page. A noun."
     },
-    "History and website data" : {
-      "comment" : "Heading of the Privacy settings group holding how long history is kept and how much websites have stored. A noun phrase covering both, not an instruction."
-    },
     "History…" : {
       "comment" : "Item in the ••• menu of the Minimal window style floating bar. Opens the History page."
     },
@@ -2789,9 +2698,6 @@
     },
     "Import" : {
       "comment" : "Used twice for bringing bookmarks in: the heading of the section on the General settings page (a noun there), and the confirming button in the import dialog and the file panel (a verb there)."
-    },
-    "Import an HTML file from Safari, Chrome, Firefox, or Edge." : {
-
     },
     "Import Bookmarks" : {
       "comment" : "Heading of the confirmation dialog shown after the file is read and before anything is imported. Title Case."
@@ -2892,6 +2798,9 @@
     "Issues" : {
       "comment" : "Command palette GitHub mode: opens the repository’s issues page."
     },
+    "It can open tabs, and read and control websites using the same Assistant Access settings as Linen’s assistant. Access ends when it disconnects." : {
+      "comment" : "Body of the external connection prompt. “It” is the connecting app."
+    },
     "Its tabs close, and its sign-ins, history and other data are deleted. You can’t undo this." : {
 
     },
@@ -2985,11 +2894,17 @@
     "left ⌥" : {
       "comment" : "Name of one physical modifier key in the shortcut recorder in Settings, where the two sides of the keyboard have to be told apart. Only the side word is translated — the symbol is the glyph macOS prints on the key, so keep it exactly and keep it beside the word. Very tight: this is a key cap. The glyph is Option."
     },
-    "Left to the assistant" : {
-
-    },
     "Less transparent" : {
 
+    },
+    "Let a shell at OpenAI run commands and create files. OpenAI may charge extra." : {
+      "comment" : "Settings, Assistant, OpenAI developer options: caption for the hosted shell switch."
+    },
+    "Let apps such as Claude Code use the assistant’s tools." : {
+      "comment" : "Settings, Assistant: caption for External connections, the MCP server page. Claude Code is an app name."
+    },
+    "Let apps such as Claude Code use the assistant’s tools. Linen asks you once for each connection. Websites follow your Assistant Access settings." : {
+      "comment" : "Settings, Assistant, External connections: caption for the MCP server switch. Assistant Access is the per-website setting name."
     },
     "Library" : {
       "comment" : "Heading of the commands in the ⌘K command palette that open one of the browser’s own pages or panels: history, downloads, settings, extensions. Title Case."
@@ -3033,6 +2948,9 @@
     "Linen couldn’t unlock or save your cards in Keychain. Try again in a signed build." : {
 
     },
+    "Linen couldn’t verify who made this app." : {
+      "comment" : "External connection prompt, shown when the connecting app has no valid developer signature."
+    },
     "Linen deletes the key from your Keychain. To use %@ again, add a new key." : {
 
     },
@@ -3071,9 +2989,6 @@
     },
     "Link Copied" : {
       "comment" : "Brief notice confirming the page's address is now on the clipboard. Title Case, as the app's other short notices are; a past participle, not a command."
-    },
-    "Links" : {
-
     },
     "Links Copied" : {
       "comment" : "Passing notice under the address field after several web addresses are copied at once. Plural of Link Copied. Title case."
@@ -3135,9 +3050,6 @@
     "local storage" : {
       "comment" : "The same kind of data named partway through a sentence, joined with others into a summary under a website's name. Lower case; never shown alone."
     },
-    "Local storage" : {
-      "comment" : "One kind of data a website stores, covering the web storage and database APIs together. Shown beside a website's name in the Website data list."
-    },
     "location" : {
       "comment" : "Lowercase name of one website permission, inserted mid-sentence into the confirmation: Are you sure you want to remove the location setting for every website? Deliberately lowercase — do not capitalise it, even in languages that capitalise nouns. The capitalised row label Location is a separate string."
     },
@@ -3151,9 +3063,6 @@
 
     },
     "Long" : {
-
-    },
-    "Long tasks" : {
 
     },
     "Look things up with the search engine." : {
@@ -3307,9 +3216,6 @@
 
     },
     "Model limit unavailable" : {
-
-    },
-    "Model requests" : {
 
     },
     "model, voice, API key" : {
@@ -3593,9 +3499,6 @@
     "No connected services" : {
 
     },
-    "No connection to check" : {
-      "comment" : "Label used where the address bar's security glyph has nothing to report — no page is loaded. Sentence case, no final period."
-    },
     "No context to compact" : {
 
     },
@@ -3616,9 +3519,6 @@
     },
     "No key yet" : {
       "comment" : "Settings → Assistant. Shown under a provider name when it has no API key."
-    },
-    "No limit" : {
-
     },
     "No lyrics found" : {
       "comment" : "Title of the empty state in the lyrics view when nothing matched the track. Sentence case with no final full stop."
@@ -3656,9 +3556,6 @@
     "No passwords match your search." : {
 
     },
-    "No preference — the assistant chose" : {
-
-    },
     "No provider is ready" : {
       "comment" : "Settings → Assistant. Title of the status shown when no provider can serve replies at all."
     },
@@ -3694,9 +3591,6 @@
     },
     "No server answers to that address. Check the spelling." : {
       "comment" : "Explanatory text on the error page shown when a website's address cannot be resolved; the headline above it is a separate entry."
-    },
-    "No Tab Available to Share" : {
-
     },
     "No trackers found" : {
 
@@ -3860,17 +3754,8 @@
     "Open a web address in the active tab." : {
 
     },
-    "Open a webpage in Linen, then ask %@ to try again." : {
-
-    },
     "Open a website even if its certificate isn’t trusted. Linen forgets your choice when you quit." : {
       "comment" : "Caption under the Allow untrusted certificates row in Advanced settings, and its Settings search description. Full sentences."
-    },
-    "Open and Share" : {
-      "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
-    },
-    "Open and Share This Website?" : {
-      "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
     },
     "Open Assistant…" : {
       "comment" : "Button that opens the Assistant settings page."
@@ -3941,9 +3826,6 @@
     "Open the project page" : {
       "comment" : "Tooltip on the small button beside a package on the About settings page; it opens that package's own repository in a new tab. Sentence case, no final full stop."
     },
-    "Open this link in the task’s tab" : {
-      "comment" : "Tooltip on a link row inside an expanded step of the agent activity panel; clicking loads that link in the tab the assistant's task belongs to. Sentence case; keep the curly apostrophe."
-    },
     "Open Video in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
     },
@@ -3964,6 +3846,9 @@
     },
     "OpenAI compatible" : {
       "comment" : "Small tag beside a user-added endpoint in Settings, naming which API dialect the server speaks. OpenAI is a vendor name — leave as is; only the word compatible is translatable. Very tight space."
+    },
+    "OpenAI keeps a copy that you can retrieve through its API. Linen’s chat history doesn’t need it." : {
+      "comment" : "Settings, Assistant, OpenAI data and privacy: caption for storing replies in the user’s OpenAI account."
     },
     "OpenAI receives microphone audio during voice chat. The voice is generated by AI." : {
 
@@ -4034,9 +3919,6 @@
     "Over the limit by %@ tokens" : {
       "comment" : "Line in the context window popover next to the assistant composer, shown instead of the used and left shares when the conversation is larger than the selected model’s context window. %@ is a token count already formatted for the locale, e.g. “13.6K”."
     },
-    "Override the models used for listening and speech." : {
-
-    },
     "Page" : {
       "comment" : "Heading of the commands that act on the page being read in the ⌘K command palette: reload, find, print, zoom. Title Case, singular noun."
     },
@@ -4060,9 +3942,6 @@
     },
     "Pages the assistant checks for you." : {
       "comment" : "Side Panel: description of the Watches tab."
-    },
-    "Parts of this page aren’t encrypted" : {
-      "comment" : "Label for the address bar's warning glyph on a mixed-content page: the page is served over https but pulls some content over http. Sentence case, no final period; keep the curly apostrophe."
     },
     "Password" : {
       "comment" : "Placeholder text inside the password field of the dialog a website shows when it asks for HTTP authentication."
@@ -4100,9 +3979,6 @@
     "Pause" : {
       "comment" : "Tooltip on the play/pause button in the media player docked at the foot of the sidebar, while something is playing. Verb; keep it to one word."
     },
-    "Pause after" : {
-
-    },
     "Pause and Close" : {
       "comment" : "Tooltip on the close button in the media dock. It pauses what is playing and puts the player away; the tab it was playing from stays open. Title Case."
     },
@@ -4113,9 +3989,6 @@
       "comment" : "Caption for the Close the Player tool in assistant settings."
     },
     "Paused" : {
-
-    },
-    "Paused at the request limit you set. Choose Continue to keep going." : {
 
     },
     "Paused because the conversation is too long. Your progress is saved." : {
@@ -4460,8 +4333,8 @@
     "Recognize speech on this Mac or with OpenAI." : {
       "comment" : "Settings search result detail for the dictation engine choice."
     },
-    "Recognizes names and mixed languages better. Billed for each minute you speak." : {
-      "comment" : "Voice settings: caption for the OpenAI dictation option."
+    "Recognizes names and mixed languages better. OpenAI charges for each minute you speak." : {
+      "comment" : "Settings, Voice: caption for the OpenAI dictation option."
     },
     "Recognizes your speech on this Mac at no cost." : {
       "comment" : "Voice settings: caption for the on-device dictation option."
@@ -4668,9 +4541,6 @@
     "Repository" : {
       "comment" : "Command palette GitHub mode: row detail for a repository without a description."
     },
-    "Request Tab Access" : {
-      "comment" : "Activity title for an external connection requesting access to the visible tabs."
-    },
     "Requested access" : {
 
     },
@@ -4866,9 +4736,6 @@
 
     },
     "Save an address to fill forms." : {
-
-    },
-    "Save an extra copy for retrieval through the OpenAI API. You don’t need this for Linen’s chat history." : {
 
     },
     "Save and fill contact details." : {
@@ -5234,9 +5101,6 @@
     "Shared" : {
 
     },
-    "Shared tabs: %lld · Tool calls: %lld" : {
-      "comment" : "Native MCP connection settings or access prompt. MCP is the protocol name. Inserted client names, website addresses, and page titles are supplied at runtime; do not translate them."
-    },
     "Shares sign-ins and data with %@." : {
 
     },
@@ -5429,9 +5293,6 @@
     "Signed in as %@" : {
       "comment" : "GitHub panel options menu. %@ is the GitHub username."
     },
-    "Signs you out of most websites." : {
-      "comment" : "Caption under the Cookies and site data checkbox in the Clear browsing data section, warning what clearing them will do. The implied subject is the clearing. Third person singular; website is one word."
-    },
     "Skip" : {
 
     },
@@ -5486,8 +5347,8 @@
     "Sorted by" : {
       "comment" : "Label of the menu in the GitHub filter editor that chooses the order of the pull requests. Reads as “Sorted by: Recently updated”."
     },
-    "Sounds more natural. Billed for each answer read aloud." : {
-      "comment" : "Voice settings: caption for the OpenAI reading aloud option."
+    "Sounds more natural. OpenAI charges for each answer it reads." : {
+      "comment" : "Settings, Voice: caption for the OpenAI read-aloud option."
     },
     "Space" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the space bar."
@@ -5567,9 +5428,6 @@
     "Starting microphone…" : {
 
     },
-    "Startup & data" : {
-      "comment" : "Section title on the General settings page that groups the startup and browsing-data options. Sentence case."
-    },
     "State or region" : {
 
     },
@@ -5578,9 +5436,6 @@
     },
     "Stop" : {
       "comment" : "Serves two places: the menu bar command under View that stops the page loading, shortcut ⌘., and the tooltip on the small cross that cancels a download in progress. Imperative verb in both."
-    },
-    "Stop a long task after this many model requests. Click Continue to resume it." : {
-
     },
     "Stop and Run" : {
       "comment" : "Tooltip on the microphone button while it is listening: one click ends the utterance and sends what was heard to the assistant. Two verbs on one control, Title Case; alternates with “Click to Talk”."
@@ -5694,9 +5549,6 @@
     "Tab" : {
       "comment" : "Legend printed on a key cap in the shortcut recorder in Settings, where the user records the key that activates the assistant. Use the word your language's Apple keyboards print on that key; the cap is only a few characters wide. This one is the Tab key on the keyboard — not a browser tab."
     },
-    "Tab to share:" : {
-
-    },
     "Tabs" : {
       "comment" : "Heading of the tab commands in the ⌘K command palette: new tab, close tab, reopen, pin. Title Case, plural noun."
     },
@@ -5706,14 +5558,11 @@
     "Tabs that don’t fit a group stay where they are." : {
 
     },
-    "Tabs to share:" : {
-
-    },
     "Take this page’s place" : {
       "comment" : "Caption shown over a page while another is dragged onto it, when the window is already showing as many as it can. The page underneath goes back to being an ordinary sidebar row rather than being closed. Sentence case, no final period; curly apostrophe."
     },
-    "Talk back and forth with the assistant. Billed for each minute a conversation is open." : {
-      "comment" : "Voice settings: caption for the Voice conversation toggle."
+    "Talk back and forth with the assistant. OpenAI charges for each minute a conversation is open." : {
+      "comment" : "Settings, Voice: caption for the Voice conversation switch."
     },
     "Talk to apps outside the browser" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Apps means other applications on the Mac. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
@@ -5744,9 +5593,6 @@
     },
     "The assistant may do these without asking: %@. Change this in Assistant settings." : {
       "comment" : "Note on a website's page when the assistant holds standing permission there. %@ is a list of action kinds already worded and joined, for example purchases and money transfers. Assistant is the name of a Settings page."
-    },
-    "The assistant saves what you tell it about yourself and uses it later. When this is off, it can’t save or recall anything." : {
-
     },
     "The assistant starts fresh in this chat. Earlier messages stay visible but are no longer sent to the model." : {
       "comment" : "Body of the alert shown before resetting what the assistant remembers in the current chat."
@@ -5847,18 +5693,6 @@
     },
     "The Keychain refused to store the key (error %d)." : {
       "comment" : "Error shown when the API key could not be saved. %d is the numeric error code macOS reported. Key means API key; Keychain is Apple’s password store — use Apple’s own name for it."
-    },
-    "the last 4 weeks" : {
-      "comment" : "Lowercase phrase naming a time range, inserted mid-sentence into the confirmation before clearing browsing data, which reads roughly: browsing history will be cleared for the last 4 weeks. Deliberately lowercase, including the leading article — do not capitalise it. The capitalised menu label Last 4 weeks is a separate string."
-    },
-    "the last 7 days" : {
-      "comment" : "Lowercase phrase naming a time range, inserted mid-sentence into the confirmation before clearing browsing data, which reads roughly: browsing history will be cleared for the last 7 days. Deliberately lowercase, including the leading article — do not capitalise it. The capitalised menu label Last 7 days is a separate string."
-    },
-    "the last 24 hours" : {
-      "comment" : "Lowercase phrase naming a time range, inserted mid-sentence into the confirmation before clearing browsing data, which reads roughly: browsing history will be cleared for the last 24 hours. Deliberately lowercase, including the leading article — do not capitalise it. The capitalised menu label Last 24 hours is a separate string."
-    },
-    "the last hour" : {
-      "comment" : "Lowercase phrase naming a time range, inserted mid-sentence into the confirmation before clearing browsing data, which reads roughly: browsing history will be cleared for the last hour. Deliberately lowercase, including the leading article — do not capitalise it. The capitalised menu label Last hour is a separate string."
     },
     "The list shows the known tracker domains this page refers to. A request that is stopped before it loads can be missing." : {
 
@@ -6068,6 +5902,17 @@
     "This image couldn’t be read or is too large to process." : {
 
     },
+    "This includes %@ and other pages on %@." : {
+      "comment" : "Added to the assistant site prompt. First %@ is the current host, e.g. maps.google.com; second %@ is the site, e.g. google.com.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This includes %1$@ and other pages on %2$@."
+          }
+        }
+      }
+    },
     "This isn’t a valid URL. Try http://localhost:8000/v1" : {
       "comment" : "Error under the field where a user-added endpoint address is typed. The address is an example of the expected form and must be kept exactly as it is. URL is the technical term for a web address; curly apostrophe."
     },
@@ -6160,6 +6005,9 @@
     },
     "Tool activity" : {
       "comment" : "Row label in the context window popover next to the assistant composer: tokens taken by the actions the assistant took and the content they returned."
+    },
+    "Tool calls: %lld" : {
+      "comment" : "Settings, External Connections: number of tool calls an external app has made in this connection."
     },
     "Tool names, separated by commas" : {
 
@@ -6437,6 +6285,9 @@
     "Using `%@` from the environment." : {
       "comment" : "Caption under the API key row when the key is being taken from an environment variable rather than the Keychain. %@ is the variable’s name, for example OPENAI_API_KEY — leave it exactly as it is. The backticks mark it as code and must be kept."
     },
+    "Verified developer: %@." : {
+      "comment" : "External connection prompt. %@ is the developer name from the app’s code signature, e.g. Anthropic PBC."
+    },
     "Version %@" : {
       "comment" : "Line beside the Linen heading on the About page in Settings. %@ is the version number of the running app, for example 1.4.2."
     },
@@ -6590,11 +6441,11 @@
     "Websites get an address only when you choose one." : {
 
     },
-    "Websites the assistant may act on without asking." : {
-      "comment" : "Settings search caption for the Assistant permissions section."
-    },
     "Websites use this data to keep you signed in and remember your preferences." : {
       "comment" : "Caption under the Website data page title, saying what the stored data is for before offering to remove it. Third person plural."
+    },
+    "Websites where the assistant can act without asking you first." : {
+      "comment" : "Settings, Assistant: caption for the list of websites with saved action approvals."
     },
     "Websites with their own settings." : {
       "comment" : "Description of the Custom settings section, shown only in the Settings search results."
@@ -6611,8 +6462,8 @@
     "What the assistant may do in the browser." : {
       "comment" : "Settings search result detail for the Tools page."
     },
-    "What the assistant remembers about you. It saves your answers and what you ask it to remember, never page content, passwords, or payment details." : {
-
+    "What the assistant remembers about you. It saves your answers and what you ask it to remember. It never saves page content, passwords, or payment details." : {
+      "comment" : "Settings, Assistant, Memory: page description."
     },
     "What’s on Hacker News?" : {
       "comment" : "Label on one of three example prompt chips on the start page; clicking it asks the assistant that question. “Hacker News” is the name of a website — keep it. Keep the curly apostrophe; the prompt actually sent to the model is separate and stays in English."
@@ -6622,6 +6473,9 @@
     },
     "When the sidebar is hidden, move the pointer to the left edge of the window to see your tabs." : {
       "comment" : "Caption under the Show sidebar switch in Appearance settings, and its Settings search description."
+    },
+    "When this is off, the assistant can’t save or recall anything." : {
+      "comment" : "Settings, Assistant, Memory: caption for the Remember things about me switch."
     },
     "Where" : {
       "comment" : "Section heading in the Qualifier menu of the GitHub filter editor: search terms about the repository, organization, branch, label, and milestone."
