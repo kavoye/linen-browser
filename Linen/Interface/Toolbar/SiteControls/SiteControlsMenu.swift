@@ -16,7 +16,6 @@ struct SiteControlsMenu: View {
     @State private var isPresented = false
     @Environment(\.chromeIsLight) private var chromeIsLight
     @Environment(\.chromeIconExtent) private var extent
-    @Environment(\.chromeHoverLifts) private var hoverLifts
 
     private var tab: BrowserTab? {
         browser.activeTab
@@ -33,10 +32,7 @@ struct SiteControlsMenu: View {
             Image(systemName: "slider.horizontal.3")
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight, hovering: hovering || isPresented))
-                .hoverLift(hoverLifts && hovering && hasPage)
-                .frame(width: extent, height: extent)
-                .hoverBackground(isActive: !hoverLifts && (hovering || isPresented))
-                .contentShape(Rectangle())
+                .chromeHover(hovering && hasPage, isOn: isPresented, side: extent)
         }
         .buttonStyle(.plain)
         .fixedSize()

@@ -498,8 +498,6 @@ struct NewTabRow: View {
 struct SidebarDownloadsButton: View {
     let coordinator: AppCoordinator
 
-    @Environment(\.sidebarStyle) private var sidebarStyle
-    @Environment(\.chromeHoverLifts) private var hoverLifts
     @State private var hovering = false
     @State private var hoveringPreview = false
     @State private var previewing = false
@@ -555,10 +553,7 @@ struct SidebarDownloadsButton: View {
                     .opacity(isRunning ? 1 : 0)
                     .frame(height: isRunning ? 2 : 0)
             }
-            .hoverLift(hoverLifts && hovering)
-            .frame(width: 28, height: 28)
-            .hoverBackground(isActive: !hoverLifts && hovering)
-            .contentShape(Rectangle())
+            .chromeHover(hovering, side: 28)
         }
         .buttonStyle(.plain)
         .onGeometryChange(for: CGPoint.self) { proxy in

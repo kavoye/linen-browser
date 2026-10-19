@@ -91,8 +91,7 @@ private struct TranslationMenu: View {
             Image(systemName: "translate")
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(style)
-                .frame(width: extent, height: extent)
-                .hoverBackground(isActive: hovering)
+                .chromeHover(hovering, side: extent)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)

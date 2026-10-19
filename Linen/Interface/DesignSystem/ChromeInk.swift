@@ -182,6 +182,33 @@ extension View {
     }
 }
 
+private struct ChromeHover: ViewModifier {
+    let hovering: Bool
+    let isOn: Bool
+    let width: CGFloat
+    let height: CGFloat
+
+    @Environment(\.chromeHoverLifts) private var lifts
+
+    func body(content: Content) -> some View {
+        content
+            .hoverLift(lifts && hovering)
+            .frame(width: width, height: height)
+            .hoverBackground(isActive: !lifts && (hovering || isOn))
+            .contentShape(Rectangle())
+    }
+}
+
+extension View {
+    func chromeHover(_ hovering: Bool, isOn: Bool = false, width: CGFloat, height: CGFloat) -> some View {
+        modifier(ChromeHover(hovering: hovering, isOn: isOn, width: width, height: height))
+    }
+
+    func chromeHover(_ hovering: Bool, isOn: Bool = false, side: CGFloat) -> some View {
+        chromeHover(hovering, isOn: isOn, width: side, height: side)
+    }
+}
+
 private struct SelectionBackground<S: Shape>: ViewModifier {
     let isSelected: Bool
     let isHovering: Bool
@@ -264,7 +291,6 @@ struct ChromeIcon: View {
     @State private var hovering = false
     @Environment(\.chromeIsLight) private var chromeIsLight
     @Environment(\.chromeIconExtent) private var inheritedExtent
-    @Environment(\.chromeHoverLifts) private var hoverLifts
 
     private var side: CGFloat {
         extent ?? inheritedExtent
@@ -288,10 +314,7 @@ struct ChromeIcon: View {
                 .font(.system(size: size, weight: weight))
                 .foregroundStyle(style)
                 .offset(glyphOffset)
-                .hoverLift(hoverLifts && hovering && isEnabled)
-                .frame(width: side, height: side)
-                .hoverBackground(isActive: !hoverLifts && hovering && isEnabled)
-                .contentShape(Rectangle())
+                .chromeHover(hovering && isEnabled, side: side)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)

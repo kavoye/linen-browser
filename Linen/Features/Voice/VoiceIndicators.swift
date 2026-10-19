@@ -9,7 +9,6 @@ struct MicButton: View {
     var orbSize: CGFloat = 14
 
     @State private var hovering = false
-    @Environment(\.chromeHoverLifts) private var hoverLifts
 
     private var glyphState: PipelineState {
         coordinator.state == .idle && coordinator.browser.modelActivity.isRunning ? .executing : coordinator.state
@@ -49,10 +48,7 @@ struct MicButton: View {
                 isHighlighted: hovering,
                 orbSize: orbSize
             )
-            .hoverLift(hoverLifts && hovering)
-            .frame(width: max(20, orbSize + 2), height: max(20, orbSize + 2))
-            .hoverBackground(isActive: !hoverLifts && hovering)
-            .contentShape(Rectangle())
+            .chromeHover(hovering, side: max(20, orbSize + 2))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
