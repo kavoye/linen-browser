@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.9.1
+
+### Improved
+
+- **External assistants work like Linen's assistant.** Apps such as Claude
+  Code now use the same tools as Linen's assistant and follow the same
+  Assistant Access settings. Linen asks you once for each connection and
+  shows the app's verified developer. You no longer choose tabs to share.
+- **External assistant activity.** What an external assistant does appears in
+  the Assistant panel, with the same steps and tool calls as Linen's
+  assistant. The task ends when the app stops working or disconnects.
+- **Tasks in every tab they open.** When the assistant or an external
+  assistant opens a tab, the task also appears in that tab, and you can watch
+  it work there.
+- **Assistant access for the whole website.** Assistant Access now applies to
+  every page on a website. For example, allowing google.com also allows
+  maps.google.com. Website settings show when a choice applies to the whole
+  website.
+- **Opening websites.** The assistant can open a website in a new tab without
+  access to the tab you're on. Linen asks about the website it opens, and a
+  website you blocked stays blocked without a prompt.
+- **Faster new tabs for the assistant.** The assistant waits for a new tab to
+  show its page before it continues, so it needs fewer steps.
+- **Tracker counts.** The tracker count includes only trackers from other
+  websites. Other parts of the same website, such as cdn.example.com on
+  example.com, are no longer counted.
+- **External connections in Assistant settings.** External connections moved
+  from Settings > Advanced to Settings > Assistant.
+
+### Removed
+
+- **Pause long tasks.** The setting that paused the assistant after a number of
+  requests is removed. The assistant still stops when it repeats the same step
+  or keeps failing.
+
 ## 0.9.0
 
 ### New
