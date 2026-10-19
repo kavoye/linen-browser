@@ -12,7 +12,7 @@ import Observation
 final class BrowserMCPServer {
     private struct Connection {
         let server: MCP.Server
-        let transport: LocalMCPTransport
+        let transport: MCPStdioTransport
         let session: MCPBrowserSession
         let task: Task<Void, Never>
     }
@@ -28,6 +28,8 @@ final class BrowserMCPServer {
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private let endpoint: String
     @ObservationIgnored private var listener: LocalMCPListener?
+    @ObservationIgnored var makeToolkit: ((BrowserModel) -> AgentToolkit?)?
+    @ObservationIgnored var approveConnection: (String, MCPClientIdentity?, NSWindow?) async -> Bool = MCPAccessConsent.approve
     @ObservationIgnored private var connections: [UUID: Connection] = [:]
     @ObservationIgnored private var generation = UUID()
     @ObservationIgnored private var activeCall: (id: UUID, sessionID: UUID, task: Task<CallTool.Result, any Error>)?
@@ -112,8 +114,12 @@ final class BrowserMCPServer {
         Task { [weak self] in
             guard let self, started == generation, isEnabled, listener == nil, canListen() else { return }
             do {
-                let listener = try LocalMCPListener(path: endpoint) { [weak self] connection in
-                    self?.accept(connection)
+                let listener = try LocalMCPListener(path: endpoint) { [weak self] socket, identity in
+                    guard let self else {
+                        close(socket)
+                        return
+                    }
+                    accept(socket, identity: identity)
                 }
                 self.listener = listener
                 try await listener.start()
@@ -159,39 +165,33 @@ final class BrowserMCPServer {
 
     /// Bind to the selected window once. Later focus changes cannot retarget this connection.
     func makeSessionForConnection(
-        consent: @escaping (String, [MCPAccessConsent.Page], NSWindow?) async -> MCPAccessConsent.Access? = MCPAccessConsent.share,
-        openConsent: @escaping (String, URL, NSWindow?) async -> Bool = MCPAccessConsent.open
+        approve: ((String, MCPClientIdentity?, NSWindow?) async -> Bool)? = nil
     ) -> MCPBrowserSession? {
         guard let browser = target(), !browser.opensPrivately, !browser.context.profile.isPrivate,
               available(browser) else { return nil }
         let context = browser.context
+        let approve = approve ?? approveConnection
         return MCPBrowserSession(
             browser: browser,
             available: { [weak self, weak browser, weak context] in
                 guard let self, let browser, let context, browser.context === context else { return false }
                 return available(browser)
             },
-            consent: { [weak browser] client, pages in
-                guard let browser,
-                      let window = browser.context.extensions.adapter(for: browser)?.nativeWindow
-                else { return nil }
-                return await consent(client, pages, window)
+            approve: { [weak browser] client, identity in
+                guard let browser else { return false }
+                return await approve(client, identity, browser.context.extensions.adapter(for: browser)?.nativeWindow)
             },
-            openConsent: { [weak browser] client, url in
-                guard let browser,
-                      let window = browser.context.extensions.adapter(for: browser)?.nativeWindow
-                else { return false }
-                return await openConsent(client, url, window)
-            }
+            toolkit: makeToolkit?(browser)
         )
     }
 
-    private func accept(_ connection: NWConnection) {
+    private func accept(_ socket: Int32, identity: MCPClientIdentity?) {
         guard isEnabled, connections.count < 8, let session = makeSessionForConnection() else {
-            connection.cancel()
+            close(socket)
             return
         }
-        let transport = LocalMCPTransport(connection: connection)
+        session.identity = identity
+        let transport = MCPStdioTransport(input: socket, output: socket)
         let server = MCP.Server(
             name: "Linen", version: "1.0.0",
             instructions: MCPToolCatalog.instructions,
@@ -199,7 +199,7 @@ final class BrowserMCPServer {
         )
         let task = Task { [weak self] in
             await server.withMethodHandler(ListTools.self) { _ in
-                ListTools.Result(tools: MCPToolCatalog.entries.map(\.tool))
+                ListTools.Result(tools: MCPToolCatalog.tools())
             }
             await server.withMethodHandler(CallTool.self) { [weak self] params in
                 guard let self else { throw MCPError.connectionClosed }
@@ -211,8 +211,10 @@ final class BrowserMCPServer {
                         session.clientName = String(info.name.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) }.prefix(100))
                     }
                 }
+                close(socket)
                 await server.waitUntilCompleted()
             } catch {
+                close(socket)
             }
             self?.disconnect(session.id)
         }

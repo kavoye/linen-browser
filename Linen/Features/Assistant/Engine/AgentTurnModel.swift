@@ -100,9 +100,6 @@ final class AgentTurnModel {
     var activeTabID: UUID? {
         activeTask?.tabID
     }
-    var activeAnchorID: UUID? {
-        activeTask?.anchorID
-    }
 
     func adopt(log: any AgentTurnLogging) {
         guard self.log !== log else { return }
@@ -234,7 +231,7 @@ final class AgentTurnModel {
         let actionPolicy = actionPolicy
         runTask = Task { [weak self] in
             await LLMSettings.$scoped.withValue(modelSettings) {
-                await AgentActionConsent.$scopedPolicy.withValue(actionPolicy) {
+                await task.driver.scope(policy: actionPolicy) {
                     await runner.run(
                         utterance: contextualized,
                         task: task,

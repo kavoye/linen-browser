@@ -20,8 +20,6 @@ enum SettingsPageTitles {
             return autofill(path)
         case .privacy where path == ["website-data"]:
             return String(localized: "Website data")
-        case .advanced where path == ["mcp"]:
-            return String(localized: "External connections")
         case .advanced where path == ["webkit-features"]:
             return String(localized: "Feature flags")
         case .about where path == ["acknowledgements"]:
@@ -69,6 +67,8 @@ enum SettingsPageTitles {
             return String(localized: "Allowed without asking")
         case ["memory"]:
             return String(localized: "Memory")
+        case ["connections"]:
+            return String(localized: "External connections")
         default:
             break
         }

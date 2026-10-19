@@ -3,6 +3,27 @@
 
 import Foundation
 
+nonisolated enum AgentDriver: Sendable, Equatable {
+    case assistant
+    case external(name: String)
+
+    var externalName: String? {
+        if case .external(let name) = self {
+            return name
+        }
+        return nil
+    }
+
+    @MainActor
+    func scope<T>(policy: AgentActionPolicy, _ operation: @MainActor () async -> T) async -> T {
+        await AgentActionConsent.$scopedPolicy.withValue(policy) {
+            await AgentActionConsent.$externalClientName.withValue(externalName) {
+                await operation()
+            }
+        }
+    }
+}
+
 nonisolated struct AgentTaskContext: Sendable, Equatable {
     let id: UUID
     let tabID: UUID
@@ -11,11 +32,12 @@ nonisolated struct AgentTaskContext: Sendable, Equatable {
     let attachments: [AssistantAttachment]
     let attachmentTextOnly: Bool
     let isContinuation: Bool
+    let driver: AgentDriver
 
     init(
         id: UUID, tabID: UUID, anchorID: UUID? = nil, mentionedTabIDs: [UUID] = [],
         attachments: [AssistantAttachment] = [], attachmentTextOnly: Bool = false,
-        isContinuation: Bool = false
+        isContinuation: Bool = false, driver: AgentDriver = .assistant
     ) {
         self.id = id
         self.tabID = tabID
@@ -24,6 +46,7 @@ nonisolated struct AgentTaskContext: Sendable, Equatable {
         self.attachments = attachments
         self.attachmentTextOnly = attachmentTextOnly
         self.isContinuation = isContinuation
+        self.driver = driver
     }
 }
 

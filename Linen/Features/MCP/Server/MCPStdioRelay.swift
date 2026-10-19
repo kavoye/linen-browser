@@ -23,7 +23,7 @@ actor MCPStdioRelay {
             capabilities: .init(tools: .init()), configuration: .strict
         )
         await server.withMethodHandler(ListTools.self) { _ in
-            ListTools.Result(tools: MCPToolCatalog.entries.map(\.tool))
+            ListTools.Result(tools: MCPToolCatalog.tools())
         }
         await server.withMethodHandler(CallTool.self) { params in
             try await self.call(params)
@@ -55,10 +55,9 @@ actor MCPStdioRelay {
 
     private func call(_ params: CallTool.Parameters) async throws -> CallTool.Result {
         guard !stopped else { throw MCPError.connectionClosed }
-        guard let entry = MCPToolCatalog.entries.first(where: { $0.name == params.name }) else {
+        guard MCPToolCatalog.names.contains(params.name) else {
             throw MCPError.invalidParams("Unknown tool.")
         }
-        try entry.validate(params.arguments ?? [:])
         guard !busy else { return failure("Another operation is running. Wait for its result.") }
         busy = true
         defer { busy = false }
@@ -115,7 +114,7 @@ actor MCPStdioRelay {
             await backend.client.disconnect()
             return failure("""
                 The Linen connection was interrupted. The operation may have completed; it was not retried. \
-                On your next call Linen will reconnect with no shared tabs. Request access again, then check the page before repeating an action.
+                On your next call Linen reconnects and asks the user to allow it again. Check the page before repeating an action.
                 """)
         }
     }

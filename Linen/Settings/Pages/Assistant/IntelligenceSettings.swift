@@ -28,6 +28,8 @@ struct AssistantSettings: View {
                 AssistantGrantsPage(policy: coordinator.browser.context.actionPolicy, onBack: { model.showOverview() })
             case .memory:
                 AssistantMemoryPage(memory: coordinator.browser.memory, onBack: { model.showOverview() })
+            case .connections:
+                MCPSettingsPage(server: coordinator.mcpServer, onBack: { model.showOverview() })
             case .openAI(let page):
                 OpenAISettingsPageView(model: model, page: page)
             }
@@ -85,7 +87,7 @@ private struct AssistantOverview: View {
     let coordinator: AppCoordinator
 
     var body: some View {
-        SettingsPageHeader(title: "Assistant")
+        SettingsPageHeader(title: "Assistant", caption: AIDisclosure.settingsCaption)
 
         AnsweringNotice(model: model, coordinator: coordinator)
 
@@ -126,7 +128,12 @@ private struct AssistantOverview: View {
             .settingsAnchor("assistant.memory")
         }
 
-        Footnote(AIDisclosure.settingsCaption)
+        SettingsCard {
+            DrillInRow(title: "External connections", caption: "Let apps such as Claude Code use the assistant’s tools.") {
+                model.showConnections()
+            }
+            .settingsAnchor("assistant.connections")
+        }
     }
 }
 

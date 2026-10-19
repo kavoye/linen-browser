@@ -142,20 +142,23 @@ Loading the chosen result into a tab does not grant the assistant access to it.
 Add enforcement below the model prompt. Prompts can improve behavior but cannot
 authorize access, protect credentials or confirm an irreversible action.
 
-External MCP clients use a separate `MCPBrowserSession`, with explicit tab-and-
-origin grants and connection-local consequential-action approvals. The session
-uses `PageDriver` through a revocable `PageAutomationGuard`. It does not enter
-`AgentTurnModel` or write assistant conversation history. Each connection binds
-to one regular window when it connects. Focus changes do not retarget it.
+External MCP clients run the assistant's own tools. `MCPBrowserSession` gives
+each connection an `AgentToolkit` with an external `AgentDriver` and
+connection-local consequential-action approvals, so site access, tab scope and
+page safety are the assistant's. The only added gate is a one-time connection
+approval that names the client's verified developer. External work is logged as
+prompt-less tasks in the tab's conversation; it does not enter `AgentTurnModel`
+or the model's context. Each connection binds to one regular window when it
+connects. Focus changes do not retarget it.
 Closing or switching that window revokes its connections before replacing
 stores. Other windows keep their connections. The
 bundled `--mcp` process relays stdio to a user-only Unix socket without opening a
 second browser session. See [MCP.md](MCP.md) for the tool contract and boundaries.
 
 MCP enablement is an app-level preference. Runtime shutdown clears connections
-and grants without changing that preference. The listener belongs to the
+without changing that preference. The listener belongs to the
 application. It refuses new connections when the focused window is private.
-Existing connections to regular windows stay bound to their original window. Consent sheets attach to that window.
+Existing connections to regular windows stay bound to their original window. The approval sheet attaches to that window.
 
 `MCPClientInstaller` handles optional client setup on its own actor. It merges
 standard JSON configs and uses the installed Codex CLI on a staged TOML copy.

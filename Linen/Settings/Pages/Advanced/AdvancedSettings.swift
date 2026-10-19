@@ -5,7 +5,6 @@ import SwiftUI
 
 struct AdvancedSettings: View {
     @Bindable var settings: BrowserSettings
-    var mcpServer: BrowserMCPServer?
     var highlight: String?
 
     @FocusState private var customFieldFocused: Bool
@@ -14,9 +13,7 @@ struct AdvancedSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsMetrics.sectionSpacing) {
-            if router.path == ["mcp"], let mcpServer {
-                MCPSettingsPage(server: mcpServer) { router.back() }
-            } else if router.path == ["webkit-features"] {
+            if router.path == ["webkit-features"] {
                 WebKitFeaturesPage { router.back() }
             } else {
                 page
@@ -25,8 +22,6 @@ struct AdvancedSettings: View {
         .onChange(of: highlight, initial: true) { _, anchor in
             guard let anchor, anchor.hasPrefix("advanced.") else { return }
             switch anchor {
-            case "advanced.mcp":
-                router.open(["mcp"])
             case "advanced.features":
                 router.open(["webkit-features"])
             default:
@@ -98,18 +93,6 @@ struct AdvancedSettings: View {
                             .focused($customFieldFocused)
                     }
                 }
-            }
-        }
-
-        if mcpServer != nil {
-            SettingsCard {
-                DrillInRow(
-                    title: "External connections", symbol: "cable.connector",
-                    caption: "Connect an external assistant to tabs you choose."
-                ) {
-                    router.open(["mcp"])
-                }
-                .settingsAnchor("advanced.mcp")
             }
         }
 

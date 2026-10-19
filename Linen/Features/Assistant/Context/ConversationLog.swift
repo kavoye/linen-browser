@@ -234,6 +234,11 @@ final class ConversationLog {
 
     @discardableResult
     func beginTask(_ prompt: String, tabID: UUID) -> UUID {
+        beginTask(prompt, tabID: tabID, providerID: LLMSettings.providerID)
+    }
+
+    @discardableResult
+    func beginTask(_ prompt: String, tabID: UUID, providerID: String?) -> UUID {
         discardedTabIDs.remove(tabID)
         cancelRunningTask(forTab: tabID)
 
@@ -247,7 +252,7 @@ final class ConversationLog {
             response: "",
             state: .running,
             finishedAt: nil,
-            providerID: LLMSettings.providerID
+            providerID: providerID
         ))
         scheduleSave(trace: taskID)
         return taskID

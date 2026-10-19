@@ -9,18 +9,17 @@ struct MCPSettingsPage: View {
     let onBack: () -> Void
 
     var body: some View {
-        SubPageHeader(backTitle: "Advanced", onBack: onBack)
+        SubPageHeader(backTitle: "Assistant", onBack: onBack)
         SettingsPageHeader(title: "External connections")
 
         SettingsCard {
             DetailRow(
                 title: "MCP server",
-                caption: "Connect external assistants to tabs you choose. Private tabs are never shared."
+                caption: "Let apps such as Claude Code use the assistant’s tools. Linen asks you once for each connection. Websites follow your Assistant Access settings."
             ) {
                 SettingsToggle(Binding(get: { server.isEnabled }, set: { server.setEnabled($0) }))
                     .disabled(server.isPaused)
             }
-            .settingsAnchor("advanced.mcp")
 
             if let status = server.status {
                 RowSeparator()
@@ -82,7 +81,7 @@ private struct MCPConnectionRow: View {
 
     var body: some View {
         DetailRow(
-            verbatimTitle: session.clientName,
+            verbatimTitle: session.displayName,
             verbatimCaption: caption
         ) {
             SettingsButton(title: "Disconnect", action: disconnect)
@@ -90,7 +89,7 @@ private struct MCPConnectionRow: View {
     }
 
     private var caption: String {
-        let count = String(localized: "Shared tabs: \(session.grants.count) · Tool calls: \(session.completedCalls)")
+        let count = String(localized: "Tool calls: \(session.completedCalls)")
         guard let action = session.lastActionTitle else { return count }
         return count + "\n" + String(localized: "Latest action: \(action)")
     }

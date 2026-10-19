@@ -199,6 +199,8 @@ enum SettingsIndex {
         SettingsEntry("downloads.list", .downloads, "Open downloads", "View downloads and their saved locations.",
                       ["downloads", "files", "recent", "history"]),
 
+        SettingsEntry("assistant.connections", .provider, "External connections", "Let apps such as Claude Code use the assistant’s tools.",
+                      ["mcp", "external", "connection", "automation", "codex", "claude", "cursor", "client", "tools"]),
         SettingsEntry("provider.model", .provider, "Model", "The model used by the assistant.",
                       ["gpt", "claude", "llama", "model id", "llm", "provider", "answers"]),
         SettingsEntry("provider.key", .provider, "API key", "Add or change the selected provider’s API key.",
@@ -265,8 +267,6 @@ enum SettingsIndex {
 
         SettingsEntry("advanced.inspector", .advanced, "Web Inspector", "Add Inspect Element to a page’s right-click menu.",
                       ["developer", "devtools", "inspector", "inspect", "debug", "console"]),
-        SettingsEntry("advanced.mcp", .advanced, "External connections", "Connect an external assistant to tabs you choose.",
-                      ["mcp", "external", "connection", "automation", "codex", "claude", "cursor", "client", "tools"]),
         SettingsEntry("advanced.features", .advanced, "Feature flags",
                       "Experimental WebKit features may break websites.",
                       ["webkit", "flags", "experimental", "features", "develop"]),

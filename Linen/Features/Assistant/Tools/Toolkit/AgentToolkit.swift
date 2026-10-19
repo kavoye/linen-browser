@@ -8,7 +8,7 @@ import WebKit
 final class AgentToolkit {
     let browser: BrowserModel
     private let media: MediaCenter
-    private let log: ConversationLog
+    let log: ConversationLog
     private let services: Services
     private let questions: AgentQuestionModel?
     private var task: AgentTaskContext?
@@ -18,6 +18,9 @@ final class AgentToolkit {
     private var seededContextTabIDs: Set<UUID> = []
     private var agentOpenedTabIDs: Set<UUID> = []
     private(set) var lastToolFailed = false
+    var driver: AgentDriver {
+        task?.driver ?? .assistant
+    }
     private var taskStartedAt = Date()
     var requestConstraints = AgentRequestConstraints.none
     var askedUser = false
@@ -384,8 +387,8 @@ final class AgentToolkit {
                 return output
             }
             let tab = browser.newTab(url: url, transition: .agent)
-            agentOpenedTabIDs.insert(tab.id)
-            browser.onTabAlert?(.agentOpened(tab))
+            adoptOpened(tab)
+            await PageSettle.untilFirstRender(of: tab)
             tab.assistantAccess.pageChanged(url: url)
             let access = await authorize(.read, in: tab.webView, requiresTaskTab: false)
             if let output = cancellationOutput(for: step) {
@@ -420,8 +423,7 @@ final class AgentToolkit {
             return fencedPageOutput(output)
         }
         let tab = browser.newTab()
-        agentOpenedTabIDs.insert(tab.id)
-        browser.onTabAlert?(.agentOpened(tab))
+        adoptOpened(tab)
         let output = "New empty tab opened and active."
         completeTool(step)
         return output
@@ -495,8 +497,7 @@ final class AgentToolkit {
         }
         if let videoID = resolved.videoID, let watch = Self.watchURL(videoID: videoID) {
             let tab = browser.newTab(url: watch, activate: !media.isEnabled, transition: .agent)
-            agentOpenedTabIDs.insert(tab.id)
-            browser.onTabAlert?(.agentOpened(tab))
+            adoptOpened(tab)
             media.controlTab(
                 webView: tab.webView,
                 title: topic,
@@ -515,8 +516,7 @@ final class AgentToolkit {
             return output
         }
         let fallbackTab = browser.newTab(url: fallbackURL, transition: .agent)
-        agentOpenedTabIDs.insert(fallbackTab.id)
-        browser.onTabAlert?(.agentOpened(fallbackTab))
+        adoptOpened(fallbackTab)
         let output = "Couldn't resolve a video directly; opened the results in a tab instead."
         completeTool(step)
         return output
@@ -934,5 +934,28 @@ extension AgentToolkit {
         var components = URLComponents(string: "https://www.youtube.com/watch")
         components?.queryItems = [URLQueryItem(name: "v", value: videoID)]
         return components?.url
+    }
+}
+
+extension AgentToolkit {
+    func continueTask(_ continued: AgentTaskContext) {
+        task = continued
+    }
+
+    func followActiveTab() -> AgentTaskContext? {
+        guard let task, let tab = browser.activeTab, !tab.isPrivate else { return nil }
+        let anchor = browser.anchorID(of: tab.id)
+        guard anchor != task.anchorID, !agentOpenedTabIDs.contains(tab.id) else { return task }
+        let moved = AgentTaskContext(id: task.id, tabID: tab.id, anchorID: anchor, isContinuation: true, driver: task.driver)
+        self.task = moved
+        seededContextTabIDs.formUnion(onScreenTabs.map(\.id))
+        return moved
+    }
+}
+
+extension AgentToolkit {
+    func adoptOpened(_ tab: BrowserTab) {
+        agentOpenedTabIDs.insert(tab.id)
+        browser.onTabAlert?(.agentOpened(tab))
     }
 }

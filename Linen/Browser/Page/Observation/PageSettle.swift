@@ -19,6 +19,15 @@ enum PageSettle {
         await wait(on: webView, timeout: timeout, clock: clock) { !$0.isLoading }
     }
 
+    static func untilFirstRender(of tab: BrowserTab) async {
+        let deadline = ContinuousClock.now.advanced(by: loadCeiling)
+        while tab.committedNavigation == nil, ContinuousClock.now < deadline, !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        _ = await untilIdle(tab.webView)
+        await untilQuiet(tab.webView, interval: .milliseconds(200))
+    }
+
     static func afterInteraction(
         _ webView: WKWebView,
         grace: Duration = navigationGrace,

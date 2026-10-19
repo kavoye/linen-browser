@@ -20,6 +20,10 @@ nonisolated enum OpenAISchema {
     }
 
     static func strict(_ schema: GenerationSchema, dependencies: [GenerationSchema] = []) throws -> OpenAIJSON {
+        strict(try resolved(schema, dependencies: dependencies))
+    }
+
+    static func resolved(_ schema: GenerationSchema, dependencies: [GenerationSchema] = []) throws -> OpenAIJSON {
         var root = try resolvingDefinitions(OpenAIJSON.encode(schema), dependencies: dependencies)
         if let reference = root["$ref"].string, reference.hasPrefix("#/$defs/"),
             let definition = root["$defs"][String(reference.dropFirst(8))].object {
@@ -27,7 +31,7 @@ nonisolated enum OpenAISchema {
             root = .object(definition)
             root["$defs"] = definitions
         }
-        return strict(root)
+        return root
     }
 
     private static func resolvingDefinitions(_ encoded: OpenAIJSON, dependencies: [GenerationSchema]) throws -> OpenAIJSON {

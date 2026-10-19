@@ -229,7 +229,7 @@ private struct SettingsDetail: View {
                     case .extensions:
                         ExtensionsSettings(coordinator: coordinator)
                     case .advanced:
-                        AdvancedSettings(settings: coordinator.settings, mcpServer: coordinator.mcpServer, highlight: highlight)
+                        AdvancedSettings(settings: coordinator.settings, highlight: highlight)
                     case .experiments:
                         ExperimentsSettings(settings: coordinator.settings)
                     case .about:

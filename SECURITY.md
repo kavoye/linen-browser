@@ -18,11 +18,11 @@ your report.
 ## Scope
 
 - External MCP connections (`Linen/Features/MCP`). Connecting must disclose no
-  browser data without an explicit tab-and-origin grant. Site denials, read-only
-  access, private browsing, revocation, and profile boundaries also apply to
-  external calls. A connection must not inherit the assistant's
-  consequential-action approvals or operate controls from another connection's
-  observation.
+  browser data until the user allows the connection. After that, external calls
+  must follow exactly the assistant's rules: site Assistant Access, private
+  browsing, sensitive fields, observed-link navigation, revocation, and profile
+  boundaries. A connection must not inherit the assistant's consequential-action
+  approvals.
 - The assistant’s action policy. The assistant asks before it does anything
   with consequences, and refuses to fill a sensitive field
   (`Linen/Browser/Privacy/Permissions/SensitiveAction.swift`,

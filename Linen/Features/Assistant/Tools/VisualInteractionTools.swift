@@ -3,9 +3,9 @@
 
 import AnyLanguageModel
 
-nonisolated struct DoubleClickAtPointTool: Tool {
-    let name = "doubleClickAtPoint"
-    let description = "Double-click pixel coordinates in the latest screenshot. Capture the page first. Returns an updated screenshot."
+nonisolated struct DoubleClickAtPointTool: AgentTool {
+    static let toolName = "doubleClickAtPoint"
+    static let toolDescription = "Double-click pixel coordinates in the latest screenshot. Capture the page first. Returns an updated screenshot."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -21,9 +21,9 @@ nonisolated struct DoubleClickAtPointTool: Tool {
     }
 }
 
-nonisolated struct DragOnPageTool: Tool {
-    let name = "dragOnPage"
-    let description = """
+nonisolated struct DragOnPageTool: AgentTool {
+    static let toolName = "dragOnPage"
+    static let toolDescription = """
         Drag along 2–50 pixel points in the latest screenshot using DOM pointer or HTML drag events. Include the start and destination. \
         Capture the page first. Some sites require trusted native drags and will ignore these events. Inspect the updated screenshot and verify the result.
         """

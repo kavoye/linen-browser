@@ -13,6 +13,8 @@ Ask the assistant to search, read websites, and use the tabs you have open.
 It can click, type, and scroll. Click the page to stop the assistant and
 continue browsing yourself.
 
+<a href="https://github.com/kavoye/linen-browser/releases/latest/download/Linen.dmg"><img src="https://img.shields.io/github/v/release/kavoye/linen-browser?style=for-the-badge&label=Download&logo=apple&logoColor=white&color=1c1c1e" alt="Download Linen for Mac" height="36"></a>
+
 <a href="#install">Install</a> ·
 <a href="#what-it-does">Features</a> ·
 <a href="#building">Build</a> ·
@@ -23,7 +25,7 @@ continue browsing yourself.
 <img src="https://img.shields.io/badge/Apple%20silicon-1c1c1e?style=flat-square" alt="Apple silicon">
 <img src="https://img.shields.io/badge/license-Apache%202.0-1c1c1e?style=flat-square" alt="Apache 2.0 license">
 
-![Linen browser screenshot](https://github.com/user-attachments/assets/e6ee3f58-1cfe-4fe6-81d1-bf7f17fd17c7)
+![Linen browser screenshot](https://github.com/user-attachments/assets/d80f75d3-8605-41aa-a3d4-ac2034a09c3c)
 
 </div>
 
@@ -73,8 +75,9 @@ Use Apple Intelligence on your Mac, add a provider API key, or connect to a loca
 server such as Ollama or LM Studio. Supported providers include OpenAI,
 Anthropic, Gemini, DeepSeek, Groq, Mistral, OpenRouter, and xAI.
 
-External assistants can access only the tabs you share through Linen's
-[MCP server](MCP.md).
+External assistants, such as Claude Code, can use Linen through its
+[MCP server](MCP.md) after you allow them. They follow the same website
+permissions as Linen's assistant.
 
 ## Privacy and control
 

@@ -15,6 +15,7 @@ final class IntelligenceViewModel {
         case tools
         case grants
         case memory
+        case connections
         case openAI(OpenAISettingsPage)
     }
 
@@ -236,6 +237,12 @@ final class IntelligenceViewModel {
         destination = .memory
     }
 
+    func showConnections() {
+        customDraft = nil
+        customError = nil
+        destination = .connections
+    }
+
     func showOpenAI(_ page: OpenAISettingsPage) {
         customDraft = nil
         customError = nil
@@ -261,6 +268,8 @@ final class IntelligenceViewModel {
             return ["allowed-websites"]
         case .memory:
             return ["memory"]
+        case .connections:
+            return ["connections"]
         case .openAI(let page):
             return [inspectedID ?? subject.id, page.slug]
         }
@@ -289,6 +298,8 @@ final class IntelligenceViewModel {
             showGrants()
         case "memory":
             showMemory()
+        case "connections":
+            showConnections()
         case let id?:
             guard let provider = providers.first(where: { $0.id == id }) ?? catalog.provider(id: id) else {
                 showOverview()

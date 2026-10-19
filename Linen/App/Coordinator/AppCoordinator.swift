@@ -85,6 +85,10 @@ final class AppCoordinator {
     #else
     let lyrics = LyricsModel()
     #endif
+    func makeExternalToolkit() -> AgentToolkit {
+        AgentToolkit(browser: browser, media: media, log: conversationLog)
+    }
+
     var conversationLog: ConversationLog {
         browser.context.conversationLog
     }

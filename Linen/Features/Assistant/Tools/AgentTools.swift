@@ -4,9 +4,9 @@
 import AnyLanguageModel
 import Foundation
 
-nonisolated struct WebSearchTool: Tool {
-    let name = "searchWeb"
-    let description = AgentToolkit.Descriptions.searchWeb
+nonisolated struct WebSearchTool: AgentTool {
+    static let toolName = "searchWeb"
+    static let toolDescription = AgentToolkit.Descriptions.searchWeb
     let toolkit: AgentToolkit
 
     @Generable
@@ -24,9 +24,9 @@ nonisolated struct WebSearchTool: Tool {
     }
 }
 
-nonisolated struct NavigateTool: Tool {
-    let name = "navigate"
-    let description = AgentToolkit.Descriptions.navigate
+nonisolated struct NavigateTool: AgentTool {
+    static let toolName = "navigate"
+    static let toolDescription = AgentToolkit.Descriptions.navigate
     let toolkit: AgentToolkit
 
     @Generable
@@ -40,9 +40,9 @@ nonisolated struct NavigateTool: Tool {
     }
 }
 
-nonisolated struct NewTabTool: Tool {
-    let name = "newTab"
-    let description = AgentToolkit.Descriptions.newTab
+nonisolated struct NewTabTool: AgentTool {
+    static let toolName = "newTab"
+    static let toolDescription = AgentToolkit.Descriptions.newTab
     let toolkit: AgentToolkit
 
     @Generable
@@ -56,10 +56,9 @@ nonisolated struct NewTabTool: Tool {
     }
 }
 
-nonisolated struct AskUserTool: Tool {
+nonisolated struct AskUserTool: AgentTool {
     static let toolName = "askUser"
-    let name = AskUserTool.toolName
-    let description = AgentToolkit.Descriptions.askUser
+    static let toolDescription = AgentToolkit.Descriptions.askUser
     let toolkit: AgentToolkit
 
     @Generable
@@ -81,9 +80,9 @@ nonisolated struct AskUserTool: Tool {
     }
 }
 
-nonisolated struct ListTabsTool: Tool {
-    let name = "listTabs"
-    let description = AgentToolkit.Descriptions.listTabs
+nonisolated struct ListTabsTool: AgentTool {
+    static let toolName = "listTabs"
+    static let toolDescription = AgentToolkit.Descriptions.listTabs
     let toolkit: AgentToolkit
 
     @Generable
@@ -94,9 +93,9 @@ nonisolated struct ListTabsTool: Tool {
     }
 }
 
-nonisolated struct SwitchTabTool: Tool {
-    let name = "switchTab"
-    let description = AgentToolkit.Descriptions.switchTab
+nonisolated struct SwitchTabTool: AgentTool {
+    static let toolName = "switchTab"
+    static let toolDescription = AgentToolkit.Descriptions.switchTab
     let toolkit: AgentToolkit
 
     @Generable
@@ -110,9 +109,9 @@ nonisolated struct SwitchTabTool: Tool {
     }
 }
 
-nonisolated struct CloseTabTool: Tool {
-    let name = "closeTab"
-    let description = AgentToolkit.Descriptions.closeTab
+nonisolated struct CloseTabTool: AgentTool {
+    static let toolName = "closeTab"
+    static let toolDescription = AgentToolkit.Descriptions.closeTab
     let toolkit: AgentToolkit
 
     @Generable
@@ -126,9 +125,9 @@ nonisolated struct CloseTabTool: Tool {
     }
 }
 
-nonisolated struct ReadPageTool: Tool {
-    let name = "readPage"
-    let description = AgentToolkit.Descriptions.readPage
+nonisolated struct ReadPageTool: AgentTool {
+    static let toolName = "readPage"
+    static let toolDescription = AgentToolkit.Descriptions.readPage
     let toolkit: AgentToolkit
 
     @Generable
@@ -149,9 +148,9 @@ nonisolated struct ReadPageTool: Tool {
     }
 }
 
-nonisolated struct ReadArticleTool: Tool {
-    let name = "readArticle"
-    let description = AgentToolkit.Descriptions.readArticle
+nonisolated struct ReadArticleTool: AgentTool {
+    static let toolName = "readArticle"
+    static let toolDescription = AgentToolkit.Descriptions.readArticle
     let toolkit: AgentToolkit
 
     @Generable
@@ -167,9 +166,9 @@ nonisolated struct ReadArticleTool: Tool {
     }
 }
 
-nonisolated struct ClickOnPageTool: Tool {
-    let name = "clickOnPage"
-    let description = AgentToolkit.Descriptions.clickOnPage
+nonisolated struct ClickOnPageTool: AgentTool {
+    static let toolName = "clickOnPage"
+    static let toolDescription = AgentToolkit.Descriptions.clickOnPage
     let toolkit: AgentToolkit
 
     @Generable
@@ -195,9 +194,9 @@ nonisolated struct ClickOnPageTool: Tool {
     }
 }
 
-nonisolated struct TypeOnPageTool: Tool {
-    let name = "typeOnPage"
-    let description = AgentToolkit.Descriptions.typeOnPage
+nonisolated struct TypeOnPageTool: AgentTool {
+    static let toolName = "typeOnPage"
+    static let toolDescription = AgentToolkit.Descriptions.typeOnPage
     let toolkit: AgentToolkit
 
     @Generable
@@ -232,9 +231,9 @@ nonisolated struct TypeOnPageTool: Tool {
     }
 }
 
-nonisolated struct FillFieldsTool: Tool {
-    let name = "fillFields"
-    let description = AgentToolkit.Descriptions.fillFields
+nonisolated struct FillFieldsTool: AgentTool {
+    static let toolName = "fillFields"
+    static let toolDescription = AgentToolkit.Descriptions.fillFields
     let toolkit: AgentToolkit
 
     @Generable
@@ -266,9 +265,9 @@ nonisolated struct FillFieldsTool: Tool {
     }
 }
 
-nonisolated struct SelectOptionTool: Tool {
-    let name = "selectOption"
-    let description = AgentToolkit.Descriptions.selectOption
+nonisolated struct SelectOptionTool: AgentTool {
+    static let toolName = "selectOption"
+    static let toolDescription = AgentToolkit.Descriptions.selectOption
     let toolkit: AgentToolkit
 
     @Generable
@@ -296,9 +295,9 @@ nonisolated struct SelectOptionTool: Tool {
     }
 }
 
-nonisolated struct ScrollPageTool: Tool {
-    let name = "scrollPage"
-    let description = AgentToolkit.Descriptions.scrollPage
+nonisolated struct ScrollPageTool: AgentTool {
+    static let toolName = "scrollPage"
+    static let toolDescription = AgentToolkit.Descriptions.scrollPage
     let toolkit: AgentToolkit
 
     @Generable
@@ -323,9 +322,9 @@ nonisolated struct ScrollPageTool: Tool {
     }
 }
 
-nonisolated struct GoBackTool: Tool {
-    let name = "goBack"
-    let description = AgentToolkit.Descriptions.goBack
+nonisolated struct GoBackTool: AgentTool {
+    static let toolName = "goBack"
+    static let toolDescription = AgentToolkit.Descriptions.goBack
     let toolkit: AgentToolkit
 
     @Generable
@@ -338,9 +337,9 @@ nonisolated struct GoBackTool: Tool {
     }
 }
 
-nonisolated struct PlayVideoTool: Tool {
-    let name = "playVideo"
-    let description = AgentToolkit.Descriptions.playVideo
+nonisolated struct PlayVideoTool: AgentTool {
+    static let toolName = "playVideo"
+    static let toolDescription = AgentToolkit.Descriptions.playVideo
     let toolkit: AgentToolkit
 
     @Generable
@@ -354,9 +353,9 @@ nonisolated struct PlayVideoTool: Tool {
     }
 }
 
-nonisolated struct CloseVideoTool: Tool {
-    let name = "closeVideo"
-    let description = AgentToolkit.Descriptions.closeVideo
+nonisolated struct CloseVideoTool: AgentTool {
+    static let toolName = "closeVideo"
+    static let toolDescription = AgentToolkit.Descriptions.closeVideo
     let toolkit: AgentToolkit
 
     @Generable
@@ -367,9 +366,9 @@ nonisolated struct CloseVideoTool: Tool {
     }
 }
 
-nonisolated struct ControlMediaTool: Tool {
-    let name = "controlMedia"
-    let description = AgentToolkit.Descriptions.controlMedia
+nonisolated struct ControlMediaTool: AgentTool {
+    static let toolName = "controlMedia"
+    static let toolDescription = AgentToolkit.Descriptions.controlMedia
     let toolkit: AgentToolkit
 
     @Generable
@@ -383,9 +382,9 @@ nonisolated struct ControlMediaTool: Tool {
     }
 }
 
-nonisolated struct WatchPageTool: Tool {
-    let name = "watchPage"
-    let description = AgentToolkit.Descriptions.watchPage
+nonisolated struct WatchPageTool: AgentTool {
+    static let toolName = "watchPage"
+    static let toolDescription = AgentToolkit.Descriptions.watchPage
     let toolkit: AgentToolkit
 
     @Generable
@@ -405,9 +404,9 @@ nonisolated struct WatchPageTool: Tool {
     }
 }
 
-nonisolated struct ListWatchesTool: Tool {
-    let name = "listWatches"
-    let description = AgentToolkit.Descriptions.listWatches
+nonisolated struct ListWatchesTool: AgentTool {
+    static let toolName = "listWatches"
+    static let toolDescription = AgentToolkit.Descriptions.listWatches
     let toolkit: AgentToolkit
 
     @Generable
@@ -418,9 +417,9 @@ nonisolated struct ListWatchesTool: Tool {
     }
 }
 
-nonisolated struct StopWatchTool: Tool {
-    let name = "stopWatch"
-    let description = AgentToolkit.Descriptions.stopWatch
+nonisolated struct StopWatchTool: AgentTool {
+    static let toolName = "stopWatch"
+    static let toolDescription = AgentToolkit.Descriptions.stopWatch
     let toolkit: AgentToolkit
 
     @Generable
@@ -439,47 +438,72 @@ func makeAgentTools(toolkit: AgentToolkit, enabledIDs: Set<String>) -> [any Tool
     makeAgentTools(toolkit: toolkit).filter { $0.name == AskUserTool.toolName || enabledIDs.contains($0.name) }
 }
 
+nonisolated protocol AgentTool: Tool {
+    static var toolName: String { get }
+    static var toolDescription: String { get }
+    static var argumentSchema: GenerationSchema { get }
+    init(toolkit: AgentToolkit)
+}
+
+nonisolated extension AgentTool {
+    var name: String {
+        Self.toolName
+    }
+
+    var description: String {
+        Self.toolDescription
+    }
+}
+
+nonisolated extension AgentTool where Arguments: Generable {
+    static var argumentSchema: GenerationSchema {
+        Arguments.generationSchema
+    }
+}
+
+nonisolated let agentToolTypes: [any AgentTool.Type] = [
+    AskUserTool.self,
+    WebSearchTool.self,
+    NavigateTool.self,
+    ReadPageTool.self,
+    ReadArticleTool.self,
+    ClickOnPageTool.self,
+    TypeOnPageTool.self,
+    ScrollPageTool.self,
+    GoBackTool.self,
+    NewTabTool.self,
+    ListTabsTool.self,
+    SwitchTabTool.self,
+    CloseTabTool.self,
+    SelectOptionTool.self,
+    FillFieldsTool.self,
+    InspectControlTool.self,
+    SetCheckedTool.self,
+    WaitForPageTool.self,
+    ScreenshotPageTool.self,
+    MovePointerTool.self,
+    ClickAtPointTool.self,
+    DoubleClickAtPointTool.self,
+    DragOnPageTool.self,
+    ListFramesTool.self,
+    ReadFrameTool.self,
+    ActInFrameTool.self,
+    ChooseFilesOnPageTool.self,
+    InspectDownloadsTool.self,
+    TypeAtPointerTool.self,
+    HoverOnPageTool.self,
+    PressKeyTool.self,
+    PlayVideoTool.self,
+    CloseVideoTool.self,
+    ControlMediaTool.self,
+    WatchPageTool.self,
+    ListWatchesTool.self,
+    StopWatchTool.self,
+]
+
 @MainActor
 func makeAgentTools(toolkit: AgentToolkit) -> [any Tool] {
-    [
-        AskUserTool(toolkit: toolkit),
-        WebSearchTool(toolkit: toolkit),
-        NavigateTool(toolkit: toolkit),
-        ReadPageTool(toolkit: toolkit),
-        ReadArticleTool(toolkit: toolkit),
-        ClickOnPageTool(toolkit: toolkit),
-        TypeOnPageTool(toolkit: toolkit),
-        ScrollPageTool(toolkit: toolkit),
-        GoBackTool(toolkit: toolkit),
-        NewTabTool(toolkit: toolkit),
-        ListTabsTool(toolkit: toolkit),
-        SwitchTabTool(toolkit: toolkit),
-        CloseTabTool(toolkit: toolkit),
-        SelectOptionTool(toolkit: toolkit),
-        FillFieldsTool(toolkit: toolkit),
-        InspectControlTool(toolkit: toolkit),
-        SetCheckedTool(toolkit: toolkit),
-        WaitForPageTool(toolkit: toolkit),
-        ScreenshotPageTool(toolkit: toolkit),
-        MovePointerTool(toolkit: toolkit),
-        ClickAtPointTool(toolkit: toolkit),
-        DoubleClickAtPointTool(toolkit: toolkit),
-        DragOnPageTool(toolkit: toolkit),
-        ListFramesTool(toolkit: toolkit),
-        ReadFrameTool(toolkit: toolkit),
-        ActInFrameTool(toolkit: toolkit),
-        ChooseFilesOnPageTool(toolkit: toolkit),
-        InspectDownloadsTool(toolkit: toolkit),
-        TypeAtPointerTool(toolkit: toolkit),
-        HoverOnPageTool(toolkit: toolkit),
-        PressKeyTool(toolkit: toolkit),
-        PlayVideoTool(toolkit: toolkit),
-        CloseVideoTool(toolkit: toolkit),
-        ControlMediaTool(toolkit: toolkit),
-        WatchPageTool(toolkit: toolkit),
-        ListWatchesTool(toolkit: toolkit),
-        StopWatchTool(toolkit: toolkit),
-    ]
+    agentToolTypes.map { $0.init(toolkit: toolkit) }
 }
 
 nonisolated func estimatedToolSchemaTokens(_ tools: [any Tool]) -> Int {

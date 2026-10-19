@@ -74,6 +74,22 @@ struct AssistantToolSettingsTests {
         #expect(model.destination == .overview)
     }
 
+    @Test func externalConnectionsLiveInAssistantSettings() throws {
+        let name = TestDefaults.name("settings-connections")
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let model = IntelligenceViewModel(settings: LLMSettings(defaults: defaults), credentials: TestCredentialStore(),
+            contextProbe: SilentContextProbe(), onConfigurationChanged: {})
+
+        model.follow(["connections"])
+        #expect(model.destination == .connections)
+        #expect(model.path == ["connections"])
+
+        let entry = try #require(SettingsIndex.all.first { $0.id == "assistant.connections" })
+        #expect(entry.category == .provider)
+        #expect(!SettingsIndex.all.contains { $0.id == "advanced.mcp" })
+    }
+
     private static let inUse = Provider(
         id: "in-use",
         name: "In Use",

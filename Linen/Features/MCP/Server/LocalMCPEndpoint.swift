@@ -56,57 +56,80 @@ nonisolated enum LocalMCPEndpoint {
 
 @MainActor
 final class LocalMCPListener {
-    private let listener: NWListener
+    private let socket: Int32
     private let lock: Int32
     private let path: String
+    private let accept: @MainActor (Int32, MCPClientIdentity?) -> Void
+    private var source: DispatchSourceRead?
     private var stopped = false
 
-    init(path: String = LocalMCPEndpoint.path, accept: @escaping @MainActor (NWConnection) -> Void) throws {
+    init(path: String = LocalMCPEndpoint.path, accept: @escaping @MainActor (Int32, MCPClientIdentity?) -> Void) throws {
         self.path = path
+        self.accept = accept
         lock = try LocalMCPEndpoint.lockDirectory(URL(fileURLWithPath: path).deletingLastPathComponent().path)
         unlink(path)
-        let parameters = NWParameters.tcp
-        parameters.requiredLocalEndpoint = .unix(path: path)
-        do {
-            listener = try NWListener(using: parameters)
-        } catch {
+        socket = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+        guard socket >= 0 else {
             close(lock)
-            throw error
+            throw LocalMCPEndpoint.failure()
         }
-        listener.newConnectionHandler = { connection in
-            Task { @MainActor in accept(connection) }
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        let bytes = Array(path.utf8)
+        let capacity = MemoryLayout.size(ofValue: address.sun_path)
+        guard bytes.count < capacity else {
+            close(socket)
+            close(lock)
+            throw LocalMCPEndpoint.failure()
         }
+        withUnsafeMutableBytes(of: &address.sun_path) { buffer in
+            buffer.copyBytes(from: bytes)
+        }
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(socket, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+        guard bound == 0, chmod(path, 0o600) == 0, listen(socket, 8) == 0,
+              fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK) == 0
+        else {
+            close(socket)
+            unlink(path)
+            close(lock)
+            throw LocalMCPEndpoint.failure()
+        }
+        _ = fcntl(socket, F_SETFD, FD_CLOEXEC)
     }
 
     func start() async throws {
-        try await withCheckedThrowingContinuation { (ready: CheckedContinuation<Void, any Error>) in
-            listener.stateUpdateHandler = { [listener, path] state in
-                switch state {
-                case .ready:
-                    listener.stateUpdateHandler = nil
-                    if chmod(path, 0o600) == 0 {
-                        ready.resume()
-                    } else {
-                        ready.resume(throwing: LocalMCPEndpoint.failure())
-                    }
-                case .failed(let error), .waiting(let error):
-                    listener.stateUpdateHandler = nil
-                    ready.resume(throwing: error)
-                case .cancelled:
-                    listener.stateUpdateHandler = nil
-                    ready.resume(throwing: CancellationError())
-                default:
-                    break
-                }
+        guard source == nil, !stopped else { return }
+        let source = DispatchSource.makeReadSource(fileDescriptor: socket, queue: .main)
+        source.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                self?.acceptPending()
             }
-            listener.start(queue: DispatchQueue(label: "Linen.mcp.listener"))
+        }
+        self.source = source
+        source.resume()
+    }
+
+    private func acceptPending() {
+        while !stopped {
+            let client = Darwin.accept(socket, nil, nil)
+            guard client >= 0 else { return }
+            _ = fcntl(client, F_SETFD, FD_CLOEXEC)
+            var on: Int32 = 1
+            _ = setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
+            accept(client, MCPClientIdentity.ofPeer(socket: client))
         }
     }
 
     func stop() {
         guard !stopped else { return }
         stopped = true
-        listener.cancel()
+        source?.cancel()
+        source = nil
+        close(socket)
         unlink(path)
         close(lock)
     }

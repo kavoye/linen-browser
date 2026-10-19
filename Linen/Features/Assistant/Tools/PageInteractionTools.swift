@@ -4,9 +4,9 @@
 import AnyLanguageModel
 import Foundation
 
-nonisolated struct HoverOnPageTool: Tool {
-    let name = "hoverOnPage"
-    let description = "Dispatch pointer and mouse hover handlers to a control. CSS-only hover is unavailable. Verify the returned page for revealed content."
+nonisolated struct HoverOnPageTool: AgentTool {
+    static let toolName = "hoverOnPage"
+    static let toolDescription = "Dispatch pointer and mouse hover handlers to a control. CSS-only hover is unavailable. Verify the returned page for revealed content."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -20,9 +20,9 @@ nonisolated struct HoverOnPageTool: Tool {
     }
 }
 
-nonisolated struct PressKeyTool: Tool {
-    let name = "pressKey"
-    let description =
+nonisolated struct PressKeyTool: AgentTool {
+    static let toolName = "pressKey"
+    static let toolDescription =
         "Focus a control in a visible tab and send a key: Enter, Tab, Escape, Space, ArrowLeft, ArrowRight, ArrowDown, ArrowUp, Home, End, Backspace, or Delete. Use typeOnPage for text."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
@@ -38,9 +38,9 @@ nonisolated struct PressKeyTool: Tool {
     }
 }
 
-nonisolated struct InspectControlTool: Tool {
-    let name = "inspectControl"
-    let description = "Inspect a control's state, bounds, full field value, and dropdown options. Use offset to continue a long value or the option list."
+nonisolated struct InspectControlTool: AgentTool {
+    static let toolName = "inspectControl"
+    static let toolDescription = "Inspect a control's state, bounds, full field value, and dropdown options. Use offset to continue a long value or the option list."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -57,9 +57,9 @@ nonisolated struct InspectControlTool: Tool {
     }
 }
 
-nonisolated struct SetCheckedTool: Tool {
-    let name = "setChecked"
-    let description = "Set a checkbox, switch, or radio to the requested state. Avoid toggling a control already in that state."
+nonisolated struct SetCheckedTool: AgentTool {
+    static let toolName = "setChecked"
+    static let toolDescription = "Set a checkbox, switch, or radio to the requested state. Avoid toggling a control already in that state."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -76,9 +76,9 @@ nonisolated struct SetCheckedTool: Tool {
     }
 }
 
-nonisolated struct WaitForPageTool: Tool {
-    let name = "waitForPage"
-    let description = "Wait for text, textAbsent, a URL substring, or document ready. Returns one fresh observation. Use for an expected asynchronous change."
+nonisolated struct WaitForPageTool: AgentTool {
+    static let toolName = "waitForPage"
+    static let toolDescription = "Wait for text, textAbsent, a URL substring, or document ready. Returns one fresh observation. Use for an expected asynchronous change."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -95,9 +95,9 @@ nonisolated struct WaitForPageTool: Tool {
     }
 }
 
-nonisolated struct ScreenshotPageTool: Tool {
-    let name = "screenshotPage"
-    let description =
+nonisolated struct ScreenshotPageTool: AgentTool {
+    static let toolName = "screenshotPage"
+    static let toolDescription =
         "Capture the current viewport when visual layout matters. Costs image tokens; prefer readPage for text and controls. Filled sensitive fields prevent capture."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
@@ -108,9 +108,9 @@ nonisolated struct ScreenshotPageTool: Tool {
     }
 }
 
-nonisolated struct MovePointerTool: Tool {
-    let name = "movePointer"
-    let description = "Move the visible assistant pointer to pixel coordinates in the latest screenshot. Capture the page first. Use for visual hover when page controls are unavailable."
+nonisolated struct MovePointerTool: AgentTool {
+    static let toolName = "movePointer"
+    static let toolDescription = "Move the visible assistant pointer to pixel coordinates in the latest screenshot. Capture the page first. Use for visual hover when page controls are unavailable."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -124,9 +124,9 @@ nonisolated struct MovePointerTool: Tool {
     }
 }
 
-nonisolated struct ClickAtPointTool: Tool {
-    let name = "clickAtPoint"
-    let description = "Click pixel coordinates in the latest screenshot with the visible assistant pointer. Capture the page first. Prefer clickOnPage when a numbered control is available."
+nonisolated struct ClickAtPointTool: AgentTool {
+    static let toolName = "clickAtPoint"
+    static let toolDescription = "Click pixel coordinates in the latest screenshot with the visible assistant pointer. Capture the page first. Prefer clickOnPage when a numbered control is available."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -140,9 +140,9 @@ nonisolated struct ClickAtPointTool: Tool {
     }
 }
 
-nonisolated struct TypeAtPointerTool: Tool {
-    let name = "typeAtPointer"
-    let description = "Type into the field focused by a visual click. Use the latest screenshot; filled sensitive fields are blocked. Prefer typeOnPage when a numbered field is available."
+nonisolated struct TypeAtPointerTool: AgentTool {
+    static let toolName = "typeAtPointer"
+    static let toolDescription = "Type into the field focused by a visual click. Use the latest screenshot; filled sensitive fields are blocked. Prefer typeOnPage when a numbered field is available."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?

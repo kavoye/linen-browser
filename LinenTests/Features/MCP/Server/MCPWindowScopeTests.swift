@@ -33,6 +33,7 @@ struct MCPWindowScopeTests {
 
     @Test func focusChangesDoNotRetargetAnExistingConnection() async throws {
         let app = BrowserApplication()
+        app.mcpServer.approveConnection = { _, _, _ in true }
         let first = window(in: app)
         let second = window(in: app)
         let privateWindow = window(in: app, privately: true)
@@ -58,6 +59,7 @@ struct MCPWindowScopeTests {
 
     @Test func closingOneWindowMakesOnlyItsConnectionUnavailable() async throws {
         let app = BrowserApplication()
+        app.mcpServer.approveConnection = { _, _, _ in true }
         let first = window(in: app)
         let second = window(in: app)
         defer { second.closeWindow() }
@@ -69,13 +71,13 @@ struct MCPWindowScopeTests {
         first.closeWindow()
 
         #expect(try await call(firstConnection, "listTabs").isError == true)
-        #expect(try await call(firstConnection, "requestAccess").isError == true)
         #expect(try await call(secondConnection, "listTabs").isError == false)
         #expect(app.mcpServer.makeSessionForConnection()?.isBound(to: second.browser) == true)
     }
 
     @Test func replacingTheBoundProfileContextDoesNotReauthorizeTheConnection() async throws {
         let app = BrowserApplication()
+        app.mcpServer.approveConnection = { _, _, _ in true }
         let first = window(in: app)
         let second = window(in: app)
         let original = first.browser.context
@@ -95,13 +97,13 @@ struct MCPWindowScopeTests {
 
         #expect(app.mcpServer.makeSessionForConnection() == nil)
         #expect(try await call(firstConnection, "listTabs").isError == true)
-        #expect(try await call(firstConnection, "requestAccess").isError == true)
         #expect(try await call(secondConnection, "listTabs").isError == false)
         #expect(firstConnection.isBound(to: first.browser))
     }
 
     @Test func consentAndNewPageConsentStayWithTheOriginalNativeWindow() async throws {
         let app = BrowserApplication()
+        app.mcpServer.approveConnection = { _, _, _ in true }
         let first = window(in: app)
         let second = window(in: app)
         let firstNative = nativeWindow(for: first)
@@ -114,33 +116,21 @@ struct MCPWindowScopeTests {
         }
         let tab = await parkTab(first.browser, at: try #require(URL(string: "https://first-window.invalid/")))
         app.focus(first)
-        var shareWindow: NSWindow?
-        var openWindow: NSWindow?
-        var sharedPages: [MCPAccessConsent.Page] = []
-        let connection = try #require(app.mcpServer.makeSessionForConnection(
-            consent: { _, pages, window in
-                shareWindow = window
-                sharedPages = pages
-                return .control
-            },
-            openConsent: { _, _, window in
-                openWindow = window
-                return false
-            }
-        ))
+        var approveWindow: NSWindow?
+        let connection = try #require(app.mcpServer.makeSessionForConnection(approve: { _, _, window in
+            approveWindow = window
+            return true
+        }))
         app.focus(second)
 
-        #expect(try await call(connection, "requestAccess").isError == false)
-        #expect(shareWindow === firstNative)
-        #expect(sharedPages.map(\.id) == [tab.id])
-        #expect(try await call(connection, "newTab", arguments: ["url": "https://first-window.invalid/next"]).isError == true)
-        #expect(openWindow === firstNative)
-        #expect(first.browser.tabs.count == 1)
-        #expect(second.browser.tabs.isEmpty)
+        #expect(try await call(connection, "listTabs").isError == false)
+        #expect(approveWindow === firstNative)
+        _ = tab
     }
 
     @Test func missingWindowCannotSendConsentToAnotherWindowsSheet() async throws {
         let app = BrowserApplication()
+        app.mcpServer.approveConnection = { _, _, _ in true }
         let first = window(in: app)
         let second = window(in: app)
         let secondNative = nativeWindow(for: second)
@@ -152,14 +142,16 @@ struct MCPWindowScopeTests {
         _ = await parkTab(first.browser, at: try #require(URL(string: "https://first-window.invalid/")))
         app.focus(first)
         var prompts = 0
-        let connection = try #require(app.mcpServer.makeSessionForConnection(consent: { _, _, _ in
+        var offered: NSWindow?
+        let connection = try #require(app.mcpServer.makeSessionForConnection(approve: { _, _, window in
             prompts += 1
-            return .control
+            offered = window
+            return window != nil
         }))
         app.focus(second)
 
-        #expect(try await call(connection, "requestAccess").isError == true)
-        #expect(prompts == 0)
-        #expect(connection.grants.isEmpty)
+        #expect(try await call(connection, "listTabs").isError == true)
+        #expect(prompts == 1)
+        #expect(offered == nil)
     }
 }

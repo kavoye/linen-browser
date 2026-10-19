@@ -5,9 +5,9 @@ import AnyLanguageModel
 import Foundation
 import WebKit
 
-nonisolated struct ChooseFilesOnPageTool: Tool {
-    let name = "chooseFilesOnPage"
-    let description = """
+nonisolated struct ChooseFilesOnPageTool: AgentTool {
+    static let toolName = "chooseFilesOnPage"
+    static let toolDescription = """
         Open the website's file picker for a visible main-frame file input. The user chooses the files; never supply local paths. Waits for \
         selection or cancellation. Selection alone does not verify upload completion.
         """
@@ -27,9 +27,9 @@ nonisolated struct ChooseFilesOnPageTool: Tool {
     }
 }
 
-nonisolated struct InspectDownloadsTool: Tool {
-    let name = "inspectDownloads"
-    let description = """
+nonisolated struct InspectDownloadsTool: AgentTool {
+    static let toolName = "inspectDownloads"
+    static let toolDescription = """
         List download IDs, filenames, status, and received bytes for this task's selected page and current site. Supply downloadID to inspect one. \
         Does not read file contents or expose local paths.
         """

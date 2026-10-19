@@ -9,10 +9,6 @@ import WebKit
 extension AppCoordinator {
     // MARK: - Launch
 
-    func bootstrap() async {
-        prepareBrowser(restoring: true)
-    }
-
     func prepareBrowser(restoring: Bool, show: Bool = true, urls: [URL] = []) {
         guard !isBootstrapped else { return }
         isBootstrapped = true
@@ -59,6 +55,10 @@ extension AppCoordinator {
         showBrowser(activate: show)
         timing.mark("show window")
         if application == nil {
+            mcpServer.makeToolkit = { [weak self] browser in
+                guard let self, self.browser === browser else { return nil }
+                return makeExternalToolkit()
+            }
             mcpServer.resume()
         }
         if !AppDatabase.ownsSession {

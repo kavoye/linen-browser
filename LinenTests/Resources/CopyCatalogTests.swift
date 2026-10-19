@@ -186,7 +186,7 @@ struct SettingsIndexParityTests {
         "Linen/Settings/Pages/Privacy/WebsiteSettings.swift",
         "Linen/Settings/Pages/General/DownloadsSettings.swift",
         "Linen/Settings/Pages/Advanced/AdvancedSettings.swift",
-        "Linen/Settings/Pages/Advanced/MCPSettingsPage.swift",
+        "Linen/Settings/Pages/Assistant/MCPSettingsPage.swift",
         "Linen/Settings/Pages/Advanced/ExperimentsSettings.swift",
         "Linen/Settings/Navigation/SettingsView.swift",
         "Linen/Settings/Pages/Assistant/IntelligenceSettings.swift",

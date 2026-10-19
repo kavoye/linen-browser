@@ -58,6 +58,7 @@ struct MCPTransportTests {
         let (_, offline) = try await client.callTool(name: "listTabs")
         #expect(offline == true)
         let server = BrowserMCPServer(browser: BrowserModel(database: .temporary()), endpoint: endpoint, available: { true })
+        server.approveConnection = { _, _, _ in true }
         defer { server.stop() }
         server.setEnabled(true)
         #expect(await waitUntil { server.isListening })
@@ -75,14 +76,16 @@ struct MCPTransportTests {
         let probe = SuspendedRelayCall()
         let backend = MCP.Server(name: "Fixture", version: "1", capabilities: .init(tools: .init()))
         await backend.withMethodHandler(CallTool.self) { _ in await probe.call() }
-        var socket: LocalMCPTransport?
-        let listener = try LocalMCPListener(path: endpoint) { connection in
-            let transport = LocalMCPTransport(connection: connection)
+        var socket: MCPStdioTransport?
+        let listener = try LocalMCPListener(path: endpoint) { descriptor, _ in
+            let transport = MCPStdioTransport(input: descriptor, output: descriptor)
             socket = transport
             Task {
                 do {
                     try await backend.start(transport: transport)
+                    close(descriptor)
                 } catch {
+                    close(descriptor)
                     Issue.record(error)
                     await transport.disconnect()
                 }
@@ -124,6 +127,7 @@ struct MCPTransportTests {
         }
         let browser = BrowserModel(database: .temporary())
         let server = BrowserMCPServer(browser: browser, endpoint: directory + "/browser.sock", defaults: defaults, available: { true })
+        server.approveConnection = { _, _, _ in true }
         #expect(!server.isEnabled)
         server.setEnabled(true)
         #expect(await waitUntil { server.isListening })
@@ -132,6 +136,8 @@ struct MCPTransportTests {
         #expect(!server.isListening)
 
         let relaunched = BrowserMCPServer(browser: browser, endpoint: directory + "/browser.sock", defaults: defaults, available: { true })
+
+        relaunched.approveConnection = { _, _, _ in true }
         defer { relaunched.stop() }
         #expect(relaunched.isEnabled)
         relaunched.resume()
@@ -146,6 +152,7 @@ struct MCPTransportTests {
         defer { try? FileManager.default.removeItem(atPath: directory) }
         var isPrivate = false
         let server = BrowserMCPServer(browser: BrowserModel(database: .temporary()), endpoint: directory + "/browser.sock") { !isPrivate }
+        server.approveConnection = { _, _, _ in true }
         defer { server.stop() }
         server.setEnabled(true)
         #expect(await waitUntil { server.isListening })
@@ -191,19 +198,6 @@ struct MCPTransportTests {
         }
     }
 
-    @Test func argumentValidationRejectsCoercionAndUnknownFields() throws {
-        let click = try #require(MCPToolCatalog.entries.first { $0.name == "clickOnPage" })
-        #expect(throws: (any Error).self) {
-            try click.validate(["tabID": "tab", "observationID": "observation", "ref": "1"])
-        }
-        #expect(throws: (any Error).self) {
-            try click.validate(["tabID": "tab", "observationID": "observation", "ref": 1, "bypass": true])
-        }
-        #expect(throws: (any Error).self) {
-            try click.validate(["tabID": "tab", "observationID": "observation", "ref": 0])
-        }
-    }
-
     @Test func endpointRejectsInsecureDirectoriesAndCompetingListeners() throws {
         let directory = "/tmp/linen-mcp-test-\(UUID().uuidString)"
         defer { try? FileManager.default.removeItem(atPath: directory) }
@@ -225,6 +219,7 @@ struct MCPTransportTests {
         defer { try? FileManager.default.removeItem(atPath: directory) }
         let browser = BrowserModel(database: .temporary())
         let server = BrowserMCPServer(browser: browser, endpoint: endpoint, available: { true })
+        server.approveConnection = { _, _, _ in true }
         defer { server.stop() }
         server.setEnabled(true)
         #expect(await waitUntil { server.isListening || server.status != nil })
@@ -238,10 +233,10 @@ struct MCPTransportTests {
         let initialized = try await client.connect(transport: transport)
         #expect(initialized.capabilities.tools != nil)
         let (tools, _) = try await client.listTools()
-        #expect(Set(tools.map(\.name)) == Set(MCPToolCatalog.entries.map(\.name)))
+        #expect(Set(tools.map(\.name)) == MCPToolCatalog.names)
         let (content, isError) = try await client.callTool(name: "listTabs")
         #expect(isError == false)
-        #expect(content == [.text(text: "{\"tabs\":[]}", annotations: nil, _meta: nil)])
+        #expect(content == [.text(text: "No tabs are open.", annotations: nil, _meta: nil)])
         #expect(await waitUntil { server.sessions.first?.clientName == "Integration test" })
         let session = try #require(server.sessions.first)
         server.stop()
@@ -256,6 +251,7 @@ struct MCPTransportTests {
         let endpoint = directory + "/browser.sock"
         defer { try? FileManager.default.removeItem(atPath: directory) }
         let server = BrowserMCPServer(browser: BrowserModel(database: .temporary()), endpoint: endpoint, available: { true })
+        server.approveConnection = { _, _, _ in true }
         defer { server.stop() }
         server.setEnabled(true)
         #expect(await waitUntil { server.isListening || server.status != nil })
@@ -310,7 +306,7 @@ struct MCPTransportTests {
         }
         try send(2, "listTabs")
         let first = try #require(await replies.next())
-        #expect(String(decoding: first, as: UTF8.self).contains("structuredContent"))
+        #expect(String(decoding: first, as: UTF8.self).contains("No tabs are open."))
         let originalSession = try #require(server.sessions.first)
         #expect(originalSession.clientName == "Stdio integration")
 
@@ -328,11 +324,9 @@ struct MCPTransportTests {
         let recoveredObject = try #require(JSONSerialization.jsonObject(with: recovered) as? [String: Any])
         let result = try #require(recoveredObject["result"] as? [String: Any])
         #expect(result["isError"] as? Bool == false)
-        let structured = try #require(result["structuredContent"] as? [String: Any])
-        #expect((structured["tabs"] as? [Any])?.isEmpty == true)
+        #expect(String(decoding: recovered, as: UTF8.self).contains("No tabs are open."))
         let freshSession = try #require(server.sessions.first)
         #expect(freshSession.id != originalSession.id)
-        #expect(freshSession.grants.isEmpty)
         #expect(freshSession.clientName == "Stdio integration")
         try input.fileHandleForWriting.close()
         #expect(await waitUntil { !process.isRunning })

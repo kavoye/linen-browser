@@ -5,9 +5,9 @@ import AnyLanguageModel
 import Foundation
 import WebKit
 
-nonisolated struct ListFramesTool: Tool {
-    let name = "listFrames"
-    let description = "List embedded frame IDs and origins on a page. Use readFrame to request separate access to an embedded website. Frame IDs expire on navigation."
+nonisolated struct ListFramesTool: AgentTool {
+    static let toolName = "listFrames"
+    static let toolDescription = "List embedded frame IDs and origins on a page. Use readFrame to request separate access to an embedded website. Frame IDs expire on navigation."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -26,9 +26,9 @@ nonisolated struct ListFramesTool: Tool {
     }
 }
 
-nonisolated struct ReadFrameTool: Tool {
-    let name = "readFrame"
-    let description = "Read text and controls in an embedded frame with separate permission for its origin. Return fresh refs and observationID. Use actInFrame for those refs."
+nonisolated struct ReadFrameTool: AgentTool {
+    static let toolName = "readFrame"
+    static let toolDescription = "Read text and controls in an embedded frame with separate permission for its origin. Return fresh refs and observationID. Use actInFrame for those refs."
     let toolkit: AgentToolkit
     @Generable struct Arguments {
         var page: String?
@@ -47,9 +47,9 @@ nonisolated struct ReadFrameTool: Tool {
     }
 }
 
-nonisolated struct ActInFrameTool: Tool {
-    let name = "actInFrame"
-    let description = """
+nonisolated struct ActInFrameTool: AgentTool {
+    static let toolName = "actInFrame"
+    static let toolDescription = """
         Act on a freshly observed embedded frame. action is click, type, select, check, key, or scroll. Use text for typing, option labels, keys, or \
         scroll direction; checked for check. Typing never submits. Frame and top-level site permissions both apply.
         """
