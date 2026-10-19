@@ -309,7 +309,7 @@ jobs:
           cp Tools/dmg/background.tiff "$STAGE/.background/background.tiff"
           cp Tools/dmg/DS_Store "$STAGE/.DS_Store"
 
-          DMG="build/dmg/$APP-${{ steps.version.outputs.version }}.dmg"
+          DMG="build/dmg/$APP.dmg"
           hdiutil create -volname "$APP" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG"
           echo "path=$DMG" >> "$GITHUB_OUTPUT"
 

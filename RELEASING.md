@@ -351,11 +351,11 @@ Mac:
 7. Make the disk image:
 
    ```bash
-   hdiutil create -volname Linen -srcfolder dmg -fs HFS+ -format UDZO -ov Linen-1.1.dmg
+   hdiutil create -volname Linen -srcfolder dmg -fs HFS+ -format UDZO -ov Linen.dmg
    ```
 
 8. Sign the disk image:
-   `codesign --force --sign "Developer ID Application" --timestamp Linen-1.1.dmg`
+   `codesign --force --sign "Developer ID Application" --timestamp Linen.dmg`
 9. Notarize the disk image with `notarytool`.
 10. Staple the ticket to the disk image with `staple`.
 11. Attach the disk image, the zip file **and** `appcast.xml` to the release.
