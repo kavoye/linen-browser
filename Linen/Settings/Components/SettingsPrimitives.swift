@@ -36,9 +36,6 @@ enum SettingsMetrics {
     static var controlRadius: CGFloat {
         Theme.Radius.control
     }
-    static var rowRadius: CGFloat {
-        Theme.Radius.card
-    }
     static let controlHeight: CGFloat = 28
 
     static let hairline = Color.primary.opacity(0.08)

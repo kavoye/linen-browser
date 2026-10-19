@@ -106,7 +106,6 @@ struct ProfileTests {
         let (store, _) = makeStore()
         store.add(name: "Work")
 
-        #expect(store.deletableProfiles.count == 1)
         await store.remove(Profile.original())
         #expect(store.profiles.contains { $0.isOriginal })
     }
@@ -199,7 +198,6 @@ struct ProfileTests {
         let (store, _) = makeStore()
 
         #expect(!store.profiles.contains { $0.isPrivate })
-        #expect(!store.deletableProfiles.contains { $0.isPrivate })
         #expect(store.privateBrowsing.isPrivate)
     }
 

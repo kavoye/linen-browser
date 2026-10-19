@@ -151,11 +151,6 @@ enum PageDriver {
         }
     }
 
-    static func renderControls(_ controls: [[String: Any]], limit: Int = 40) -> String {
-        let lines = controls.prefix(limit).map(renderControl).filter { !$0.isEmpty }
-        return "CONTROLS:\n" + lines.joined(separator: "\n")
-    }
-
     private static func renderControl(_ control: [String: Any]) -> String {
         guard let ref = control["r"] as? Int, let kind = control["k"] as? String else { return "" }
         let label = control["l"] as? String ?? ""

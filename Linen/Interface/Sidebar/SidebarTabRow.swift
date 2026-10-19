@@ -438,8 +438,6 @@ struct SidebarTabMuteButton: View {
 struct PinBadge: View {
     let browser: BrowserModel
 
-    @State private var hovering = false
-
     private var tab: BrowserTab? {
         browser.activeTab
     }

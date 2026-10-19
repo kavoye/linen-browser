@@ -37,13 +37,6 @@ final class AgentAttention {
         return failureCount > (seenFailures[anchorID] ?? 0)
     }
 
-    func retainAnchors(_ anchorIDs: Set<UUID>) {
-        let kept = seenFailures.filter { anchorIDs.contains($0.key) }
-        guard kept.count != seenFailures.count else { return }
-        seenFailures = kept
-        persist()
-    }
-
     private func persist() {
         let stored = seenFailures.map { ($0.key.uuidString, $0.value) }
         defaults.set(Dictionary(uniqueKeysWithValues: stored), forKey: Key.seen)

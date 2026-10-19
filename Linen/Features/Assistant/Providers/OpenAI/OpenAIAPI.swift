@@ -64,18 +64,8 @@ nonisolated struct OpenAIAPI: Sendable {
         return false
     }
 
-    func cancelResponse(_ id: String) async throws -> OpenAIJSON {
-        try await request(["responses", id, "cancel"])
-    }
     func compact(_ body: OpenAIJSON) async throws -> OpenAIJSON {
         try await request(["responses", "compact"], body: body)
-    }
-
-    func createBackgroundResponse(_ body: OpenAIJSON) async throws -> OpenAIJSON {
-        var body = body
-        body["background"] = true
-        body["stream"] = false
-        return try await request(["responses"], body: body)
     }
 
     func pages(_ path: [String], query: [String: String] = [:]) -> AsyncThrowingStream<OpenAIJSON, any Error> {

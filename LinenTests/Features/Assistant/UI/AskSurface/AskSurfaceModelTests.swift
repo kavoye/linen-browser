@@ -337,10 +337,6 @@ struct AskSurfaceModelTests {
 
             model.mention(other)
             #expect(model.mentionedTabIDs == [other.id])
-
-            model.removeMention(other.id)
-            #expect(model.mentionedTabIDs.isEmpty)
-            #expect(model.interaction.text == "which is cheaper  ")
         }
     }
 

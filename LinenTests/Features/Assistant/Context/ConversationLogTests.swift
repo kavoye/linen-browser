@@ -291,7 +291,6 @@ struct ConversationLogTests {
 
         let tab = UUID()
         log.completeTask(log.beginTask("one", tabID: tab), response: "1")
-        log.failTask(log.beginTask("two", tabID: tab), reason: "network died")
         log.cancelTask(log.beginTask("three", tabID: tab))
         log.completeTask(log.beginTask("four", tabID: tab), response: "4")
 
@@ -311,21 +310,6 @@ struct ConversationLogTests {
         log.cancelTask(asked)
 
         #expect(log.exchanges(forTab: tab).map(\.response) == ["Where would you like to go?"])
-    }
-
-    /// A failure ends the turn with its reason as the response, and a
-    /// `completeTask` arriving afterwards must not paper over it.
-    @Test func aFailedTurnStaysFailed() throws {
-        let (log, _) = makeLog()
-
-        let tab = UUID()
-        let task = log.beginTask("doomed", tabID: tab)
-        log.failTask(task, reason: "Couldn't reach the model provider.")
-        log.completeTask(task, response: "")
-
-        let trace = try #require(log.latestTrace(forTab: tab))
-        #expect(trace.state == .failed)
-        #expect(trace.response == "Couldn't reach the model provider.")
     }
 
     /// Starting a second turn on a tab whose first is still running cancels

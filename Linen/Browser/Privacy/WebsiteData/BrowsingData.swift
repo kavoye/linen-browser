@@ -25,17 +25,6 @@ enum BrowsingData {
             }
         }
 
-        var caption: LocalizedStringResource {
-            switch self {
-            case .history:
-                "Also clears your start page tiles and your conversations with the assistant."
-            case .cookies:
-                "Signs you out of most websites."
-            case .cache:
-                "Frees up space. Pages load more slowly the next time."
-            }
-        }
-
         var listName: LocalizedStringResource {
             switch self {
             case .history:
@@ -44,17 +33,6 @@ enum BrowsingData {
                 "cookies and site data"
             case .cache:
                 "cached files"
-            }
-        }
-
-        var symbol: String {
-            switch self {
-            case .history:
-                "clock"
-            case .cookies:
-                "checkmark.shield"
-            case .cache:
-                "internaldrive"
             }
         }
 
@@ -105,21 +83,6 @@ enum BrowsingData {
                 "Last 4 weeks"
             case .everything:
                 "All time"
-            }
-        }
-
-        var phrase: LocalizedStringResource {
-            switch self {
-            case .hour:
-                "the last hour"
-            case .day:
-                "the last 24 hours"
-            case .week:
-                "the last 7 days"
-            case .month:
-                "the last 4 weeks"
-            case .everything:
-                "all time"
             }
         }
 

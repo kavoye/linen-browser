@@ -116,7 +116,6 @@ struct AskSurface: View {
             )
         }
         .modifier(AskSurfaceMaterial(
-            placement: model.placement,
             tint: status?.color,
             cornerRadius: model.placement.cornerRadius,
             isPrivate: model.isPrivate
@@ -125,8 +124,7 @@ struct AskSurface: View {
             AskSurfaceBorder(
                 cornerRadius: model.placement.cornerRadius,
                 isPrivate: model.isPrivate,
-                status: status,
-                isFocused: model.isFocused
+                status: status
             )
         }
         .overlay(alignment: .top) {

@@ -205,7 +205,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         .gesture(
             DragGesture(minimumDistance: 4, coordinateSpace: .named(WorkspaceListCoordinateSpace.name))
                 .onChanged(dragChanged)
-                .onEnded(dragEnded)
+                .onEnded { _ in dragEnded() }
         )
         .background {
             SidebarKeyCatcher(
@@ -332,7 +332,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         }
     }
 
-    private func dragEnded(_ value: DragGesture.Value) {
+    private func dragEnded() {
         defer {
             rest()
             newFolderDrop.isArmed = false

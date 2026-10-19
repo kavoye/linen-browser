@@ -5,7 +5,6 @@ import SwiftUI
 import WebKit
 
 struct PeekSurface: View {
-    let browser: BrowserModel
     let coordinator: AppCoordinator
 
     private static let maximumWidth: CGFloat = 1220

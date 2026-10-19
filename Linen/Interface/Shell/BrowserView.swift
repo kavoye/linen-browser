@@ -25,7 +25,6 @@ struct BrowserView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static let retractMotion = Animation.spring(duration: 0.34, bounce: 0)
     static let morphMotion = Animation.spring(duration: 0.35, bounce: 0)
 
     init(browser: BrowserModel, coordinator: AppCoordinator) {

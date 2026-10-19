@@ -75,7 +75,7 @@ struct ExtensionActionsCluster: View {
         .gesture(
             DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
                 .onChanged(dragChanged)
-                .onEnded(dragEnded)
+                .onEnded { _ in dragEnded() }
         )
         .overlay {
             ClusterMenuCatcher(
@@ -150,7 +150,7 @@ struct ExtensionActionsCluster: View {
         reorder(around: carriedCentreX)
     }
 
-    private func dragEnded(_ value: DragGesture.Value) {
+    private func dragEnded() {
         guard let drag, !drag.landing else { return }
         let id = drag.id
 
@@ -640,7 +640,7 @@ struct StoreInstallButton: View {
         .padding(.horizontal, 9)
         .frame(height: 24)
         .background(Theme.Wash.hairline, in: Capsule())
-        .hoverBackground(isActive: hovering, tint: tint, in: Capsule())
+        .hoverBackground(isActive: hovering, in: Capsule())
         .contentShape(Capsule())
         .animation(Theme.Motion.quick, value: hovering)
     }

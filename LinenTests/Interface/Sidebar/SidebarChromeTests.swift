@@ -449,16 +449,6 @@ struct SidebarTrayControlWidthTests {
         SidebarMetrics.contentWidth(SidebarMetrics.iconsWidth, style: .icons, isFloating: false)
     }
 
-    @Test func everyCompactControlFillsTheColumn() {
-        #expect(SidebarMetrics.controlMaxWidth(style: .icons) == .infinity)
-    }
-
-    /// A full sidebar lays them out side by side, where filling would give the
-    /// first control the whole row.
-    @Test func aFullSidebarKeepsThemSquare() {
-        #expect(SidebarMetrics.controlMaxWidth(style: .full) == SidebarMetrics.controlHeight)
-    }
-
     /// The column is as thin as the toolbar band, so a control that fills it is
     /// exactly the square it used to be pinned to — never narrower.
     @Test func noCompactControlIsNarrowerThanTheSquareTheyHeldTo() {

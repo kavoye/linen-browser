@@ -151,7 +151,6 @@ private struct GitHubChurnBar: View {
 }
 
 struct GitHubPRActions: View {
-    let pr: GitHubInboxPR
     let reference: GitHubPullRequestReference
     let onOpen: (GitHubPullRequestReference, GitHubPullRequestSection) -> Void
     let onAsk: (GitHubPullRequestReference) -> Void

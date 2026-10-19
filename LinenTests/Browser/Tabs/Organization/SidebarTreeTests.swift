@@ -12,9 +12,9 @@ import Testing
 /// mention it.
 struct SidebarTreeTests {
     private let a = UUID(), b = UUID(), c = UUID(), d = UUID()
-    private let folder1 = UUID(), folder2 = UUID(), folder3 = UUID()
+    private let folder1 = UUID(), folder2 = UUID()
 
-    private func always(_ id: UUID) -> Bool {
+    private func always(_: UUID) -> Bool {
         true
     }
 

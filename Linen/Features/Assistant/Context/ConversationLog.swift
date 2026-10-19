@@ -315,18 +315,6 @@ final class ConversationLog {
         saveNow()
     }
 
-    func failTask(_ taskID: UUID, reason: String) {
-        guard let index = traces.firstIndex(where: { $0.id == taskID }),
-              traces[index].state == .running
-        else { return }
-        finishRunningSteps(at: index, failed: true)
-        traces[index].response = reason
-        traces[index].state = .failed
-        traces[index].finishedAt = Date()
-        scheduleSave(trace: taskID)
-        saveNow()
-    }
-
     func cancelTask(_ taskID: UUID) {
         guard let index = traces.firstIndex(where: { $0.id == taskID }),
               traces[index].state == .running

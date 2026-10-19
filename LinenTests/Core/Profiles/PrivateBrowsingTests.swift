@@ -484,30 +484,6 @@ struct PageZoomStoreTests {
 /// other way round.
 @MainActor
 struct WebViewPoolPrivacyTests {
-    @Test func swappingTheStoreRetiresEveryWarmedView() {
-        let pool = WebViewPool()
-        pool.warmUp()
-
-        let ephemeral = WKWebsiteDataStore.nonPersistent()
-        pool.useDataStore(ephemeral)
-
-        let view = pool.acquire()
-        #expect(view.configuration.websiteDataStore === ephemeral)
-        #expect(!view.configuration.websiteDataStore.isPersistent)
-    }
-
-    @Test func swappingBackHandsOutPersistentViewsAgain() {
-        let pool = WebViewPool()
-        let ephemeral = WKWebsiteDataStore.nonPersistent()
-        pool.useDataStore(ephemeral)
-        pool.warmUp()
-
-        pool.useDataStore(.default())
-        let view = pool.acquire()
-        #expect(view.configuration.websiteDataStore === WKWebsiteDataStore.default())
-        #expect(view.configuration.websiteDataStore.isPersistent)
-    }
-
     @Test func everyViewAcquiredWhilePrivateSharesTheOneEphemeralStore() {
         let pool = WebViewPool()
         let ephemeral = WKWebsiteDataStore.nonPersistent()

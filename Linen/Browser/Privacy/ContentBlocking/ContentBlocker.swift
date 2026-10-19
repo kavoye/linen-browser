@@ -30,15 +30,6 @@ final class ContentBlocker {
 
     @ObservationIgnored private var defaults: UserDefaults = .standard
 
-    func use(defaults: UserDefaults) {
-        guard defaults !== self.defaults else { return }
-        self.defaults = defaults
-        exemptHosts = Set(
-            (defaults.stringArray(forKey: Self.exemptDefaultsKey) ?? []).map(Self.normalized)
-        )
-        refresh()
-    }
-
     init(
         defaults: UserDefaults = .standard,
         settings: BrowserSettings = .shared,

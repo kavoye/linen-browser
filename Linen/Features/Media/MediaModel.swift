@@ -34,10 +34,6 @@ final class MediaModel {
 
     var isLive = false
 
-    var progress: Double? {
-        guard !isLive, duration > 0 else { return nil }
-        return min(max(currentTime / duration, 0), 1)
-    }
 }
 
 enum PictureSource {

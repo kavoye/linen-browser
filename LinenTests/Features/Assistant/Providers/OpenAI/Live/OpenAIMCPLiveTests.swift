@@ -73,7 +73,7 @@ struct OpenAIMCPLiveTests {
             let call = second.state.items.last { $0["type"] == "mcp_call" && $0["name"] == "read_wiki_structure" }
             guard second.calls.isEmpty, let call, call["error"] == .null, call["approval_request_id"].string == approval.id,
                   call["output"].string?.isEmpty == false, second.state.usage?.input != nil else { throw OpenAILiveFailure.invariant }
-            guard !second.state.hasUnconfirmedMCPCall else { throw OpenAILiveFailure.invariant }
+            guard second.state.pendingMCPApprovals.isDisjoint(with: second.state.mcpApprovalAttempts ?? []) else { throw OpenAILiveFailure.invariant }
             client.settings.additionalParameters = ["tool_choice": "none"]
             recorder.select("mcp_resolved_history")
             let third = try await client.respond(transcript: second.transcript, prompt: "Reply ready without calling tools.",

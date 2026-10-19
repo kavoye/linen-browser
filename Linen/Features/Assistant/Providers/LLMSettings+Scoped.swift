@@ -27,20 +27,8 @@ nonisolated extension LLMSettings {
         current.reasoningEffort(for: provider)
     }
 
-    static func setReasoningEffort(_ effort: ReasoningEffort, for provider: Provider) {
-        current.setReasoningEffort(effort, for: provider)
-    }
-
-    static func contextWindow(for provider: Provider) -> Int? {
-        current.contextWindow(for: provider)
-    }
-
     static func setContextWindow(_ tokens: Int?, for provider: Provider) {
         current.setContextWindow(tokens, for: provider)
-    }
-
-    static func discoveredContextWindow(for provider: Provider, model: String) -> Int? {
-        current.discoveredContextWindow(for: provider, model: model)
     }
 
     static func setDiscoveredContextWindow(_ tokens: Int?, for provider: Provider, model: String) {

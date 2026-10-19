@@ -225,30 +225,6 @@ struct DownloadResumeTests {
 
     // MARK: - Not leaking
 
-    /// Forgetting the row forgets the token with it. Held on, these would
-    /// accumulate for the life of the process, each the size of a server's
-    /// resume state.
-    @Test func removingAnInterruptedRowDropsItsToken() throws {
-        let (downloads, id) = makeRunning()
-        downloads.noteFailure(id, reason: "stopped", resumeData: token)
-        let row = try item(downloads, id)
-
-        downloads.remove(row)
-
-        #expect(downloads.items.isEmpty)
-        #expect(!downloads.holdsResumeState(for: id))
-    }
-
-    @Test func clearingTheListDropsEveryToken() throws {
-        let (downloads, id) = makeRunning()
-        downloads.noteFailure(id, reason: "stopped", resumeData: token)
-
-        downloads.clearFinished()
-
-        #expect(downloads.items.isEmpty)
-        #expect(!downloads.holdsResumeState(for: id))
-    }
-
     /// A stopped row is not a running one: Clear may take it, and the chrome
     /// must not keep showing a transfer in progress.
     @Test func anInterruptedRowIsNotRunning() throws {

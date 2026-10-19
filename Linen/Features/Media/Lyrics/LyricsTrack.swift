@@ -26,9 +26,6 @@ nonisolated struct LyricsTrack: Equatable, Sendable {
     let lines: [LyricsLine]
     let plainText: String
 
-    var isSynced: Bool {
-        !lines.isEmpty
-    }
 }
 
 nonisolated enum LyricsParser {

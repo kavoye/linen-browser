@@ -152,7 +152,7 @@ struct ContentArea: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            PeekSurface(browser: browser, coordinator: coordinator)
+            PeekSurface(coordinator: coordinator)
                 .zIndex(8)
 
             if pullsAWebPage {

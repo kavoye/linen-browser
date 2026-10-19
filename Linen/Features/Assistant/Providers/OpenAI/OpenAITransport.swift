@@ -13,8 +13,6 @@ nonisolated struct OpenAIRequest: Sendable {
 
 nonisolated struct OpenAIHTTPResult: Sendable {
     let data: Data
-    let status: Int
-    let headers: [String: String]
     func json() throws -> OpenAIJSON {
         try .decode(data)
     }
@@ -179,12 +177,7 @@ nonisolated final class OpenAIHTTPTransport: OpenAITransport {
                                 retryAfter: AgentProviderRetry.retryAfter(http.value(forHTTPHeaderField: "Retry-After"),
                                     milliseconds: http.value(forHTTPHeaderField: "retry-after-ms")))
         }
-        let headers = http.allHeaderFields.reduce(into: [String: String]()) { result, entry in
-            if let key = entry.key as? String, let value = entry.value as? String {
-                result[key.lowercased()] = value
-            }
-        }
-        return .init(data: data, status: http.statusCode, headers: headers)
+        return .init(data: data)
     }
 }
 

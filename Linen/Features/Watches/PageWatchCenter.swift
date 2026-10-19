@@ -90,13 +90,6 @@ nonisolated struct PageWatchChange: Equatable, Sendable {
         }
     }
 
-    init(removed: [String], added: [String]) {
-        self.removed = removed
-        self.added = added
-        removedAnchors = Array(repeating: 0, count: removed.count)
-        addedAnchors = Array(repeating: 0, count: added.count)
-    }
-
     init(from old: String, to new: String) {
         let difference = Self.segments(in: new).difference(from: Self.segments(in: old))
         var removed: [String] = []

@@ -21,10 +21,6 @@ struct ShiftStep {
 }
 
 extension BrowserModel {
-    var previouslyActiveTabID: UUID? {
-        recentlyActive.first { $0 != activeTabID && tabsByID[$0] != nil }
-    }
-
     var isSwitchingTabs: Bool {
         switcherRecency != nil
     }

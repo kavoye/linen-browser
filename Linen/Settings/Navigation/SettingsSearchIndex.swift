@@ -372,7 +372,6 @@ private struct SettingsAnchorModifier: ViewModifier {
 
     @Environment(\.settingsHighlight) private var highlight
     @Environment(\.settingsCardInset) private var cardInset
-    @Environment(\.colorScheme) private var colorScheme
 
     private var isLit: Bool {
         highlight.map { $0 == anchor || hidden.contains($0) } ?? false

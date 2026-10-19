@@ -466,7 +466,7 @@ final class MediaCenter {
         return true
     }
 
-    private func returnWasAsked(for webView: WKWebView) -> Bool {
+    private func returnWasAsked() -> Bool {
         guard let asked = returnAskedAt else { return false }
         return Date().timeIntervalSince(asked) < Self.returnWindow
     }
@@ -492,7 +492,7 @@ final class MediaCenter {
             return
         }
         guard nativePiPView === webView else { return }
-        let wasAsked = source.speaksForTheUser || returnWasAsked(for: webView)
+        let wasAsked = source.speaksForTheUser || returnWasAsked()
         forgetPicture(webView)
         returnAskedAt = nil
         Pipeline.log.notice("""

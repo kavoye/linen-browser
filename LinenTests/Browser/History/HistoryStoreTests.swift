@@ -346,7 +346,7 @@ struct HistoryStoreTests {
         store.record(url: "https://example.com/a", title: "First")
         let second = try #require(store.record(url: "https://example.com/a", title: "Second"))
 
-        store.removeVisit(second)
+        store.removeVisits([second])
 
         #expect(store.visits.count == 1)
         let entry = try #require(store.entries.first)
@@ -385,7 +385,7 @@ struct HistoryStoreTests {
         let (store, _) = makeStore()
 
         let only = try #require(store.record(url: "https://example.com/a", title: "Only"))
-        store.removeVisit(only)
+        store.removeVisits([only])
 
         #expect(store.entries.isEmpty)
         #expect(store.visits.isEmpty)
@@ -399,56 +399,6 @@ struct HistoryStoreTests {
 
         #expect(store.visits.first?.transition == .link)
         #expect(store.visits.last?.transition == .typed)
-    }
-
-    /// What a per-URL history cannot answer: which page led to this one.
-    @Test func theReferrerChainWalksBackToWhereItStarted() throws {
-        let (store, _) = makeStore()
-
-        let search = try #require(
-            store.record(url: "https://example.com/search", title: "Search", transition: .typed)
-        )
-        let result = try #require(
-            store.record(
-                url: "https://example.com/result",
-                title: "Result",
-                transition: .link,
-                fromVisit: search
-            )
-        )
-        let deeper = try #require(
-            store.record(
-                url: "https://example.com/deeper",
-                title: "Deeper",
-                transition: .link,
-                fromVisit: result
-            )
-        )
-
-        let chain = store.referrerChain(to: deeper)
-        #expect(chain.map(\.url) == [
-            "https://example.com/search",
-            "https://example.com/result",
-            "https://example.com/deeper",
-        ])
-    }
-
-    /// A typed address is where a chain starts, whatever the caller passes:
-    /// nobody arrived at it from anywhere.
-    @Test func aTypedAddressCarriesNoReferrer() throws {
-        let (store, _) = makeStore()
-
-        let first = try #require(store.record(url: "https://example.com/a", title: "A"))
-        let second = try #require(
-            store.record(
-                url: "https://example.com/b",
-                title: "B",
-                transition: .typed,
-                fromVisit: first
-            )
-        )
-
-        #expect(store.referrerChain(to: second).map(\.url) == ["https://example.com/b"])
     }
 
     /// Pages that predate the visit log keep their count, and get the one

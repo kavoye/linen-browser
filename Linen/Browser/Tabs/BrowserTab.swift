@@ -409,16 +409,9 @@ final class BrowserTab: Identifiable {
     var hasEditedForm: Bool {
         processState.hasEditedForm
     }
-    var isSharingScreen: Bool {
-        processState.isSharingScreen
-    }
 
     func setAgentWorking(_ isWorking: Bool) {
         processState.setAgentWorking(isWorking)
-    }
-
-    func setExternalAutomationWorking(_ isWorking: Bool) {
-        processState.isExternalAutomationWorking = isWorking
     }
 
     func notePageActivity(_ signal: PageActivitySignal) {
@@ -567,7 +560,7 @@ final class BrowserTab: Identifiable {
         applySitePopups()
         refreshChrome()
         guard urlString != previous else { return }
-        refreshPageColor(from: webView)
+        refreshPageColor()
         refreshFavicon()
         measureBandUnderBar()
         invalidateSessionState()
@@ -874,7 +867,7 @@ final class BrowserTab: Identifiable {
         coverHold = nil
         hasPresentedContent = true
         refreshCanvas(from: webView)
-        refreshPageColor(from: webView)
+        refreshPageColor()
     }
 
     private var presentedFrameWouldFlash: Bool {

@@ -11,7 +11,6 @@ private struct SidebarRowSelectionEffect: ViewModifier {
     var glassTint: Color?
     var radius = Theme.Radius.hover
 
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.windowColorScheme) private var windowColorScheme
     @Environment(\.chromeWash) private var wash
 
@@ -73,10 +72,9 @@ private struct SidebarRowSelectionEffect: ViewModifier {
 extension View {
     func sidebarHoverFill<S: InsettableShape>(
         isHovering: Bool,
-        tint: Color? = nil,
         in shape: S
     ) -> some View {
-        hoverBackground(isActive: isHovering, tint: tint, in: shape)
+        hoverBackground(isActive: isHovering, in: shape)
             .contentShape(shape)
     }
 }

@@ -154,13 +154,6 @@ final class UpdateController: NSObject {
         reply?(.install)
     }
 
-    func dismiss() {
-        model.isDismissed = true
-        let reply = pendingChoice
-        pendingChoice = nil
-        reply?(.dismiss)
-    }
-
     private func showTransiently(_ phase: UpdateModel.Phase) {
         checkTask?.cancel()
         model.isDismissed = false

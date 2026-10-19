@@ -61,15 +61,6 @@ enum LoomStyle: String, CaseIterable, Identifiable {
         rawValue
     }
 
-    var label: LocalizedStringResource {
-        switch self {
-        case .standard:
-            "Standard"
-        case .transparent:
-            "Transparent"
-        }
-    }
-
     var backgroundLabel: LocalizedStringResource {
         switch self {
         case .standard:

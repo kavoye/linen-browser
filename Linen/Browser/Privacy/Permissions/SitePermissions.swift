@@ -150,13 +150,6 @@ nonisolated enum AssistantAccessPolicy: String, Codable, CaseIterable, Sendable 
 final class SitePermissions {
     static private(set) var shared = SitePermissions()
 
-    @discardableResult
-    static func use(file: URL) -> SitePermissions {
-        let store = SitePermissions(storageURL: file)
-        shared = store
-        return store
-    }
-
     private(set) var records: [String: [WebPermission: PermissionPolicy]] = [:]
 
     private(set) var defaults: [WebPermission: PermissionPolicy] = [:]

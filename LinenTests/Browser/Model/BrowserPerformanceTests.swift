@@ -15,7 +15,6 @@ nonisolated final class BrowserPerformanceTests: XCTestCase, @unchecked Sendable
             options.invocationOptions = [.manuallyStart, .manuallyStop]
             measure(metrics: [XCTClockMetric(), XCTMemoryMetric()], options: options) {
                 let browser = BrowserModel(database: .temporary())
-                browser.context.webViewPool.warmUp()
                 startMeasuring()
                 let tab = browser.newTab()
                 stopMeasuring()

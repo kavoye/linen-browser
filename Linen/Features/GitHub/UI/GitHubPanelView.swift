@@ -4,7 +4,6 @@
 import SwiftUI
 
 struct GitHubPanelSurface: View {
-    let browser: BrowserModel
     let coordinator: AppCoordinator
 
     var body: some View {

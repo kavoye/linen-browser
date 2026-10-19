@@ -159,14 +159,13 @@ struct TabSwitcherTests {
         _ = model.newTab()
         let third = model.newTab()
         _ = model.newTab()
-        let start = model.newTab()
+        _ = model.newTab()
 
         model.switchTab(forward: true)
         model.switchTab(forward: true)
         model.endTabSwitching()
 
         #expect(model.activeTab === third)
-        #expect(model.previouslyActiveTabID == start.id)
     }
 
     @Test func aTapAfterAWalkGoesBackToWhereTheWalkBegan() {

@@ -18,20 +18,6 @@ final class FaviconLoader {
 
     var persistsToDisk = true
 
-    func use(cacheDirectory: URL) {
-        guard cacheDirectory != self.cacheDirectory else { return }
-        self.cacheDirectory = cacheDirectory
-        profileGeneration &+= 1
-        cache.removeAll()
-        for task in inFlight.values {
-            task.cancel()
-        }
-        inFlight.removeAll()
-        sessionOnly.removeAll()
-        guessed.removeAll()
-        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
-    }
-
     private var profileGeneration = 0
 
     static func cacheDirectory(for profile: Profile) -> URL {

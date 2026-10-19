@@ -312,20 +312,6 @@ struct TabOrderingTests {
         #expect(nest.model.folder(containing: nest.parent) == nil)
     }
 
-    @Test func aLooseTabHasNoFolder() {
-        let model = makeModel()
-        let tab = model.newTab()
-        #expect(model.folder(containing: tab) == nil)
-        #expect(model.ungroupedTabs.contains { $0 === tab })
-    }
-
-    @Test func aFolderedTabIsNoLongerLoose() {
-        let model = makeModel()
-        let tab = model.newTab()
-        model.createFolder(containing: [tab])
-        #expect(!model.ungroupedTabs.contains { $0 === tab })
-    }
-
     // MARK: - Folder colour
 
     @Test func aFolderKeepsTheColorItWasGiven() {

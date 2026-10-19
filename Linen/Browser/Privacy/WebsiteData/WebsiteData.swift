@@ -15,19 +15,6 @@ enum WebsiteData {
             rawValue
         }
 
-        var label: LocalizedStringResource {
-            switch self {
-            case .cookies:
-                "Cookies"
-            case .storage:
-                "Local storage"
-            case .serviceWorkers:
-                "Background scripts"
-            case .cache:
-                "Cached files"
-            }
-        }
-
         var listName: LocalizedStringResource {
             switch self {
             case .cookies:

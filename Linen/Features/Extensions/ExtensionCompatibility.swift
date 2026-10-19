@@ -12,10 +12,6 @@ nonisolated enum ExtensionCompatibility {
             namespaces.isEmpty && members.isEmpty
         }
 
-        var names: [String] {
-            namespaces + members
-        }
-
         var summaries: [String] {
             var events: [String: [String]] = [:]
             for member in members {

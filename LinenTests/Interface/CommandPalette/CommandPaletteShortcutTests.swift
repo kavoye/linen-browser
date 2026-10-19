@@ -123,12 +123,13 @@ struct CommandPaletteShortcutTests {
     /// A modified arrow is the palette moving its own selection. Dismissing on
     /// it is what took command-arrow section jumps away.
     @Test func aModifiedArrowStaysWithTheList() {
-        for key in CommandPaletteShortcutPolicy.arrowKeys {
+        let arrows = [NSUpArrowFunctionKey, NSDownArrowFunctionKey, NSLeftArrowFunctionKey, NSRightArrowFunctionKey]
+            .compactMap { UnicodeScalar($0).map(String.init) }
+        for key in arrows {
             #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .command, key: key))
             #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: [], key: key))
             #expect(!CommandPaletteShortcutPolicy.shouldDismiss(modifiers: .option, key: key))
         }
-        #expect(CommandPaletteShortcutPolicy.arrowKeys.count == 4)
     }
 
     @Test func lineAndWordEditingKeepsThePaletteOpen() {

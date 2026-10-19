@@ -117,10 +117,6 @@ final class ProfileStore {
         save()
     }
 
-    var deletableProfiles: [Profile] {
-        profiles.filter { !$0.isOriginal }
-    }
-
     func remove(_ profile: Profile) async {
         guard !profile.isOriginal, let index = index(of: profile) else { return }
         profiles.remove(at: index)

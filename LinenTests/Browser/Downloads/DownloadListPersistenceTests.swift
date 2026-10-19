@@ -53,7 +53,6 @@ struct DownloadListPersistenceTests {
         privateDownloads.noteCancellation(id, resumeData: Data([1, 2, 3]))
 
         #expect(privateDownloads.items.isEmpty)
-        #expect(!privateDownloads.holdsResumeState(for: id))
         #expect(try Data(contentsOf: file) == saved)
         #expect(DownloadManager(file: file).items.map(\.filename) == ["report.pdf"])
     }

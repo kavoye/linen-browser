@@ -72,10 +72,6 @@ nonisolated enum SensitiveAction {
         return nil
     }
 
-    static func isConsequentialClick(_ label: String) -> Bool {
-        category(of: label) != nil
-    }
-
     static func declined(_ label: String, category: Category) -> String {
         "The user declined “\(label)”. It \(category.consequenceForModel), so it's theirs to do. "
             + "Say what's waiting for them and stop; do not try another way to do it."

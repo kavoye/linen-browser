@@ -68,10 +68,6 @@ enum SidebarMetrics {
     }
 
     static let controlHeight: CGFloat = 32
-
-    static func controlMaxWidth(style: SidebarStyle) -> CGFloat {
-        style == .icons ? .infinity : controlHeight
-    }
     static let defaultWidth: CGFloat = 268
     static let defaultSnapDistance: CGFloat = 8
 
@@ -200,13 +196,6 @@ final class SidebarLayout {
         isVisible.toggle()
         isPeeking = false
         defaults.set(isVisible, forKey: Key.visible)
-    }
-
-    func show() {
-        guard !isVisible else { return }
-        isVisible = true
-        isPeeking = false
-        defaults.set(true, forKey: Key.visible)
     }
 
     func setVisible(_ visible: Bool) {

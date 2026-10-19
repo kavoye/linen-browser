@@ -26,7 +26,7 @@ struct QuietIconButton: View {
                 .font(Theme.Font.rowTitle)
                 .hoverLift(hovering)
                 .frame(width: 28, height: 28)
-                .hoverBackground(isActive: isOn, tint: tint, in: Circle())
+                .hoverBackground(isActive: isOn, in: Circle())
         }
         .buttonStyle(.plain)
         .foregroundStyle(ink)

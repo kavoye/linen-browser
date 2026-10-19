@@ -22,7 +22,6 @@ struct AgentContextCompactor {
 
     func summarize(
         _ transcript: Transcript,
-        beforeRequest: () throws -> Void = {},
         event: (String, [String: String]) -> Void
     ) async throws -> String {
         var records = evidence(in: transcript)
@@ -69,7 +68,6 @@ struct AgentContextCompactor {
             do {
                 for attempt in 0..<2 {
                     try Task.checkCancellation()
-                    try beforeRequest()
                     let session = LanguageModelSession(model: model, tools: [], instructions: instructions)
                     let observer = AgentToolProposalObserver()
                     session.toolExecutionDelegate = observer

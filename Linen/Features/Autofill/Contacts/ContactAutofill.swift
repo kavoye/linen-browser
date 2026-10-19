@@ -11,16 +11,8 @@ final class ContactAutofill: NSObject, WKScriptMessageHandler {
     private static let handlerName = "linenContactAutofill"
 
     private(set) var profileID = Profile.originalID
-    var isPrivate: Bool {
-        profileID == Profile.privateID
-    }
     @ObservationIgnored private let controllers = NSHashTable<WKUserContentController>.weakObjects()
     @ObservationIgnored private let owners = NSMapTable<WKWebView, NSUUID>.weakToStrongObjects()
-
-    func use(profile: Profile) {
-        self.profileID = profile.id
-        AutofillSuggestions.shared.reset()
-    }
 
     func install(in webView: WKWebView, profileID: UUID? = nil) {
         let profileID = profileID ?? self.profileID
@@ -42,7 +34,4 @@ final class ContactAutofill: NSObject, WKScriptMessageHandler {
                                             world: Self.world, bridge: "__linenContactAutofill")
     }
 
-    static func isSecure(_ url: URL) -> Bool {
-        SavedPassword.origin(for: url) != nil
-    }
 }

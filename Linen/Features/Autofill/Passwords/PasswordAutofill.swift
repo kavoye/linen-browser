@@ -12,14 +12,8 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
     private static let handlerName = "linenPasswords"
 
     private(set) var profileID = Profile.originalID
-    var isPrivate: Bool {
-        profileID == Profile.privateID
-    }
 
     @ObservationIgnored var extensions: () -> [InstalledExtension] = { [] }
-    var isEnabled: Bool {
-        isEnabled(profileID: profileID)
-    }
 
     func isEnabled(profileID: UUID) -> Bool {
         guard profileID != Profile.privateID else { return false }
@@ -62,11 +56,6 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
         }
     }
 
-    func use(profileID: UUID) {
-        self.profileID = profileID
-        refreshPolicy()
-    }
-
     func install(in webView: WKWebView, profileID: UUID? = nil) {
         let profileID = profileID ?? self.profileID
         owners.setObject(profileID as NSUUID, forKey: webView)
@@ -104,10 +93,6 @@ final class PasswordAutofill: NSObject, WKScriptMessageHandler {
         }
         AutofillSuggestions.shared.receive(message, kind: .password, profileID: profileID,
                                             world: Self.world, bridge: "__linenPasswords")
-    }
-
-    static func isSecure(_ url: URL) -> Bool {
-        url.scheme?.lowercased() == "https" && url.host != nil && url.user == nil && url.password == nil
     }
 
 }

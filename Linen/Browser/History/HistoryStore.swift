@@ -155,10 +155,6 @@ final class HistoryStore {
         return saved.visitID
     }
 
-    func removeVisit(_ id: Int64) {
-        removeVisits([id])
-    }
-
     func removeVisits(_ ids: [Int64]) {
         guard !ids.isEmpty else { return }
         let marks = databaseQuestionMarks(count: ids.count)
@@ -196,36 +192,6 @@ final class HistoryStore {
         }
         guard removed == true else { return }
         reload()
-    }
-
-    func referrerChain(to visitID: Int64, limit: Int = 12) -> [VisitedPage] {
-        let chain = read { db -> [VisitedPage] in
-            var found: [VisitedPage] = []
-            var next: Int64? = visitID
-            var seen: Set<Int64> = []
-            while let id = next, found.count < limit, seen.insert(id).inserted {
-                let row = try VisitedPage.fetchOne(
-                    db,
-                    sql: """
-                        SELECT historyVisit.id, historyVisit.url, historyPage.title,
-                               historyVisit.visitedAt, historyVisit.transition
-                        FROM historyVisit
-                        JOIN historyPage ON historyPage.url = historyVisit.url
-                        WHERE historyVisit.id = ?
-                        """,
-                    arguments: [id]
-                )
-                guard let row else { break }
-                found.append(row)
-                next = try Int64.fetchOne(
-                    db,
-                    sql: "SELECT fromVisit FROM historyVisit WHERE id = ?",
-                    arguments: [id]
-                )
-            }
-            return found
-        } ?? []
-        return chain.reversed()
     }
 
     @discardableResult

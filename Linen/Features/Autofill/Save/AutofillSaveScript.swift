@@ -4,7 +4,6 @@
 import Foundation
 
 nonisolated enum AutofillSaveScript {
-    static let source = AutofillFormScript.source + clientSource
     static let clientSource = #"""
     (() => {
       if (globalThis.__linenAutofillSave || location.protocol !== 'https:') return;

@@ -497,7 +497,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab.didPresentContent()
         tab.refreshFavicon()
         tab.releasePageColorHold()
-        tab.refreshPageColor(from: webView)
+        tab.refreshPageColor()
         tab.restoreScrollOffsetIfNeeded()
         tab.probeReader()
         tab.offerTranslation()
@@ -527,7 +527,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             pendingMainFrameURL = nil
             tab.provisionalNavigation = nil
             tab.releasePageColorHold()
-            tab.refreshPageColor(from: webView)
+            tab.refreshPageColor()
         }
         tab?.isRestoring = false
         tab?.finishReclaim()

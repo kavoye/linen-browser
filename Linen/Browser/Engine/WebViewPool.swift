@@ -452,12 +452,6 @@ final class WebViewPool {
         idle.removeAll()
     }
 
-    func warmUp() {
-        while idle.count < targetCount {
-            idle.append(makeWarmView())
-        }
-    }
-
     private func scheduleRefill() {
         guard refillTask == nil else { return }
         refillTask = Task { [weak self] in

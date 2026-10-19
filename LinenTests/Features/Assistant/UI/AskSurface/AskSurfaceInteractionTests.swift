@@ -302,7 +302,7 @@ struct AskSurfaceInteractionTests {
         }
     }
 
-    @Test func markersResolveToTitlesAndSurviveDeletion() {
+    @Test func markersResolveToTitles() {
         let first = MentionChip(id: UUID(), title: "Nike Air Max")
         let second = MentionChip(id: UUID(), title: "Adidas Samba")
         let text = "compare \(MentionText.marker) with \(MentionText.marker)"
@@ -313,10 +313,6 @@ struct AskSurfaceInteractionTests {
                 == "compare @Nike Air Max with @Adidas Samba"
         )
         #expect(MentionText.stripped(text) == "compare  with ")
-        #expect(
-            MentionText.removingMarker(at: 0, from: text)
-                == "compare  with \(MentionText.marker)"
-        )
         #expect(MentionText.appending(to: "which is cheaper @ni") == "which is cheaper \(MentionText.marker) ")
     }
 

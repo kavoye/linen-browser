@@ -715,14 +715,6 @@ final class AgentToolkit {
         }
     }
 
-    private func mentionedTab(named reference: String) -> BrowserTab? {
-        let needle = reference.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !needle.isEmpty else { return nil }
-        return mentionedTabs.first {
-            $0.id.uuidString.lowercased() == needle || $0.title.lowercased().contains(needle) || $0.urlString.lowercased().contains(needle)
-        }
-    }
-
     private func mentionedTab(for webView: WKWebView) -> BrowserTab? {
         mentionedTabs.first { $0.webView === webView }
     }

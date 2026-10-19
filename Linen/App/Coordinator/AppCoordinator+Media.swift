@@ -225,11 +225,6 @@ extension AppCoordinator {
         )
     }
 
-    var dockedTab: BrowserTab? {
-        guard let tabID = media.controlledTabID else { return nil }
-        return browser.tabs.first { $0.id == tabID }
-    }
-
     func toggleMute(tab: BrowserTab) {
         tab.isMuted.toggle()
         MediaCenter.setMuted(tab.isMuted, on: tab.webView)

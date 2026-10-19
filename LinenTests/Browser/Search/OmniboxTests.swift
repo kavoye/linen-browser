@@ -70,7 +70,7 @@ struct OmniboxTests {
             ) { _ in }
 
             #expect(section?.items.count == 2)
-            #expect(section?.title.contains(Omnibox.engineName) == true)
+            #expect(section?.title.contains(SearchURLBuilder.engine.name) == true)
             #expect(section?.items.allSatisfy { $0.kind == .phrase } == true)
         }
     }

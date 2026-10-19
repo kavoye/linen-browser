@@ -144,7 +144,7 @@ struct OpenAIMCPTests {
         await running.value
         let state = try #require(fixture.log.checkpoint(forTab: fixture.tabID)?.openAI)
         #expect(state.mcpApprovalAttempts?.contains("approval_fixture") == true)
-        #expect(state.hasUnconfirmedMCPCall)
+        #expect(!state.pendingMCPApprovals.isDisjoint(with: state.mcpApprovalAttempts ?? []))
         let sent = try OpenAIJSON.decode(try #require(fixture.wire.requests[1].body))
         #expect(sent["input"].array?.first { $0["type"] == "mcp_approval_response" }?["approve"] == true)
         let restored = try JSONDecoder().decode(OpenAIConversationState.self, from: JSONEncoder().encode(state))
@@ -167,7 +167,7 @@ struct OpenAIMCPTests {
         }
         #expect(state.mcpRequestItems(toolsEnabled: true).first?["approve"] == false)
         state.items.append(["type": "mcp_call", "approval_request_id": "id", "output": "Confirmed"])
-        #expect(!state.hasUnconfirmedMCPCall)
+        #expect(state.pendingMCPApprovals.isDisjoint(with: state.mcpApprovalAttempts ?? []))
         #expect(state.mcpRequestItems(toolsEnabled: true).first?["approve"] == true)
     }
 
@@ -195,7 +195,8 @@ struct OpenAIMCPTests {
         fixture.questions.answer(OpenAIMCPApproval.approve)
         await running.value
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.stopReason == .providerError)
-        #expect(fixture.log.checkpoint(forTab: fixture.tabID)?.openAI?.hasUnconfirmedMCPCall == true)
+        let saved = try #require(fixture.log.checkpoint(forTab: fixture.tabID)?.openAI)
+        #expect(!saved.pendingMCPApprovals.isDisjoint(with: saved.mcpApprovalAttempts ?? []))
     }
 
     @Test func invalidConnectionConfigurationsAreRejectedWithoutRequests() throws {

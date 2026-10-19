@@ -197,12 +197,6 @@ final class AskSurfaceModel {
         interaction.text = MentionText.appending(to: interaction.text)
     }
 
-    func removeMention(_ tabID: UUID) {
-        guard let index = mentionedTabIDs.firstIndex(of: tabID) else { return }
-        mentionedTabIDs.remove(at: index)
-        interaction.text = MentionText.removingMarker(at: index, from: interaction.text)
-    }
-
     func mentionsDidChange(_ ids: [UUID]) {
         guard mentionedTabIDs != ids else { return }
         mentionedTabIDs = ids

@@ -206,22 +206,17 @@ struct OpenAICompatibilityTests {
 
     @Test func resourcesPreserveUnknownFieldsAndCursorPagination() async throws {
         let wire = OpenAITransportFixture([
-            ["id": "resp_background", "status": "queued", "future": true],
             ["has_more": true, "data": [["id": "file_1", "future": 3]]],
             ["has_more": false, "data": [["id": "file_2"]]],
         ])
         let api = OpenAIAPI(transport: wire)
-        #expect(try await api.createBackgroundResponse(["model": "fixture", "new_parameter": true])["future"] == true)
         var pages: [OpenAIJSON] = []
         for try await page in api.pages(["files"]) {
             pages.append(page)
         }
         #expect(pages.count == 2)
         #expect(pages.first?["data"].array?.first?["future"] == 3)
-        #expect(wire.requests[2].query["after"] == "file_1")
-        let background = try OpenAIJSON.decode(wire.requests[0].body!)
-        #expect(background["background"] == true)
-        #expect(background["new_parameter"] == true)
+        #expect(wire.requests[1].query["after"] == "file_1")
     }
 
     @Test func uploadsAndEndpointBoundariesAreChecked() async throws {

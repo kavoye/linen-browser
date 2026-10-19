@@ -106,7 +106,7 @@ struct SidePanelSurface: View {
         case .lyrics:
             LyricsSurface(coordinator: coordinator)
         case .github:
-            GitHubPanelSurface(browser: browser, coordinator: coordinator)
+            GitHubPanelSurface(coordinator: coordinator)
         case .watches:
             WatchesPanelSurface(center: browser.context.pageWatches, coordinator: coordinator)
         case nil:

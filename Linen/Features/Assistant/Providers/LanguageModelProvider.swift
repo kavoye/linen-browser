@@ -419,10 +419,6 @@ final class ModelProviderRegistry: ModelProviderResolving {
         self.factories = factories
     }
 
-    func register(providerID: String, factory: @escaping Factory) {
-        factories[providerID] = factory
-    }
-
     func resolve(_ configuration: Provider) -> any ModelProvider {
         if let factory = factories[configuration.id] {
             return factory(configuration)

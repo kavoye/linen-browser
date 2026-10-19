@@ -143,7 +143,7 @@ struct GitHubPanelTests {
                 body.contains("LinenInbox(") ? "triage" : body.contains("LinenPullRequests(") ? "search"
                     : body.contains("LinenPullRequestDetails(") ? "details" : "single"
             }
-            log.append(kind, request)
+            log.append(kind)
             await pause(kind)
             let fallback = switch kind {
             case "user":
@@ -490,7 +490,7 @@ struct GitHubPanelTests {
             if request.url!.path == "/user" {
                 json = #"{"login":"octocat"}"#
             } else if body.contains("LinenInbox(") {
-                log.append("triage", request)
+                log.append("triage")
                 try await Task.sleep(for: .milliseconds(300))
                 json = #"{"data":{"review":{"nodes":["# + Self.pullRequest(42) + #"]},"authored":{"nodes":[]},"recent":{"nodes":[]}}}"#
             } else if request.url!.path == "/graphql" {
@@ -517,7 +517,7 @@ struct GitHubPanelTests {
         let client = GitHubClient { request in
             let body = String(decoding: request.httpBody ?? Data(), as: UTF8.self)
             let kind = request.url!.path == "/user" ? "user" : body.contains("LinenInbox(") ? "triage" : "other"
-            log.append(kind, request)
+            log.append(kind)
             let json = switch kind {
             case "user":
                 #"{"login":"octocat"}"#
@@ -643,7 +643,7 @@ nonisolated final class GitHubTestCredentials: Sendable {
 nonisolated final class GitHubRequestLog: Sendable {
     private let kinds = Mutex<[String]>([])
 
-    func append(_ kind: String, _ request: URLRequest) {
+    func append(_ kind: String) {
         kinds.withLock { $0.append(kind) }
     }
 

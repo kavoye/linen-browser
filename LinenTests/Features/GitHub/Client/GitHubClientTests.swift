@@ -12,7 +12,7 @@ struct GitHubClientTests {
     @Test func aFailedImageIsNotFetchedAgainUntilItsRetryTime() async {
         let fetches = GitHubRequestLog()
         let cache = GitHubImageCache { url in
-            fetches.append("image", URLRequest(url: url))
+            fetches.append("image")
             return (Data(), HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!)
         }
         var date = Date(timeIntervalSinceReferenceDate: 800_000_000)

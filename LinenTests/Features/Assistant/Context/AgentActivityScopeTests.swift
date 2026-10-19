@@ -79,38 +79,6 @@ struct AgentActivityScopeTests {
         UserDefaults(suiteName: TestDefaults.name("AgentAttentionTests"))!
     }
 
-    @Test func aFailedTurnRaisesTheFailureCount() {
-        let log = ConversationLog(database: .temporary())
-        let tab = UUID()
-
-        log.completeTask(log.beginTask("fine", tabID: tab), response: "done")
-        log.cancelTask(log.beginTask("stopped", tabID: tab))
-        #expect(log.failureCount(forTab: tab) == 0)
-
-        log.failTask(log.beginTask("doomed", tabID: tab), reason: "Network died.")
-        #expect(log.failureCount(forTab: tab) == 1)
-    }
-
-    /// A failure from another tab once made the activity indicator open an empty panel.
-    @Test func aFailureOnOneTabLeavesTheOtherTabsDotAlone() {
-        let log = ConversationLog(database: .temporary())
-        let tabA = UUID()
-        let tabB = UUID()
-
-        log.failTask(log.beginTask("doomed", tabID: tabA), reason: "Network died.")
-
-        #expect(log.failureCount(forTab: tabA) == 1)
-        #expect(log.failureCount(forTab: tabB) == 0)
-
-        let attention = newAttention()
-        #expect(attention.needsAttention(
-            failureCount: log.failureCount(forTab: tabA), inAnchor: tabA, isShowing: false
-        ))
-        #expect(!attention.needsAttention(
-            failureCount: log.failureCount(forTab: tabB), inAnchor: tabB, isShowing: false
-        ))
-    }
-
     @Test func anUnseenFailureTurnsTheDotOrangeUntilTheColumnOpens() {
         let attention = newAttention()
         let anchor = UUID()
@@ -180,27 +148,6 @@ struct AgentActivityScopeTests {
             relaunched.needsAttention(failureCount: 2, inAnchor: anchor, isShowing: false),
             "a later failure is news again"
         )
-    }
-
-    @Test func anAnchorThatIsGoneTakesWhatWasSeenWithIt() {
-        let defaults = scratch()
-        let attention = AgentAttention(defaults: defaults)
-        attention.review(1, inAnchor: UUID(), isShowing: true)
-
-        attention.retainAnchors([UUID()])
-
-        #expect(attention.seenFailures.isEmpty)
-        #expect(AgentAttention(defaults: defaults).seenFailures.isEmpty)
-    }
-
-    @Test func anAnchorThatIsStillOpenKeepsWhatWasSeen() {
-        let anchor = UUID()
-        let attention = newAttention()
-        attention.review(1, inAnchor: anchor, isShowing: true)
-
-        attention.retainAnchors([anchor, UUID()])
-
-        #expect(attention.seenFailures[anchor] == 1)
     }
 
     // MARK: - The footer disclaimer

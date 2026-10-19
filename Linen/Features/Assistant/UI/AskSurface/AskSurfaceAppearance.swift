@@ -60,7 +60,6 @@ struct AskSurfaceBorder: View {
     let cornerRadius: CGFloat
     let isPrivate: Bool
     let status: AskSurfaceStatus?
-    let isFocused: Bool
 
     var body: some View {
         if isPrivate {
@@ -87,7 +86,6 @@ struct AskSurfaceBorder: View {
 }
 
 struct AskSurfaceMaterial: ViewModifier {
-    let placement: AskSurface.Placement
     let tint: Color?
     let cornerRadius: CGFloat
     let isPrivate: Bool
@@ -145,20 +143,6 @@ extension PageSecurity {
         }
     }
 
-    var label: LocalizedStringResource {
-        switch self {
-        case .secure:
-            "Connection is secure"
-        case .pending:
-            "Checking the connection"
-        case .mixed:
-            "Parts of this page aren’t encrypted"
-        case .insecure:
-            "Connection is not secure"
-        case .none:
-            "No connection to check"
-        }
-    }
 }
 
 struct AskRestingLine: View {

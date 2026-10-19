@@ -10,7 +10,6 @@ final class TabProcessState {
     private(set) var hasEditedForm = false
     private(set) var isSharingScreen = false
     private(set) var isAgentWorking = false
-    var isExternalAutomationWorking = false
     private(set) var reclaimState: TabReclaimState = .none
 
     @ObservationIgnored private var editedFormFrames: Set<String> = []
@@ -38,7 +37,7 @@ final class TabProcessState {
         if isSharingScreen || hasDeviceAccess {
             return .deviceAccess
         }
-        if isAgentWorking || isExternalAutomationWorking {
+        if isAgentWorking {
             return .agentWorking
         }
         if hasMediaPlayback {

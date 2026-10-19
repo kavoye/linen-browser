@@ -288,14 +288,6 @@ final class LinkPeek {
         }
     }
 
-    func keptSummary(for url: URL) -> LinkPeekSummary? {
-        remembered[url]?.summary
-    }
-
-    func keptSnapshot(for url: URL) -> NSImage? {
-        remembered[url]?.snapshot
-    }
-
     func remember(_ summary: LinkPeekSummary, snapshot: NSImage?, for url: URL) {
         if remembered[url] == nil {
             order.append(url)

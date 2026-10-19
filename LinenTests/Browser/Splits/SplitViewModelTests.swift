@@ -89,21 +89,6 @@ struct SplitViewModelTests {
         #expect(rows.firstIndex(of: .tab(right.id))! < rows.firstIndex(of: .tab(left.id))!)
     }
 
-    @Test func aReplacedPaneLeavesItsTabWhereItAlreadyWas() {
-        let model = makeModel()
-        let left = model.newTab(url: URL(string: "https://example.com/a"))
-        let right = model.newTab(url: URL(string: "https://example.com/b"))
-        let third = model.newTab(url: URL(string: "https://example.com/c"))
-        model.split(left, with: right, axis: .sideBySide)
-
-        model.replaceSplitPane(right, with: third)
-
-        #expect(model.splits.others(of: left.id) == [third.id])
-        #expect(model.tabs.contains { $0 === right })
-        let rows = model.sidebarTree.walk()
-        #expect(rows[rows.firstIndex(of: .tab(left.id))! + 1] == .tab(third.id))
-    }
-
     // MARK: - A peek kept beside its page
 
     /// Keeping a peek beside the page puts it in a split with the page it was

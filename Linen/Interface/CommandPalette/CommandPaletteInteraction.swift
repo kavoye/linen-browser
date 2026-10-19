@@ -54,11 +54,6 @@ struct CommandPaletteLayout: Equatable {
 }
 
 enum CommandPaletteShortcutPolicy {
-    static let arrowKeys: Set<String> = Set(
-        [NSUpArrowFunctionKey, NSDownArrowFunctionKey, NSLeftArrowFunctionKey, NSRightArrowFunctionKey]
-            .compactMap { UnicodeScalar($0).map(String.init) }
-    )
-
     static let returnKeys: Set<String> = ["\r", "\u{3}"]
 
     static func showsCurrentTab(modifiers: NSEvent.ModifierFlags) -> Bool {

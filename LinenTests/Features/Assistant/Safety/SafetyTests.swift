@@ -158,7 +158,7 @@ struct SensitiveActionTests {
         "Submit review", "Reply",
     ])
     func refusesActionsThatSpendMoneyOrDestroyData(_ label: String) {
-        #expect(SensitiveAction.isConsequentialClick(label))
+        #expect(SensitiveAction.category(of: label) != nil)
     }
 
     /// The category decides which grant a remembered "always allow" writes, so
@@ -190,12 +190,12 @@ struct SensitiveActionTests {
         "Learn more", "UK 8", "Repay information",
     ])
     func leavesOrdinaryBrowsingAlone(_ label: String) {
-        #expect(!SensitiveAction.isConsequentialClick(label))
+        #expect(SensitiveAction.category(of: label) == nil)
     }
 
     @Test func ignoresCaseAndSurroundingPunctuation() {
-        #expect(SensitiveAction.isConsequentialClick("  PLACE  ORDER  "))
-        #expect(SensitiveAction.isConsequentialClick("Confirm payment »"))
+        #expect(SensitiveAction.category(of: "  PLACE  ORDER  ") != nil)
+        #expect(SensitiveAction.category(of: "Confirm payment »") != nil)
         #expect(SensitiveAction.category(of: "Continue", context: "data-action=confirm_purchase") == .purchase)
     }
 

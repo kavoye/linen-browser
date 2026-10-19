@@ -605,14 +605,6 @@ extension BrowserModel {
             }
     }
 
-    func tab(matching reference: String) -> BrowserTab? {
-        let needle = reference.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !needle.isEmpty else { return nil }
-        return tabs.first {
-            $0.title.lowercased().contains(needle) || $0.urlString.lowercased().contains(needle)
-        }
-    }
-
     @discardableResult
     func ensureActiveTab() -> BrowserTab {
         if let activeTab {

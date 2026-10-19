@@ -16,10 +16,6 @@ nonisolated enum SplitMetrics {
         abs(fraction - 0.5) * length < snapDistance
     }
 
-    static func snapped(_ fraction: CGFloat, over length: CGFloat) -> CGFloat {
-        isCentred(fraction, over: length) ? 0.5 : fraction
-    }
-
     static func seamHitRect(in rect: CGRect, axis: SplitAxis) -> CGRect {
         axis == .sideBySide
             ? CGRect(

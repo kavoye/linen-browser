@@ -10,9 +10,9 @@ nonisolated struct AgentEvaluationEvent: Codable, Equatable, Sendable {
     init(kind: String, values: [String: String]) {
         let kinds: Set<String> = [
             "generation", "response", "tool_proposed", "tool_accepted", "tool_completed",
-            "tool_failed", "tool_stopped", "terminal", "context_compaction", "overflow_recovery",
-            "progress_recovery", "checkpoint", "resume", "compaction_result", "progress_update",
-            "provider_usage", "provider_failure", "first_text",
+            "tool_failed", "terminal", "context_compaction", "overflow_recovery",
+            "progress_recovery", "compaction_result", "progress_update",
+            "provider_usage", "provider_failure", "first_text", "attachment_text_fallback",
         ]
         self.kind = kinds.contains(kind) ? kind : "unknown"
         var safe: [String: String] = [:]
@@ -20,10 +20,8 @@ nonisolated struct AgentEvaluationEvent: Codable, Equatable, Sendable {
             safe["name"] = AgentDiagnosticPrivacy.tool(name)
         }
         let statuses: Set<String> = [
-            "completed", "cancelled", "agent_error", "budget_exceeded", "request_limit",
-            "no_progress", "context_limit", "provider_error", "rate_limited", "interrupted", "input_budget",
-            "failed", "succeeded", "not_executed", "manual", "empty_summary", "not_smaller", "summary_too_large",
-            "verification_required", "blocked", "answered", "verified", "unverified",
+            "completed", "no_progress", "context_limit", "provider_error", "rate_limited", "interrupted", "input_budget",
+            "failed", "succeeded", "manual", "empty_summary", "not_smaller", "summary_too_large",
         ]
         for key in ["status", "reason"] {
             if let value = values[key], statuses.contains(value) {

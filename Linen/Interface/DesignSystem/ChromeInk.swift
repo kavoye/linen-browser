@@ -55,7 +55,6 @@ enum ChromeInk {
 private struct GlassSurface<S: Shape>: ViewModifier {
     let isActive: Bool
     let isEnabled: Bool
-    let tint: Color?
     let shape: S
 
     @Environment(\.chromeWash) private var wash
@@ -76,15 +75,9 @@ extension View {
     func glassSurface<S: Shape>(
         isActive: Bool = false,
         isEnabled: Bool = true,
-        tint: Color? = nil,
         in shape: S
     ) -> some View {
-        modifier(GlassSurface(
-            isActive: isActive,
-            isEnabled: isEnabled,
-            tint: tint,
-            shape: shape
-        ))
+        modifier(GlassSurface(isActive: isActive, isEnabled: isEnabled, shape: shape))
     }
 }
 
@@ -152,7 +145,6 @@ extension View {
 
 private struct HoverBackground<S: Shape>: ViewModifier {
     let isActive: Bool
-    let tint: Color?
     let shape: S
 
     @Environment(\.chromeWash) private var wash
@@ -169,12 +161,8 @@ private struct HoverBackground<S: Shape>: ViewModifier {
 }
 
 extension View {
-    func hoverBackground<S: Shape>(
-        isActive: Bool,
-        tint: Color? = nil,
-        in shape: S
-    ) -> some View {
-        modifier(HoverBackground(isActive: isActive, tint: tint, shape: shape))
+    func hoverBackground<S: Shape>(isActive: Bool, in shape: S) -> some View {
+        modifier(HoverBackground(isActive: isActive, shape: shape))
     }
 
     func hoverBackground(isActive: Bool) -> some View {
@@ -212,15 +200,8 @@ extension View {
 private struct SelectionBackground<S: Shape>: ViewModifier {
     let isSelected: Bool
     let isHovering: Bool
-    let hoverTint: Color?
     let rests: Bool
     let shape: S
-
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var onLight: Bool {
-        colorScheme == .light
-    }
 
     private var glass: Glass {
         if isSelected {
@@ -254,14 +235,12 @@ extension View {
     func selectionBackground<S: Shape>(
         isSelected: Bool,
         isHovering: Bool,
-        hoverTint: Color? = nil,
         rests: Bool = false,
         in shape: S
     ) -> some View {
         modifier(SelectionBackground(
             isSelected: isSelected,
             isHovering: isHovering,
-            hoverTint: hoverTint,
             rests: rests,
             shape: shape
         ))

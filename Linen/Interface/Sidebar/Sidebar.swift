@@ -8,15 +8,10 @@ struct Sidebar: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
 
-    private var sidebar: SidebarLayout {
-        coordinator.sidebar
-    }
-
     @Environment(\.windowControlsInset) private var windowControlsInset
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.sidebarIsFloating) private var isFloating
     @Environment(\.floatingGround) private var floatingGround
-    @Environment(\.colorScheme) private var scheme
     @State private var bottomObscuredHeight: CGFloat = 0
     @State private var newFolderDrop = SidebarNewFolderDrop()
     @State private var pinDrop = SidebarPinDrop()

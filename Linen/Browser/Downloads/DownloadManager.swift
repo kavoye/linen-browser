@@ -162,8 +162,6 @@ final class DownloadManager: NSObject {
         return running.reduce(0.0) { $0 + ($1.fraction ?? 0.5) } / Double(running.count)
     }
 
-    private static let recentWindow: TimeInterval = 6 * 60 * 60
-
     // MARK: - Taking a download
 
     func adopt(
@@ -347,10 +345,6 @@ final class DownloadManager: NSObject {
             $0.bytesReceived = received
             $0.bytesExpected = max(0, expected)
         }
-    }
-
-    func holdsResumeState(for id: UUID) -> Bool {
-        resumeData[id] != nil
     }
 
     func noteResumeStarted(_ id: UUID) {

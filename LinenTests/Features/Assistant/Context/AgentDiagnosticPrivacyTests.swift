@@ -83,4 +83,16 @@ struct AgentDiagnosticPrivacyTests {
         }
         #expect(remaining == 0)
     }
+
+    @Test func eventsKeepOnlyWhatTheAgentEmits() {
+        #expect(AgentEvaluationEvent(kind: "attachment_text_fallback", values: [:]).kind == "attachment_text_fallback")
+        for kind in ["tool_stopped", "checkpoint", "resume"] {
+            #expect(AgentEvaluationEvent(kind: kind, values: [:]).kind == "unknown")
+        }
+        for status in ["cancelled", "agent_error", "budget_exceeded", "request_limit", "not_executed", "verification_required",
+                       "blocked", "answered", "verified", "unverified", ] {
+            #expect(AgentEvaluationEvent(kind: "terminal", values: ["status": status]).values["status"] == nil, "\(status)")
+        }
+        #expect(AgentEvaluationEvent(kind: "terminal", values: ["status": "no_progress"]).values["status"] == "no_progress")
+    }
 }

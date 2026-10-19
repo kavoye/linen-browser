@@ -38,7 +38,7 @@ struct GitHubPRDetail: View {
                 }
             }
             if let reference = pr.reference {
-                GitHubPRActions(pr: pr, reference: reference, onOpen: onOpen, onAsk: onAsk)
+                GitHubPRActions(reference: reference, onOpen: onOpen, onAsk: onAsk)
             }
         }
         .frame(maxWidth: 620, alignment: .leading)

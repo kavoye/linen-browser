@@ -226,12 +226,6 @@ final class AutofillSaveCoordinator: NSObject, WKScriptMessageHandler {
         } })
     }
 
-    func use(profileID: UUID) {
-        clear()
-        self.profileID = profileID
-        refreshPolicy()
-    }
-
     private func clear() {
         AutofillSuggestions.shared.reset()
         for session in sessions.objectEnumerator()?.allObjects as? [AutofillSaveSession] ?? [] {

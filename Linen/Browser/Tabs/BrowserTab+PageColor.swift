@@ -18,7 +18,7 @@ extension BrowserTab {
         holdsPageColor = false
     }
 
-    func refreshPageColor(from webView: WKWebView) {
+    func refreshPageColor() {
         guard isShowingRealPage else {
             clearPageColor()
             return
@@ -69,7 +69,7 @@ extension BrowserTab {
 
     func webViewDidBecomeVisible() {
         refreshCanvas(from: webView)
-        refreshPageColor(from: webView)
+        refreshPageColor()
     }
 
     static func averageOfTopBand(of image: NSImage, fraction: CGFloat) -> NSColor? {

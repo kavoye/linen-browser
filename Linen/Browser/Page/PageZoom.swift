@@ -5,11 +5,6 @@ import Foundation
 
 @MainActor
 final class PageZoomStore {
-    static private(set) var shared = PageZoomStore()
-
-    static func use(file: URL) {
-        shared = PageZoomStore(file: file)
-    }
 
     private var levels: [String: Double]
     private let file: URL

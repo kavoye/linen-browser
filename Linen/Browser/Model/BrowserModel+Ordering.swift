@@ -177,11 +177,6 @@ extension BrowserModel {
         settleSplit(containing: anchor)
     }
 
-    func replaceSplitPane(_ replaced: BrowserTab, with tab: BrowserTab) {
-        splits = splits.replacing(replaced.id, with: tab.id)
-        settleSplit(containing: tab)
-    }
-
     func removeFromSplit(_ tab: BrowserTab) {
         guard let survivor = splits.others(of: tab.id).first.flatMap({ tabsByID[$0] }) else { return }
         splits = splits.removing(tab.id)
@@ -602,13 +597,6 @@ extension BrowserModel {
 
     func allTabs(in folder: TabFolder) -> [BrowserTab] {
         sidebarTree.descendants(ofFolder: folder.id).compactMap { item in
-            guard case .tab(let id) = item else { return nil }
-            return tabsByID[id]
-        }
-    }
-
-    var ungroupedTabs: [BrowserTab] {
-        sidebarTree.root.compactMap { item in
             guard case .tab(let id) = item else { return nil }
             return tabsByID[id]
         }

@@ -42,7 +42,7 @@ nonisolated final class OpenAITransportFixture: OpenAITransport, @unchecked Send
         }
     }
     func send(_ request: OpenAIRequest) async throws -> OpenAIHTTPResult {
-        .init(data: try next(request).data(), status: 200, headers: [:])
+        .init(data: try next(request).data())
     }
     func events(_ request: OpenAIRequest) -> AsyncThrowingStream<OpenAIEvent, any Error> {
         AsyncThrowingStream { continuation in

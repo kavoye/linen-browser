@@ -76,21 +76,6 @@ enum Theme {
 
     static let addressBarMaxWidth: CGFloat = 620
 
-    static func edgeHandle(along axis: Axis) -> LinearGradient {
-        LinearGradient(
-            stops: [
-                .init(color: accent.opacity(0), location: 0),
-                .init(color: accent, location: 0.08),
-                .init(color: accent, location: 0.92),
-                .init(color: accent.opacity(0), location: 1),
-            ],
-            startPoint: axis == .vertical ? .top : .leading,
-            endPoint: axis == .vertical ? .bottom : .trailing
-        )
-    }
-
-    static let edgeHandle = edgeHandle(along: .vertical)
-
     static func chrome(_ opacity: Double) -> Color {
         Color.primary.opacity(opacity)
     }

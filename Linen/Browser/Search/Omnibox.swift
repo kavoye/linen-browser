@@ -156,10 +156,6 @@ enum OmniboxSelection {
 }
 
 enum Omnibox {
-    static var engineName: String {
-        SearchURLBuilder.engine.name
-    }
-
     static var isAgentOnly: Bool {
         agentOnlyForTesting ?? BrowserSettings.shared.agentOnlyInput
     }

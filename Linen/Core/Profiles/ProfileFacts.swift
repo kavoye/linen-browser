@@ -26,25 +26,6 @@ extension ProfileFacts {
         var holdsOtherProfiles: Bool
     }
 
-    @MainActor
-    static func sources(for profile: Profile) -> Sources? {
-        guard !profile.isPrivate else { return nil }
-        return Sources(
-            database: profile.databaseURL,
-            profileID: profile.id,
-            extensionLibrary: ExtensionLibrary.defaultBaseDirectory,
-            permissions: profile.permissionsFile,
-            support: profile.supportDirectory,
-            holdsOtherProfiles: profile.isOriginal
-        )
-    }
-
-    @MainActor
-    static func load(for profile: Profile) async -> ProfileFacts {
-        guard let sources = sources(for: profile) else { return .empty }
-        return await Task.detached(priority: .utility) { read(sources) }.value
-    }
-
     nonisolated static func read(_ sources: Sources) -> ProfileFacts {
         var facts = ProfileFacts()
         if let database = sources.database, let counts = counts(in: database) {
@@ -113,17 +94,5 @@ extension ProfileFacts {
             total += Int64(bytes)
         }
         return total
-    }
-}
-
-enum ProfileMaintenance {
-    @MainActor
-    static func clearHistory(of profile: Profile) {
-        guard let database = profile.databaseURL,
-              FileManager.default.fileExists(atPath: database.path)
-        else { return }
-        let appDatabase = AppDatabase(at: database)
-        HistoryStore(database: appDatabase).clear()
-        TabArchive(database: appDatabase).clear()
     }
 }

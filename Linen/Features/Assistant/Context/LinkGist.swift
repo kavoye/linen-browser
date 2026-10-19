@@ -32,9 +32,6 @@ nonisolated struct LinkPeekSummary: Equatable {
 }
 
 enum LinkSummarizer {
-    static var isAvailable: Bool {
-        UtilityModelSource.isAvailable
-    }
 
     private static let instructions = """
         You preview a web page for someone who has not opened it. You get the page's \

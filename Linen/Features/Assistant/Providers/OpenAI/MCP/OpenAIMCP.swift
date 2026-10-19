@@ -61,7 +61,6 @@ nonisolated struct OpenAIMCPApproval: Sendable {
     let id: String
     let server: String
     let name: String
-    let arguments: String
     let question: String
     static let approve = "Approve this call"
     static let deny = "Deny this call"
@@ -75,7 +74,6 @@ nonisolated struct OpenAIMCPApproval: Sendable {
         self.id = id
         self.server = server
         self.name = name
-        self.arguments = raw
         let visible = raw.unicodeScalars.map { scalar in
             [.control, .format, .lineSeparator, .paragraphSeparator].contains(scalar.properties.generalCategory)
                 ? "\\u{\(String(scalar.value, radix: 16))}" : String(scalar)
@@ -123,10 +121,6 @@ nonisolated extension OpenAIConversationState {
 
     var unsubmittedMCPApprovals: Set<String> {
         pendingMCPApprovals.subtracting(mcpApprovalAttempts ?? [])
-    }
-
-    var hasUnconfirmedMCPCall: Bool {
-        !pendingMCPApprovals.isDisjoint(with: mcpApprovalAttempts ?? [])
     }
 
     mutating func recordMCPApprovalAttempts(_ ids: Set<String>) {

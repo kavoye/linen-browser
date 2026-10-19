@@ -18,10 +18,6 @@ enum MentionText {
         text.reduce(0) { $1 == markerCharacter ? $0 + 1 : $0 }
     }
 
-    static func contains(in text: String) -> Bool {
-        text.contains(markerCharacter)
-    }
-
     static func appending(to text: String) -> String {
         let head = AskSurfaceInteraction.removingMentionFragment(from: text)
         return head + marker + " "
@@ -39,21 +35,6 @@ enum MentionText {
                 result += "@" + chips[index].title
             }
             index += 1
-        }
-        return result
-    }
-
-    static func removingMarker(at index: Int, from text: String) -> String {
-        var seen = 0
-        var result = ""
-        for character in text {
-            if character == markerCharacter {
-                defer { seen += 1 }
-                if seen == index {
-                    continue
-                }
-            }
-            result.append(character)
         }
         return result
     }

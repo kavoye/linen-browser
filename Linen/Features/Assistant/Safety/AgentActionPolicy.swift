@@ -9,12 +9,6 @@ import Observation
 final class AgentActionPolicy {
     static private(set) var shared = AgentActionPolicy()
 
-    @discardableResult
-    static func use(storage: any AgentGrantStorage) -> AgentActionPolicy {
-        shared = AgentActionPolicy(storage: storage)
-        return shared
-    }
-
     struct Grant: Identifiable, Hashable, Codable, Sendable {
         var host: String
         var category: SensitiveAction.Category
