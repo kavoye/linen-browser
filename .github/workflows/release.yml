@@ -51,13 +51,37 @@ jobs:
         run: |
           SHA="$(git rev-parse HEAD)"
           for _ in $(seq 1 90); do
-            STATE="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
-              --jq '.check_runs[] | select(.name == "Build and test") | "\(.status) \(.conclusion)"' \
-              | head -1)"
+            RUNS="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs")"
+            STATE="$(jq -r '.check_runs[] | select(.name == "Build and test") | "\(.status) \(.conclusion)"' <<< "$RUNS" | head -1)"
+            DETECT="$(jq -r '.check_runs[] | select(.name == "Detect changes") | .conclusion' <<< "$RUNS" | head -1)"
             case "$STATE" in
               "completed success")
                 echo "$SHA passed."
                 exit 0
+                ;;
+              "completed skipped")
+                if [ "$DETECT" != "success" ]; then
+                  echo "::error::Build and test skipped on $SHA."
+                  exit 1
+                fi
+                for PARENT in $(git rev-list --first-parent --max-count=50 "$SHA^"); do
+                  TESTED="$(gh api "repos/$GITHUB_REPOSITORY/commits/$PARENT/check-runs" \
+                    --jq '.check_runs[] | select(.name == "Build and test") | .conclusion' \
+                    | head -1)"
+                  case "$TESTED" in
+                    success)
+                      echo "$SHA changes only docs. Its code passed on $PARENT."
+                      exit 0
+                      ;;
+                    skipped) ;;
+                    *)
+                      echo "::error::$SHA changes only docs, but Build and test is '${TESTED:-missing}' on $PARENT."
+                      exit 1
+                      ;;
+                  esac
+                done
+                echo "::error::No tested commit within 50 commits of $SHA."
+                exit 1
                 ;;
               completed*)
                 echo "::error::Build and test ${STATE#completed } on $SHA."

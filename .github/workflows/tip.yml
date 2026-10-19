@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 # Ten commits in ten minutes build once, and always the last one.
 concurrency:
@@ -39,6 +40,7 @@ jobs:
       file: ${{ steps.compute.outputs.file }}
       number: ${{ steps.compute.outputs.number }}
       base: ${{ steps.compute.outputs.base }}
+      docs: ${{ steps.compute.outputs.docs }}
 
     steps:
       # `workflow_run` checks out the default branch, not the commit that
@@ -50,6 +52,8 @@ jobs:
 
       - name: Version from the last tag
         id: compute
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # `--match` excludes the rolling `tip` tag, which is also on main and
           # would otherwise collapse the count to zero on every build.
@@ -78,8 +82,15 @@ jobs:
           echo "number=$(git rev-list --count HEAD)"     >> "$GITHUB_OUTPUT"
           echo "base=$BASE"                              >> "$GITHUB_OUTPUT"
 
+          TEST="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/${{ github.event.workflow_run.id }}/jobs" \
+            --jq '.jobs[] | select(.name == "Build and test") | .conclusion')"
+          if [ "$TEST" = "skipped" ] && [ "$COUNT" -ne 0 ]; then
+            echo "docs=true" >> "$GITHUB_OUTPUT"
+          fi
+
   preview:
     needs: version
+    if: needs.version.outputs.docs != 'true'
     runs-on: xcode-27
     timeout-minutes: 60
 
