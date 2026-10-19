@@ -165,6 +165,7 @@ struct Vendor {
 }
 
 let vendored = [
+    Vendor(name: "public-suffix-list", version: "2026-10-19", url: "https://publicsuffix.org"),
     Vendor(name: "readability", version: "0.6.0", url: "https://github.com/mozilla/readability"),
     Vendor(name: "thinking-orbs", version: "0.3.1", url: "https://github.com/Jakubantalik/thinking-orbs"),
 ]

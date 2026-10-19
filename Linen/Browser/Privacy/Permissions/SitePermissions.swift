@@ -212,7 +212,7 @@ final class SitePermissions {
     }
 
     func assistantAccess(for origin: String) -> AssistantAccessPolicy {
-        assistantRecords[normalize(origin)] ?? .ask
+        assistantRecords[Self.site(for: normalize(origin))] ?? .ask
     }
 
     var assistantOrigins: [String] {
@@ -306,7 +306,7 @@ final class SitePermissions {
     }
 
     func setAssistantAccess(_ policy: AssistantAccessPolicy, for origin: String) {
-        let origin = normalize(origin)
+        let origin = Self.site(for: normalize(origin))
         guard !origin.isEmpty else { return }
         assistantRecords[origin] = policy == .ask ? nil : policy
         scheduleSave()
@@ -394,6 +394,17 @@ final class SitePermissions {
         default:
             nil
         }
+    }
+
+    nonisolated static func site(for origin: String) -> String {
+        guard let components = URLComponents(string: origin), let scheme = components.scheme,
+              let host = components.host, let domain = PublicSuffix.registrableDomain(of: host)
+        else { return origin }
+        return components.port.map { "\(scheme)://\(domain):\($0)" } ?? "\(scheme)://\(domain)"
+    }
+
+    nonisolated static func site(for url: URL?) -> String {
+        site(for: origin(for: url))
     }
 
     nonisolated static func isPotentiallyTrustworthy(_ url: URL?) -> Bool {
@@ -536,10 +547,12 @@ final class SitePermissions {
             records[origin, default: [:]].merge(policies) { existing, _ in existing }
         }
         defaults = snapshot.defaults
-        for (key, policy) in snapshot.assistantAccess {
-            let origin = normalize(key)
-            guard !origin.isEmpty, assistantRecords[origin] == nil else { continue }
-            assistantRecords[origin] = policy == .ask ? nil : policy
+        for (key, policy) in snapshot.assistantAccess where policy != .ask {
+            let site = Self.site(for: normalize(key))
+            guard !site.isEmpty else { continue }
+            let order: [AssistantAccessPolicy] = [.control, .readOnly, .deny]
+            assistantRecords[site] = [assistantRecords[site], policy].compactMap { $0 }
+                .max { order.firstIndex(of: $0) ?? 0 < order.firstIndex(of: $1) ?? 0 }
         }
         for key in snapshot.keptActive {
             let origin = normalize(key)

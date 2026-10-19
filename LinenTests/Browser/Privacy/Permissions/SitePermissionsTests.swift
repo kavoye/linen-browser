@@ -50,6 +50,37 @@ struct SitePermissionsStoreTests {
         #expect(store.assistantOrigins == ["https://example.com", "https://example.com:8443"])
     }
 
+    @Test func assistantAccessCoversTheWholeSite() {
+        let store = SitePermissions(persists: false)
+        store.setAssistantAccess(.deny, for: "https://www.google.com")
+
+        #expect(store.assistantAccess(for: "https://maps.google.com") == .deny)
+        #expect(store.assistantAccess(for: "https://google.com") == .deny)
+        #expect(store.assistantAccess(for: "https://google.co.uk") == .ask)
+        #expect(store.assistantOrigins == ["https://google.com"])
+    }
+
+    @Test func assistantAccessKeepsHostedSitesApart() {
+        let store = SitePermissions(persists: false)
+        store.setAssistantAccess(.control, for: "https://alice.github.io")
+
+        #expect(store.assistantAccess(for: "https://docs.alice.github.io") == .control)
+        #expect(store.assistantAccess(for: "https://bob.github.io") == .ask)
+        #expect(store.assistantAccess(for: "http://127.0.0.1:8080") == .ask)
+    }
+
+    @Test func savedHostsFoldIntoTheirSiteWithTheStrictestAnswer() throws {
+        let file = TestFiles.directory
+            .appendingPathComponent("SitePermissionsFold-\(UUID().uuidString).json")
+        let json = #"{"assistantAccess":{"https://maps.google.com":"control","https://www.google.com":"readOnly","https://mail.google.com":"deny","https://news.ycombinator.com":"control"}}"#
+        try Data(json.utf8).write(to: file)
+        let store = SitePermissions(storageURL: file)
+
+        #expect(store.assistantAccess(for: "https://maps.google.com") == .deny)
+        #expect(store.assistantAccess(for: "https://ycombinator.com") == .control)
+        #expect(store.assistantOrigins == ["https://google.com", "https://ycombinator.com"])
+    }
+
     @Test func askingAgainForgetsAssistantAccess() {
         let store = temporaryStore()
         store.setAssistantAccess(.deny, for: "https://example.com")

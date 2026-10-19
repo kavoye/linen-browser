@@ -27,6 +27,7 @@ final class TabAssistantAccessCenter {
     private let store: SitePermissions
 
     private(set) var origin = ""
+    private(set) var host = ""
     var persistsAnswers = true
     private(set) var sessionPolicy: AssistantAccessPolicy?
 
@@ -62,7 +63,7 @@ final class TabAssistantAccessCenter {
         if let stub = Self.decisionForTesting {
             answer = stub.decide(capability, requestedOrigin)
         } else {
-            answer = await Self.ask(capability: capability, origin: requestedOrigin)
+            answer = await Self.ask(capability: capability, origin: requestedOrigin, host: host)
         }
 
         guard origin == requestedOrigin else { return false }
@@ -83,9 +84,9 @@ final class TabAssistantAccessCenter {
 
     func pageChanged(url: URL?) {
         let scheme = url?.scheme?.lowercased()
-        let nextOrigin = scheme == "http" || scheme == "https"
-            ? SitePermissions.origin(for: url)
-            : ""
+        let isWeb = scheme == "http" || scheme == "https"
+        host = isWeb ? url?.host()?.lowercased() ?? "" : ""
+        let nextOrigin = isWeb ? SitePermissions.site(for: url) : ""
         guard nextOrigin != origin else { return }
         origin = nextOrigin
         sessionPolicy = nil
@@ -127,7 +128,8 @@ final class TabAssistantAccessCenter {
 
     private static func ask(
         capability: AssistantPageCapability,
-        origin: String
+        origin: String,
+        host: String
     ) async -> AssistantAccessPolicy {
         guard !isRunningTests else { return .ask }
 
@@ -135,6 +137,9 @@ final class TabAssistantAccessCenter {
         let alert = NSAlert()
         alert.messageText = String(localized: "Allow Assistant on \(site)?")
         alert.informativeText = body(capability: capability, site: site)
+        if !host.isEmpty, host != site, host != "www." + site {
+            alert.informativeText += "\n\n" + String(localized: "This includes \(host) and other pages on \(site).")
+        }
 
         let choices: [(LocalizedStringResource, AssistantAccessPolicy)] = switch capability {
         case .read:

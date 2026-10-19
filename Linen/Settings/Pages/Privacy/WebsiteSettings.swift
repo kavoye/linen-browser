@@ -292,6 +292,12 @@ private struct SiteDetailPage: View {
         )
     }
 
+    private var assistantSiteCaption: LocalizedStringResource? {
+        let site = SitePermissions.site(for: origin)
+        guard site != origin else { return nil }
+        return "Applies to every page on \(SitePermissions.displayName(for: site))."
+    }
+
     private var keepAwakeCaption: AttributedString {
         SettingsIndex.caption(
             "Sleep inactive tabs is set to Never, so every website stays loaded.",
@@ -362,7 +368,7 @@ private struct SiteDetailPage: View {
         )
 
         SettingsCard {
-            DetailRow(title: "Assistant access") {
+            DetailRow(title: "Assistant access", caption: assistantSiteCaption) {
                 SettingsMenu(
                     options: AssistantAccessPolicy.allCases.map {
                         .init(value: $0, label: String(localized: $0.label))
