@@ -65,6 +65,25 @@ struct MCPActivityTests {
         #expect(subject.log.traces.last?.steps.map(\.toolName) == ["listTabs"])
     }
 
+    @Test func theTaskAlsoShowsInTheTabTheClientOpens() async throws {
+        let subject = try await fixture()
+        defer { _ = subject.server }
+        let opened = try await subject.session.call(name: "newTab", arguments: ["url": .string(try subject.server.url().absoluteString)])
+        #expect(opened.isError == false)
+        let newTab = try #require(subject.browser.activeTab)
+        #expect(newTab !== subject.tab)
+        let trace = try #require(subject.log.traces.last)
+        #expect(subject.log.traces.count == 1)
+        #expect(trace.tabID == subject.browser.anchorID(of: subject.tab.id))
+        #expect(subject.log.traces(forTab: subject.browser.anchorID(of: newTab.id)).map(\.id) == [trace.id])
+        #expect(newTab.isAgentWorking)
+        _ = try await subject.session.call(name: "listTabs", arguments: [:])
+        #expect(subject.log.traces.count == 1)
+        subject.session.revoke()
+        #expect(!newTab.isAgentWorking)
+        #expect(!subject.tab.isAgentWorking)
+    }
+
     @Test func verifiedClientsShowTheirBrand() {
         #expect(MCPBrowserSession.providerID(for: MCPClientIdentity(name: "Claude Code", path: "/x", developer: "Anthropic PBC")) == "anthropic")
         #expect(MCPBrowserSession.providerID(for: MCPClientIdentity(name: "Codex", path: "/x", developer: "OpenAI, L.L.C.")) == "openai")

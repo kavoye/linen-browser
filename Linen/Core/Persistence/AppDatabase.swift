@@ -250,6 +250,7 @@ struct AppDatabase: Sendable {
         try defineTabArchive(in: db)
         try defineSessionSpaces(in: db)
         try defineContextClears(in: db)
+        try defineOpenedTabs(in: db)
         try defineAssistantMemory(in: db)
     }
 
@@ -267,6 +268,13 @@ struct AppDatabase: Sendable {
         guard try !db.columns(in: "agentTrace").contains(where: { $0.name == "clearsContext" }) else { return }
         try db.alter(table: "agentTrace") { t in
             t.add(column: "clearsContext", .boolean).notNull().defaults(to: false)
+        }
+    }
+
+    private nonisolated static func defineOpenedTabs(in db: Database) throws {
+        guard try !db.columns(in: "agentTrace").contains(where: { $0.name == "openedTabIDs" }) else { return }
+        try db.alter(table: "agentTrace") { t in
+            t.add(column: "openedTabIDs", .text)
         }
     }
 

@@ -147,8 +147,11 @@ final class MCPBrowserSession: Identifiable {
         idleFinish = nil
         guard let trace else { return }
         self.trace = nil
+        let opened = toolkit.log.traces.first { $0.id == trace.id }?.openedTabIDs ?? []
         toolkit.log.completeTask(trace.id, response: String(localized: "\(displayName) finished working."))
-        browser.setAgentWorking(false, inAnchor: trace.anchorID)
+        for anchor in [trace.anchorID] + opened {
+            browser.setAgentWorking(false, inAnchor: anchor)
+        }
     }
 
     private func scheduleIdleFinish() {

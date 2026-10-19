@@ -209,6 +209,9 @@ final class AgentToolkit {
 
     func finishTask(_ completedTask: AgentTaskContext) {
         guard task?.id == completedTask.id else { return }
+        for id in agentOpenedTabIDs {
+            browser.setAgentWorking(false, inAnchor: browser.anchorID(of: id))
+        }
         computerObservation = nil
         task = nil
     }
@@ -957,5 +960,9 @@ extension AgentToolkit {
     func adoptOpened(_ tab: BrowserTab) {
         agentOpenedTabIDs.insert(tab.id)
         browser.onTabAlert?(.agentOpened(tab))
+        guard let task else { return }
+        let anchor = browser.anchorID(of: tab.id)
+        log.noteOpenedTab(anchor, taskID: task.id)
+        browser.setAgentWorking(true, inAnchor: anchor)
     }
 }
