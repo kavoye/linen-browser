@@ -73,7 +73,7 @@ struct PrivacySettings: View {
             .settingsAnchor("privacy.quit")
         }
 
-        SettingsSection(title: "History and website data", symbol: "clock") {
+        SettingsCard {
             DetailRow(
                 title: "Keep history for",
                 caption: retentionCaption

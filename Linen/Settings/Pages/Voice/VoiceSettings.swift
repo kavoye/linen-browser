@@ -32,7 +32,7 @@ struct VoiceSettings: View {
     var body: some View {
         SettingsPageHeader(
             title: "Voice",
-            caption: "Choose how Linen listens and speaks. Voices on this Mac are free. OpenAI voices are billed to your API key."
+            caption: "Choose how Linen listens and speaks. Voices on this Mac are free. OpenAI charges its voices to your API key."
         )
 
         if !canUseOpenAI {
@@ -45,7 +45,7 @@ struct VoiceSettings: View {
                     .init(value: VoiceEngine.device, label: "On this Mac",
                           caption: "Recognizes your speech on this Mac at no cost."),
                     .init(value: VoiceEngine.openAI, label: "OpenAI",
-                          caption: "Recognizes names and mixed languages better. Billed for each minute you speak."),
+                          caption: "Recognizes names and mixed languages better. OpenAI charges for each minute you speak."),
                 ],
                 selection: coordinator.voiceRoute.dictatesWithOpenAI ? .openAI : .device,
                 onSelect: { preferences.dictation = $0 }
@@ -90,7 +90,7 @@ struct VoiceSettings: View {
                     .init(value: VoiceEngine.device, label: "On this Mac",
                           caption: "Uses the best voice installed on this Mac at no cost."),
                     .init(value: VoiceEngine.openAI, label: "OpenAI",
-                          caption: "Sounds more natural. Billed for each answer read aloud."),
+                          caption: "Sounds more natural. OpenAI charges for each answer it reads."),
                 ],
                 selection: coordinator.voiceRoute.readsWithOpenAI ? .openAI : .device,
                 onSelect: { preferences.reading = $0 }
@@ -122,10 +122,10 @@ struct VoiceSettings: View {
             }
         }
 
-        SettingsSection(title: "Conversation", symbol: "waveform") {
+        SettingsCard {
             DetailRow(
                 title: "Voice conversation",
-                caption: "Talk back and forth with the assistant. Billed for each minute a conversation is open."
+                caption: "Talk back and forth with the assistant. OpenAI charges for each minute a conversation is open."
             ) {
                 SettingsToggle(Binding(
                     get: { conversationIsOn },

@@ -29,11 +29,7 @@ struct GeneralSettings: View {
     var body: some View {
         SettingsPageHeader(title: "General")
 
-        SettingsSection(
-            title: "Startup & data",
-            symbol: "arrow.up.forward.app",
-            footnote: "Export your bookmarks as an HTML file in the other browser first."
-        ) {
+        SettingsCard {
             DetailRow(
                 title: "Default web browser",
                 caption: defaultBrowserCaption
@@ -52,7 +48,7 @@ struct GeneralSettings: View {
 
             BookmarkImportRow(
                 browser: coordinator.browser,
-                caption: "Import an HTML file from Safari, Chrome, Firefox, or Edge."
+                caption: "Export your bookmarks as an HTML file from Safari, Chrome, Firefox, or Edge, then import it here."
             )
             .settingsAnchor("general.import")
         }
@@ -67,7 +63,7 @@ struct GeneralSettings: View {
             Footnote("If no panel appeared, set it in System Settings under Desktop & Dock.")
         }
 
-        SettingsSection(title: "Tabs", symbol: "rectangle.on.rectangle") {
+        SettingsCard {
             DetailRow(
                 title: "Sleep inactive tabs",
                 caption: "Inactive tabs unload to save memory. They reload when you open them."
@@ -93,7 +89,7 @@ struct GeneralSettings: View {
             .settingsAnchor("general.archiveTabs")
         }
 
-        SettingsSection(title: "Browsing", symbol: "cursorarrow.rays", footnote: mediaFootnote) {
+        SettingsCard {
             DetailRow(
                 title: "Show status bar",
                 caption: "Shows where a link goes at the bottom of the window."
@@ -132,6 +128,10 @@ struct GeneralSettings: View {
             }
             .settingsAnchor("general.automaticPiP")
             .disabled(settings.showsVideoInPlayer)
+        }
+
+        if let mediaFootnote {
+            Footnote(mediaFootnote)
         }
     }
 

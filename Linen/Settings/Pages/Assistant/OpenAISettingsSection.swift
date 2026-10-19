@@ -30,7 +30,7 @@ struct OpenAISettingsSection: View {
                 .settingsAnchor("openai.replyLength")
                 RowSeparator()
             }
-            DrillInRow(title: "Connections", symbol: "link", caption: "Connect services your assistant can use.") { onOpen(.connections) }
+            DrillInRow(title: "Connections", symbol: "link", caption: "Connect services the assistant can use.") { onOpen(.connections) }
                 .settingsAnchor("openai.connections")
             RowSeparator()
             DrillInRow(title: "Data and privacy", symbol: "hand.raised", caption: "Choose whether you can retrieve replies through the OpenAI API.") { onOpen(.privacy) }
@@ -186,7 +186,7 @@ private struct OpenAIPrivacySettings: View {
         Text("Linen saves chat history on this Mac. Your messages are still sent to OpenAI to generate replies.")
             .font(.callout).foregroundStyle(.secondary)
         SettingsCard {
-            DetailRow(title: "Keep replies in my OpenAI account", caption: "Save an extra copy for retrieval through the OpenAI API. You don’t need this for Linen’s chat history.") {
+            DetailRow(title: "Keep replies in my OpenAI account", caption: "OpenAI keeps a copy that you can retrieve through its API. Linen’s chat history doesn’t need it.") {
                 SettingsToggle($options.store)
             }
             .settingsAnchor("openai.privacy")

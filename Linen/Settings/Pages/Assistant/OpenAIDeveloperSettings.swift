@@ -41,8 +41,8 @@ struct OpenAIDeveloperSettings: View {
     @ViewBuilder private var settings: some View {
         Text("Change these options only if your API setup needs them. Chat and voice work with the defaults.")
             .font(.callout).foregroundStyle(.secondary)
-        SettingsSection(title: "API configuration", symbol: "curlybraces") {
-            DetailRow(title: "Run commands at OpenAI", caption: "Allow a hosted shell to run commands and create files. Extra charges may apply.") {
+        SettingsCard {
+            DetailRow(title: "Run commands at OpenAI", caption: "Let a shell at OpenAI run commands and create files. OpenAI may charge extra.") {
                 SettingsToggle(Binding(get: { options.hostedTools.contains { $0["type"] == "shell" } }, set: { enabled in
                     var updated = options
                     updated.hostedTools.removeAll { $0["type"] == "shell" }
@@ -54,10 +54,10 @@ struct OpenAIDeveloperSettings: View {
             }
             .settingsAnchor("openai.developer.runCommands")
             RowSeparator()
-            DrillInRow(title: "Voice models", caption: "Override the models used for listening and speech.") { router.open(base + ["voice-models"]) }
+            DrillInRow(title: "Voice models", caption: "Choose the models for listening and speech.") { router.open(base + ["voice-models"]) }
                 .settingsAnchor("openai.developer.voiceModels")
             RowSeparator()
-            DrillInRow(title: "API JSON", caption: "Edit additional parameters and hosted tool definitions.") { router.open(base + ["api-json"]) }
+            DrillInRow(title: "API JSON", caption: "Edit request parameters and hosted tool definitions.") { router.open(base + ["api-json"]) }
                 .settingsAnchor("openai.developer.apiJSON")
         }
     }

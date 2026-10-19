@@ -228,7 +228,9 @@ private struct ExtensionUpdateStatus: View {
                 .font(Theme.Font.caption)
                 .foregroundStyle(.secondary)
         case .updated(let version):
-            Tag("Updated to \(version)")
+            Text("Updated to \(version)")
+                .font(Theme.Font.caption)
+                .foregroundStyle(.secondary)
         case .failed(let message):
             Text(verbatim: message)
                 .font(Theme.Font.caption)

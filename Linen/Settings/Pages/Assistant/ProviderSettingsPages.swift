@@ -35,7 +35,9 @@ struct SettingsProviderRow: View {
                 Spacer(minLength: 8)
 
                 if isInUse {
-                    Tag("In use")
+                    Text("In use")
+                        .font(Theme.Font.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 DrillInChevron()
@@ -50,7 +52,6 @@ struct SettingsProviderRow: View {
 
 struct ProviderPage: View {
     @Bindable var model: IntelligenceViewModel
-    let coordinator: AppCoordinator
 
     @State private var confirmingEndpointRemoval = false
 
@@ -93,7 +94,9 @@ struct ProviderPage: View {
             )
 
             if model.isSubjectInUse {
-                Tag("In use")
+                Text("In use")
+                    .font(Theme.Font.secondary)
+                    .foregroundStyle(.secondary)
                     .padding(.top, 5)
             } else {
                 SettingsButton(title: "Use \(provider.name)") {
@@ -179,7 +182,9 @@ struct ProviderPage: View {
                 SettingsButton(title: "Remove…", isDestructive: true, symbol: "trash") {
                     confirmingEndpointRemoval = true
                 }
-                Tag(provider.adapterLabel)
+                Text(provider.adapterLabel)
+                    .font(Theme.Font.secondary)
+                    .foregroundStyle(.secondary)
             }
         }
         .settingsAnchor("provider.endpoint")

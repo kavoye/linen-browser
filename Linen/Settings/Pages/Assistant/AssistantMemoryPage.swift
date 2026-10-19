@@ -32,13 +32,13 @@ struct AssistantMemoryPage: View {
 
         SettingsPageHeader(
             title: "Memory",
-            caption: "What the assistant remembers about you. It saves your answers and what you ask it to remember, never page content, passwords, or payment details."
+            caption: "What the assistant remembers about you. It saves your answers and what you ask it to remember. It never saves page content, passwords, or payment details."
         )
 
         SettingsCard {
             DetailRow(
                 title: "Remember things about me",
-                caption: "The assistant saves what you tell it about yourself and uses it later. When this is off, it can’t save or recall anything."
+                caption: "When this is off, the assistant can’t save or recall anything."
             ) {
                 SettingsToggle($isEnabled)
             }

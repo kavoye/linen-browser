@@ -17,7 +17,7 @@ struct AssistantSettings: View {
             case .overview:
                 AssistantOverview(model: model, coordinator: coordinator)
             case .provider:
-                ProviderPage(model: model, coordinator: coordinator)
+                ProviderPage(model: model)
             case .picker:
                 AddProviderPage(model: model)
             case .editor:
@@ -111,9 +111,10 @@ private struct AssistantOverview: View {
 
         BehaviourSection(settings: coordinator.settings)
 
-        SettingsSection(title: "Acting on websites", symbol: "hand.raised") {
+        SettingsCard {
             DrillInRow(
                 title: "Allowed without asking",
+                caption: "Websites where the assistant can act without asking you first.",
                 detail: AssistantGrantsPage.summary(for: coordinator.browser.context.actionPolicy)
             ) {
                 model.showGrants()
@@ -121,7 +122,7 @@ private struct AssistantOverview: View {
             .settingsAnchor("privacy.assistant")
         }
 
-        SettingsSection(title: "Memory", symbol: "square.and.pencil") {
+        SettingsCard {
             DrillInRow(title: "Memory", detail: AssistantMemoryPage.summary(for: coordinator.browser.memory)) {
                 model.showMemory()
             }
@@ -188,7 +189,7 @@ private struct BehaviourSection: View {
     @Bindable var settings: BrowserSettings
 
     var body: some View {
-        SettingsSection(title: "Links", symbol: "link") {
+        SettingsCard {
             DetailRow(
                 title: "Summarize a link on hover",
                 caption: "Hold Shift while pointing at a link to get a summary before opening it."
