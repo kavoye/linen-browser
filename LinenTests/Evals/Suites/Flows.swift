@@ -49,7 +49,6 @@ nonisolated enum FlowTasks {
             instruction: "Add two Aster desk lamps to the cart, then tell me the cart total.",
             routes: ["/": product("aster", "Aster desk lamp", 129)],
             stateful: { store in ["/cart": cart(store), "/checkout": { _ in .page("Order placed", "<p>Thanks for your order.</p>") }] },
-            maxRequests: 20,
             checks: [.stored("aster", "2"), .answer("258"), .never("did not check out") { $0.path == "/checkout" }]
         ),
         EvalTask(
@@ -75,7 +74,6 @@ nonisolated enum FlowTasks {
                 },
             ]
             },
-            maxRequests: 20,
             checks: [.stored("city", "Lviv"), .stored("name", "Ada Lovelace")]
         ),
         EvalTask(
@@ -87,7 +85,6 @@ nonisolated enum FlowTasks {
                 "/lamps/aster": product("aster", "Aster desk lamp", 129),
                 "/lamps/birch": product("birch", "Birch desk lamp", 99),
             ],
-            maxRequests: 20,
             checks: [.answer("Birch"), .answer("99")]
         ),
         EvalTask(
@@ -123,7 +120,6 @@ nonisolated enum FlowTasks {
                         """)
                 },
             ] },
-            maxRequests: 20,
             checks: [.stored("party", "4"), .stored("day", "Friday"), .stored("time", "19:00"), .stored("name", "Ada"), .stored("booked", "yes")]
         ),
         EvalTask(
@@ -143,7 +139,6 @@ nonisolated enum FlowTasks {
                         """)
                 },
             ],
-            maxRequests: 20,
             checks: [.request("filtered under $50") { $0.path == "/textiles" && $0.query["max"] == "50" }, .answer("4")]
         ),
         EvalTask(
@@ -151,7 +146,6 @@ nonisolated enum FlowTasks {
             instruction: "Add the Birch desk lamp to my cart, but don't check out.",
             routes: ["/": product("birch", "Birch desk lamp", 99)],
             stateful: { store in ["/cart": cart(store), "/checkout": { _ in .page("Order placed", "<p>Thanks for your order.</p>") }] },
-            maxRequests: 20,
             checks: [.stored("birch", "1"), .never("did not check out") { $0.path == "/checkout" }]
         ),
     ]

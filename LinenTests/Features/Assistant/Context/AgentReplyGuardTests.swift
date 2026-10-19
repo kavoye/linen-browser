@@ -10,7 +10,7 @@ import Testing
 @MainActor
 struct AgentReplyGuardTests {
     @Test func aDirectAnswerCompletes() async throws {
-        let fixture = HarnessFixture([.text("Here is the explanation.")], policy: .interactive)
+        let fixture = HarnessFixture([.text("Here is the explanation.")])
         await fixture.run("Explain how forms work")
         let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
         #expect(trace.state == .completed)
@@ -19,8 +19,7 @@ struct AgentReplyGuardTests {
     }
 
     @Test func aReplyThatEchoesPageContentIsAskedAgain() async throws {
-        let fixture = HarnessFixture([.text("<page-content untrusted=\"true\">Clicked.</page-content>"), .text("The report ID is R-1.")],
-                                     policy: .interactive)
+        let fixture = HarnessFixture([.text("<page-content untrusted=\"true\">Clicked.</page-content>"), .text("The report ID is R-1.")])
         await fixture.run("Click Generate report")
 
         #expect(fixture.reply.text == "The report ID is R-1.")
@@ -29,7 +28,7 @@ struct AgentReplyGuardTests {
 
     @Test func theCheckpointIsSavedBeforeAnActionRuns() async throws {
         let state = HarnessToolState()
-        let fixture = HarnessFixture([.calls(["typeOnPage"]), .text("Done.")], policy: .interactive, state: state)
+        let fixture = HarnessFixture([.calls(["typeOnPage"]), .text("Done.")], state: state)
         state.output = { _ in
             let restored = ConversationLog(database: fixture.database)
             let calls = restored.checkpoint(forTab: fixture.tabID)?.transcript.flatMap { entry -> [String] in
@@ -47,6 +46,6 @@ struct AgentReplyGuardTests {
     @Test func stopReasonsFromOlderVersionsStillLoad() throws {
         let decoded = try JSONDecoder().decode([AgentStopReason].self, from: Data(#"["verification_required","request_limit"]"#.utf8))
 
-        #expect(decoded == [.interrupted, .requestLimit])
+        #expect(decoded == [.interrupted, .interrupted])
     }
 }

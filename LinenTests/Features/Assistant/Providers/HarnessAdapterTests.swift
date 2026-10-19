@@ -33,7 +33,7 @@ struct HarnessAdapterTests {
         let log = ConversationLog(database: .temporary())
         let state = HarnessToolState()
         let agent = AnyLanguageModelAgent(
-            name: "fixture", executionPolicy: .interactive,
+            name: "fixture",
             toolOverrides: [HarnessTool(name: "readPage", state: state)], model: model,
             options: GenerationOptions(),
             budget: ContextBudget.resolve(windowTokens: 128_000, desiredResponseTokens: 2_000),

@@ -324,21 +324,4 @@ struct AgentContextCompactionTests {
         #expect(fixture.log.checkpoint(forTab: fixture.tabID) == original)
     }
 
-    @Test func chunkedCompactionHonorsTheOptionalRequestLimit() async throws {
-        let state = HarnessToolState()
-        state.output = { _ in String(repeating: "recorded browser evidence ", count: 5_000) }
-        let budget = ContextBudget.resolve(windowTokens: 16_384, desiredResponseTokens: 700, toolCount: 3)
-        let fixture = HarnessFixture(
-            [.calls(["readPage"]), .text("Must not run past the limit")],
-            policy: .init(maxModelRequests: 2), state: state, contextBudget: budget
-        )
-        await fixture.run()
-        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
-        #expect(trace.stopReason == .requestLimit)
-        #expect(trace.diagnostics.modelRequests == 3)
-        #expect(fixture.model.requests.filter { $0.hasPrefix("Create a historical checkpoint") }.count == 1)
-        #expect(state.calls == 1)
-        #expect(trace.checkpoint?.summary.isEmpty == true)
-        #expect(!fixture.reply.isCompacting)
-    }
 }

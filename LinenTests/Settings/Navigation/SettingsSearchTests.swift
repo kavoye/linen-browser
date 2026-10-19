@@ -95,7 +95,7 @@ struct SettingsSearchTests {
     }
 
     @Test func newerAssistantAndExtensionControlsAreSearchable() {
-        #expect(SettingsIndex.search("pause after").contains { $0.id == "assistant.pauseAfter" })
+        #expect(!SettingsIndex.all.contains { $0.id == "assistant.pauseAfter" })
         #expect(SettingsIndex.search("embedded pages").contains { $0.id == "provider.tools" })
         #expect(SettingsIndex.search("choose files to upload").contains { $0.id == "provider.tools" })
         #expect(SettingsIndex.search("safari extensions").contains { $0.id == "extensions.installed" })

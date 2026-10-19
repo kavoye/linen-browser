@@ -13,17 +13,14 @@ nonisolated struct AgentProgressMonitor {
     private var readStreak = 0
     private var answerRequests = 0
     private var seenWords: Set<String> = []
-    let policy: AgentExecutionPolicy
 
     static let readOnlyTools: Set<String> = [
         "readPage", "readArticle", "searchWeb", "inspectControl", "listTabs", "listFrames", "readFrame",
         "listWatches", "inspectDownloads", "screenshotPage",
     ]
     static let readStreakLimit = 4
-
-    init(policy: AgentExecutionPolicy) {
-        self.policy = policy
-    }
+    static let repeatedActionLimit = 3
+    static let consecutiveFailureLimit = 3
 
     enum Decision {
         case proceed
@@ -72,7 +69,7 @@ nonisolated struct AgentProgressMonitor {
         let key = digest.finalize().map { String(format: "%02x", $0) }.joined()
         if recoveryAttempts > 0, !failed, !stalledKeys.contains(key) {
             progressKeys.insert(key)
-            if progressKeys.count >= policy.repeatedActionLimit {
+            if progressKeys.count >= Self.repeatedActionLimit {
                 recoveryAttempts = 0
                 stalledKeys = []
                 progressKeys = []
@@ -86,8 +83,8 @@ nonisolated struct AgentProgressMonitor {
         if recent.count > 12 {
             recent.removeFirst()
         }
-        let repeated = recent.filter { $0 == key }.count >= policy.repeatedActionLimit
-        guard repeated || failures >= policy.consecutiveFailureLimit else {
+        let repeated = recent.filter { $0 == key }.count >= Self.repeatedActionLimit
+        guard repeated || failures >= Self.consecutiveFailureLimit else {
             guard readStreak >= Self.readStreakLimit else { return .proceed }
             readStreak = 0
             answerRequests += 1

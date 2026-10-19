@@ -5,8 +5,6 @@ import AnyLanguageModel
 import Foundation
 import os
 
-struct AgentRequestLimitReached: Error {}
-
 enum AgentFailure: LocalizedError {
     case emptyResponse
 

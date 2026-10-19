@@ -18,12 +18,7 @@ final class ComputerWorkflowFixture {
     let tab: BrowserTab
     let window: NSWindow
     let folder: URL
-    let reply = AgentReplyModel()
     private var agent: AnyLanguageModelAgent?
-
-    var completed: Bool {
-        log.latestTrace(forTab: tab.id)?.diagnostics.events.last(where: { $0.kind == "terminal" })?.values["status"] == "completed"
-    }
 
     init(services: AgentToolkit.Services = .live) async throws {
         folder = TestFiles.directory.appendingPathComponent("linen-computer-" + UUID().uuidString)
@@ -64,19 +59,6 @@ final class ComputerWorkflowFixture {
         tab.assistantAccess.persistsAnswers = false
         tab.assistantAccess.pageChanged(url: tab.webView.url ?? base)
         tab.assistantAccess.set(.control)
-    }
-
-    @discardableResult
-    func run(client: OpenAIResponsesClient, prompt: String) async -> UUID {
-        let agent = AnyLanguageModelAgent(name: "computer fixture", modelID: client.model, executionPolicy: .init(maxModelRequests: 6),
-            toolOverrides: [], openAI: client, model: HarnessScript([]), options: GenerationOptions(),
-            budget: ContextBudget(windowTokens: 128_000, responseTokens: 2_048, inputTokens: 120_000,
-                toolSchemaTokens: 0, toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 10),
-            toolkit: toolkit, log: log)
-        self.agent = agent
-        let id = log.beginTask(prompt, tabID: tab.id)
-        await agent.run(utterance: prompt, task: .init(id: id, tabID: tab.id), into: reply, speech: HarnessSpeech())
-        return id
     }
 
     func close() {

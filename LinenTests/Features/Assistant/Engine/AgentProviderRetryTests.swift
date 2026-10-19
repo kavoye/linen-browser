@@ -75,12 +75,4 @@ struct AgentRetryWorkflowTests {
         #expect(trace?.diagnostics.events.last?.values["status"] == "rate_limited")
     }
 
-    @Test func retryRespectsTheRequestLimit() async throws {
-        let fixture = HarnessFixture([.failure(OpenAIFailure(kind: .http, status: 429, retryAfter: 0)), .text("Unexpected retry")],
-                                     policy: .init(maxModelRequests: 1))
-        await fixture.run()
-        #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.stopReason == .requestLimit)
-        #expect(fixture.model.requests.filter { !$0.contains("browser task is paused") }.count == 1)
-        #expect(fixture.state.calls == 0)
-    }
 }

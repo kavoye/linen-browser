@@ -153,10 +153,9 @@ struct EvalRunner {
         let access = task.siteAccess
         let mentioned = context.mentioned
         let started = ContinuousClock.now
-        let finished = try await TabAssistantAccessCenter.$decisionForTesting.withValue(.init { _, _ in access }) {
-          try await AgentExecutionPolicy.$scoped.withValue(.init(maxModelRequests: task.maxRequests)) {
-            try await AgentActionConsent.$scopedPolicy.withValue(AgentActionPolicy(storage: EvalGrantStorage())) {
-                try await AgentActionConsent.$decisionForTesting.withValue(.init { _, _, _ in
+        let finished = await TabAssistantAccessCenter.$decisionForTesting.withValue(.init { _, _ in access }) {
+            await AgentActionConsent.$scopedPolicy.withValue(AgentActionPolicy(storage: EvalGrantStorage())) {
+                await AgentActionConsent.$decisionForTesting.withValue(.init { _, _, _ in
                     consentRequests += 1
                     return decision
                 }) {
@@ -174,7 +173,6 @@ struct EvalRunner {
                     }
                 }
             }
-          }
         }
         if !finished {
             turn.cancel()

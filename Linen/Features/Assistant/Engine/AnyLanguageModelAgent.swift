@@ -20,7 +20,6 @@ final class AnyLanguageModelAgent: AgentRunner {
     static let resumeInstructionID = "linen.internal.resume"
     let modelID: String
     let reasoningEffort: String
-    let executionPolicy: AgentExecutionPolicy?
     private let toolOverrides: [any Tool]?
     let openAI: OpenAIResponsesClient?
 
@@ -45,7 +44,6 @@ final class AnyLanguageModelAgent: AgentRunner {
         name: String,
         modelID: String = "custom_model",
         reasoningEffort: String = "unspecified",
-        executionPolicy: AgentExecutionPolicy? = nil,
         toolOverrides: [any Tool]? = nil,
         openAI: OpenAIResponsesClient? = nil,
         model: any LanguageModel,
@@ -62,7 +60,6 @@ final class AnyLanguageModelAgent: AgentRunner {
         self.name = name
         self.modelID = AgentDiagnosticPrivacy.model(modelID)
         self.reasoningEffort = AgentDiagnosticPrivacy.effort(reasoningEffort)
-        self.executionPolicy = executionPolicy
         self.toolOverrides = toolOverrides
         self.openAI = openAI
         self.acceptsImages = acceptsImages
@@ -390,13 +387,11 @@ final class AnyLanguageModelAgent: AgentRunner {
         nativeState: inout OpenAIConversationState?,
         reply: AgentReplyModel? = nil,
         pendingPromptTokens: Int = 0,
-        beforeRequest: () throws -> Void = {},
         event: (String, [String: String]) -> Void
     ) async throws -> LanguageModelSession {
         reply?.setCompacting(true)
         defer { reply?.setCompacting(false) }
         if let openAI, let state = nativeState {
-            try beforeRequest()
             event("generation", [:])
             do {
                 nativeState = try await openAI.compact(
@@ -436,12 +431,11 @@ final class AnyLanguageModelAgent: AgentRunner {
         let summary: String
         do {
             summary = try await AgentContextCompactor(model: model, options: answerOptions, budget: budget)
-                .summarize(Transcript(entries: entries), beforeRequest: beforeRequest, event: event)
+                .summarize(Transcript(entries: entries), event: event)
         } catch {
             event("compaction_result", [
                 "status": "failed",
-                "reason": error is AgentRequestLimitReached ? "request_limit"
-                    : (error as? AgentCompactionFailure)?.reason.rawValue
+                "reason": (error as? AgentCompactionFailure)?.reason.rawValue
                     ?? (Self.isContextWindowError(error) ? "context_limit" : "provider_error"),
             ])
             throw error

@@ -141,7 +141,6 @@ nonisolated struct EvalTask: Sendable {
     var answers: [String] = []
     var search: [EvalSearchHit] = []
     var upload: (name: String, contents: String)?
-    var maxRequests = 15
     var timeout: Duration = .seconds(180)
     let checks: [EvalCheck]
 

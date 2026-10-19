@@ -88,9 +88,7 @@ extension AnyLanguageModelAgent {
         } catch {
             state.finalText = (error as? AttachmentFailure)?.errorDescription
                 ?? (error as? OpenAIMCPFailure)?.errorDescription ?? state.finalText
-            if error is AgentRequestLimitReached {
-                state.stop = .requestLimit
-            } else if (error as? OpenAIFailure)?.isRateLimited == true {
+            if (error as? OpenAIFailure)?.isRateLimited == true {
                 state.stop = .rateLimited
             } else {
                 state.stop = Self.isContextWindowError(error) || error is AgentCompactionFailure ? .contextLimit : .providerError
@@ -130,20 +128,12 @@ extension AnyLanguageModelAgent {
 
     private func runLoop(_ state: RunState, callbacks: RunCallbacks) async throws {
         while !Task.isCancelled && state.stop == nil {
-            if let limit = state.policy.maxModelRequests, state.diagnostics.modelRequests >= limit {
-                state.stop = .requestLimit
-                break
-            }
             let resumeCharacters = state.task.isContinuation ? AgentCheckpoint.resumePrompt.count + state.utterance.count : 0
             if isOverBudget(state.session, nativeState: state.nativeState, promptCharacters: state.prompt.count + state.images.count * 6_400 + resumeCharacters) {
                 callbacks.event("context_compaction", ["reason": "input_budget"])
                 try await compact(state, pendingPromptTokens: max(1, (state.prompt.count + resumeCharacters) / 4) + state.images.count * 1_600,
                                   event: callbacks.event)
                 callbacks.save()
-            }
-            if let limit = state.policy.maxModelRequests, state.diagnostics.modelRequests >= limit {
-                state.stop = .requestLimit
-                break
             }
             if state.task.isContinuation {
                 state.session = sessionForContinuation(state.session, pageContext: state.utterance)
@@ -212,10 +202,6 @@ extension AnyLanguageModelAgent {
                 state.session = makeSession(transcript: transcriptBeforeRequest)
                 state.nativeState = nativeStateBeforeRequest
                 state.submittedUtterance = wasSubmitted
-                if let limit = state.policy.maxModelRequests, state.diagnostics.modelRequests >= limit {
-                    state.stop = .requestLimit
-                    return nil
-                }
                 state.providerRetries += 1
                 let retryMessage = (error as? OpenAIFailure)?.isRateLimited == true
                     ? String(localized: "The model provider’s rate limit was reached. Waiting before retrying.")
@@ -261,7 +247,7 @@ extension AnyLanguageModelAgent {
         }
         state.session = try await compact(
             state.session, checkpoint: &checkpoint, nativeState: &nativeState, reply: state.reply,
-            pendingPromptTokens: pendingPromptTokens, beforeRequest: { try state.checkCompactionBudget() }, event: event
+            pendingPromptTokens: pendingPromptTokens, event: event
         )
     }
 
@@ -349,7 +335,6 @@ extension AnyLanguageModelAgent {
         var nativeState: OpenAIConversationState?
         var session: LanguageModelSession
         var stop: AgentStopReason?
-        let policy: AgentExecutionPolicy
         var monitor: AgentProgressMonitor
         let observer = AgentToolProposalObserver()
         var prompt: String
@@ -378,21 +363,13 @@ extension AnyLanguageModelAgent {
                 checkpoint.request = utterance
             }
             session = agent.session(for: task.anchorID)
-            let policy = agent.executionPolicy ?? .current
-            self.policy = policy
-            monitor = AgentProgressMonitor(policy: policy)
-            prompt = task.isContinuation ? AnyLanguageModelAgent.continuationPrompt : agent.toolkit.rememberedContext(for: utterance) + AssistantAttachment.prompt(
+            monitor = AgentProgressMonitor()
+            prompt = task.isContinuation ? AnyLanguageModelAgent.continuationPrompt : agent.toolkit.rememberedContext() + AssistantAttachment.prompt(
                 utterance, attachments: task.attachments, textOnly: task.attachmentTextOnly || !agent.acceptsImages
             )
             images = AttachmentRequest.images(task.attachments, textOnly: task.attachmentTextOnly || !agent.acceptsImages)
             originalPrompt = prompt
             originalImages = images
-        }
-
-        func checkCompactionBudget() throws {
-            if let limit = policy.maxModelRequests, diagnostics.modelRequests >= limit {
-                throw AgentRequestLimitReached()
-            }
         }
     }
 

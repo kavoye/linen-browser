@@ -119,7 +119,7 @@ struct OpenAIToolSearchTests {
         let toolkit = AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: log)
         let state = HarnessToolState()
         let agent = AnyLanguageModelAgent(
-            name: "fixture", modelID: "gpt-5.6-luna", reasoningEffort: "low", executionPolicy: .init(maxModelRequests: 2),
+            name: "fixture", modelID: "gpt-5.6-luna", reasoningEffort: "low",
             toolOverrides: [HarnessTool(name: "listTabs", state: state)], openAI: client, model: HarnessScript([]), options: GenerationOptions(),
             budget: ContextBudget(windowTokens: 128_000, responseTokens: 2_000, inputTokens: 100_000, toolSchemaTokens: 0,
                                   toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),

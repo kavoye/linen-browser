@@ -188,19 +188,6 @@ struct OpenAIMCPTests {
         #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.stopReason == .providerError)
     }
 
-    @Test func pausingAtTheRequestLimitDoesNotExecuteAnApprovedRemoteCallInItsSummary() async throws {
-        let fixture = try MCPAgentFixture(server: server, request: request, requestLimit: 1, confirmsRemoteCall: false)
-        let running = Task { await fixture.run() }
-        try #require(await waitUntil { fixture.questions.current != nil })
-        fixture.questions.answer(OpenAIMCPApproval.approve)
-        await running.value
-        #expect(fixture.wire.requests.count == 2)
-        let summary = try OpenAIJSON.decode(try #require(fixture.wire.requests.last?.body))
-        #expect(summary["input"].array?.first { $0["type"] == "mcp_approval_response" }?["approve"] == false)
-        #expect(!(summary["tools"].array ?? []).contains { $0["type"] == "mcp" })
-        #expect(fixture.log.latestTrace(forTab: fixture.tabID)?.stopReason == .requestLimit)
-    }
-
     @Test func aCompletedGenerationWithoutItsRemoteResultRemainsUnconfirmed() async throws {
         let fixture = try MCPAgentFixture(server: server, request: request, confirmsRemoteCall: false)
         let running = Task { await fixture.run() }
@@ -234,7 +221,7 @@ private struct MCPAgentFixture {
     let agent: AnyLanguageModelAgent
     let reply = AgentReplyModel()
 
-    init(server: OpenAIMCPServer, request: OpenAIJSON, respondsAfterApproval: Bool = true, requestLimit: Int? = nil, confirmsRemoteCall: Bool = true) throws {
+    init(server: OpenAIMCPServer, request: OpenAIJSON, respondsAfterApproval: Bool = true, confirmsRemoteCall: Bool = true) throws {
         database = .temporary()
         log = ConversationLog(database: database)
         var responses = [OpenAITransportFixture.response([request])]
@@ -254,7 +241,7 @@ private struct MCPAgentFixture {
                                            settings: settings, transport: wire)
         let toolkit = AgentToolkit(browser: BrowserModel(database: .temporary()), media: MediaCenter(), log: log, questions: questions)
         agent = AnyLanguageModelAgent(
-            name: "fixture", modelID: "fixture", reasoningEffort: "low", executionPolicy: .init(maxModelRequests: requestLimit), toolOverrides: [AskUserTool(toolkit: toolkit)], openAI: client,
+            name: "fixture", modelID: "fixture", reasoningEffort: "low", toolOverrides: [AskUserTool(toolkit: toolkit)], openAI: client,
             model: HarnessScript([]), options: GenerationOptions(),
             budget: ContextBudget(windowTokens: 128_000, responseTokens: 2_000, inputTokens: 100_000, toolSchemaTokens: 0,
                                   toolOutput: .standard, retainedExchanges: 12, retainedToolRounds: 1),

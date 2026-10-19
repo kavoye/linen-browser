@@ -27,7 +27,7 @@ extension AgentToolkit {
         AssistantMemory.isEnabled
     }
 
-    func rememberedContext(for request: String) -> String {
+    func rememberedContext() -> String {
         let remembered = remembersUser ? AssistantMemory.context(for: Array(browser.memory.facts.prefix(20))) : ""
         guard let preference = pendingPreference else { return remembered }
         return remembered + "[The request mentions “\(preference)”, which you do not know. Ask the user with askUser before you change anything.]\n"

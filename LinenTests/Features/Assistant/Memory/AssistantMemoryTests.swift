@@ -71,7 +71,7 @@ struct AssistantMemoryTests {
         subject.beginRequest("Set the lamp to my usual colour.")
 
         #expect(subject.preferenceRefusal(for: "selectOption") == nil)
-        #expect(subject.rememberedContext(for: "Set the lamp to my usual colour.").contains("Brass"))
+        #expect(subject.rememberedContext().contains("Brass"))
     }
 
     @Test func anUnknownPreferenceIsRaisedBeforeTheModelActs() {
@@ -79,7 +79,7 @@ struct AssistantMemoryTests {
         let subject = toolkit(browser)
         subject.beginRequest("Set the lamp to my usual colour.")
 
-        #expect(subject.rememberedContext(for: "Set the lamp to my usual colour.").contains("Ask the user with askUser"))
+        #expect(subject.rememberedContext().contains("Ask the user with askUser"))
         subject.askedUser = true
         #expect(subject.pendingPreference == nil)
     }
@@ -128,7 +128,7 @@ struct AssistantMemoryTests {
         await subject.writeMemory(using: NotesModel(#"{"changes":[{"subject":"home city","value":"Lviv","forget":false}]}"#))
 
         #expect(browser.memory.facts.isEmpty)
-        #expect(subject.rememberedContext(for: "home city").isEmpty)
+        #expect(subject.rememberedContext().isEmpty)
     }
 
     @Test func theModelWritesShortNotesFromWhatTheUserSaid() async throws {
@@ -178,6 +178,6 @@ struct AssistantMemoryTests {
 
         subject.beginRequest("Find me running shoes")
 
-        #expect(subject.rememberedContext(for: "Find me running shoes") == "[What you remember about the user: shoe size: 42]\n")
+        #expect(subject.rememberedContext() == "[What you remember about the user: shoe size: 42]\n")
     }
 }

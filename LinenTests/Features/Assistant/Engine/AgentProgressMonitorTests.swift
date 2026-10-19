@@ -8,7 +8,7 @@ import Testing
 
 struct AgentProgressMonitorTests {
     @Test func readsThatBringNothingNewAskForTheAnswerThenPause() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         let windows = [
             "Aster desk lamp. Product code AST-4471. Price $129.", "esk lamp. Product code AST-4471. Price $129.",
             "Product code AST-4471. Price $129. Aster desk", "lamp. Product code AST-4471",
@@ -21,7 +21,7 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func identifiersInsideTheOutputAreNotNewInformation() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         let decisions = (0..<5).map { index in
             monitor.observe(name: "readPage", arguments: "{\"controlOffset\":\(index)}",
                             output: "pageID: 77423B04-20D0-43FC\nobservationID: mvbkt\(index)s0.3skh3vfx\(index)b\nPAGE TEXT: Price $129",
@@ -31,7 +31,7 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func anActionBetweenReadsKeepsTheStreakShort() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         var decisions: [AgentProgressMonitor.Decision] = []
         for index in 1...6 {
             decisions.append(monitor.observe(name: "readPage", arguments: "{\"controlOffset\":\(index)}",
@@ -43,7 +43,7 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func changedScreenshotsKeepRepeatedVisualActionsMoving() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         for index in 1...8 {
             #expect(monitor.observe(
                 name: "clickAtPoint", arguments: "{\"x\":100,\"y\":100}",
@@ -54,7 +54,7 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func unchangedScreenshotsStillRecoverThenPause() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         let decisions = (1...6).map { index in
             monitor.observe(
                 name: "clickAtPoint",
@@ -67,7 +67,7 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func differentCoordinatesAndInputMethodsCannotHideAnUnchangedPage() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         let decisions = (1...6).map { index in
             monitor.observe(name: index.isMultiple(of: 2) ? "clickAtPoint" : "typeAtPointer",
                             arguments: "{\"page\":\"form\",\"x\":\(index * 10),\"y\":100}",
@@ -77,7 +77,7 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func changingScreenshotsDoNotExcuseConsecutiveFailures() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         let decisions = (1...6).map { index in
             monitor.observe(name: "clickAtPoint", arguments: "{}", output: "Input unverified.",
                             failed: true, images: [Data("page-\(index)".utf8)])
@@ -90,13 +90,13 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func freshObservationIDsCannotHideRepeatedReads() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         let decisions = (1...6).map { monitor.observe(name: "readPage", arguments: "{}", output: output($0), failed: false) }
         #expect(decisions == [.proceed, .proceed, .recover, .proceed, .proceed, .pause])
     }
 
     @Test func actionCredentialsAndJSONOrderDoNotHideAStall() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         for index in 1...3 {
             let arguments = index == 2 ? "{\"ref\":1,\"observationID\":\"two\"}" : "{\"observationID\":\"\(index)\",\"ref\":1}"
             #expect(monitor.observe(name: "clickOnPage", arguments: arguments, output: output(index), failed: false)
@@ -105,7 +105,7 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func changedContentTargetsAndPaginationRemainProgress() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         for index in 1...6 {
             #expect(monitor.observe(name: "readPage", arguments: "{}", output: output(index, text: "Row \(index)"), failed: false) == .proceed)
             #expect(monitor.observe(name: "readPage", arguments: "{\"textOffset\":\(index)}", output: output(index), failed: false) == .proceed)
@@ -114,16 +114,10 @@ struct AgentProgressMonitorTests {
     }
 
     @Test func pageContentThatLooksLikeMetadataIsPreserved() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         for index in 1...6 {
             #expect(monitor.observe(name: "readPage", arguments: "{}", output: output(index, text: "observationID: page-text-\(index)"), failed: false) == .proceed)
         }
     }
 
-    @Test func scopedExecutionPolicyDoesNotChangeUserSettings() {
-        AgentExecutionPolicy.$scoped.withValue(.init(maxModelRequests: 7)) {
-            #expect(AgentExecutionPolicy.current.maxModelRequests == 7)
-        }
-        #expect(AgentExecutionPolicy.scoped == nil)
-    }
 }

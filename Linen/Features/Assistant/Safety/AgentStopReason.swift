@@ -3,27 +3,7 @@
 
 import Foundation
 
-nonisolated struct AgentExecutionPolicy: Equatable, Sendable {
-    @TaskLocal static var scoped: Self?
-    var maxModelRequests: Int?
-    var repeatedActionLimit = 3
-    var consecutiveFailureLimit = 3
-
-    static let interactive = Self()
-
-    static var current: Self {
-        if let scoped {
-            return scoped
-        }
-        let limit = UserDefaults.standard.integer(forKey: settingsKey)
-        return Self(maxModelRequests: limit > 0 ? limit : nil)
-    }
-
-    static let settingsKey = "assistant.maxModelRequests"
-}
-
 nonisolated enum AgentStopReason: String, Codable, Sendable {
-    case requestLimit = "request_limit"
     case noProgress = "no_progress"
     case contextLimit = "context_limit"
     case providerError = "provider_error"
@@ -36,8 +16,6 @@ nonisolated enum AgentStopReason: String, Codable, Sendable {
 
     var message: String {
         switch self {
-        case .requestLimit:
-            String(localized: "Paused at the request limit you set. Choose Continue to keep going.")
         case .noProgress:
             String(localized: "Paused because the same actions kept repeating or failing. Check the page, then choose Continue.")
         case .contextLimit:

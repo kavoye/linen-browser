@@ -69,22 +69,3 @@ struct AgentToolsPage: View {
         }
     }
 }
-
-struct AssistantExecutionSettings: View {
-    @AppStorage(AgentExecutionPolicy.settingsKey) private var requestLimit = 0
-
-    var body: some View {
-        SettingsSection(title: "Long tasks", symbol: "arrow.trianglehead.2.clockwise") {
-            DetailRow(title: "Pause after", caption: "Stop a long task after this many model requests. Click Continue to resume it.") {
-                Picker("Model requests", selection: $requestLimit) {
-                    Text("No limit").tag(0)
-                    Text("100 requests").tag(100)
-                    Text("250 requests").tag(250)
-                    Text("500 requests").tag(500)
-                }
-                .labelsHidden()
-            }
-            .settingsAnchor("assistant.pauseAfter")
-        }
-    }
-}

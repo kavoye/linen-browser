@@ -76,7 +76,7 @@ struct AnyLanguageModelAgentTests {
     }
 
     @Test func progressRestoresRecoveryForALaterIndependentStall() {
-        var monitor = AgentProgressMonitor(policy: .interactive)
+        var monitor = AgentProgressMonitor()
         for _ in 0..<2 {
             #expect(monitor.observe(name: "readPage", arguments: "a", output: "unchanged", failed: true) == .proceed)
         }
@@ -112,22 +112,6 @@ struct AnyLanguageModelAgentTests {
         let history = fixture.model.transcripts.last.map(HarnessFixture.flattened) ?? ""
         #expect(history.contains("Observed state 1"))
         #expect(history.contains("Observed state 2"))
-    }
-
-    @Test func explicitLimitPausesWithSummaryAndCanResumeAfterReload() async throws {
-        let fixture = HarnessFixture([.calls(["typeOnPage"])], policy: .init(maxModelRequests: 1))
-        await fixture.run()
-        let trace = try #require(fixture.log.latestTrace(forTab: fixture.tabID))
-        #expect(trace.state == .paused)
-        #expect(trace.stopReason == .requestLimit)
-        #expect(trace.canContinue)
-        #expect(trace.response.contains("earlier fields"))
-        #expect(trace.response.contains("Continue"))
-        let resumed = HarnessFixture([.text("Finished.")], database: fixture.database, tabID: fixture.tabID)
-        await resumed.run(AgentCheckpoint.resumePrompt)
-        #expect(resumed.state.calls == 0)
-        #expect(resumed.model.transcripts.first.map(HarnessFixture.flattened)?.contains("Observed state 1") == true)
-        #expect(resumed.reply.text == "Finished.")
     }
 
     @Test func repeatedUnchangedActionsRecoverThenPause() async throws {

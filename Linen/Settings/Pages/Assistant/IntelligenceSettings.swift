@@ -109,8 +109,6 @@ private struct AssistantOverview: View {
 
         BehaviourSection(settings: coordinator.settings)
 
-        AssistantExecutionSettings()
-
         SettingsSection(title: "Acting on websites", symbol: "hand.raised") {
             DrillInRow(
                 title: "Allowed without asking",
