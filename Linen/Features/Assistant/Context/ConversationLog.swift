@@ -49,45 +49,23 @@ final class ConversationLog {
         let title: String
         let toolName: String?
         let startedAt: Date
-        var detail: String?
-        var links: [ActivityLink]
         var state: State
 
-        init(
-            kind: Kind,
-            title: String,
-            toolName: String? = nil,
-            detail: String? = nil,
-            links: [ActivityLink] = [],
-            state: State = .running
-        ) {
+        init(kind: Kind, title: String, toolName: String? = nil, state: State = .running) {
             id = UUID()
             self.kind = kind
             self.title = title
             self.toolName = toolName
             self.startedAt = Date()
-            self.detail = detail
-            self.links = links
             self.state = state
         }
 
-        init(
-            id: UUID,
-            kind: Kind,
-            title: String,
-            toolName: String?,
-            startedAt: Date,
-            detail: String?,
-            links: [ActivityLink],
-            state: State
-        ) {
+        init(id: UUID, kind: Kind, title: String, toolName: String?, startedAt: Date, state: State) {
             self.id = id
             self.kind = kind
             self.title = title
             self.toolName = toolName
             self.startedAt = startedAt
-            self.detail = detail
-            self.links = links
             self.state = state
         }
     }
@@ -284,12 +262,7 @@ final class ConversationLog {
     }
 
     @discardableResult
-    func beginTool(
-        taskID: UUID,
-        name: String,
-        title: String,
-        detail: String? = nil
-    ) -> UUID? {
+    func beginTool(taskID: UUID, name: String) -> UUID? {
         guard let traceIndex = traces.firstIndex(where: { $0.id == taskID }),
               traces[traceIndex].state == .running
         else { return nil }
@@ -301,21 +274,13 @@ final class ConversationLog {
         return step.id
     }
 
-    func completeTool(
-        taskID: UUID,
-        stepID: UUID?,
-        detail: String,
-        links: [ActivityLink] = [],
-        failed: Bool = false
-    ) {
+    func completeTool(taskID: UUID, stepID: UUID?, failed: Bool = false) {
         guard let stepID,
               let traceIndex = traces.firstIndex(where: { $0.id == taskID }),
               traces[traceIndex].state == .running,
               let stepIndex = traces[traceIndex].steps.firstIndex(where: { $0.id == stepID })
         else { return }
 
-        traces[traceIndex].steps[stepIndex].detail = nil
-        traces[traceIndex].steps[stepIndex].links = []
         traces[traceIndex].steps[stepIndex].state = failed ? .failed : .completed
         scheduleSave(trace: taskID)
     }
@@ -818,8 +783,6 @@ final class ConversationLog {
             title: AgentDiagnosticPrivacy.title(for: record.toolName ?? ""),
             toolName: record.toolName.map(AgentDiagnosticPrivacy.tool),
             startedAt: record.startedAt,
-            detail: nil,
-            links: [],
             state: record.state
         )
     }

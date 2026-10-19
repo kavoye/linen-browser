@@ -60,8 +60,8 @@ struct AgentDiagnosticPrivacyTests {
         await fixture.run("My private conversation")
         let id = try #require(fixture.log.latestTrace(forTab: fixture.tabID)?.id)
         let step = fixture.log.beginTask("Another private question", tabID: fixture.tabID)
-        let action = fixture.log.beginTool(taskID: step, name: "typeOnPage", title: "private@example.test", detail: "secret")
-        fixture.log.completeTool(taskID: step, stepID: action, detail: "secret", links: [.init(title: "secret", url: URL(string: "https://private.test")!)])
+        let action = fixture.log.beginTool(taskID: step, name: "typeOnPage")
+        fixture.log.completeTool(taskID: step, stepID: action)
         fixture.log.saveBlocking()
         try await fixture.database.writer.read { db in
             let rows = try Row.fetchAll(db, sql: "SELECT title, toolName, detail, links FROM agentStep")

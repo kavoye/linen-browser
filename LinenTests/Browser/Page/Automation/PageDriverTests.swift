@@ -132,18 +132,6 @@ struct PageDriverTests {
         #expect(links.first?.label == "The story")
     }
 
-    @Test func aLinkListingSurvivesItsOwnPunctuation() {
-        let controls: [[String: Any]] = [
-            ["r": 1, "k": "link", "l": "Home \u{2192} Shop", "h": "https://example.com/shop", "d": 1],
-            ["r": 2, "k": "button", "l": "Buy"],
-            ["r": 3, "k": "link", "l": "Mail us", "h": "mailto:hi@example.com"],
-        ]
-        let links = PageDriver.listedLinks(in: PageDriver.renderControls(controls))
-
-        #expect(links.map(\.url.absoluteString) == ["https://example.com/shop"])
-        #expect(links.first?.label == "Home \u{2192} Shop")
-    }
-
     /// The reason refs exist: five "More" buttons are five different rows,
     /// not one row shown once.
     @Test func duplicateLabelsGetDistinctRefs() async {

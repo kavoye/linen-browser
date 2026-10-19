@@ -6,19 +6,15 @@ import SwiftUI
 struct AgentActivityStepRow: View {
     let title: String
     let toolName: String?
-    let detail: String?
-    let links: [ConversationLog.ActivityLink]
     let state: ConversationLog.Step.State
     let inspection: AgentToolInspection?
     let connectsAbove: Bool
     let connectsBelow: Bool
-    let tabID: UUID
-    let browser: BrowserModel
 
     @State private var isExpanded = false
 
     private var canInspect: Bool {
-        toolName != nil || !(detail?.isEmpty ?? true) || !links.isEmpty
+        toolName != nil
     }
 
     var body: some View {
@@ -46,24 +42,15 @@ struct AgentActivityStepRow: View {
                         Spacer(minLength: 0)
                     }
 
-                    if toolName != nil || !links.isEmpty {
+                    if let toolName {
                         HStack(spacing: 6) {
-                            if let toolName {
-                                Text(verbatim: toolName)
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1)
-                                    .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
-                            }
-
-                            if !links.isEmpty {
-                                Text("\(links.count) links")
-                                    .font(Theme.Font.caption)
-                                    .foregroundStyle(.tertiary)
-                                    .lineLimit(1)
-                            }
+                            Text(verbatim: toolName)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Theme.Wash.hairline, in: RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
 
                             Spacer(minLength: 0)
                         }
@@ -76,14 +63,7 @@ struct AgentActivityStepRow: View {
             .accessibilityValue(isExpanded ? Text("Expanded") : Text("Collapsed"))
 
             if isExpanded {
-                AgentStepInspection(
-                    detail: detail,
-                    links: links,
-                    state: state,
-                    inspection: inspection,
-                    tabID: tabID,
-                    browser: browser
-                )
+                AgentStepInspection(state: state, inspection: inspection)
                 .transition(.opacity)
             }
         }
@@ -182,17 +162,8 @@ private struct AgentBreadcrumbNode: View {
 }
 
 private struct AgentStepInspection: View {
-    let detail: String?
-    let links: [ConversationLog.ActivityLink]
     let state: ConversationLog.Step.State
     let inspection: AgentToolInspection?
-    let tabID: UUID
-    let browser: BrowserModel
-
-    private var exchanges: [AgentAskedExchange]? {
-        guard let detail, detail.contains(AgentQuestionModel.questionMark) else { return nil }
-        return AgentAskedExchange.read(detail)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -216,26 +187,10 @@ private struct AgentStepInspection: View {
                         .font(Theme.Font.caption)
                         .foregroundStyle(.secondary)
                 }
-            } else if detail == nil && links.isEmpty {
+            } else {
                 Text("Details unavailable for this step.")
                     .font(Theme.Font.caption)
                     .foregroundStyle(.secondary)
-            }
-
-            if let exchanges {
-                AgentAskedList(exchanges: exchanges)
-            } else if let detail, !detail.isEmpty {
-                Text(verbatim: detail)
-                    .font(Theme.Font.body)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
-                    .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
-            }
-
-            ForEach(links) { link in
-                AgentActivityLinkRow(link: link, tabID: tabID, browser: browser)
             }
         }
     }
@@ -264,46 +219,6 @@ private struct AgentStepInspection: View {
                 .padding(8)
                 .background(Theme.Wash.faint, in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous))
         }
-    }
-}
-
-private struct AgentActivityLinkRow: View {
-    let link: ConversationLog.ActivityLink
-    let tabID: UUID
-    let browser: BrowserModel
-
-    var body: some View {
-        Button {
-            guard let tab = browser.tabs.first(where: { $0.id == tabID }) else { return }
-            browser.activate(tab)
-            tab.load(link.url)
-        } label: {
-            HStack(spacing: 9) {
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.accent)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(verbatim: link.title)
-                        .font(Theme.Font.control)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    Text(verbatim: link.url.absoluteString)
-                        .font(.system(size: 10.5, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 8)
-            }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
-            .background {
-                RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-                    .strokeBorder(Theme.Wash.hover, lineWidth: 1)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("Open this link in the task’s tab")
     }
 }
 

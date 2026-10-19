@@ -56,8 +56,8 @@ final class AgentToolkit {
     }
 
     func rejectTool(name: String, reason: String) -> String {
-        let step = beginTool(name: name, title: AgentDiagnosticPrivacy.title(for: name))
-        completeTool(step, output: reason, failed: true)
+        let step = beginTool(name: name)
+        completeTool(step, failed: true)
         return reason
     }
 
@@ -111,19 +111,19 @@ final class AgentToolkit {
         name: String, readOnly: Bool = false,
         operation: (WKWebView) async -> String
     ) async -> String {
-        let step = beginTool(name: name, title: AgentDiagnosticPrivacy.title(for: name))
+        let step = beginTool(name: name)
         if let cancelled = cancellationOutput(for: step) {
             pendingScreenshot = nil
             return cancelled
         }
         guard let view = targetWebView else {
-            completeTool(step, output: "No matching page is open.", failed: true)
+            completeTool(step, failed: true)
             return "No matching page is open."
         }
         let capability: AssistantPageCapability = readOnly ? .read : .control
         let access = await authorize(capability, in: view)
         if let denial = access.denial {
-            completeTool(step, output: denial, failed: true)
+            completeTool(step, failed: true)
             return denial
         }
         let output = await guardedPageOperation(in: view, authorization: access.authorization, capability: capability) {
@@ -135,7 +135,7 @@ final class AgentToolkit {
         }
         if let denial = postflightDenial(for: access.authorization, in: view) {
             pendingScreenshot = nil
-            completeTool(step, output: denial, failed: true)
+            completeTool(step, failed: true)
             return denial
         }
         remember(links: links(in: output))
@@ -143,7 +143,7 @@ final class AgentToolkit {
             "CONTROL:", "Condition met.", "Clicked", "Typed", "Selected", "Set checked", "Checked state",
             "Screenshot captured.", "Scrolled", "Already at", "Dispatched hover", "Sent ",
         ].contains { output.hasPrefix($0) }
-        completeTool(step, output: output, failed: !succeeded)
+        completeTool(step, failed: !succeeded)
         return fencedPageOutput(output)
     }
 
@@ -218,27 +218,24 @@ final class AgentToolkit {
         var seenQueries = Set<String>()
         let queries = ([query] + additionalQueries).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty && seenQueries.insert($0).inserted }
-        let step = beginTool(
-            name: "searchWeb",
-            title: "Search the web for “\(query)”"
-        )
+        let step = beginTool(name: "searchWeb")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard (1...4).contains(queries.count), queries.allSatisfy({ $0.utf8.count <= 2048 }) else {
             let output = "Enter a search term, with at most three additional queries of up to 2,048 bytes each."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         guard domain.isEmpty || (domain.contains(".") && domain.range(of: #"^[a-z0-9.-]+$"#, options: .regularExpression) != nil
             && URL(string: "https://" + domain)?.host() == domain) else {
             let output = "Use a domain such as example.com, without a path or URL scheme."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         guard visibleTaskTab != nil else {
             let output = String(localized: "The active tab changed before the assistant could use it.")
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let groups = await withTaskGroup(of: (Int, [SearchHit]).self) { group in
@@ -271,7 +268,7 @@ final class AgentToolkit {
         }
         guard !hits.isEmpty else {
             let output = "No results (network problem or no matches)."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
 
@@ -287,7 +284,7 @@ final class AgentToolkit {
             return ConversationLog.ActivityLink(title: hit.title, url: url)
         }
         remember(links: links)
-        completeTool(step, output: output, links: links)
+        completeTool(step)
         return fencedPageOutput(output)
     }
 
@@ -310,30 +307,29 @@ final class AgentToolkit {
 
     func navigate(to rawURL: String) async -> String {
         let destination = normalized(rawURL)
-        let title = destination?.host() ?? rawURL
-        let step = beginTool(name: "navigate", title: "Open \(title)", detail: rawURL)
+        let step = beginTool(name: "navigate")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let url = destination else {
             let output = "Invalid URL."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         if let output = outboundDenial(for: url) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
 
         guard let tab = visibleTaskTab else {
             let output = String(localized: "The active tab changed before the assistant could use it.")
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let webView = tab.webView
         guard let navigation = tab.load(url, transition: .agent) else {
             let output = "Couldn’t open the page in the active tab."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let loaded = await waitForVisibleNavigation(navigation, in: tab)
@@ -343,12 +339,12 @@ final class AgentToolkit {
         }
         guard loaded else {
             let output = "Couldn’t open the page in the active tab."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.read, in: webView)
         if let denial = access.denial {
-            completeTool(step, output: denial, failed: true)
+            completeTool(step, failed: true)
             return denial
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .read) {
@@ -363,28 +359,28 @@ final class AgentToolkit {
             return cancelled
         }
         if let denial = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: denial, failed: true)
+            completeTool(step, failed: true)
             return denial
         }
         let links = links(in: output)
         remember(links: links)
-        completeTool(step, output: output, links: links, failed: !output.hasPrefix("PAGE TEXT:"))
+        completeTool(step, failed: !output.hasPrefix("PAGE TEXT:"))
         return fencedPageOutput("pageID: \(tab.id.uuidString)\n" + output)
     }
 
     func newTab(url rawURL: String?) async -> String {
-        let step = beginTool(name: "newTab", title: "Open a new tab", detail: rawURL)
+        let step = beginTool(name: "newTab")
         if let output = cancellationOutput(for: step) {
             return output
         }
         if let rawURL, !rawURL.isEmpty {
             guard let url = normalized(rawURL) else {
                 let output = "Invalid URL."
-                completeTool(step, output: output, failed: true)
+                completeTool(step, failed: true)
                 return output
             }
             if let output = outboundDenial(for: url) {
-                completeTool(step, output: output, failed: true)
+                completeTool(step, failed: true)
                 return output
             }
             let tab = browser.newTab(url: url, transition: .agent)
@@ -397,7 +393,7 @@ final class AgentToolkit {
                 return output
             }
             if let output = access.denial {
-                completeTool(step, output: output, failed: true)
+                completeTool(step, failed: true)
                 return output
             }
             let output = await PageDriver.readRenderedPage(
@@ -410,7 +406,7 @@ final class AgentToolkit {
                 return cancelled
             }
             if let output = postflightDenial(for: access.authorization, in: tab.webView) {
-                completeTool(step, output: output, failed: true)
+                completeTool(step, failed: true)
                 return output
             }
             let pageLinks = links(in: output)
@@ -420,84 +416,77 @@ final class AgentToolkit {
                 url: url
             )
             remember(links: [openedLink])
-            completeTool(
-                step,
-                output: output,
-                links: [openedLink] + pageLinks.filter { $0.url != url }
-            )
+            completeTool(step)
             return fencedPageOutput(output)
         }
         let tab = browser.newTab()
         agentOpenedTabIDs.insert(tab.id)
         browser.onTabAlert?(.agentOpened(tab))
         let output = "New empty tab opened and active."
-        completeTool(step, output: output)
+        completeTool(step)
         return output
     }
 
     func switchTab(matching reference: String) -> String {
-        let step = beginTool(name: "switchTab", title: "Switch to “\(reference)”")
+        let step = beginTool(name: "switchTab")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let tab = contextTab(matching: reference) else {
             let output = missingContextTabOutput()
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         browser.activate(tab)
         browser.onTabAlert?(.agentSwitched(tab))
         let output = "Switched to “\(tab.title)”."
-        completeTool(step, output: output)
+        completeTool(step)
         return output
     }
 
     func closeTab(matching reference: String?) -> String {
-        let step = beginTool(
-            name: "closeTab",
-            title: reference.map { "Close tab “\($0)”" } ?? "Close the active tab"
-        )
+        let step = beginTool(name: "closeTab")
         if let output = cancellationOutput(for: step) {
             return output
         }
         if let reference, !reference.isEmpty {
             guard let tab = contextTab(matching: reference) else {
                 let output = "No tab in this conversation matches that."
-                completeTool(step, output: output, failed: true)
+                completeTool(step, failed: true)
                 return output
             }
             browser.close(tab)
             browser.onTabAlert?(.agentClosed(tab.title))
             let output = "Closed “\(tab.title)”."
-            completeTool(step, output: output)
+            completeTool(step)
             return output
         }
         guard let active = browser.activeTab else {
             let output = "There are no tabs open."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         guard contextTabIDs.contains(active.id) else {
             let output = String(localized: "The active tab changed before the assistant could use it.")
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         browser.close(active)
         browser.onTabAlert?(.agentClosed(active.title))
         let output = "Closed the active tab."
-        completeTool(step, output: output)
+        completeTool(step)
         return output
     }
 
     func playVideo(topic: String) async -> String {
         let topic = topic.trimmingCharacters(in: .whitespacesAndNewlines)
-        let step = beginTool(name: "playVideo", title: "Find a video for “\(topic)”")
+        let step = beginTool(name: "playVideo")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard !topic.isEmpty else {
             let output = "Enter a video topic."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let resolved = await services.resolveVideo(topic)
@@ -517,50 +506,46 @@ final class AgentToolkit {
             let output = media.isEnabled
                 ? "Opened the video in the browser's media player. Check playback before reporting that it is playing."
                 : "Opened it in a tab. The media player is off in Settings."
-            completeTool(step, output: output)
+            completeTool(step)
             return output
         }
         guard let fallbackURL = Self.webURL(resolved.fallbackURL) else {
             let output = "Couldn’t open an unsafe video result."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let fallbackTab = browser.newTab(url: fallbackURL, transition: .agent)
         agentOpenedTabIDs.insert(fallbackTab.id)
         browser.onTabAlert?(.agentOpened(fallbackTab))
         let output = "Couldn't resolve a video directly; opened the results in a tab instead."
-        completeTool(
-            step,
-            output: output,
-            links: [ConversationLog.ActivityLink(title: "Video results", url: fallbackURL)]
-        )
+        completeTool(step)
         return output
     }
 
     func closeVideo() -> String {
-        let step = beginTool(name: "closeVideo", title: "Close the video")
+        let step = beginTool(name: "closeVideo")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard media.model.isActive else {
             let output = "No media is playing."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         media.close()
         let output = "Paused it and closed the media player. Its tab is still open."
-        completeTool(step, output: output)
+        completeTool(step)
         return output
     }
 
     func controlMedia(action: String) -> String {
-        let step = beginTool(name: "controlMedia", title: "Adjust the player", detail: action)
+        let step = beginTool(name: "controlMedia")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard media.model.isActive else {
             let output = "No media is playing."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output: String
@@ -584,7 +569,7 @@ final class AgentToolkit {
         default:
             output = "Unknown media action."
         }
-        completeTool(step, output: output, failed: output == "Unknown media action.")
+        completeTool(step, failed: output == "Unknown media action.")
         return output
     }
 
@@ -828,32 +813,21 @@ final class AgentToolkit {
         discoveredDestinations.formUnion(links.map { Self.destinationKey(for: $0.url) })
     }
 
-    func beginTool(name: String, title: String, detail: String? = nil) -> UUID? {
+    func beginTool(name: String) -> UUID? {
         guard let task else { return nil }
-        return log.beginTool(taskID: task.id, name: name, title: title, detail: detail)
+        return log.beginTool(taskID: task.id, name: name)
     }
 
-    func completeTool(
-        _ stepID: UUID?,
-        output: String,
-        links: [ConversationLog.ActivityLink] = [],
-        failed: Bool = false
-    ) {
+    func completeTool(_ stepID: UUID?, failed: Bool = false) {
         lastToolFailed = failed
         guard let task else { return }
-        log.completeTool(
-            taskID: task.id,
-            stepID: stepID,
-            detail: output,
-            links: links,
-            failed: failed
-        )
+        log.completeTool(taskID: task.id, stepID: stepID, failed: failed)
     }
 
     func cancellationOutput(for stepID: UUID?) -> String? {
         guard Task.isCancelled else { return nil }
         let output = String(localized: "Canceled.")
-        completeTool(stepID, output: output, failed: true)
+        completeTool(stepID, failed: true)
         return output
     }
 }
@@ -869,10 +843,7 @@ extension AgentToolkit {
         guard !put.isEmpty, let questions else {
             return "No one is there to answer. Carry on with what you have."
         }
-        let title = put.count == 1
-            ? put[0].text
-            : String(localized: "\(put.count) questions")
-        let step = beginTool(name: "askUser", title: title)
+        let step = beginTool(name: "askUser")
         if let output = cancellationOutput(for: step) {
             return output
         }
@@ -881,15 +852,15 @@ extension AgentToolkit {
         userWords.append(trimmed)
         guard !trimmed.isEmpty else {
             let output = "Nothing was answered. Carry on with what you have."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
-        completeTool(step, output: trimmed)
+        completeTool(step)
         return trimmed
     }
 
     func listTabs() -> String {
-        let step = beginTool(name: "listTabs", title: "List the open tabs")
+        let step = beginTool(name: "listTabs")
         if let output = cancellationOutput(for: step) {
             return output
         }
@@ -897,7 +868,7 @@ extension AgentToolkit {
         let tabs = browser.tabs.filter { $0.assistantAccess.effectivePolicy != .deny }
         guard !tabs.isEmpty else {
             let output = "No tabs are open."
-            completeTool(step, output: output)
+            completeTool(step)
             return output
         }
         let lines = tabs.enumerated().map { index, tab -> String in
@@ -913,7 +884,7 @@ extension AgentToolkit {
                 + "switch to it, or ask the person to attach it with @."
             : ""
         let output = "\(tabs.count) tabs open:\n" + lines.joined(separator: "\n") + note
-        completeTool(step, output: output)
+        completeTool(step)
         return output
     }
 }

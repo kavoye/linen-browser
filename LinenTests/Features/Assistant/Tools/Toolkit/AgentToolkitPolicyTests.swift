@@ -296,9 +296,6 @@ struct AgentToolkitPolicyTests {
 
         _ = await subject.readPage()
 
-        let links = log.latestTrace(forTab: tab.id)?.steps.last?.links ?? []
-        #expect(links.isEmpty)
-        #expect(log.latestTrace(forTab: tab.id)?.steps.last?.detail == nil)
         #expect((await subject.navigate(to: "https://example.org/thread")).hasPrefix("For safety"))
     }
 

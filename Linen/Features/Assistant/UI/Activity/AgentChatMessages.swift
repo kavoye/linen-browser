@@ -69,7 +69,7 @@ struct AgentTaskTraceView: View {
                 )
 
                 if showsWorkHistory {
-                    AgentWorkHistory(trace: trace, tabID: tabID, browser: browser, showsDetails: showsSteps)
+                    AgentWorkHistory(trace: trace, showsDetails: showsSteps)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: -6)))
                 }
 

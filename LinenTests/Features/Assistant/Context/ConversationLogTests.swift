@@ -102,8 +102,8 @@ struct ConversationLogTests {
 
         let tab = UUID()
         let task = log.beginTask("find me shoes", tabID: tab)
-        let step = try #require(log.beginTool(taskID: task, name: "searchWeb", title: "Search"))
-        log.completeTool(taskID: task, stepID: step, detail: "three results")
+        let step = try #require(log.beginTool(taskID: task, name: "searchWeb"))
+        log.completeTool(taskID: task, stepID: step)
         log.completeTask(task, response: "Here are three.")
 
         let trace = try #require(log.latestTrace(forTab: tab))
@@ -174,7 +174,7 @@ struct ConversationLogTests {
 
         let tab = UUID()
         let task = log.beginTask("interrupted", tabID: tab)
-        _ = log.beginTool(taskID: task, name: "navigate", title: "Open example.com")
+        _ = log.beginTool(taskID: task, name: "navigate")
         log.saveBlocking()
 
         let reopened = ConversationLog(database: database)
@@ -353,8 +353,8 @@ struct ConversationLogTests {
 
         let tab = UUID()
         let task = log.beginTask("find me shoes", tabID: tab)
-        let step = try #require(log.beginTool(taskID: task, name: "searchWeb", title: "Search"))
-        log.completeTool(taskID: task, stepID: step, detail: "three results")
+        let step = try #require(log.beginTool(taskID: task, name: "searchWeb"))
+        log.completeTool(taskID: task, stepID: step)
         log.completeTask(task, response: "Here are three.")
         log.saveBlocking()
 
@@ -373,8 +373,8 @@ struct ConversationLogTests {
         let tab = UUID()
         let task = log.beginTask("go", tabID: tab)
         for name in ["navigate", "readPage", "click"] {
-            let step = try #require(log.beginTool(taskID: task, name: name, title: name))
-            log.completeTool(taskID: task, stepID: step, detail: "done")
+            let step = try #require(log.beginTool(taskID: task, name: name))
+            log.completeTool(taskID: task, stepID: step)
             log.saveNow()
         }
         log.completeTask(task, response: "finished")
@@ -384,27 +384,20 @@ struct ConversationLogTests {
         #expect(try stepCount(in: database) == trace.steps.count)
     }
 
-    @Test func aToolStepComesBackWithItsLinks() throws {
+    @Test func toolStepsComeBackInOrder() throws {
         let (log, database) = makeLog()
 
         let tab = UUID()
         let task = log.beginTask("look it up", tabID: tab)
-        let step = try #require(log.beginTool(taskID: task, name: "searchWeb", title: "Search"))
-        let link = ConversationLog.ActivityLink(
-            title: "Example",
-            url: try #require(URL(string: "https://example.com/"))
-        )
-        log.completeTool(taskID: task, stepID: step, detail: "one result", links: [link])
-        let second = try #require(log.beginTool(taskID: task, name: "navigate", title: "Open"))
-        log.completeTool(taskID: task, stepID: second, detail: "opened")
+        let step = try #require(log.beginTool(taskID: task, name: "searchWeb"))
+        log.completeTool(taskID: task, stepID: step)
+        let second = try #require(log.beginTool(taskID: task, name: "navigate"))
+        log.completeTool(taskID: task, stepID: second)
         log.completeTask(task, response: "found it")
         log.saveBlocking()
 
         let reopened = ConversationLog(database: database)
         let trace = try #require(reopened.latestTrace(forTab: tab))
-        let restored = try #require(trace.steps.first { $0.toolName == "searchWeb" })
-        #expect(restored.links.isEmpty)
-        #expect(restored.detail == nil)
         // Order is a column, not an accident of how rows came back.
         #expect(trace.steps.map(\.title) == ["Search web", "Open Page"])
     }
@@ -414,7 +407,7 @@ struct ConversationLogTests {
 
         let tab = UUID()
         let task = log.beginTask("something", tabID: tab)
-        _ = log.beginTool(taskID: task, name: "navigate", title: "Open")
+        _ = log.beginTool(taskID: task, name: "navigate")
         log.completeTask(task, response: "done")
         log.saveBlocking()
 

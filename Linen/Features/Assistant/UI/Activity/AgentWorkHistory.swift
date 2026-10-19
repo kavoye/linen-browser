@@ -5,8 +5,6 @@ import SwiftUI
 
 struct AgentWorkHistory: View {
     let trace: ConversationLog.TaskTrace
-    let tabID: UUID
-    let browser: BrowserModel
     let showsDetails: Bool
 
     var body: some View {
@@ -32,16 +30,14 @@ struct AgentWorkHistory: View {
                     let previous = visibleIndices.last { $0 < index }
                     let next = visibleIndices.first { $0 > index }
                     AgentActivityStepRow(
-                        title: step.title, toolName: step.toolName,
-                        detail: step.detail, links: step.links, state: step.state,
+                        title: step.title, toolName: step.toolName, state: step.state,
                         inspection: inspections[step.id],
                         connectsAbove: previous.map { prior in
                             !trace.progressUpdates.contains { $0.afterStepCount > prior && $0.afterStepCount <= index }
                         } ?? false,
                         connectsBelow: next.map { following in
                             !trace.progressUpdates.contains { $0.afterStepCount > index && $0.afterStepCount <= following }
-                        } ?? false,
-                        tabID: tabID, browser: browser
+                        } ?? false
                     )
                     .frame(maxWidth: AssistantChatMetrics.steps, alignment: .leading)
                 }

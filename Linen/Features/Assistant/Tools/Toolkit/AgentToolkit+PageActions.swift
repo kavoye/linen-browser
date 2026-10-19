@@ -6,17 +6,13 @@ import WebKit
 
 extension AgentToolkit {
     func readPage(lookingFor: String = "", page: String = "", textOffset: Int = 0, controlOffset: Int = 0, scope: String = "", viewportOnly: Bool = false) async -> String {
-        let subject = page.isEmpty ? "the page" : "“\(page)”"
-        let title = lookingFor.isEmpty
-            ? "Read \(subject)"
-            : "Read \(subject) for “\(lookingFor)”"
-        let step = beginTool(name: "readPage", title: title)
+        let step = beginTool(name: "readPage")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let (webView, note) = readableSurface(named: page) else {
             let output = onScreenPageDenial(for: page)
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.read, in: webView)
@@ -24,7 +20,7 @@ extension AgentToolkit {
             return output
         }
         if let output = access.denial {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .read) {
@@ -40,12 +36,12 @@ extension AgentToolkit {
             return cancelled
         }
         if let output = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let links = links(in: output)
         remember(links: links)
-        completeTool(step, output: output, links: links, failed: !output.hasPrefix("PAGE TEXT:"))
+        completeTool(step, failed: !output.hasPrefix("PAGE TEXT:"))
         let pageID = pageIdentifier(for: webView)
         let request = [page, lookingFor, String(textOffset), String(controlOffset), scope, String(viewportOnly)].joined(separator: "\u{1F}")
         return note + fencedPageOutput("pageID: \(pageID)\n" + unchangedRead(output, page: pageID, request: request))
@@ -68,13 +64,13 @@ extension AgentToolkit {
     }
 
     func clickOnPage(ref: Int, label: String) async -> String {
-        let step = beginTool(name: "clickOnPage", title: ref > 0 ? "Click [\(ref)]" : "Click “\(label)”")
+        let step = beginTool(name: "clickOnPage")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let webView = targetWebView else {
             let output = "No tab is open yet."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.control, in: webView)
@@ -82,7 +78,7 @@ extension AgentToolkit {
             return output
         }
         if let output = access.denial {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
@@ -92,16 +88,16 @@ extension AgentToolkit {
             return cancelled
         }
         if let output = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         if AgentRequestConstraints.isRefusal(output) {
             refusedActions += 1
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         remember(links: links(in: output))
-        completeTool(step, output: output, failed: !output.hasPrefix("Clicked"))
+        completeTool(step, failed: !output.hasPrefix("Clicked"))
         guard !output.hasPrefix("Clicked"), Self.namesAKey(label) else { return fencedPageOutput(output) }
         return Self.keyHint + "\n" + fencedPageOutput(output)
     }
@@ -114,17 +110,13 @@ extension AgentToolkit {
     }
 
     func typeOnPage(text: String, field: String, ref: Int, submit: Bool) async -> String {
-        let step = beginTool(
-            name: "typeOnPage",
-            title: ref > 0 ? "Type into [\(ref)]" : "Type into “\(field)”",
-            detail: text
-        )
+        let step = beginTool(name: "typeOnPage")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let webView = targetWebView else {
             let output = "No tab is open yet."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.control, in: webView)
@@ -132,7 +124,7 @@ extension AgentToolkit {
             return output
         }
         if let output = access.denial {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
@@ -150,16 +142,16 @@ extension AgentToolkit {
             return cancelled
         }
         if let output = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         if AgentRequestConstraints.isRefusal(output) {
             refusedActions += 1
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         remember(links: links(in: output))
-        completeTool(step, output: output, failed: !output.hasPrefix("Typed"))
+        completeTool(step, failed: !output.hasPrefix("Typed"))
         if text.isEmpty, !submit, output.hasPrefix("Typed") {
             return "The text was empty, so the field is now empty. " + Self.keyHint + "\n" + fencedPageOutput(output)
         }
@@ -168,12 +160,12 @@ extension AgentToolkit {
     }
 
     func fillFields(_ fields: [PageDriver.FieldValue]) async -> String {
-        let step = beginTool(name: "fillFields", title: "Fill fields")
+        let step = beginTool(name: "fillFields")
         if let cancelled = cancellationOutput(for: step) {
             return cancelled
         }
         guard let webView = targetWebView else {
-            completeTool(step, output: "No page is open.", failed: true)
+            completeTool(step, failed: true)
             return "No page is open."
         }
         let access = await authorize(.control, in: webView)
@@ -181,7 +173,7 @@ extension AgentToolkit {
             return cancelled
         }
         if let denial = access.denial {
-            completeTool(step, output: denial, failed: true)
+            completeTool(step, failed: true)
             return denial
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
@@ -191,25 +183,22 @@ extension AgentToolkit {
             return cancelled
         }
         if let denial = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: denial, failed: true)
+            completeTool(step, failed: true)
             return denial
         }
         remember(links: links(in: output))
-        completeTool(step, output: output, failed: !output.hasPrefix("Filled \(fields.count) of \(fields.count) fields."))
+        completeTool(step, failed: !output.hasPrefix("Filled \(fields.count) of \(fields.count) fields."))
         return fencedPageOutput(output)
     }
 
     func selectOption(_ option: String, ref: Int, field: String) async -> String {
-        let step = beginTool(
-            name: "selectOption",
-            title: ref > 0 ? "Choose “\(option)” in [\(ref)]" : "Choose “\(option)” in “\(field)”"
-        )
+        let step = beginTool(name: "selectOption")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let webView = targetWebView else {
             let output = "No tab is open yet."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.control, in: webView)
@@ -217,7 +206,7 @@ extension AgentToolkit {
             return output
         }
         if let output = access.denial {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
@@ -233,22 +222,22 @@ extension AgentToolkit {
             return cancelled
         }
         if let output = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         remember(links: links(in: output))
-        completeTool(step, output: output, failed: !output.hasPrefix("Selected"))
+        completeTool(step, failed: !output.hasPrefix("Selected"))
         return fencedPageOutput(output)
     }
 
     func scrollPage(direction: String) async -> String {
-        let step = beginTool(name: "scrollPage", title: "Scroll \(direction)")
+        let step = beginTool(name: "scrollPage")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let webView = targetWebView else {
             let output = "No tab is open yet."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.control, in: webView)
@@ -256,7 +245,7 @@ extension AgentToolkit {
             return output
         }
         if let output = access.denial {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
@@ -266,21 +255,21 @@ extension AgentToolkit {
             return cancelled
         }
         if let output = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
-        completeTool(step, output: output, failed: !output.hasPrefix("Scrolled") && !output.hasPrefix("Already at"))
+        completeTool(step, failed: !output.hasPrefix("Scrolled") && !output.hasPrefix("Already at"))
         return fencedPageOutput(output)
     }
 
     func goBack() async -> String {
-        let step = beginTool(name: "goBack", title: "Go Back")
+        let step = beginTool(name: "goBack")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let webView = targetWebView else {
             let output = "No tab is open yet."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.control, in: webView)
@@ -288,7 +277,7 @@ extension AgentToolkit {
             return output
         }
         if let output = access.denial {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .control) {
@@ -298,10 +287,10 @@ extension AgentToolkit {
             return cancelled
         }
         if let output = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
-        completeTool(step, output: output, failed: output.hasPrefix("There is no"))
+        completeTool(step, failed: output.hasPrefix("There is no"))
         return fencedPageOutput(output)
     }
 

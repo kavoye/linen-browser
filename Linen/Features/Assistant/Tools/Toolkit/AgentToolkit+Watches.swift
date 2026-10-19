@@ -12,13 +12,12 @@ extension AgentToolkit {
     func watchPage(condition rawCondition: String, everyMinutes: Int) async -> String {
         let condition = rawCondition.trimmingCharacters(in: .whitespacesAndNewlines)
         let view = targetWebView
-        let place = view?.url?.displayHost ?? "this page"
-        let step = beginTool(name: "watchPage", title: "Watch \(place)", detail: condition)
+        let step = beginTool(name: "watchPage")
         if let output = cancellationOutput(for: step) {
             return output
         }
         func fail(_ output: String) -> String {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         guard !browserContext.profile.isPrivate else {
@@ -59,7 +58,7 @@ extension AgentToolkit {
         switch started {
         case .watching:
             let output = Self.output(for: started)
-            completeTool(step, output: output)
+            completeTool(step)
             return output
         default:
             return fail(Self.output(for: started))
@@ -93,47 +92,47 @@ extension AgentToolkit {
     }
 
     func listWatches() -> String {
-        let step = beginTool(name: "listWatches", title: "List Watched Pages")
+        let step = beginTool(name: "listWatches")
         if let output = cancellationOutput(for: step) {
             return output
         }
         let watches = pageWatches.watches
         guard !watches.isEmpty else {
             let output = "No pages are being watched."
-            completeTool(step, output: output)
+            completeTool(step)
             return output
         }
         let output = watches.map(Self.describe).joined(separator: "\n")
-        completeTool(step, output: output)
+        completeTool(step)
         return output
     }
 
     func stopWatch(matching reference: String) -> String {
-        let step = beginTool(name: "stopWatch", title: "Stop watching a page", detail: reference)
+        let step = beginTool(name: "stopWatch")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard !reference.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             let output = "Pass a watch ID, or part of the page title, address or condition."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let center = pageWatches
         let matches = center.matching(reference)
         guard let watch = matches.first else {
             let output = "No watch matches. Use listWatches to see them."
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         guard matches.count == 1 else {
             let output = "More than one watch matches. Pass a watch ID:\n"
                 + matches.map(Self.describe).joined(separator: "\n")
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         center.stop(watch.id)
         let output = "Stopped watching \(watch.title.isEmpty ? watch.place : watch.title)."
-        completeTool(step, output: output)
+        completeTool(step)
         return output
     }
 

@@ -6,14 +6,13 @@ import WebKit
 
 extension AgentToolkit {
     func readArticle(page: String = "", textOffset: Int = 0) async -> String {
-        let subject = page.isEmpty ? "the page" : "“\(page)”"
-        let step = beginTool(name: "readArticle", title: "Read the article on \(subject)")
+        let step = beginTool(name: "readArticle")
         if let output = cancellationOutput(for: step) {
             return output
         }
         guard let (webView, note) = readableSurface(named: page) else {
             let output = onScreenPageDenial(for: page)
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let access = await authorize(.read, in: webView)
@@ -21,7 +20,7 @@ extension AgentToolkit {
             return output
         }
         if let output = access.denial {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
         let output = await guardedPageOperation(in: webView, authorization: access.authorization, capability: .read) {
@@ -34,10 +33,10 @@ extension AgentToolkit {
             return cancelled
         }
         if let output = postflightDenial(for: access.authorization, in: webView) {
-            completeTool(step, output: output, failed: true)
+            completeTool(step, failed: true)
             return output
         }
-        completeTool(step, output: output, failed: !output.hasPrefix("ARTICLE:"))
+        completeTool(step, failed: !output.hasPrefix("ARTICLE:"))
         let pageID = pageIdentifier(for: webView)
         return note + fencedPageOutput("pageID: \(pageID)\n" + output)
     }

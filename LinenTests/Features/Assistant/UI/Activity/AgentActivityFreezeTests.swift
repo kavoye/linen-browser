@@ -180,8 +180,6 @@ nonisolated final class AgentActivityFreezeTests: XCTestCase, @unchecked Sendabl
                     kind: .tool,
                     title: "Search the web for “a deliberately long query \(index)-\(stepIndex) that wraps at the panel's minimum width”",
                     toolName: "searchWeb",
-                    detail: Array(repeating: paragraph, count: 4).joined(separator: "\n\n"),
-                    links: [],
                     state: .completed
                 )
             }

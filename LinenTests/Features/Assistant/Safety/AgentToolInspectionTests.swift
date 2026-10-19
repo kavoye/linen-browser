@@ -14,10 +14,10 @@ struct AgentToolInspectionTests {
         let log = ConversationLog(database: database)
         let tab = UUID()
         let task = log.beginTask("Fill the trip form", tabID: tab)
-        let first = try #require(log.beginTool(taskID: task, name: "clickOnPage", title: "Click control"))
-        log.completeTool(taskID: task, stepID: first, detail: "private first detail")
-        let second = try #require(log.beginTool(taskID: task, name: "clickOnPage", title: "Click control"))
-        log.completeTool(taskID: task, stepID: second, detail: "private second detail")
+        let first = try #require(log.beginTool(taskID: task, name: "clickOnPage"))
+        log.completeTool(taskID: task, stepID: first)
+        let second = try #require(log.beginTool(taskID: task, name: "clickOnPage"))
+        log.completeTool(taskID: task, stepID: second)
 
         let firstCall = Transcript.ToolCall(id: "first", toolName: "clickOnPage", arguments: GeneratedContent(properties: [
             "selector": GeneratedContent("#origin")
@@ -35,7 +35,6 @@ struct AgentToolInspectionTests {
 
         let reopened = ConversationLog(database: database)
         let trace = try #require(reopened.latestTrace(forTab: tab))
-        #expect(trace.steps.allSatisfy { $0.detail == nil && $0.links.isEmpty })
         let details = AgentToolInspection.forTrace(trace)
         #expect(details[first]?.result == "Opened origin")
         #expect(details[second]?.result == "Opened destination")
@@ -47,8 +46,8 @@ struct AgentToolInspectionTests {
         let log = ConversationLog(database: .temporary())
         let tab = UUID()
         let task = log.beginTask("Fill a field", tabID: tab)
-        let step = try #require(log.beginTool(taskID: task, name: "typeOnPage", title: "Fill field"))
-        log.completeTool(taskID: task, stepID: step, detail: "private@example.test")
+        let step = try #require(log.beginTool(taskID: task, name: "typeOnPage"))
+        log.completeTool(taskID: task, stepID: step)
 
         let call = Transcript.ToolCall(id: "typed", toolName: "typeOnPage", arguments: GeneratedContent(properties: [
             "field": GeneratedContent("Destination"),

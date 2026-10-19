@@ -49,7 +49,7 @@ struct OmniboxTests {
             let item = try #require(Omnibox.searchItem(for: "weather tomorrow") { opened = $0 })
 
             #expect(item.kind == .search)
-            #expect(item.detail.contains(Omnibox.engineName))
+            #expect(item.detail.contains(SearchURLBuilder.engine.name))
             item.run()
             let url = try #require(opened)
             #expect(url == SearchURLBuilder.searchURL(for: "weather tomorrow"))

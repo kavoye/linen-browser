@@ -16,8 +16,8 @@ struct AgentProgressUpdateTests {
         ])
         fixture.state.output = { _ in
             let id = try #require(fixture.log.latestTrace(forTab: fixture.tabID)?.id)
-            let step = fixture.log.beginTool(taskID: id, name: "readPage", title: "Read page")
-            fixture.log.completeTool(taskID: id, stepID: step, detail: "")
+            let step = fixture.log.beginTool(taskID: id, name: "readPage")
+            fixture.log.completeTool(taskID: id, stepID: step)
             return "Verified page state"
         }
         var sawUpdateWhileRunning = false
@@ -44,7 +44,7 @@ struct AgentProgressUpdateTests {
         let trace = try #require(restored.latestTrace(forTab: fixture.tabID))
         #expect(trace.progressUpdates.first?.text == privateText)
         #expect(!trace.diagnostics.exported().contains(privateText))
-        #expect(!trace.steps.contains { $0.detail?.contains(privateText) == true || $0.title.contains(privateText) })
+        #expect(!trace.steps.contains { $0.title.contains(privateText) })
         #expect(trace.response == "Done.")
     }
 
