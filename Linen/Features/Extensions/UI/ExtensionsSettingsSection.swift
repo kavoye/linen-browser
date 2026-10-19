@@ -154,7 +154,7 @@ private struct ExtensionRow: View {
             ExtensionIcon(image: icon)
                 .opacity(record.enabled ? 1 : 0.55)
 
-            HStack(spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(verbatim: record.displayName)
                     .font(Theme.Font.title)
                     .lineLimit(isCompact ? 2 : 1)
