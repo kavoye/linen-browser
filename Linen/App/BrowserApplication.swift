@@ -92,6 +92,9 @@ final class BrowserApplication {
         let queued = queuedURLs
         queuedURLs.removeAll()
         openFromAnotherApp(queued)
+        mcpServer.makeToolkit = { [weak self] browser in
+            self?.windows.first { $0.browser === browser }?.makeExternalToolkit()
+        }
         mcpServer.resume()
     }
 
