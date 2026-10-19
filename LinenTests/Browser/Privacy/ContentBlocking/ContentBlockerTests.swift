@@ -130,6 +130,24 @@ struct ContentBlockerRuleTests {
         #expect(Set(TrackerList.domains).count == TrackerList.domains.count)
     }
 
+    @Test func trackersFromTheSameSiteAreNotCounted() {
+        let page = URL(string: "https://www.facebook.com/groups")
+        #expect(TrackerList.matchingDomains(in: ["https://facebook.com/tr?id=1"], topLevelURL: page).isEmpty)
+        #expect(TrackerList.matchingDomains(in: ["http://www.facebook.com/tr?id=1"], topLevelURL: page).isEmpty)
+    }
+
+    @Test func trackersFromAnotherSiteAreCounted() {
+        let page = URL(string: "https://www.facebook.com/groups")
+        let found = TrackerList.matchingDomains(
+            in: ["https://www.google-analytics.com/collect", "https://facebook.com.evil.example/tr"],
+            topLevelURL: page
+        )
+        #expect(found == ["google-analytics.com"])
+        #expect(
+            TrackerList.matchingDomains(in: ["https://facebook.com/tr"], topLevelURL: URL(string: "https://example.com"))
+                == ["facebook.com"])
+    }
+
     /// WebKit rejects a rule list it cannot compile, and the failure is a log
     /// line rather than anything the user sees - so the real compiler is what
     /// this has to be checked against.

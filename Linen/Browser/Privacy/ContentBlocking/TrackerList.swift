@@ -119,7 +119,7 @@ enum TrackerList {
                   let scheme = url.scheme?.lowercased(),
                   scheme == "http" || scheme == "https",
                   let host = url.host?.lowercased(),
-                  !isSameOrigin(url, topLevelURL)
+                  !isSameSite(url, topLevelURL)
             else { continue }
 
             for rule in rules where host == rule.host || host.hasSuffix(".\(rule.host)") {
@@ -140,24 +140,13 @@ enum TrackerList {
         )
     }
 
-    private static func isSameOrigin(_ resourceURL: URL, _ topLevelURL: URL?) -> Bool {
+    private static func isSameSite(_ resourceURL: URL, _ topLevelURL: URL?) -> Bool {
         guard let topLevelURL else { return false }
-        return resourceURL.scheme?.lowercased() == topLevelURL.scheme?.lowercased()
-            && resourceURL.host?.lowercased() == topLevelURL.host?.lowercased()
-            && effectivePort(of: resourceURL) == effectivePort(of: topLevelURL)
+        return site(of: resourceURL) == site(of: topLevelURL)
     }
 
-    private static func effectivePort(of url: URL) -> Int? {
-        if let port = url.port {
-            return port
-        }
-        return switch url.scheme?.lowercased() {
-        case "http":
-            80
-        case "https":
-            443
-        default:
-            nil
-        }
+    private static func site(of url: URL) -> String? {
+        guard let host = url.host()?.lowercased() else { return nil }
+        return PublicSuffix.registrableDomain(of: host) ?? host
     }
 }
