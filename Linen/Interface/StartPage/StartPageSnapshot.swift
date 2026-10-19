@@ -64,7 +64,7 @@ struct StartPageSnapshot {
         )
         recentHistory = Array(historyEntries.prefix(6))
         recentDownloads = Array(downloads.prefix(4))
-        recentTasks = Array(tasks.suffix(3).reversed())
+        recentTasks = Array(tasks.filter(\.hasUserPrompt).suffix(3).reversed())
     }
 
     private func sectionSnapshot(_ section: StartPageSection) -> StartPageSectionSnapshot? {

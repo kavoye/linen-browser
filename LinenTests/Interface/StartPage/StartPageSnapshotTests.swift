@@ -173,6 +173,18 @@ struct StartPageSnapshotTests {
             == [.suggestions, .recentTasks, .history, .downloads])
     }
 
+    @Test func recentTasksSkipWorkWithoutAQuestion() {
+        let tasks = ["Asked", "", "Also asked"].enumerated().map { index, prompt in
+            ConversationLog.TaskTrace(
+                id: UUID(), tabID: UUID(), prompt: prompt,
+                startedAt: Date(timeIntervalSinceReferenceDate: Double(index)), steps: [], response: "",
+                state: .completed, finishedAt: Date(timeIntervalSinceReferenceDate: Double(index + 1)), providerID: nil
+            )
+        }
+        let snapshot = StartPageSnapshot(historyEntries: [], historyVisits: [], downloads: [], tasks: tasks, hiddenFrequentHosts: [])
+        #expect(snapshot.recentTasks.map(\.prompt) == ["Also asked", "Asked"])
+    }
+
     @Test func startPagePreferencesAreIsolatedBindableAndPersistent() {
         let suiteName = TestDefaults.name("StartPageSnapshotTests")
         let defaults = UserDefaults(suiteName: suiteName)!
