@@ -1215,9 +1215,6 @@
     "Cancel" : {
       "comment" : "The standard Cancel button in confirmation sheets and alerts throughout the app. Use the system's own wording for it."
     },
-    "Cancel shortcut recording" : {
-      "comment" : "Tooltip on the shortcut recorder in Settings > Voice while it is listening for a key combination; pressing it stops without recording anything."
-    },
     "Canceled" : {
       "comment" : "Status label on a download the user stopped."
     },
@@ -1479,6 +1476,12 @@
     "Clear the download list?" : {
       "comment" : "Heading of the confirmation sheet for emptying the list of finished downloads, raised from the downloads popover and from the Downloads settings page. Only the list is emptied, not the files."
     },
+    "Clear website data for “%@”?" : {
+
+    },
+    "Clear Website Data…" : {
+
+    },
     "Clear…" : {
       "comment" : "Button on the Downloads settings page that raises the confirmation for emptying the download list. A verb, with a real ellipsis (…) promising a dialog."
     },
@@ -1736,6 +1739,9 @@
     "Cookies and site data" : {
       "comment" : "Name of one of the three kinds of data listed with tick boxes on the Privacy settings page. A noun phrase at the head of a row; a separate lowercase variant exists for use inside sentences."
     },
+    "Cookies, caches and storage for this website are removed, and the page reloads." : {
+
+    },
     "Copied to the clipboard" : {
       "comment" : "Confirmation shown for a moment on the External connections settings page after the user copies the connection details."
     },
@@ -1764,6 +1770,9 @@
       "comment" : "Sidebar context menu on a split row or several selected tabs: puts one web address per line on the clipboard. Plural of Copy Link. Title case."
     },
     "Copy Question" : {
+
+    },
+    "Copy Screenshot" : {
 
     },
     "Copy this answer" : {
@@ -1860,6 +1869,9 @@
 
     },
     "Couldn’t summarize this page." : {
+
+    },
+    "Couldn’t take a screenshot" : {
 
     },
     "Couldn’t transcribe the recording." : {
@@ -1961,10 +1973,19 @@
     "Developer" : {
 
     },
+    "Developer Mode for “%@”" : {
+
+    },
+    "Developer Mode for This Website" : {
+
+    },
     "Developer settings" : {
 
     },
     "Developer settings…" : {
+
+    },
+    "Developer Tools" : {
 
     },
     "Dictation" : {
@@ -3134,6 +3155,9 @@
     "Mark as Read" : {
       "comment" : "GitHub inbox row context menu item. Marks the GitHub notification as read."
     },
+    "Match System" : {
+
+    },
     "Max" : {
       "comment" : "Label for the highest Thinking level in model and provider settings."
     },
@@ -3781,6 +3805,9 @@
     "Open Image in New Tab" : {
       "comment" : "Item in the web page’s right-click menu. Title Case."
     },
+    "Open In" : {
+
+    },
     "Open in current tab" : {
       "comment" : "Shown with a history result in the command palette while Option is held."
     },
@@ -3916,6 +3943,9 @@
     "Other websites" : {
       "comment" : "Label of the row that sets the answer for every website not listed individually below it, in the Websites permissions section. A noun phrase, not a heading."
     },
+    "Outline Elements" : {
+
+    },
     "Over the limit by %@ tokens" : {
       "comment" : "Line in the context window popover next to the assistant composer, shown instead of the used and left shares when the conversation is larger than the selected model’s context window. %@ is a token count already formatted for the locale, e.g. “13.6K”."
     },
@@ -3923,6 +3953,9 @@
       "comment" : "Heading of the commands that act on the page being read in the ⌘K command palette: reload, find, print, zoom. Title Case, singular noun."
     },
     "Page Actions" : {
+
+    },
+    "Page Appearance" : {
 
     },
     "Page Down" : {
@@ -4828,6 +4861,9 @@
     "Scopes, separated by spaces" : {
 
     },
+    "Screenshot Copied" : {
+
+    },
     "Scroll" : {
       "comment" : "Tool name in assistant settings: scrolling a web page."
     },
@@ -5153,6 +5189,9 @@
       "comment" : "External MCP client setup in Advanced settings."
     },
     "Show details" : {
+
+    },
+    "Show Frame Rate" : {
 
     },
     "Show full website address" : {
@@ -6048,6 +6087,9 @@
     "Try Again" : {
       "comment" : "Button that retries a failed agent turn or a failed update check."
     },
+    "Turn Off Developer Mode for “%@”" : {
+
+    },
     "Turn on Apple Intelligence in System Settings." : {
       "comment" : "Setup hint shown when the Apple Intelligence provider is chosen but not enabled on the Mac. Apple Intelligence and System Settings are Apple’s names — use Apple’s own translations, since the user has to find them on screen."
     },
@@ -6464,6 +6506,9 @@
     },
     "What the assistant remembers about you. It saves your answers and what you ask it to remember. It never saves page content, passwords, or payment details." : {
       "comment" : "Settings, Assistant, Memory: page description."
+    },
+    "What’s New" : {
+
     },
     "What’s on Hacker News?" : {
       "comment" : "Label on one of three example prompt chips on the start page; clicking it asks the assistant that question. “Hacker News” is the name of a website — keep it. Keep the curly apostrophe; the prompt actually sent to the model is separate and stays in English."
