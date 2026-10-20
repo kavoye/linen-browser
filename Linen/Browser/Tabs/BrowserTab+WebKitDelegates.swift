@@ -465,6 +465,8 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         pendingMainFrameURL = nil
         tab?.committedNavigation = navigation
+        tab?.context.settings.applyInspector(to: webView)
+        tab?.applyDeveloperAppearance()
         tab?.autofillSave.resetDismissalsForNavigation()
         if tab?.provisionalNavigation === navigation {
             tab?.provisionalNavigation = nil
@@ -495,6 +497,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             return
         }
         tab.didPresentContent()
+        tab.applyDeveloperOverlays()
         tab.refreshFavicon()
         tab.releasePageColorHold()
         tab.refreshPageColor()

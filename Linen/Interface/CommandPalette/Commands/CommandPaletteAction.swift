@@ -17,6 +17,7 @@ struct CommandPaletteContext {
     var isTranslated = false
     var canTranslate = false
     var canInspect = false
+    var canScreenshot = false
     var isShowingPin = false
     var isAwayFromPin = false
     var canReopenClosedTab = false
@@ -81,6 +82,7 @@ enum CommandPaletteAction: String, CaseIterable {
     case actualSize
     case translatePage
     case showWebInspector
+    case copyScreenshot
 
     case splitRight
     case splitDown

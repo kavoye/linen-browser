@@ -117,6 +117,7 @@ final class AskSurfaceModel {
             placeholder: placeholder,
             currentURL: currentURL,
             showsFullAddress: browser.context.settings.showsFullAddress
+                || browser.activeTab?.usesDeveloperMode == true
         )
     }
 

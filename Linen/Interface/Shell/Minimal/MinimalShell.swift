@@ -106,7 +106,7 @@ struct MinimalShell: View {
                 coordinator: coordinator,
                 floating: floating,
                 width: IslandBar.width(
-                    fullAddress: coordinator.settings.showsFullAddress,
+                    fullAddress: coordinator.settings.showsFullAddress || browser.activeTab?.usesDeveloperMode == true,
                     available: containerWidth - 2 * Self.cornerInset
                 ),
                 onTabButtonFrame: { tabButtonFrame = $0 }

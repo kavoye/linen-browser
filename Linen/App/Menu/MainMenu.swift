@@ -256,6 +256,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             modifiers: [.command, .option]
         ))
         developer.addItem(command("Restart Page", #selector(restartPage)))
+        developer.addItem(.separator())
+        developer.addItem(command("Developer Mode for This Website", #selector(toggleDeveloperMode)))
         menu.addItem(submenu(developer, titled: "Developer"))
         return menu
     }
@@ -408,6 +410,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func restartPage() {
         coordinator.pageCommandTab?.restartPage()
     }
+    @objc private func toggleDeveloperMode() {
+        guard let tab = coordinator.pageCommandTab else { return }
+        tab.setDeveloperMode(!tab.usesDeveloperMode)
+    }
     @objc private func stopLoading() {
         coordinator.pageCommandTab?.stopLoading()
     }
@@ -550,10 +556,22 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             menuItem.title = String(localized: "Search with \(SearchURLBuilder.engine(settings: tab.context.settings).name)")
             return true
         case #selector(showWebInspector):
-            return coordinator.pageCommandTab != nil && coordinator.settings.webInspectorEnabled
+            guard let tab = coordinator.pageCommandTab else { return false }
+            return coordinator.settings.webInspectorEnabled || tab.usesDeveloperMode
         case #selector(restartPage):
             guard let tab = coordinator.pageCommandTab else { return false }
             return tab.extensionBaseURL == nil
+        case #selector(toggleDeveloperMode):
+            guard let tab = coordinator.pageCommandTab,
+                  let host = DeveloperMode.host(of: URL(string: tab.urlString))
+            else {
+                menuItem.title = String(localized: "Developer Mode for This Website")
+                menuItem.state = .off
+                return false
+            }
+            menuItem.title = String(localized: "Developer Mode for “\(host)”")
+            menuItem.state = tab.usesDeveloperMode ? .on : .off
+            return true
         case #selector(reload), #selector(hardReload):
             return coordinator.pageCommandTab?.canReload ?? false
         case #selector(zoomIn), #selector(zoomOut), #selector(openFind), #selector(findNext),

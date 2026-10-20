@@ -336,7 +336,8 @@ final class CommandPaletteModel {
             isZoomed: page?.isZoomed ?? false,
             isTranslated: page?.translation.isActive ?? false,
             canTranslate: page?.canToggleTranslation ?? false,
-            canInspect: page != nil && browser.context.settings.webInspectorEnabled,
+            canInspect: page.map { browser.context.settings.webInspectorEnabled || $0.usesDeveloperMode } ?? false,
+            canScreenshot: page?.isMaterialised ?? false,
             isShowingPin: tab?.isShowingPin ?? false,
             isAwayFromPin: tab?.isAwayFromPin ?? false,
             canReopenClosedTab: browser.canReopenClosedTab,
@@ -467,6 +468,10 @@ final class CommandPaletteModel {
             }
         case .copyLink:
             coordinator.copyCurrentURL()
+        case .copyScreenshot:
+            if let page {
+                coordinator.copyScreenshot(of: page)
+            }
         case .printPage:
             coordinator.printActivePage()
         case .translatePage:

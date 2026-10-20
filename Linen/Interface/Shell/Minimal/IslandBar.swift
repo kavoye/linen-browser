@@ -165,6 +165,11 @@ struct IslandBar: View {
                 PermissionBadge(browser: browser)
                 AutofillSaveBadge(browser: browser, coordinator: coordinator)
                 PopupBadge(browser: browser, coordinator: coordinator)
+                if let tab = browser.activeTab, tab.usesDeveloperMode {
+                    DeveloperBadge(tab: tab, coordinator: coordinator)
+                        .frame(width: 30)
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
                 PinBadge(browser: browser)
                     .frame(width: 30)
                 TranslationBadge(browser: browser, coordinator: coordinator)
@@ -303,7 +308,8 @@ private struct IslandAddress: View {
     @Environment(\.chromeIsLight) private var onLight
 
     private var showsFullAddress: Bool {
-        tab?.context.settings.showsFullAddress ?? false
+        guard let tab else { return false }
+        return tab.context.settings.showsFullAddress || tab.usesDeveloperMode
     }
 
     private var label: String {

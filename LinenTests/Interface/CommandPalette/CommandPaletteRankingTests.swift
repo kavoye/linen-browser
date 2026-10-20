@@ -206,6 +206,7 @@ struct CommandPaletteRankingTests {
             isZoomed: true,
             canTranslate: true,
             canInspect: true,
+            canScreenshot: true,
             isAwayFromPin: true,
             canReopenClosedTab: true,
             canReopenClosedWindow: true,

@@ -349,6 +349,14 @@ enum CommandPaletteCatalog {
                     aliases: ["inspect element", "developer tools", "devtools", "console"],
                     isAvailable: context.canInspect
                 ),
+                make(
+                    .copyScreenshot,
+                    group: .page,
+                    title: "Copy Screenshot",
+                    symbol: "camera.viewfinder",
+                    aliases: ["screenshot", "take screenshot", "capture page", "snapshot"],
+                    isAvailable: context.canScreenshot
+                ),
             ]
         }
 

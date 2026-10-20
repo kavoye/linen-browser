@@ -60,6 +60,8 @@ final class BrowserSettings {
         static let userAgent = "advanced.userAgent"
         static let customUserAgent = "advanced.userAgent.custom"
         static let webInspector = "advanced.webInspector"
+        static let developerHosts = "advanced.developerHosts"
+        static let nonDeveloperHosts = "advanced.nonDeveloperHosts"
         static let updateChannel = "updates.channel"
         static let startPageOrder = "startPage.order"
         static let startPageHidden = "startPage.hidden"
@@ -549,6 +551,44 @@ final class BrowserSettings {
         }
     }
 
+    private(set) var developerHosts: Set<String> = [] {
+        didSet {
+            guard developerHosts != oldValue else { return }
+            write(developerHosts.sorted(), forKey: Key.developerHosts)
+        }
+    }
+
+    private(set) var nonDeveloperHosts: Set<String> = [] {
+        didSet {
+            guard nonDeveloperHosts != oldValue else { return }
+            write(nonDeveloperHosts.sorted(), forKey: Key.nonDeveloperHosts)
+        }
+    }
+
+    func usesDeveloperMode(for url: URL?) -> Bool {
+        guard let host = DeveloperMode.host(of: url) else { return false }
+        if developerHosts.contains(host) {
+            return true
+        }
+        if nonDeveloperHosts.contains(host) {
+            return false
+        }
+        return DeveloperMode.isLocal(host)
+    }
+
+    func setDeveloperMode(_ isOn: Bool, for url: URL?) {
+        guard let host = DeveloperMode.host(of: url) else { return }
+        developerHosts.remove(host)
+        nonDeveloperHosts.remove(host)
+        defer { onWebPreferencesChanged?() }
+        guard isOn != DeveloperMode.isLocal(host) else { return }
+        if isOn {
+            developerHosts.insert(host)
+        } else {
+            nonDeveloperHosts.insert(host)
+        }
+    }
+
     // MARK: - Start page
 
     var startPageOrder: [StartPageSection] {
@@ -707,6 +747,8 @@ final class BrowserSettings {
         webInspectorEnabled = store.object(Key.webInspector) as? Bool ?? true
         translationTargetID = store.string(Key.translationTarget) ?? ""
         alwaysTranslatedLanguages = Set(store.stringArray(Key.alwaysTranslate) ?? [])
+        developerHosts = Set(store.stringArray(Key.developerHosts) ?? [])
+        nonDeveloperHosts = Set(store.stringArray(Key.nonDeveloperHosts) ?? [])
 
         startPageOrder = Self.resolveOrder(store.stringArray(Key.startPageOrder))
         hiddenStartPageSections = Set(
@@ -788,7 +830,13 @@ final class BrowserSettings {
             webView.pageZoom = pageZoom
         }
         webView.customUserAgent = userAgentString
-        webView.isInspectable = webInspectorEnabled
+        applyInspector(to: webView)
+    }
+
+    func applyInspector(to webView: WKWebView) {
+        let isEnabled = webInspectorEnabled || usesDeveloperMode(for: webView.url)
+        webView.configuration.preferences.setValue(isEnabled, forKey: "developerExtrasEnabled")
+        webView.isInspectable = isEnabled
     }
 
     func resetToDefaults() {
@@ -820,6 +868,8 @@ final class BrowserSettings {
         userAgentMode = .safari
         customUserAgent = ""
         webInspectorEnabled = true
+        developerHosts = []
+        nonDeveloperHosts = []
         translationTargetID = ""
         alwaysTranslatedLanguages = []
         startPageOrder = StartPageSection.allCases

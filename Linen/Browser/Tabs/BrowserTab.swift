@@ -31,6 +31,7 @@ final class BrowserTab: Identifiable {
     private var faviconHost = ""
     var progress: Double = 0
     var pageColor: NSColor?
+    var developerTools = DeveloperTools()
     var isRestoring = false
     var isPlayingAudio = false
     var hasVideo = false
