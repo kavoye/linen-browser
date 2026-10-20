@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.9.2
+
+### New
+
+- **Developer mode for websites.** Turn on Developer mode for a website in
+  View > Developer. Local websites, such as localhost and .test addresses,
+  use it automatically. The address field shows the full address and a
+  Developer Tools button. Use it to open the Web Inspector, copy a screenshot,
+  show the frame rate, outline page elements, preview the page in light or
+  dark appearance, open the page in another browser, or clear the website's
+  data.
+- **Copy Screenshot.** Copy a screenshot of the page from the command
+  palette.
+
+### Improved
+
+- **Update notice.** After Linen updates, the sidebar shows the new version
+  and a What's New button. The release notes no longer open by themselves.
+- **Keyboard shortcuts.** The command palette, the sidebar, and Settings show
+  keyboard shortcuts as keys.
+- **Sidebar peek.** The sidebar and the tab list open when you rest the
+  pointer at the edge of the window, not when it passes over the edge. They
+  close when the pointer leaves, also when you switch to another app, and stay
+  open while you resize the sidebar.
+
+### Fixed
+
+- **iCloud Passwords extension.** The iCloud Passwords extension from the
+  Chrome Web Store now works in Linen. It fills passwords and verification
+  codes from the Passwords app.
+- **Extensions that use unsupported features.** An extension that uses a
+  feature WebKit doesn't have, such as the side panel or bookmarks, now starts
+  and runs its other features. Only the unsupported feature stops working.
+
 ## 0.9.1
 
 ### Improved

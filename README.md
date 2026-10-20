@@ -65,6 +65,7 @@ for changes in published versions.
   Unlock saved passwords and cards with Touch ID or your Mac password.
   To sign in with a passkey, follow the macOS sign-in prompt.
 - Install extensions from the Chrome Web Store or Firefox Add-ons.
+  Use the iCloud Passwords extension to fill passwords from the Passwords app.
 - Let a space share sign-ins and data with another space, or keep its own
   cookies, history, tabs, permissions, and extensions. Press ⇧⌘N to open a
   private window. Closing it ends that private session.
