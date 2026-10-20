@@ -73,10 +73,8 @@ extension AppCoordinator {
         MoveToApplications.reregisterDefaultBrowserIfNeeded()
         timing.mark("updates")
         Task { [weak self] in
-            guard let self, application == nil || application?.windows.count == 1,
-                  await releaseNotes.shouldOpenForNewVersion() else { return }
-            guard !isClosed else { return }
-            showReleaseNotes()
+            guard let self, application == nil || application?.windows.count == 1 else { return }
+            await releaseNotes.checkForNewVersion()
         }
 
         Task { [extensions] in

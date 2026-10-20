@@ -250,7 +250,7 @@ private struct SidebarPinnedCards: View {
     private static let spacing: CGFloat = 6
 
     private var bannerHeight: CGFloat {
-        coordinator.updates.model.isBannerVisible ? measuredBanner : 0
+        UpdateBanner.isVisible(for: coordinator) ? measuredBanner : 0
     }
 
     private var stackedHeight: CGFloat {
@@ -270,7 +270,7 @@ private struct SidebarPinnedCards: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            UpdateBanner(updates: coordinator.updates)
+            UpdateBanner(coordinator: coordinator)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { measuredBanner = $0 }
         }
         .frame(maxWidth: .infinity)

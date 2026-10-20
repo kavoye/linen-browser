@@ -208,7 +208,7 @@ struct IslandBar: View {
                 IslandMoreMenu(coordinator: coordinator, isPresented: $isMoreOpen)
             }
 
-            UpdateBanner(updates: coordinator.updates)
+            UpdateBanner(coordinator: coordinator)
                 .environment(\.sidebarStyle, .icons)
                 .frame(width: 30)
                 .environment(\.chromeIconExtent, 28)

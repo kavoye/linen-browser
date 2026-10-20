@@ -59,30 +59,40 @@ final class ReleaseNotesModel {
 
     private(set) var releases: [GitHubRelease] = []
     private(set) var isLoading = false
+    private(set) var updatedVersion: String?
 
     private var hasAttempted = false
 
     /// A version whose notes are not published yet stays unseen, so the next launch asks again.
-    func shouldOpenForNewVersion() async -> Bool {
-        guard !hasAttempted else { return false }
+    func checkForNewVersion() async {
+        guard !hasAttempted else { return }
         hasAttempted = true
 
         let current = UpdateFeed.currentVersion
         let defaults = UserDefaults.standard
         guard let seen = defaults.string(forKey: Self.seenKey) else {
             defaults.set(current, forKey: Self.seenKey)
-            return false
+            return
         }
-        guard seen != current else { return false }
+        guard seen != current else { return }
 
         await load()
         guard releases.contains(where: { $0.version == current }) else {
             Pipeline.log.notice("release notes: none published for \(current, privacy: .public) yet")
-            return false
+            return
         }
 
-        defaults.set(current, forKey: Self.seenKey)
-        return true
+        updatedVersion = current
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(30))
+            self?.acknowledgeUpdate()
+        }
+    }
+
+    func acknowledgeUpdate() {
+        guard let updatedVersion else { return }
+        UserDefaults.standard.set(updatedVersion, forKey: Self.seenKey)
+        self.updatedVersion = nil
     }
 
     func isRunning(_ release: GitHubRelease) -> Bool {

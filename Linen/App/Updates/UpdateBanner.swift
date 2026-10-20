@@ -4,30 +4,56 @@
 import SwiftUI
 
 struct UpdateBanner: View {
-    let updates: UpdateController
+    let coordinator: AppCoordinator
 
     @Environment(\.sidebarStyle) private var sidebarStyle
+
+    private var updates: UpdateController {
+        coordinator.updates
+    }
 
     private var model: UpdateModel {
         updates.model
     }
 
+    static func isVisible(for coordinator: AppCoordinator) -> Bool {
+        coordinator.updates.model.isBannerVisible || coordinator.releaseNotes.updatedVersion != nil
+    }
+
+    private enum Presence {
+        case hidden, update, updated
+    }
+
+    private var presence: Presence {
+        if model.isBannerVisible {
+            return .update
+        }
+        return coordinator.releaseNotes.updatedVersion == nil ? .hidden : .updated
+    }
+
     var body: some View {
-        Group {
+        GlassEffectContainer {
             if model.isBannerVisible {
                 if sidebarStyle == .icons {
                     badge
                 } else {
                     card
                 }
+            } else if coordinator.releaseNotes.updatedVersion != nil {
+                if sidebarStyle == .icons {
+                    updatedBadge
+                } else {
+                    updatedCard
+                }
             }
         }
+        .animation(Theme.Motion.drift, value: presence)
     }
 
     // MARK: - The card
 
     private var card: some View {
-        HStack(spacing: 8) {
+        cardShell {
             Text(bannerTitle)
                 .font(Theme.Font.control.weight(.semibold))
                 .lineLimit(1)
@@ -36,16 +62,33 @@ struct UpdateBanner: View {
 
             cardAccessory
         }
-        .frame(minHeight: SettingsMetrics.controlHeight)
-        .padding(.leading, 10)
-        .padding(.trailing, 5)
-        .padding(.vertical, 5)
-        .frame(maxWidth: .infinity)
-        .glassEffect(
-            .regular.tint(Theme.accent.opacity(0.38)),
-            in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-        )
-        .transition(.identity)
+    }
+
+    private var updatedCard: some View {
+        cardShell {
+            Text(updatedTitle)
+                .font(Theme.Font.control.weight(.semibold))
+                .lineLimit(1)
+
+            Spacer(minLength: 4)
+
+            SettingsButton(title: "What’s New", isProminent: true, action: readNotes)
+        }
+    }
+
+    private func cardShell(@ViewBuilder content: () -> some View) -> some View {
+        HStack(spacing: 8, content: content)
+            .frame(minHeight: SettingsMetrics.controlHeight)
+            .padding(.leading, 10)
+            .padding(.trailing, 5)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
+            .glassEffect(
+                .regular.tint(Theme.accent.opacity(0.38)),
+                in: RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+            )
+            .glassEffectTransition(.materialize)
+            .transition(.opacity)
     }
 
     @ViewBuilder
@@ -80,7 +123,33 @@ struct UpdateBanner: View {
         .buttonStyle(.plain)
         .disabled(!isActionable)
         .help(Text(bannerTitle))
-        .transition(.identity)
+        .glassEffectTransition(.materialize)
+        .transition(.opacity)
+    }
+
+    private var updatedBadge: some View {
+        Button(action: readNotes) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.primary)
+                .frame(width: 22, height: 22)
+                .glassEffect(.regular.tint(Theme.accent.opacity(0.38)), in: Circle())
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(Text(updatedTitle))
+        .glassEffectTransition(.materialize)
+        .transition(.opacity)
+    }
+
+    private var updatedTitle: LocalizedStringResource {
+        "Updated to \(coordinator.releaseNotes.updatedVersion ?? UpdateFeed.currentVersion)"
+    }
+
+    private func readNotes() {
+        coordinator.releaseNotes.acknowledgeUpdate()
+        coordinator.showReleaseNotes()
     }
 
     private func act() {
