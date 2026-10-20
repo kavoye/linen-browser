@@ -290,6 +290,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             } else {
                 let package = library.packageURL(for: record.id)
                 ExtensionShims.ensureApplied(at: package)
+                ExtensionShims.ensurePagesApplied(at: package)
                 ExtensionExternalConnect.ensureRelayApplied(at: package)
                 ExtensionPageAssets.ensureReporterApplied(at: package)
                 webExtension = try await WKWebExtension(resourceBaseURL: package)

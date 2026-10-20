@@ -27,16 +27,20 @@ nonisolated enum ExtensionCompatibility {
     }
 
     static let unsupportedMembers: Set<String> = [
+        "action.onUserSettingsChanged",
+        "runtime.onRestartRequired",
         "runtime.onSuspend",
+        "runtime.onSuspendCanceled",
         "runtime.onUpdateAvailable",
         "tabs.onZoomChange",
         "webNavigation.onCreatedNavigationTarget",
         "webNavigation.onHistoryStateUpdated",
         "webNavigation.onReferenceFragmentUpdated",
         "webNavigation.onTabReplaced",
+        "windows.onBoundsChanged",
     ]
 
-    static let membersMeasuredThroughMacOS = 26
+    static let membersMeasuredThroughMacOS = 27
 
     static func membersAreKnown(
         on version: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
