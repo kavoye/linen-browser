@@ -20,7 +20,7 @@ To see every task, run `Tools/eval list`.
 
 ## Requirements
 
-- An Apple silicon Mac with macOS 26 or later and Xcode 26.5 or later.
+- An Apple silicon Mac with macOS 26 or later and Xcode 27.0 or later.
 - For Apple Intelligence: Apple Intelligence turned on in System Settings.
 - For a cloud provider: an API key for that provider.
 - For Ollama or LM Studio: the local server running with a tool-capable model.

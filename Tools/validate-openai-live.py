@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def source_hash():
-    paths = [*(ROOT / "Linen").rglob("*.swift"), *(ROOT / "LinenTests").rglob("*.swift"), ROOT / "Linen.xcodeproj/project.pbxproj",
+    paths = [*(ROOT / "Linen").rglob("*.swift"), *(ROOT / "LinenTests").rglob("*.swift"), ROOT / "Linen.xcodeproj/project.xcproj",
              ROOT / "Linen.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"]
     digest = hashlib.sha256()
     for path in sorted(paths):

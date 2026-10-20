@@ -100,7 +100,7 @@ Report vulnerabilities privately through [Security](SECURITY.md).
 
 ## Building
 
-Requires **Xcode 26.5 or later**.
+Requires **Xcode 27.0 or later**.
 
 ```bash
 git clone https://github.com/kavoye/linen-browser.git
