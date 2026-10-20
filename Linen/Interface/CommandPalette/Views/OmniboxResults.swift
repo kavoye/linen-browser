@@ -288,10 +288,7 @@ private struct OmniboxRow: View {
             Spacer(minLength: 6)
 
             if !item.shortcut.isEmpty {
-                Text(verbatim: item.shortcut)
-                    .font(.system(size: density.detailSize, weight: .medium))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+                KeyCaps(item.shortcut)
             }
 
             if let onRemove {

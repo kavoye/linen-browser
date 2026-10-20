@@ -311,8 +311,7 @@ struct SpaceTip: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             if let shortcut {
-                Text(verbatim: shortcut)
-                    .foregroundStyle(.secondary)
+                KeyCaps(shortcut)
             }
         }
         .font(Theme.Font.row)

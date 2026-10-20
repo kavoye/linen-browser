@@ -60,25 +60,6 @@ struct Tag: View {
     }
 }
 
-struct KeyCap: View {
-    let text: String
-
-    init(_ text: String) {
-        self.text = text
-    }
-
-    var body: some View {
-        Text(verbatim: text)
-            .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 6)
-            .frame(height: 20)
-            .settingsSurface(
-                in: RoundedRectangle(cornerRadius: Theme.Radius.chip, style: .continuous)
-            )
-    }
-}
-
 struct SettingsNotice: View {
     let symbol: String
     let text: String
