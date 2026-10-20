@@ -13,7 +13,7 @@ Ask the assistant to search, read websites, and use the tabs you have open.
 It can click, type, and scroll. Click the page to stop the assistant and
 continue browsing yourself.
 
-<a href="https://github.com/kavoye/linen-browser/releases/latest/download/Linen.dmg"><img src="https://img.shields.io/github/v/release/kavoye/linen-browser?style=for-the-badge&label=Download&logo=apple&logoColor=white&color=1c1c1e" alt="Download Linen for Mac" height="36"></a>
+<a href="https://github.com/kavoye/linen-browser/releases/latest/download/Linen.dmg"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2Fkavoye%2Flinen-browser%2Freleases%2Flatest&query=%24.name&style=for-the-badge&label=Download&logo=apple&logoColor=white&color=1c1c1e" alt="Download Linen for Mac" height="36"></a>
 
 <a href="#install">Install</a> ·
 <a href="#what-it-does">Features</a> ·
