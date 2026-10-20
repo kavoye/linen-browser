@@ -44,7 +44,12 @@ struct SpaceCoordinatorTests {
 
         func close() {
             coordinator.closeParkedTabModels()
-            app.windows.forEach { $0.closeWindow() }
+            for window in app.windows {
+                window.closeWindow()
+                UserDefaults.standard.removeObject(
+                    forKey: "NSWindow Frame linen.browser.window.\(window.windowID.uuidString)"
+                )
+            }
             BrowserProfileContext.forget(work.id)
             files.forEach { try? FileManager.default.removeItem(at: $0) }
         }

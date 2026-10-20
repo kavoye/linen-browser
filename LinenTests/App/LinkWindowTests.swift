@@ -10,13 +10,20 @@ import WebKit
 @MainActor
 @Suite(.serialized, .boundedWebViews)
 struct LinkWindowTests {
+    private func forget(_ coordinator: AppCoordinator) {
+        coordinator.closeWindow()
+        UserDefaults.standard.removeObject(
+            forKey: "NSWindow Frame linen.browser.window.\(coordinator.windowID.uuidString)"
+        )
+    }
+
     private func withProfile(_ action: (BrowserApplication, Profile) throws -> Void) async throws {
         let app = BrowserApplication()
         let catalog = ProfileStore.shared
         let originalSelection = catalog.current
         let profile = catalog.add(name: "Window links")
         let result = Result { try action(app, profile) }
-        app.windows.forEach { $0.closeWindow() }
+        app.windows.forEach(forget)
         await app.clearDataOnQuitIfNeeded()
         await catalog.remove(profile)
         catalog.markCurrent(originalSelection)
@@ -71,7 +78,7 @@ struct LinkWindowTests {
         let app = BrowserApplication()
         let urls = try ["about:blank#first", "about:blank#second"].map { try #require(URL(string: $0)) }
         let opened = app.newWindow(profile: .original(), show: false, urls: urls)
-        defer { opened.closeWindow() }
+        defer { forget(opened) }
 
         #expect(opened.browser.tabs.map(\.urlString) == urls.map(\.absoluteString))
         #expect(opened.browser.activeTab?.urlString == urls.first?.absoluteString)

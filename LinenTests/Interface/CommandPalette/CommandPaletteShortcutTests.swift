@@ -90,6 +90,12 @@ struct CommandPaletteShortcutTests {
 
     @Test func paletteShortcutsToggleAndNewTabSelectionTracksThePalette() {
         let coordinator = AppCoordinator()
+        let frameKey = "NSWindow Frame linen.browser.window.\(coordinator.windowID.uuidString)"
+        let savedFrame = UserDefaults.standard.object(forKey: frameKey)
+        defer {
+            coordinator.closeWindow()
+            UserDefaults.standard.set(savedFrame, forKey: frameKey)
+        }
         let tab = coordinator.browser.newTab()
         coordinator.browser.sidebarSelection.toggle(.tab(tab.id))
 

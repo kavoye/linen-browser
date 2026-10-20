@@ -38,6 +38,12 @@ struct CommandPaletteModelTests {
 
     @Test func openStartPageCommandCreatesAStartPageTab() throws {
         let coordinator = AppCoordinator()
+        let frameKey = "NSWindow Frame linen.browser.window.\(coordinator.windowID.uuidString)"
+        let savedFrame = UserDefaults.standard.object(forKey: frameKey)
+        defer {
+            coordinator.closeWindow()
+            UserDefaults.standard.set(savedFrame, forKey: frameKey)
+        }
         let previous = coordinator.browser.newTab()
         previous.urlString = "https://example.com/"
         let count = coordinator.browser.tabs.count

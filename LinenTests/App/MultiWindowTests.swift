@@ -18,6 +18,13 @@ struct MultiWindowTests {
         return coordinator
     }
 
+    private func forget(_ coordinator: AppCoordinator) {
+        coordinator.closeWindow()
+        UserDefaults.standard.removeObject(
+            forKey: "NSWindow Frame linen.browser.window.\(coordinator.windowID.uuidString)"
+        )
+    }
+
     @Test func closingANativeWindowKeepsItsSessionAndTheOtherWindowOpen() throws {
         let app = BrowserApplication()
         let context = BrowserProfileContext.shared(for: .original())
@@ -26,8 +33,8 @@ struct MultiWindowTests {
         let firstTab = first.browser.newTab()
         let secondTab = second.browser.newTab()
         defer {
-            first.closeWindow()
-            second.closeWindow()
+            forget(first)
+            forget(second)
         }
         weak var closedHost: BrowserHost?
         // Drain AppKit's temporary references before checking host deallocation.

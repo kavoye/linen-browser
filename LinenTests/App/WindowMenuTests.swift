@@ -9,12 +9,19 @@ import Testing
 @MainActor
 @Suite(.serialized, .boundedWebViews)
 struct WindowMenuTests {
+    private func forget(_ coordinator: AppCoordinator) {
+        coordinator.closeWindow()
+        UserDefaults.standard.removeObject(
+            forKey: "NSWindow Frame linen.browser.window.\(coordinator.windowID.uuidString)"
+        )
+    }
+
     @Test(arguments: [false, true])
     func nativeWindowTitlesLimitLongPageTitles(isPrivate: Bool) throws {
         let profile: Profile = isPrivate ? .privateBrowsing() : .original()
         let context = BrowserProfileContext.shared(for: profile)
         let coordinator = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
-        defer { coordinator.closeWindow() }
+        defer { forget(coordinator) }
         let tab = coordinator.browser.newTab()
         coordinator.showBrowser(activate: false)
         let window = try #require(coordinator.nativeWindow)
@@ -38,7 +45,7 @@ struct WindowMenuTests {
         let profile: Profile = isPrivate ? .privateBrowsing() : .original()
         let context = BrowserProfileContext.shared(for: profile)
         let coordinator = AppCoordinator(browser: BrowserModel(context: context, windowID: UUID()))
-        defer { coordinator.closeWindow() }
+        defer { forget(coordinator) }
         let tab = coordinator.browser.newTab()
         coordinator.showBrowser(activate: false)
         let window = try #require(coordinator.nativeWindow)
@@ -78,8 +85,8 @@ struct WindowMenuTests {
         app.register(first)
         app.register(second)
         defer {
-            first.closeWindow()
-            second.closeWindow()
+            forget(first)
+            forget(second)
             NSApp.mainMenu = savedMainMenu
             NSApp.windowsMenu = savedWindowsMenu
             NSApp.helpMenu = savedHelpMenu
