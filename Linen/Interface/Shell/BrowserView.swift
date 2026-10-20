@@ -22,6 +22,7 @@ struct BrowserView: View {
     @State private var isInputLocked = false
     @State private var switchGeneration = 0
     @State private var sidebarFrame: CGRect = .zero
+    @State private var peekWatch = PeekWatch()
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -68,11 +69,15 @@ struct BrowserView: View {
     }
 
     private func endPeekUnlessPointerOnSidebar() {
-        guard sidebar.isPeeking, !sidebar.isVisible, !coordinator.overlays.isProfileSwitcherOpen else { return }
-        if let pointer = coordinator.pointerInShell, sidebarFrame.contains(pointer) {
-            return
+        guard sidebar.isPeeking, !sidebar.isVisible, !sidebar.isDragging,
+              !coordinator.overlays.isProfileSwitcherOpen else { return }
+        if PeekExit.hasLeft(
+            pointer: coordinator.pointerInShell,
+            frame: sidebarFrame,
+            trailingReach: PeekExit.resizeReach
+        ) {
+            sidebar.isPeeking = false
         }
-        sidebar.isPeeking = false
     }
 
     private var page: some View {
@@ -207,6 +212,14 @@ struct BrowserView: View {
             .onReceive(NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)) { _ in
                 endPeekUnlessPointerOnSidebar()
             }
+            .onChange(of: sidebar.isFloating) { _, isFloating in
+                if isFloating {
+                    peekWatch.start(window: coordinator.nativeWindow) { endPeekUnlessPointerOnSidebar() }
+                } else {
+                    peekWatch.stop()
+                }
+            }
+            .onDisappear { peekWatch.stop() }
 
             if sidebarIn {
                 LoomPageInkReader(browser: browser, coordinator: coordinator) { onLightPage in
@@ -264,11 +277,7 @@ struct BrowserView: View {
             }
 
             if !sidebar.isShowing && !isRetracted {
-                Color.clear
-                    .frame(width: 10)
-                    .frame(maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onHover { if $0 { sidebar.isPeeking = true } }
+                PeekEdgeStrip(coordinator: coordinator) { sidebar.isPeeking = true }
             }
 
             if coordinator.palette.isOpen {

@@ -26,8 +26,8 @@ struct MinimalShell: View {
     @State private var islandWidth: CGFloat = 0
     @State private var mediaHeight: CGFloat = 0
     @State private var isTabListPeeking = false
-    @State private var hasEnteredTabList = false
     @State private var tabListFrame: CGRect = .zero
+    @State private var peekWatch = PeekWatch()
     @State private var isTabListMounted = false
     @State private var isTabListIn = false
     @Environment(\.colorScheme) private var scheme
@@ -174,15 +174,10 @@ struct MinimalShell: View {
             }
 
             if !coordinator.overlays.isTabListOpen {
-                Color.clear
-                    .frame(width: 10)
-                    .frame(maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onHover { inside in
-                        guard inside else { return }
-                        isTabListPeeking = true
-                        coordinator.overlays.isTabListOpen = true
-                    }
+                PeekEdgeStrip(coordinator: coordinator) {
+                    isTabListPeeking = true
+                    coordinator.overlays.isTabListOpen = true
+                }
             }
 
             SidebarDragOverlay(browser: browser, model: coordinator.sidebarDrag)
@@ -268,7 +263,7 @@ struct MinimalShell: View {
             slideTabList(in: isOpen)
             if !isOpen {
                 isTabListPeeking = false
-                hasEnteredTabList = false
+                tabListFrame = .zero
                 coordinator.overlays.notePointer(on: .tabList, false)
             }
         }
@@ -349,9 +344,7 @@ struct MinimalShell: View {
                 tabListFrame = $0
             }
             .onHover { inside in
-                if inside {
-                    hasEnteredTabList = true
-                } else {
+                if !inside {
                     closePeekedTabListUnlessPointerOnIt()
                 }
             }
@@ -363,16 +356,23 @@ struct MinimalShell: View {
             .onReceive(NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)) { _ in
                 closePeekedTabListUnlessPointerOnIt()
             }
+            .onChange(of: isTabListPeeking, initial: true) { _, isPeeking in
+                if isPeeking {
+                    peekWatch.start(window: coordinator.nativeWindow) { closePeekedTabListUnlessPointerOnIt() }
+                } else {
+                    peekWatch.stop()
+                }
+            }
+            .onDisappear { peekWatch.stop() }
             .offset(x: isTabListIn ? 0 : -(tabListWidth + 2 * LoomChrome.canvasInset + 24))
             .transition(.asymmetric(insertion: .move(edge: .leading), removal: .identity))
     }
 
     private func closePeekedTabListUnlessPointerOnIt() {
-        guard isTabListPeeking, hasEnteredTabList, !coordinator.overlays.isProfileSwitcherOpen else { return }
-        if let pointer = coordinator.pointerInShell, tabListFrame.contains(pointer) {
-            return
+        guard isTabListPeeking, !coordinator.overlays.isProfileSwitcherOpen else { return }
+        if PeekExit.hasLeft(pointer: coordinator.pointerInShell, frame: tabListFrame) {
+            coordinator.overlays.isTabListOpen = false
         }
-        coordinator.overlays.isTabListOpen = false
     }
 
     private func slideTabList(in isOpen: Bool) {
