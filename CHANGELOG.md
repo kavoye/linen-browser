@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.9.3
+
+### New
+
+- **Browsing trails in History.** When you follow links, History groups the
+  pages under the page you started on. Select the arrow to show or hide them.
+
+### Improved
+
+- **Web apps in History.** When a web app such as Jira opens a new page without
+  reloading, History now lists that page.
+- **Pin a new tab.** A pinned new tab opens the Start page.
+- **Page titles in History.** History shows the title a page ends up with, and
+  search finds the page by that title.
+- **Older history.** History shows all of your visits. Older visits load when
+  you scroll to the end of the list.
+- **Middle-click in History.** Middle-click a page in History or on the Start
+  page to open it in a new tab.
+- **Faster scrolling.** The sidebar, History, Downloads, What's New, and long
+  lists in Settings no longer stutter when they hold many items.
+- **Website data.** Removing a website's data in Settings is faster. The row
+  shows a spinner while Linen removes the data.
+- **Private window symbol.** Private windows use a new symbol.
+
 ## 0.9.2
 
 ### New
