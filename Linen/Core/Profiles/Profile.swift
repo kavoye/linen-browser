@@ -34,7 +34,7 @@ nonisolated struct Profile: Identifiable, Codable, Hashable, Sendable {
         Profile(
             id: privateID,
             name: String(localized: "Private Browsing"),
-            symbol: "eyeglasses",
+            symbol: "plus.square.fill",
             color: .gray
         )
     }

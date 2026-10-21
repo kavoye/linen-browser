@@ -99,7 +99,7 @@ enum CommandPaletteCatalog {
                     .privateBrowsing,
                     group: .tabs,
                     title: "New Private Window",
-                    symbol: "eyeglasses",
+                    symbol: "plus.square.fill",
                     shortcut: "⇧⌘N",
                     aliases: ["incognito", "private window"]
                 ),

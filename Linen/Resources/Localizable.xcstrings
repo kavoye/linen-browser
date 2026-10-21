@@ -4205,7 +4205,7 @@
       "comment" : "Command palette GitHub mode: row detail for a private repository without a description."
     },
     "Private Window" : {
-      "comment" : "Tooltip on the eyeglasses icon in the Minimal window style floating bar. Says this window does not keep history."
+      "comment" : "Tooltip on the private window icon in the Minimal window style floating bar. Says this window does not keep history."
     },
     "Project Notes" : {
 

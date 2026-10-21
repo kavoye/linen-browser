@@ -70,7 +70,7 @@ struct ProfileMenuRows: View {
             PopoverMenuDivider()
         }
 
-        PopoverMenuRow(symbol: "eyeglasses", title: String(localized: "New Private Window")) {
+        PopoverMenuRow(symbol: "plus.square.fill", title: String(localized: "New Private Window")) {
             isPresented = false
             coordinator.enterPrivateBrowsing()
         }

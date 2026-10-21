@@ -247,7 +247,7 @@ struct SidebarMoreMenu: View {
                 PopoverMenuDivider()
                 PopoverMenuRow(symbol: "arrow.down", title: String(localized: "Downloads…"), shortcut: "⌥⌘L", action: run { coordinator.showDownloads() })
             } else {
-                PopoverMenuRow(symbol: "eyeglasses", title: String(localized: "New Private Window"), action: run {
+                PopoverMenuRow(symbol: "plus.square.fill", title: String(localized: "New Private Window"), action: run {
                     coordinator.enterPrivateBrowsing()
                 })
                 .disabled(coordinator.isSwitchingProfile)

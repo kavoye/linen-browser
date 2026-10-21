@@ -141,7 +141,7 @@ struct IslandBar: View {
             }
 
             if tab?.isPrivate == true {
-                Image(systemName: "eyeglasses")
+                Image(systemName: "plus.square.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(ChromeInk.glyph(onLight: onLight))
                     .frame(width: 24)
