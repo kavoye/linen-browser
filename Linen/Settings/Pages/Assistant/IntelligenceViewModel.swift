@@ -622,8 +622,7 @@ final class IntelligenceViewModel {
     // MARK: - Custom providers
 
     var canCommitCustomProvider: Bool {
-        !customName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && Self.normalizedURL(customBaseURL) != nil
+        CustomProviderEndpoint.canConfigure(name: customName, baseURL: customBaseURL)
     }
 
     func beginCustomProvider() {
@@ -654,26 +653,14 @@ final class IntelligenceViewModel {
     }
 
     func commitCustomProvider() {
-        guard var draft = customDraft else { return }
-        let name = customName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else {
-            customError = String(localized: "Enter a name.")
+        guard let pending = customDraft else { return }
+        let draft: Provider
+        do {
+            draft = try CustomProviderEndpoint.configure(pending, name: customName, baseURL: customBaseURL)
+        } catch {
+            customError = error.message
             return
         }
-        guard let url = Self.normalizedURL(customBaseURL) else {
-            customError = String(localized: "This isn’t a valid URL. Try http://localhost:8000/v1")
-            return
-        }
-        guard !Self.isInsecureRemoteEndpoint(url) else {
-            customError = String(localized: "Use HTTPS to encrypt your API key. HTTP is allowed only for localhost.")
-            return
-        }
-        draft.name = name
-        draft.baseURL = url
-        draft.isLocal = Self.isLocalNetwork(url)
-        draft.auth = draft.isLocal ? .none : .bearer
-        let host = url.host() ?? ""
-        draft.blurb = String(localized: "OpenAI-compatible endpoint at \(host)")
         catalog.save(draft)
         customDraft = nil
         customError = nil
@@ -691,35 +678,5 @@ final class IntelligenceViewModel {
         selectedID = catalog.selected.id
         showOverview()
         onConfigurationChanged()
-    }
-
-    private static func normalizedURL(_ raw: String) -> URL? {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return nil }
-        if !text.contains("://") {
-            text = "http://" + text
-        }
-        while text.hasSuffix("/") {
-            text.removeLast()
-        }
-        if text.hasSuffix("/chat/completions") {
-            text.removeLast("/chat/completions".count)
-        }
-        guard let url = URL(string: text), url.host() != nil else { return nil }
-        return url
-    }
-
-    nonisolated static func isLocalNetwork(_ url: URL) -> Bool {
-        guard let host = url.host()?.lowercased() else { return false }
-        return isLoopback(url) || host.hasSuffix(".local")
-    }
-
-    nonisolated static func isLoopback(_ url: URL) -> Bool {
-        guard let host = url.host()?.lowercased() else { return false }
-        return host == "localhost" || host == "127.0.0.1" || host == "::1"
-    }
-
-    nonisolated static func isInsecureRemoteEndpoint(_ url: URL) -> Bool {
-        url.scheme?.lowercased() == "http" && !isLoopback(url)
     }
 }

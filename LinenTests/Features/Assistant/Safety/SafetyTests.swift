@@ -463,7 +463,7 @@ struct ProviderEndpointTests {
     ])
     func rejectsPlainHTTPToRemoteHosts(_ string: String) throws {
         let url = try #require(URL(string: string))
-        #expect(IntelligenceViewModel.isInsecureRemoteEndpoint(url))
+        #expect(CustomProviderEndpoint.isInsecureRemote(url))
     }
 
     @Test(arguments: [
@@ -474,15 +474,15 @@ struct ProviderEndpointTests {
     ])
     func allowsHTTPSAndLoopbackHTTP(_ string: String) throws {
         let url = try #require(URL(string: string))
-        #expect(!IntelligenceViewModel.isInsecureRemoteEndpoint(url))
+        #expect(!CustomProviderEndpoint.isInsecureRemote(url))
     }
 
     /// The interface's sense of "local" is wider than the wire's: a `.local`
     /// server still needs no key, it just needs TLS.
     @Test func aDotLocalServerIsStillALocalServer() throws {
         let url = try #require(URL(string: "https://my-mac.local:11434/v1"))
-        #expect(IntelligenceViewModel.isLocalNetwork(url))
-        #expect(!IntelligenceViewModel.isLoopback(url))
+        #expect(CustomProviderEndpoint.isLocalNetwork(url))
+        #expect(!CustomProviderEndpoint.isLoopback(url))
     }
 }
 

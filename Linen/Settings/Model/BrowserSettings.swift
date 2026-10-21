@@ -16,68 +16,9 @@ final class BrowserSettings {
     private static let liveSettings = NSHashTable<BrowserSettings>.weakObjects()
     @ObservationIgnored private var isReceivingAppSetting = false
 
-    private enum Key {
-        static let appearance = "appearance.mode"
-        static let websiteTint = "appearance.websiteTint"
-        static let websiteColor = "appearance.websiteColor"
-        static let loomStyle = "appearance.loomStyle"
-        static let transparency = "appearance.transparency"
-        static let pageZoom = "content.defaultZoom"
-        static let tabSleep = "tabs.sleep"
-        static let archiveTabsAfter = "tabs.archive"
-        static let linkPreview = "content.linkPreview"
-        static let fullAddress = "content.fullAddress"
-        static let linkPeek = "content.linkPeek"
-        static let searchEngine = "search.engine"
-        static let customSearchName = "search.custom.name"
-        static let customSearchTemplate = "search.custom.template"
-        static let suggestions = "search.suggestions"
-        static let agentOnlyInput = "search.agentOnly"
-        static let historyRetention = "privacy.historyRetention"
-        static let clearOnQuit = "privacy.clearOnQuit"
-        static let certificateExceptions = "privacy.certificateExceptions"
-        static let javaScript = "content.javaScript"
-        static let blockPopups = "content.blockPopups"
-        static let blockTrackers = "content.blockTrackers"
-        static let autoplay = "content.autoplay"
-        static let mediaPlayer = "media.player"
-        static let lyrics = "media.lyrics"
-        static let github = "sidePanel.github"
-        static let tabColorRefraction = "appearance.tabColorRefraction"
-        static let solidSidePanel = "appearance.solidSidePanel"
-        static let minimal = "appearance.minimal"
-        static let minimalBar = "appearance.minimalBar"
-        static let minimalBarAutoHide = "appearance.minimalBarAutoHide"
-        static let automaticPiP = "media.automaticPiP"
-        static let videoInPlayer = "experiments.videoInPlayer"
-        static let passwordAutofill = "autofill.passwords"
-        static let passwordExtension = "autofill.passwordExtension"
-        static let contactAutofill = "autofill.contacts"
-        static let paymentCardAutofill = "privacy.paymentCardAutofill"
-        static let downloadFolder = "downloads.folder"
-        static let askWhereToSave = "downloads.ask"
-        static let downloadRetention = "downloads.retention"
-        static let userAgent = "advanced.userAgent"
-        static let customUserAgent = "advanced.userAgent.custom"
-        static let webInspector = "advanced.webInspector"
-        static let developerHosts = "advanced.developerHosts"
-        static let nonDeveloperHosts = "advanced.nonDeveloperHosts"
-        static let updateChannel = "updates.channel"
-        static let startPageOrder = "startPage.order"
-        static let startPageHidden = "startPage.hidden"
-        static let startPageHiddenSites = "startPage.hiddenSites"
-        static let translationTarget = "translation.target"
-        static let alwaysTranslate = "translation.always"
-    }
+    typealias Key = BrowserSettingsKey
 
-    static let sessionKeys: [String] = [
-        Key.searchEngine, Key.customSearchName, Key.customSearchTemplate,
-        Key.suggestions, Key.agentOnlyInput,
-        Key.historyRetention, Key.clearOnQuit, Key.certificateExceptions,
-        Key.paymentCardAutofill, Key.contactAutofill, Key.passwordAutofill, Key.passwordExtension,
-        Key.javaScript, Key.blockPopups, Key.blockTrackers, Key.autoplay,
-        Key.startPageOrder, Key.startPageHidden, Key.startPageHiddenSites,
-    ]
+    static let sessionKeys = Key.session
 
     @ObservationIgnored private let store: SettingsDefaults
 
@@ -103,74 +44,10 @@ final class BrowserSettings {
     private func receiveAppSetting(_ key: String, from source: BrowserSettings) {
         isReceivingAppSetting = true
         defer { isReceivingAppSetting = false }
-        switch key {
-        case Key.appearance:
-            appearance = source.appearance
-        case Key.loomStyle:
-            loomStyle = source.loomStyle
-        case Key.websiteTint:
-            matchesWebsiteColor = source.matchesWebsiteColor
-        case Key.transparency:
-            transparency = source.transparency
-        case Key.linkPreview:
-            showsLinkPreview = source.showsLinkPreview
-        case Key.fullAddress:
-            showsFullAddress = source.showsFullAddress
-        case Key.linkPeek:
-            peeksAtLinks = source.peeksAtLinks
-        case Key.mediaPlayer:
-            showsMediaPlayer = source.showsMediaPlayer
-        case Key.lyrics:
-            showsLyrics = source.showsLyrics
-        case Key.github:
-            showsGitHub = source.showsGitHub
-        case Key.tabColorRefraction:
-            refractsTabColor = source.refractsTabColor
-        case Key.solidSidePanel:
-            hasSolidSidePanel = source.hasSolidSidePanel
-        case Key.minimal:
-            isMinimal = source.isMinimal
-        case Key.minimalBar:
-            minimalBarEdge = source.minimalBarEdge
-        case Key.minimalBarAutoHide:
-            hidesMinimalBar = source.hidesMinimalBar
-        case Key.automaticPiP:
-            automaticPictureInPicture = source.automaticPictureInPicture
-        case Key.videoInPlayer:
-            showsVideoInPlayer = source.showsVideoInPlayer
-        default:
-            receiveWebAppSetting(key, from: source)
-        }
-    }
-
-    private func receiveWebAppSetting(_ key: String, from source: BrowserSettings) {
-        switch key {
-        case Key.pageZoom:
-            pageZoom = source.pageZoom
-        case Key.tabSleep:
-            tabSleep = source.tabSleep
-        case Key.archiveTabsAfter:
-            archiveTabsAfter = source.archiveTabsAfter
-        case Key.downloadFolder:
-            downloadFolder = source.downloadFolder
-        case Key.askWhereToSave:
-            asksWhereToSave = source.asksWhereToSave
-        case Key.downloadRetention:
-            downloadRetention = source.downloadRetention
-        case Key.userAgent:
-            userAgentMode = source.userAgentMode
-        case Key.customUserAgent:
-            customUserAgent = source.customUserAgent
-        case Key.webInspector:
-            webInspectorEnabled = source.webInspectorEnabled
-        case Key.updateChannel:
-            updateChannel = source.updateChannel
-        case Key.translationTarget:
-            translationTargetID = source.translationTargetID
-        case Key.alwaysTranslate:
+        if key == Key.alwaysTranslate {
             alwaysTranslatedLanguages = source.alwaysTranslatedLanguages
-        default:
-            break
+        } else {
+            copyAppSetting(key, from: source)
         }
     }
 
@@ -551,62 +428,61 @@ final class BrowserSettings {
         }
     }
 
-    private(set) var developerHosts: Set<String> = [] {
+    private(set) var developerMode = DeveloperModeSites() {
         didSet {
-            guard developerHosts != oldValue else { return }
-            write(developerHosts.sorted(), forKey: Key.developerHosts)
+            if developerMode.enabled != oldValue.enabled {
+                write(developerMode.enabled.sorted(), forKey: Key.developerHosts)
+            }
+            if developerMode.disabled != oldValue.disabled {
+                write(developerMode.disabled.sorted(), forKey: Key.nonDeveloperHosts)
+            }
         }
     }
 
-    private(set) var nonDeveloperHosts: Set<String> = [] {
-        didSet {
-            guard nonDeveloperHosts != oldValue else { return }
-            write(nonDeveloperHosts.sorted(), forKey: Key.nonDeveloperHosts)
-        }
+    var developerHosts: Set<String> {
+        developerMode.enabled
+    }
+    var nonDeveloperHosts: Set<String> {
+        developerMode.disabled
     }
 
     func usesDeveloperMode(for url: URL?) -> Bool {
-        guard let host = DeveloperMode.host(of: url) else { return false }
-        if developerHosts.contains(host) {
-            return true
-        }
-        if nonDeveloperHosts.contains(host) {
-            return false
-        }
-        return DeveloperMode.isLocal(host)
+        developerMode.uses(url)
     }
 
     func setDeveloperMode(_ isOn: Bool, for url: URL?) {
-        guard let host = DeveloperMode.host(of: url) else { return }
-        developerHosts.remove(host)
-        nonDeveloperHosts.remove(host)
-        defer { onWebPreferencesChanged?() }
-        guard isOn != DeveloperMode.isLocal(host) else { return }
-        if isOn {
-            developerHosts.insert(host)
-        } else {
-            nonDeveloperHosts.insert(host)
-        }
+        guard DeveloperMode.host(of: url) != nil else { return }
+        developerMode.set(isOn, for: url)
+        onWebPreferencesChanged?()
     }
 
     // MARK: - Start page
 
-    var startPageOrder: [StartPageSection] {
+    private(set) var startPage: StartPageLayout {
         didSet {
-            guard startPageOrder != oldValue else { return }
-            write(startPageOrder.map(\.rawValue), forKey: Key.startPageOrder)
+            if startPage.order != oldValue.order {
+                write(startPage.order.map(\.rawValue), forKey: Key.startPageOrder)
+            }
+            if startPage.hidden != oldValue.hidden {
+                write(startPage.hidden.map(\.rawValue), forKey: Key.startPageHidden)
+            }
+            if startPage.hiddenFrequentHosts != oldValue.hiddenFrequentHosts {
+                write(Array(startPage.hiddenFrequentHosts), forKey: Key.startPageHiddenSites)
+            }
         }
     }
 
-    private var hiddenStartPageSections: Set<StartPageSection> {
-        didSet {
-            guard hiddenStartPageSections != oldValue else { return }
-            write(hiddenStartPageSections.map(\.rawValue), forKey: Key.startPageHidden)
-        }
+    var startPageOrder: [StartPageSection] {
+        get { startPage.order }
+        set { startPage.order = newValue }
+    }
+
+    var hiddenFrequentHosts: Set<String> {
+        startPage.hiddenFrequentHosts
     }
 
     func showsStartPageSection(_ section: StartPageSection) -> Bool {
-        !hiddenStartPageSections.contains(section)
+        startPage.shows(section)
     }
 
     subscript(showsStartPageSection section: StartPageSection) -> Bool {
@@ -615,54 +491,27 @@ final class BrowserSettings {
     }
 
     func setStartPageSection(_ section: StartPageSection, shown: Bool) {
-        if shown {
-            hiddenStartPageSections.remove(section)
-        } else {
-            hiddenStartPageSections.insert(section)
-        }
-    }
-
-    private(set) var hiddenFrequentHosts: Set<String> = [] {
-        didSet {
-            guard hiddenFrequentHosts != oldValue else { return }
-            write(Array(hiddenFrequentHosts), forKey: Key.startPageHiddenSites)
-        }
+        startPage.set(section, shown: shown)
     }
 
     func hideFrequentSite(host: String) {
-        hiddenFrequentHosts.insert(host.lowercased())
+        startPage.hideFrequentSite(host: host)
     }
 
     func restoreHiddenFrequentSites() {
-        hiddenFrequentHosts = []
+        startPage.hiddenFrequentHosts = []
     }
 
     func moveStartPageSections(from source: IndexSet, to destination: Int) {
-        let moved = source.map { startPageOrder[$0] }
-        var order = startPageOrder
-        for index in source.sorted(by: >) {
-            order.remove(at: index)
-        }
-        let insertion = destination - source.count(where: { $0 < destination })
-        order.insert(contentsOf: moved, at: min(max(insertion, 0), order.count))
-        startPageOrder = order
+        startPage.move(from: source, to: destination)
     }
 
-    private static func resolveOrder(_ stored: [String]?) -> [StartPageSection] {
-        let known = stored?.compactMap(StartPageSection.init(rawValue:)) ?? []
-        var order = known
-        for section in StartPageSection.allCases where !order.contains(section) {
-            let following = StartPageSection.allCases
-                .drop { $0 != section }
-                .dropFirst()
-                .first { order.contains($0) }
-            if let following, let index = order.firstIndex(of: following) {
-                order.insert(section, at: index)
-            } else {
-                order.append(section)
-            }
-        }
-        return order
+    private static func startPage(in store: SettingsDefaults) -> StartPageLayout {
+        StartPageLayout(
+            storedOrder: store.stringArray(Key.startPageOrder),
+            hidden: store.stringArray(Key.startPageHidden),
+            hiddenFrequentHosts: store.stringArray(Key.startPageHiddenSites)
+        )
     }
 
     // MARK: - Init
@@ -747,15 +596,11 @@ final class BrowserSettings {
         webInspectorEnabled = store.object(Key.webInspector) as? Bool ?? true
         translationTargetID = store.string(Key.translationTarget) ?? ""
         alwaysTranslatedLanguages = Set(store.stringArray(Key.alwaysTranslate) ?? [])
-        developerHosts = Set(store.stringArray(Key.developerHosts) ?? [])
-        nonDeveloperHosts = Set(store.stringArray(Key.nonDeveloperHosts) ?? [])
-
-        startPageOrder = Self.resolveOrder(store.stringArray(Key.startPageOrder))
-        hiddenStartPageSections = Set(
-            (store.stringArray(Key.startPageHidden) ?? [])
-                .compactMap(StartPageSection.init(rawValue:))
+        developerMode = DeveloperModeSites(
+            enabled: Set(store.stringArray(Key.developerHosts) ?? []),
+            disabled: Set(store.stringArray(Key.nonDeveloperHosts) ?? [])
         )
-        hiddenFrequentHosts = Set(store.stringArray(Key.startPageHiddenSites) ?? [])
+        startPage = Self.startPage(in: store)
 
         if store.object(Key.websiteTint) == nil {
             write(matchesWebsiteColor, forKey: Key.websiteTint)
@@ -785,11 +630,7 @@ final class BrowserSettings {
         blocksTrackers = store.object(Key.blockTrackers) as? Bool ?? true
         autoplay = store.string(Key.autoplay).flatMap(AutoplayPolicy.init(rawValue:)) ?? .allow
 
-        startPageOrder = Self.resolveOrder(store.stringArray(Key.startPageOrder))
-        hiddenStartPageSections = Set(
-            (store.stringArray(Key.startPageHidden) ?? []).compactMap(StartPageSection.init(rawValue:))
-        )
-        hiddenFrequentHosts = Set(store.stringArray(Key.startPageHiddenSites) ?? [])
+        startPage = Self.startPage(in: store)
 
         onWebPreferencesChanged?()
     }
@@ -807,36 +648,6 @@ final class BrowserSettings {
 
     func applyAppearance() {
         onAppearanceChanged?()
-    }
-
-    func apply(to configuration: WKWebViewConfiguration) {
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = javaScriptEnabled
-        configuration.defaultWebpagePreferences.preferredHTTPSNavigationPolicy = .automaticFallbackToHTTP
-        FingerprintingProtection.enable(on: configuration.defaultWebpagePreferences)
-        configuration.preferences.javaScriptCanOpenWindowsAutomatically = !blocksPopups
-        configuration.mediaTypesRequiringUserActionForPlayback = javaScriptEnabled ? [] : autoplay.mediaTypes
-        configuration.preferences.isElementFullscreenEnabled = true
-        // `isInspectable` only lets an external inspector attach. This private
-        // preference enables the page's own Inspect Element item.
-        configuration.preferences.setValue(webInspectorEnabled, forKey: "developerExtrasEnabled")
-        WebKitFeatures.apply(to: configuration.preferences)
-        NativeApplePay.apply(to: configuration.preferences)
-        UserInstalledFonts.hide(from: configuration.preferences)
-    }
-
-    func apply(to webView: WKWebView) {
-        apply(to: webView.configuration)
-        if webView.pageZoom != pageZoom {
-            webView.pageZoom = pageZoom
-        }
-        webView.customUserAgent = userAgentString
-        applyInspector(to: webView)
-    }
-
-    func applyInspector(to webView: WKWebView) {
-        let isEnabled = webInspectorEnabled || usesDeveloperMode(for: webView.url)
-        webView.configuration.preferences.setValue(isEnabled, forKey: "developerExtrasEnabled")
-        webView.isInspectable = isEnabled
     }
 
     func resetToDefaults() {
@@ -868,13 +679,10 @@ final class BrowserSettings {
         userAgentMode = .safari
         customUserAgent = ""
         webInspectorEnabled = true
-        developerHosts = []
-        nonDeveloperHosts = []
+        developerMode = DeveloperModeSites()
         translationTargetID = ""
         alwaysTranslatedLanguages = []
-        startPageOrder = StartPageSection.allCases
-        hiddenStartPageSections = []
-        hiddenFrequentHosts = []
+        startPage = .standard
         onWebPreferencesChanged?()
     }
 }
