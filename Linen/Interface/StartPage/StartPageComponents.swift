@@ -276,8 +276,22 @@ struct HistoryRow: View {
     var onOpenInNewWindow: ((_ isPrivate: Bool) -> Void)?
     var isPrivate = false
     var onHoverChanged: ((Bool) -> Void)?
+    var indent: CGFloat = 0
+    var disclosure: Disclosure?
+    var showsHost = true
+    var showsGuide = false
+
+    struct Disclosure {
+        let count: Int
+        let isExpanded: Bool
+        let toggle: () -> Void
+    }
+
+    static let disclosureWidth: CGFloat = 18
+    static let nestedIndent: CGFloat = 25
 
     @State private var hovering = false
+    @State private var chevronHovering = false
 
     private var showsRemove: Bool {
         hovering && onRemove != nil
@@ -290,36 +304,48 @@ struct HistoryRow: View {
     }
 
     var body: some View {
-        Button(action: open) {
-            HStack(spacing: 10) {
-                RemoteSiteBadge(host: host, size: 15)
-                Text(verbatim: entry.title)
-                    .font(Theme.Font.row)
-                    .lineLimit(1)
+        HStack(spacing: 10) {
+            RemoteSiteBadge(host: host, size: 15)
+            Text(verbatim: entry.title)
+                .font(Theme.Font.row)
+                .lineLimit(1)
+            if showsHost {
                 Text(verbatim: host)
                     .font(Theme.Font.label)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
                     .fixedSize()
-                Spacer(minLength: 8)
-                Text(verbatim: stamp)
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(.tertiary)
-                    .monospacedDigit()
-                    .fixedSize()
-                    .opacity(showsRemove ? 0 : 1)
             }
-            .padding(.horizontal, 12)
-            .frame(height: 34)
-            .hoverBackground(
-                isActive: hovering,
-                in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
-            )
-            .contentShape(Rectangle())
+            if let disclosure {
+                Text(disclosure.count, format: .number)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .background(Theme.Wash.hairline, in: Capsule())
+                    .fixedSize()
+            }
+            Spacer(minLength: 8)
+            Text(verbatim: stamp)
+                .font(Theme.Font.caption)
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
+                .fixedSize()
+                .opacity(showsRemove ? 0 : 1)
         }
-        .buttonStyle(.plain)
+        .padding(.leading, indent)
+        .padding(.horizontal, 12)
+        .frame(height: 34)
+        .hoverBackground(
+            isActive: hovering,
+            in: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture(perform: open)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { open() }
         .help(Text(verbatim: entry.url))
-        .onMiddleClick { onOpenInNewTab?(false) }
         .contextMenu {
             if let onOpenInNewTab {
                 Button("Open in New Tab") { onOpenInNewTab(false) }
@@ -336,10 +362,35 @@ struct HistoryRow: View {
             }
         }
         .overlay(alignment: .trailing) {
-            if let onRemove {
+            if let onRemove, showsRemove {
                 CloseButton(help: String(localized: "Remove from History"), action: onRemove)
                     .padding(.trailing, 7)
-                    .opacity(showsRemove ? 1 : 0)
+            }
+        }
+        .overlay(alignment: .leading) {
+            if showsGuide {
+                Rectangle()
+                    .fill(Theme.Wash.strong)
+                    .frame(width: 1)
+                    .padding(.leading, 12 + 7)
+            }
+        }
+        .overlay(alignment: .leading) {
+            if let disclosure {
+                Button(action: disclosure.toggle) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .rotationEffect(.degrees(disclosure.isExpanded ? 90 : 0))
+                        .foregroundStyle(chevronHovering ? .primary : .secondary)
+                        .hoverLift(chevronHovering)
+                        .frame(width: Self.disclosureWidth, height: 34)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { chevronHovering = $0 }
+                .offset(x: indent - Self.disclosureWidth)
+                .accessibilityLabel(Text(verbatim: entry.title))
+                .accessibilityValue(disclosure.isExpanded ? Text("Expanded") : Text("Collapsed"))
             }
         }
         .onHover {
@@ -355,6 +406,18 @@ struct HistoryRow: View {
         } else {
             action()
         }
+    }
+}
+
+extension HistoryRow: Equatable {
+    nonisolated static func == (lhs: HistoryRow, rhs: HistoryRow) -> Bool {
+        lhs.entry == rhs.entry
+            && lhs.indent == rhs.indent
+            && lhs.disclosure?.count == rhs.disclosure?.count
+            && lhs.disclosure?.isExpanded == rhs.disclosure?.isExpanded
+            && lhs.showsHost == rhs.showsHost
+            && lhs.showsGuide == rhs.showsGuide
+            && lhs.isPrivate == rhs.isPrivate
     }
 }
 

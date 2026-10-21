@@ -21,12 +21,14 @@ struct HistoryDayCollapseTests {
         _ url: String,
         at date: Date,
         visit: Int64,
-        title: String = "Page"
+        title: String = "Page",
+        trail: Int64? = nil
     ) -> HistoryView.Row {
         HistoryView.Row(
             id: "visit-\(visit)",
             entry: HistoryStore.Entry(url: url, title: title, date: date),
-            visitIDs: [visit]
+            visitIDs: [visit],
+            trail: trail
         )
     }
 
@@ -68,5 +70,38 @@ struct HistoryDayCollapseTests {
 
     @Test func nothingMakesNoDays() {
         #expect(HistoryView.days(collapsing: [], calendar: calendar).isEmpty)
+    }
+
+    @Test func aTrailGroupsUnderItsFirstPage() {
+        let days = HistoryView.days(collapsing: [
+            row("https://jira.example/browse/2", at: today.addingTimeInterval(4000), visit: 4, trail: 1),
+            row("https://twitch.example/", at: today.addingTimeInterval(3900), visit: 3, trail: 3),
+            row("https://jira.example/browse/1", at: today.addingTimeInterval(3800), visit: 2, trail: 1),
+            row("https://jira.example/board", at: today.addingTimeInterval(3600), visit: 1, title: "Board", trail: 1),
+        ], calendar: calendar)
+
+        let trails = days.first?.trails ?? []
+        #expect(trails.map(\.rows.count) == [3, 1])
+        #expect(trails.first?.root.entry.title == "Board")
+        #expect(trails.first?.pages.map(\.id) == ["visit-4", "visit-2"])
+    }
+
+    @Test func aRevisitInsideATrailCollapses() {
+        let days = HistoryView.days(collapsing: [
+            row("https://jira.example/board", at: today.addingTimeInterval(4000), visit: 3, trail: 1),
+            row("https://jira.example/browse/1", at: today.addingTimeInterval(3800), visit: 2, trail: 1),
+            row("https://jira.example/board", at: today.addingTimeInterval(3600), visit: 1, trail: 1),
+        ], calendar: calendar)
+
+        #expect(days.first?.trails.first?.rows.map(\.visitIDs) == [[3, 1], [2]])
+    }
+
+    @Test func theSamePageInTwoTrailsStaysInBoth() {
+        let days = HistoryView.days(collapsing: [
+            row("https://jira.example/board", at: today.addingTimeInterval(4000), visit: 2, trail: 2),
+            row("https://jira.example/board", at: today.addingTimeInterval(3600), visit: 1, trail: 1),
+        ], calendar: calendar)
+
+        #expect(days.first?.trails.map(\.rows.count) == [1, 1])
     }
 }

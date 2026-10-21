@@ -196,10 +196,19 @@ final class BrowserModel {
         tab.events.onNavigationFinished = { [weak self, weak tab] wasRestore in
             self?.scheduleSave()
             guard !wasRestore, let tab, !tab.isPrivate else { return }
+            self?.heldInPageMove[tab.id] = nil
             self?.recordVisit(for: tab)
         }
         tab.events.onSameDocumentNavigation = { [weak self] in
             self?.scheduleSave()
+        }
+        tab.events.onInPageMove = { [weak self, weak tab] in
+            guard let tab else { return }
+            self?.noteInPageMove(of: tab)
+        }
+        tab.events.onTitleChanged = { [weak self, weak tab] in
+            guard let tab else { return }
+            self?.noteTitleChange(of: tab)
         }
         tab.events.onContentProcessTerminated = { [weak self, weak tab] in
             guard let tab else { return }
@@ -284,17 +293,65 @@ final class BrowserModel {
     }
 
     var lastVisitID: [UUID: Int64] = [:]
+    var visitTrail: [UUID: Int64] = [:]
+    private var heldInPageMove: [UUID: String] = [:]
 
-    private func recordVisit(for tab: BrowserTab) {
+    private func lastVisitTitle(of tab: BrowserTab) -> String? {
+        guard let last = lastVisitID[tab.id] else { return nil }
+        return history.visits.first { $0.id == last }?.title
+    }
+
+    private func noteInPageMove(of tab: BrowserTab) {
+        guard !tab.isPrivate else { return }
+        if lastVisitTitle(of: tab) == tab.title {
+            heldInPageMove[tab.id] = tab.urlString
+        } else {
+            heldInPageMove[tab.id] = nil
+            recordVisit(for: tab, transition: .inPage)
+        }
+    }
+
+    private func noteTitleChange(of tab: BrowserTab) {
+        guard !tab.isPrivate else { return }
+        if let held = heldInPageMove[tab.id], held == tab.urlString {
+            guard lastVisitTitle(of: tab) != tab.title else { return }
+            heldInPageMove[tab.id] = nil
+            recordVisit(for: tab, transition: .inPage)
+            return
+        }
+        guard let visit = lastVisitID[tab.id] else { return }
+        history.retitle(visit: visit, url: tab.urlString, title: tab.title)
+    }
+
+    private func recordVisit(for tab: BrowserTab, transition: HistoryStore.Transition? = nil) {
         guard !tab.isPrivate, !tab.isClosed, tabsByID[tab.id] === tab else { return }
+        let transition = transition ?? tab.pendingTransition
+        let previous = lastVisitID[tab.id]
+        let trail = continuesTrail(from: previous, to: tab.urlString, transition: transition)
+            ? visitTrail[tab.id]
+            : nil
         let visitID = history.record(
             url: tab.urlString,
             title: tab.title,
-            transition: tab.pendingTransition,
-            fromVisit: lastVisitID[tab.id]
+            transition: transition,
+            fromVisit: previous,
+            trail: trail
         )
         guard let visitID else { return }
         lastVisitID[tab.id] = visitID
+        visitTrail[tab.id] = trail ?? visitID
+    }
+
+    private func continuesTrail(from visit: Int64?, to url: String, transition: HistoryStore.Transition) -> Bool {
+        guard let visit else { return false }
+        guard transition == .typed else { return true }
+        guard let previous = history.visits.first(where: { $0.id == visit }) else { return false }
+        return Self.site(of: previous.url) == Self.site(of: url)
+    }
+
+    private static func site(of url: String) -> String? {
+        guard let host = URL(string: url)?.host() else { return nil }
+        return PublicSuffix.registrableDomain(of: host) ?? host
     }
 
     var recentlyActive: [UUID] = []

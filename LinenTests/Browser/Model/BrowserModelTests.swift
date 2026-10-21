@@ -368,4 +368,211 @@ struct BrowserModelTests {
             #expect(opened.webView.url == nil || opened.webView.url == SystemPages.start)
         }
     }
+
+    @Test func aTitleSetAfterLoadReachesHistory() {
+        let model = makeModel()
+        let tab = model.newTab()
+        tab.urlString = "https://jira.example/browse/ENEY-6039"
+        tab.title = "Jira"
+        tab.events.onNavigationFinished?(false)
+
+        tab.title = "[ENEY-6039] Tour cards stay on top - Jira"
+        tab.events.onTitleChanged?()
+
+        #expect(model.history.entries.first?.title == "[ENEY-6039] Tour cards stay on top - Jira")
+    }
+
+    @Test func aTitleAfterAnInPageMoveKeepsTheLoadedPageName() {
+        let model = makeModel()
+        let tab = model.newTab()
+        tab.urlString = "https://jira.example/browse/ENEY-6039"
+        tab.title = "[ENEY-6039] Tour cards stay on top - Jira"
+        tab.events.onNavigationFinished?(false)
+
+        tab.urlString = "https://jira.example/jira/your-work"
+        tab.title = "Your work - Jira"
+        tab.events.onTitleChanged?()
+
+        #expect(model.history.entries.map(\.title) == ["[ENEY-6039] Tour cards stay on top - Jira"])
+    }
+
+    @Test func anInPageMoveIsAVisitOfItsOwn() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/board": .html("<!doctype html><title>Board - Jira</title><p>Board</p>"),
+        ])
+        defer { withExtendedLifetime(server) {} }
+        let board = try server.url("/board")
+        let ticket = try server.url("/browse/ENEY-6039")
+        let model = makeModel()
+        let tab = model.newTab(url: board)
+        #expect(await settled(tab, at: board))
+        #expect(await waitUntil { model.history.visits.count == 1 })
+
+        _ = try await tab.webView.evaluateJavaScript("""
+            history.pushState({}, '', '/browse/ENEY-6039');
+            document.title = '[ENEY-6039] Tour cards stay on top - Jira';
+            """)
+
+        #expect(await waitUntil { model.history.visits.first?.title == "[ENEY-6039] Tour cards stay on top - Jira" })
+        #expect(model.history.visits.map(\.url) == [ticket.absoluteString, board.absoluteString])
+        #expect(model.history.visits.first?.transition == .inPage)
+        #expect(model.history.entries.first { $0.url == board.absoluteString }?.title == "Board - Jira")
+    }
+
+    @Test func anAnchorJumpIsNotAVisit() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/docs": .html("<!doctype html><title>Docs</title><p id=\"usage\">Usage</p>"),
+        ])
+        defer { withExtendedLifetime(server) {} }
+        let docs = try server.url("/docs")
+        let model = makeModel()
+        let tab = model.newTab(url: docs)
+        #expect(await settled(tab, at: docs))
+        #expect(await waitUntil { model.history.visits.count == 1 })
+
+        _ = try await tab.webView.evaluateJavaScript("location.hash = 'usage'")
+        #expect(await waitUntil { tab.urlString.hasSuffix("#usage") })
+
+        #expect(model.history.visits.count == 1)
+    }
+
+    @Test func aFullLoadIsStillOneVisit() async throws {
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/a": .html("<!doctype html><title>A</title><p>A</p>"),
+            "/b": .html("<!doctype html><title>B</title><p>B</p>"),
+        ])
+        defer { withExtendedLifetime(server) {} }
+        let a = try server.url("/a")
+        let b = try server.url("/b")
+        let model = makeModel()
+        let tab = model.newTab(url: a)
+        #expect(await settled(tab, at: a))
+
+        tab.load(b)
+        #expect(await settled(tab, at: b))
+        #expect(await waitUntil { model.history.visits.first?.url == b.absoluteString })
+
+        #expect(model.history.visits.map(\.url) == [b.absoluteString, a.absoluteString])
+    }
+
+    private func visit(_ tab: BrowserTab, _ url: String, _ transition: HistoryStore.Transition = .link) {
+        tab.noteTransition(transition)
+        tab.urlString = url
+        tab.title = url
+        tab.events.onNavigationFinished?(false)
+    }
+
+    @Test func aTabsJourneyIsOneTrail() {
+        let model = makeModel()
+        let tab = model.newTab()
+        visit(tab, "https://jira.example/board", .typed)
+        visit(tab, "https://jira.example/browse/1")
+        visit(tab, "https://jira.example/browse/1", .reload)
+        visit(tab, "https://docs.example/spec")
+
+        #expect(Set(model.history.visits.map(\.trail)).count == 1)
+    }
+
+    @Test func aNewTabStartsANewTrail() {
+        let model = makeModel()
+        let first = model.newTab()
+        visit(first, "https://jira.example/board", .typed)
+        let second = model.newTab()
+        visit(second, "https://jira.example/board", .typed)
+        visit(first, "https://jira.example/browse/1")
+
+        let trails = model.history.visits.map(\.trail)
+        #expect(trails[0] == trails[2])
+        #expect(trails[1] != trails[0])
+    }
+
+    @Test func typingAnotherSiteStartsANewTrail() {
+        let model = makeModel()
+        let tab = model.newTab()
+        visit(tab, "https://jira.example/board", .typed)
+        visit(tab, "https://www.jira.example/browse/1", .typed)
+        visit(tab, "https://twitch.example/", .typed)
+
+        let trails = model.history.visits.map(\.trail)
+        #expect(trails[1] == trails[2], "the same site typed again keeps the trail")
+        #expect(trails[0] != trails[1])
+    }
+
+    @Test func anInPageMoveWithTheSameTitleAddsNoRow() {
+        let model = makeModel()
+        let tab = model.newTab()
+        visit(tab, "https://duckduckgo.com/?q=martian", .typed)
+        tab.title = "martian at DuckDuckGo"
+        tab.events.onTitleChanged?()
+
+        tab.urlString = "https://duckduckgo.com/?q=martian&ia=images"
+        tab.events.onInPageMove?()
+        tab.urlString = "https://duckduckgo.com/?q=martian&ia=web"
+        tab.events.onInPageMove?()
+        tab.events.onTitleChanged?()
+
+        #expect(model.history.visits.count == 1)
+    }
+
+    @Test func anInPageMoveCountsOnceItsTitleArrives() {
+        let model = makeModel()
+        let tab = model.newTab()
+        visit(tab, "https://jira.example/board", .typed)
+        tab.title = "Board - Jira"
+        tab.events.onTitleChanged?()
+
+        tab.urlString = "https://jira.example/browse/ENEY-6039"
+        tab.events.onInPageMove?()
+        #expect(model.history.visits.count == 1)
+
+        tab.title = "[ENEY-6039] Tour cards stay on top - Jira"
+        tab.events.onTitleChanged?()
+
+        #expect(model.history.visits.map(\.url) == ["https://jira.example/browse/ENEY-6039", "https://jira.example/board"])
+        #expect(model.history.visits.first?.title == "[ENEY-6039] Tour cards stay on top - Jira")
+        #expect(model.history.visits.first?.transition == .inPage)
+        #expect(model.history.entries.first { $0.url == "https://jira.example/board" }?.title == "Board - Jira")
+    }
+
+    @Test func onlyTheActiveTabIsMarkedActive() {
+        let model = makeModel()
+        let first = model.newTab()
+        let second = model.newTab()
+        #expect(second.isSidebarActive)
+        #expect(!first.isSidebarActive)
+
+        model.activate(first)
+        #expect(first.isSidebarActive)
+        #expect(!second.isSidebarActive)
+
+        model.close(first)
+        #expect(model.activeTab === second)
+        #expect(second.isSidebarActive)
+        #expect(model.tabs.filter(\.isSidebarActive).count == 1)
+    }
+
+    @Test func theStartPagePinsLikeAnyOtherPage() async {
+        let model = makeModel()
+        let tab = model.newTab()
+        #expect(await settled(tab, at: SystemPages.start))
+
+        model.pin(tab)
+        #expect(tab.pinnedURL == SystemPages.start)
+        #expect(tab.isShowingPin)
+        #expect(!tab.isAwayFromPin)
+
+        tab.urlString = "https://example.com/"
+        #expect(tab.isAwayFromPin)
+        #expect(!tab.isShowingPin)
+    }
+
+    @Test func draggingTheStartPageIntoThePinnedSectionPinsIt() async {
+        let model = makeModel()
+        let tab = model.newTab()
+        #expect(await settled(tab, at: SystemPages.start))
+
+        model.setPinned(true, for: [.tab(tab.id)])
+        #expect(tab.pinnedURL == SystemPages.start)
+        #expect(tab.pinnedTitle == SystemPages.startTitle)
+    }
 }

@@ -22,6 +22,7 @@ extension BrowserModel {
             ?? peers.last { $0.offset < oldIndex }?.element
         let wasActive = source.activeTabID == tab.id
         let visitID = source.lastVisitID.removeValue(forKey: tab.id)
+        let trail = source.visitTrail.removeValue(forKey: tab.id)
         source.splits = source.splits.removing(tab.id)
         source.storedTree = source.reconciledTree().removing([.tab(tab.id)])
         source.tabs.remove(at: oldIndex)
@@ -43,6 +44,7 @@ extension BrowserModel {
         tab.spaceID = nil
         insert(tab, after: nil)
         lastVisitID[tab.id] = visitID
+        visitTrail[tab.id] = trail
         writtenStateGeneration[tab.id] = nil
         source.onTabTransferredOut?(tab, oldIndex)
         onTabTransferredIn?(tab, source, oldIndex)

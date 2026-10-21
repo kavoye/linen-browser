@@ -438,4 +438,76 @@ struct HistoryStoreTests {
         #expect(store.entries.map(\.url).contains("https://new.example/"))
         #expect(!store.entries.map(\.url).contains("file:///etc/hosts"))
     }
+
+    @Test func aTitleThatArrivesAfterLoadReplacesThePlaceholder() throws {
+        let (store, database) = makeStore()
+        let url = "https://jira.example/browse/ENEY-6039"
+        let visit = try #require(store.record(url: url, title: "Jira"))
+
+        store.retitle(visit: visit, url: url, title: "[ENEY-6039] Tour cards stay on top - Jira")
+
+        #expect(store.entries.first?.title == "[ENEY-6039] Tour cards stay on top - Jira")
+        #expect(store.visits.first?.title == "[ENEY-6039] Tour cards stay on top - Jira")
+        #expect(store.search("tour cards").map(\.url) == [url])
+        #expect(HistoryStore(database: database).visits.first?.title == "[ENEY-6039] Tour cards stay on top - Jira")
+    }
+
+    @Test func aTitleForAnotherAddressLeavesTheVisitAlone() throws {
+        let (store, _) = makeStore()
+        let visit = try #require(store.record(url: "https://example.com/a", title: "A"))
+
+        store.retitle(visit: visit, url: "https://example.com/b", title: "B")
+        store.retitle(visit: visit, url: "https://example.com/a", title: "")
+
+        #expect(store.entries.map(\.title) == ["A"])
+        #expect(store.visits.map(\.title) == ["A"])
+    }
+
+    @Test func aVisitStartsItsOwnTrailUnlessItContinuesOne() throws {
+        let (store, database) = makeStore()
+        let first = try #require(store.record(url: "https://example.com/a", title: "A"))
+        let second = try #require(store.record(url: "https://example.com/b", title: "B", trail: first))
+        let third = try #require(store.record(url: "https://example.com/c", title: "C"))
+
+        let trails = HistoryStore(database: database).visits.map(\.trail)
+        #expect(trails == [third, first, first])
+        #expect(store.visits.map(\.trail) == [third, first, first])
+        #expect(second != first)
+    }
+
+    @Test func olderVisitsLoadInPagesPastTheWindow() {
+        let database = AppDatabase.temporary()
+        let store = HistoryStore(database: database, windowSize: 3)
+        for index in 0..<7 {
+            store.record(url: "https://example.com/\(index)", title: "Page \(index)")
+        }
+        #expect(store.visits.map(\.url).last == "https://example.com/4")
+        #expect(store.hasOlderVisits)
+
+        store.loadOlderVisits(limit: 3)
+        #expect(store.visits.map(\.url) == (1...6).reversed().map { "https://example.com/\($0)" })
+        #expect(store.hasOlderVisits)
+
+        store.loadOlderVisits(limit: 3)
+        #expect(store.visits.count == 7)
+        #expect(store.visits.last?.url == "https://example.com/0")
+        #expect(!store.hasOlderVisits)
+    }
+
+    @Test func aNewVisitKeepsThePagedVisits() {
+        let store = HistoryStore(database: .temporary(), windowSize: 3)
+        for index in 0..<7 {
+            store.record(url: "https://example.com/\(index)", title: "Page \(index)")
+        }
+        store.loadOlderVisits(limit: 3)
+
+        store.record(url: "https://example.com/new", title: "New")
+        #expect(store.visits.count == 7)
+        #expect(store.visits.last?.url == "https://example.com/1")
+
+        store.removeVisits([store.visits[0].id])
+        #expect(store.visits.count == 7)
+        #expect(store.visits.last?.url == "https://example.com/0")
+        #expect(!store.hasOlderVisits)
+    }
 }

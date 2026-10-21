@@ -234,17 +234,7 @@ struct AppDatabase: Sendable {
             t.column("estimatedContextTokens", .integer).notNull()
         }
 
-        try db.create(table: "historyVisit", options: .ifNotExists) {  t in
-            t.autoIncrementedPrimaryKey("id")
-            t.column("url", .text)
-                .notNull()
-                .indexed()
-                .references("historyPage", onDelete: .cascade)
-            t.column("visitedAt", .double).notNull().indexed()
-            t.column("transition", .text).notNull()
-            t.column("fromVisit", .integer).references("historyVisit", onDelete: .setNull)
-        }
-
+        try defineHistoryVisits(in: db)
         try defineSessionSplits(in: db)
         try defineWindowSessions(in: db)
         try defineTabArchive(in: db)
@@ -261,6 +251,23 @@ struct AppDatabase: Sendable {
             t.column("value", .text).notNull()
             t.column("source", .text).notNull()
             t.column("savedAt", .double).notNull()
+        }
+    }
+
+    private nonisolated static func defineHistoryVisits(in db: Database) throws {
+        try db.create(table: "historyVisit", options: .ifNotExists) {  t in
+            t.autoIncrementedPrimaryKey("id")
+            t.column("url", .text)
+                .notNull()
+                .indexed()
+                .references("historyPage", onDelete: .cascade)
+            t.column("visitedAt", .double).notNull().indexed()
+            t.column("transition", .text).notNull()
+            t.column("fromVisit", .integer).references("historyVisit", onDelete: .setNull)
+        }
+        guard try !db.columns(in: "historyVisit").contains(where: { $0.name == "trail" }) else { return }
+        try db.alter(table: "historyVisit") { t in
+            t.add(column: "trail", .integer)
         }
     }
 

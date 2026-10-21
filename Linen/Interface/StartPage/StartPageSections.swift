@@ -156,6 +156,7 @@ private struct StartPageHistorySection: View {
                         },
                         isPrivate: browser.opensPrivately
                     )
+                    .onMiddleClick { openInNewTab(entry.url, activate: false) }
                 }
 
                 StartPageShowAllButton(count: browser.history.count) {
