@@ -6,13 +6,6 @@ import Observation
 import os
 import WebKit
 
-enum StoreInstallState: Equatable {
-    case idle
-    case installing(id: String)
-    case installed(id: String)
-    case failed(id: String, message: String)
-}
-
 @MainActor
 @Observable
 final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
@@ -50,17 +43,9 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     @ObservationIgnored private var isStopped = false
 
     @ObservationIgnored var tabAdapters: [UUID: ExtensionTabAdapter] = [:]
-    @ObservationIgnored private var iconCache: [String: NSImage] = [:]
-    @ObservationIgnored private var anchors: [ObjectIdentifier: [String: NSView]] = [:]
-    @ObservationIgnored private var overflowAnchors: [ObjectIdentifier: NSView] = [:]
+    @ObservationIgnored private let icons = ExtensionIcons()
+    @ObservationIgnored let popups = ExtensionPopups()
 
-    @ObservationIgnored private var presentedPopup: NSPopover?
-    @ObservationIgnored private var presentedPopupID: String?
-    @ObservationIgnored private weak var presentedPopupWindow: ExtensionWindowAdapter?
-    @ObservationIgnored private var popupCloseObserver: (any NSObjectProtocol)?
-    @ObservationIgnored private var lastDismissedPopupID: String?
-    @ObservationIgnored private var lastPopupDismissal = Date.distantPast
-    @ObservationIgnored private var reloadedForEmptyPopup: Set<String> = []
     @ObservationIgnored private var backgroundStarts: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private let nativeMessaging = NativeMessagingService()
     private(set) var appsOutOfReach: Set<String> = []
@@ -84,15 +69,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
     }
 
     func didUnregister(browser: BrowserModel, window: ExtensionWindowAdapter) {
-        let identifier = ObjectIdentifier(browser)
-        anchors[identifier] = nil
-        overflowAnchors[identifier] = nil
-        if presentedPopupWindow === window {
-            presentedPopup?.performClose(nil)
-            presentedPopup = nil
-            presentedPopupID = nil
-            presentedPopupWindow = nil
-        }
+        popups.forget(browser, window: window)
         if windows.isEmpty, profile?.isPrivate == true {
             isStopped = true
             startupTask?.cancel()
@@ -103,7 +80,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             for id in Array(contexts.keys) {
                 unload(id: id)
             }
-            presentedPopup?.performClose(nil)
+            popups.close()
             onOpenWindow = nil
         }
     }
@@ -201,12 +178,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         }
         contexts = [:]
         appsOutOfReach = []
-        anchors = [:]
-        overflowAnchors = [:]
-        reloadedForEmptyPopup = []
-        presentedPopup?.performClose(nil)
-        presentedPopup = nil
-        presentedPopupID = nil
+        popups.reset()
 
         controller = WKWebExtensionController(configuration: Self.controllerConfiguration(for: profile))
         controller.delegate = self
@@ -296,7 +268,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
                 webExtension = try await WKWebExtension(resourceBaseURL: package)
             }
             if let icon = webExtension.icon(for: CGSize(width: 32, height: 32)) {
-                iconCache[record.id] = icon
+                icons.store(icon, for: record.id)
             }
             guard !isStopped, !Task.isCancelled, loading[record.id] == generation,
                   contexts[record.id] == nil else { return }
@@ -319,7 +291,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
                 context.setPermissionStatus(.grantedExplicitly, for: pattern)
             }
             for host in record.blockedHosts {
-                if let pattern = Self.websitePattern(for: host) {
+                if let pattern = ExtensionSiteAccess.websitePattern(for: host) {
                     context.setPermissionStatus(.deniedExplicitly, for: pattern)
                 }
             }
@@ -457,37 +429,11 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
 
     func loadedIcon(for id: String, size: CGFloat) -> NSImage? {
         contexts[id]?.webExtension.icon(for: CGSize(width: size, height: size))
-            ?? iconCache[id]
+            ?? icons.cached(for: id)
     }
 
     func icon(for id: String) async -> NSImage? {
-        if let cached = iconCache[id] {
-            return cached
-        }
-
-        if let icon = contexts[id]?.webExtension.icon(for: CGSize(width: 32, height: 32)) {
-            iconCache[id] = icon
-            return icon
-        }
-
-        guard let known = record(for: id) else { return nil }
-
-        do {
-            let webExtension: WKWebExtension
-            if let path = known.bundlePath, let bundle = Bundle(path: path) {
-                webExtension = try await WKWebExtension(appExtensionBundle: bundle)
-            } else {
-                webExtension = try await WKWebExtension(resourceBaseURL: library.packageURL(for: id))
-            }
-            let icon = webExtension.icon(for: CGSize(width: 32, height: 32))
-            if let icon {
-                iconCache[id] = icon
-            }
-            return icon
-        } catch {
-            Pipeline.log.error("Extension icon loading failed")
-            return nil
-        }
+        await icons.icon(for: id, context: contexts[id], record: record(for: id), packageURL: library.packageURL(for: id))
     }
 
     // MARK: - Install and manage
@@ -550,30 +496,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         library.packageURL(for: id)
     }
 
-    nonisolated static func website(of url: URL?) -> String? {
-        guard let url, url.scheme == "https" || url.scheme == "http",
-              var host = url.host(percentEncoded: false)?.lowercased(), !host.isEmpty else { return nil }
-        if host.hasPrefix("www.") {
-            host.removeFirst(4)
-        }
-        return host
-    }
-
-    static func websitePattern(for host: String) -> WKWebExtension.MatchPattern? {
-        let literal = host.contains(":") ? "[\(host)]" : host
-        return try? WKWebExtension.MatchPattern(string: "*://*.\(literal)/*")
-    }
-
-    nonisolated static func website(_ host: String, isCoveredBy blocked: String) -> Bool {
-        host == blocked || host.hasSuffix("." + blocked)
-    }
-
     func requestsAccess(id: String, to url: URL) -> Bool {
         contexts[id]?.webExtension.allRequestedMatchPatterns.contains { $0.matches(url) } == true
     }
 
     func blockingHost(id: String, for host: String) -> String? {
-        record(for: id)?.blockedHosts.first { Self.website(host, isCoveredBy: $0) }
+        record(for: id)?.blockedHosts.first { ExtensionSiteAccess.website(host, isCoveredBy: $0) }
     }
 
     func isBlocked(id: String, on host: String) -> Bool {
@@ -584,7 +512,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         library.setBlocked(!allowed, host: host, id: id)
         installed = library.records
         applyPlacementsToSystemExtensions()
-        if let context = contexts[id], let pattern = Self.websitePattern(for: host) {
+        if let context = contexts[id], let pattern = ExtensionSiteAccess.websitePattern(for: host) {
             if allowed {
                 context.setPermissionStatus(.unknown, for: pattern)
                 for requested in context.webExtension.allRequestedMatchPatterns {
@@ -595,8 +523,8 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             }
         }
         for tab in browser?.tabs ?? [] where tab.isMaterialised {
-            guard let website = Self.website(of: URL(string: tab.urlString)),
-                  Self.website(website, isCoveredBy: host) else { continue }
+            guard let website = ExtensionSiteAccess.website(of: URL(string: tab.urlString)),
+                  ExtensionSiteAccess.website(website, isCoveredBy: host) else { continue }
             tab.reload()
         }
     }
@@ -659,10 +587,8 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         library.uninstall(id: id)
         refreshSharedLibraries(for: id, unloadContexts: true)
         installed = library.records
-        for key in anchors.keys {
-            anchors[key]?[id] = nil
-        }
-        iconCache[id] = nil
+        popups.forgetAnchors(for: id)
+        icons.forget(id)
         setHeldUpdate(nil, id: id)
         Pipeline.log.notice("Extension uninstalled")
     }
@@ -676,7 +602,7 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             }
             manager.library.refresh()
             manager.installed = manager.library.records
-            manager.iconCache[id] = nil
+            manager.icons.forget(id)
             if reloadContexts, let record = manager.record(for: id), record.enabled {
                 Task { await manager.load(record) }
             }
@@ -693,26 +619,12 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         actionRevision += 1
     }
 
-    var actionableExtensions: [InstalledExtension] {
-        (installed + systemExtensions).filter { $0.enabled && contexts[$0.id] != nil }
-    }
-
-    var pinnedExtensions: [InstalledExtension] {
-        actionableExtensions.filter(\.isPinned)
-    }
-
-    var unpinnedExtensions: [InstalledExtension] {
-        actionableExtensions.filter { !$0.isPinned }
-    }
-
     func setPinned(_ pinned: Bool, id: String) {
         library.setPinned(pinned, id: id)
         installed = library.records
         applyPlacementsToSystemExtensions()
         if !pinned {
-            for key in anchors.keys {
-                anchors[key]?[id] = nil
-            }
+            popups.forgetAnchors(for: id)
         }
     }
 
@@ -721,46 +633,9 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
         installed = library.records
     }
 
-    func registerAnchor(_ view: NSView?, for id: String, in browser: BrowserModel) {
-        guard adapter(for: browser) != nil else { return }
-        anchors[ObjectIdentifier(browser), default: [:]][id] = view
-    }
-
-    func registerOverflowAnchor(_ view: NSView?, in browser: BrowserModel) {
-        guard adapter(for: browser) != nil else { return }
-        overflowAnchors[ObjectIdentifier(browser)] = view
-    }
-
     private func anchorView(for id: String, in browser: BrowserModel? = nil) -> NSView? {
         guard let browser = registeredWindow(in: browser)?.browser else { return nil }
-        let key = ObjectIdentifier(browser)
-        if let own = anchors[key]?[id], own.window != nil {
-            return own
-        }
-        if let overflow = overflowAnchors[key], overflow.window != nil {
-            return overflow
-        }
-        return nil
-    }
-
-    func performAction(for id: String, in browser: BrowserModel? = nil) {
-        guard let window = registeredWindow(in: browser), let context = contexts[id] else { return }
-        let tab = window.browser?.activeTab.map { adapter(for: $0) }
-        guard let action = context.action(for: tab) else { return }
-
-        if let popover = presentedPopup, presentedPopupID == id, popover.isShown {
-            popover.performClose(nil)
-            return
-        }
-        if lastDismissedPopupID == id, Date().timeIntervalSince(lastPopupDismissal) < 0.3 {
-            return
-        }
-
-        if action.presentsPopup {
-            present(action, for: id, in: browser)
-        } else {
-            context.performAction(for: tab)
-        }
+        return popups.anchor(for: id, in: browser)
     }
 
     @discardableResult
@@ -769,30 +644,8 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
               let anchor = anchorView(for: id, in: window.browser) else {
             return false
         }
-        popover.behavior = .transient
-        if let popupCloseObserver {
-            NotificationCenter.default.removeObserver(popupCloseObserver)
-        }
-        popupCloseObserver = NotificationCenter.default.addObserver(
-            forName: NSPopover.didCloseNotification,
-            object: popover,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                self.presentedPopup = nil
-                self.presentedPopupID = nil
-                self.presentedPopupWindow = nil
-                self.lastDismissedPopupID = id
-                self.lastPopupDismissal = Date()
-            }
-        }
-        popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY)
+        popups.show(popover, for: id, in: window, at: anchor)
         reopenIfPageIsMissing(action, for: id, in: window)
-        clipPopup(popover)
-        presentedPopup = popover
-        presentedPopupID = id
-        presentedPopupWindow = window
         action.hasUnreadBadgeText = false
         return true
     }
@@ -802,28 +655,25 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             guard let window, owns(window) else { return }
             for _ in 0..<2 {
                 try? await Task.sleep(for: .milliseconds(900))
-                guard owns(window), presentedPopupWindow === window,
-                      presentedPopupID == id, presentedPopup?.isShown == true,
+                guard owns(window), popups.isShowing(id, in: window),
                       action.popupWebView?.url == nil
                 else { return }
             }
 
-            guard reloadedForEmptyPopup.insert(id).inserted else {
+            guard popups.noteReloadForEmptyPage(id) else {
                 Pipeline.log.error("ext operation failed")
                 return
             }
             Pipeline.log.notice("Extension runtime event")
 
-            presentedPopup?.performClose(nil)
-            presentedPopup = nil
-            presentedPopupID = nil
+            popups.close()
             action.closePopup()
 
             guard let record = installed.first(where: { $0.id == id }) else { return }
             unload(id: id)
             await load(record)
 
-            guard owns(window), presentedPopupID == nil, let context = contexts[id] else { return }
+            guard owns(window), popups.popupID == nil, let context = contexts[id] else { return }
 
             var waited = 0
             while anchorView(for: id, in: window.browser) == nil, waited < 10 {
@@ -837,45 +687,5 @@ final class ExtensionManager: NSObject, WKWebExtensionControllerDelegate {
             guard let fresh = context.action(for: tab), fresh.presentsPopup else { return }
             present(fresh, for: id, in: window.browser)
         }
-    }
-
-    private func clipPopup(_ popover: NSPopover) {
-        guard let content = popover.contentViewController?.view,
-              let frameView = content.window?.contentView?.superview
-        else { return }
-
-        guard let radius = Self.plateCornerRadius(of: frameView) else {
-            Pipeline.log.notice("""
-                ext: popup left unclipped - \
-                \(String(describing: type(of: frameView)), privacy: .public) \
-                bounds \(NSStringFromRect(frameView.bounds), privacy: .public) \
-                reports no plausible corner \
-                (layer \(frameView.layer?.cornerRadius ?? -1, privacy: .public))
-                """)
-            return
-        }
-
-        content.wantsLayer = true
-        content.layer?.cornerRadius = radius
-        content.layer?.cornerCurve = .continuous
-        content.layer?.masksToBounds = true
-        Pipeline.log.notice("ext: popup clipped to the plate's \(radius, privacy: .public)pt corner")
-    }
-
-    private static func plateCornerRadius(of frameView: NSView) -> CGFloat? {
-        let limit = min(frameView.bounds.width, frameView.bounds.height) / 4
-        guard limit > 1 else { return nil }
-
-        for key in ["cornerRadius", "_cornerRadius"] {
-            guard frameView.responds(to: NSSelectorFromString(key)),
-                  let radius = frameView.value(forKey: key) as? CGFloat,
-                  radius > 1, radius <= limit
-            else { continue }
-            return radius
-        }
-        if let radius = frameView.layer?.cornerRadius, radius > 1, radius <= limit {
-            return radius
-        }
-        return nil
     }
 }

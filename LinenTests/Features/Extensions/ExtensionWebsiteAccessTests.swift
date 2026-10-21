@@ -33,17 +33,17 @@ struct ExtensionWebsiteAccessTests {
     }
 
     @Test func theWebsiteDropsSchemePathAndWWW() {
-        #expect(ExtensionManager.website(of: URL(string: "https://www.Example.com/a?b")) == "example.com")
-        #expect(ExtensionManager.website(of: URL(string: "http://news.example.com")) == "news.example.com")
-        #expect(ExtensionManager.website(of: URL(string: "linen://settings")) == nil)
-        #expect(ExtensionManager.website(of: URL(string: "file:///tmp/a.html")) == nil)
+        #expect(ExtensionSiteAccess.website(of: URL(string: "https://www.Example.com/a?b")) == "example.com")
+        #expect(ExtensionSiteAccess.website(of: URL(string: "http://news.example.com")) == "news.example.com")
+        #expect(ExtensionSiteAccess.website(of: URL(string: "linen://settings")) == nil)
+        #expect(ExtensionSiteAccess.website(of: URL(string: "file:///tmp/a.html")) == nil)
     }
 
     @Test func everyWebsiteHasAPattern() throws {
         for address in ["https://example.com/", "http://192.168.1.1/", "http://[::1]:8080/"] {
             let url = try #require(URL(string: address))
-            let host = try #require(ExtensionManager.website(of: url))
-            let pattern = try #require(ExtensionManager.websitePattern(for: host), "\(host)")
+            let host = try #require(ExtensionSiteAccess.website(of: url))
+            let pattern = try #require(ExtensionSiteAccess.websitePattern(for: host), "\(host)")
             #expect(pattern.matches(url))
         }
     }

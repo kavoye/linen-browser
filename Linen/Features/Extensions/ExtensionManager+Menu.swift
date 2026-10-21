@@ -41,7 +41,7 @@ extension ExtensionManager {
 
         menu.addItem(.separator())
         if let page = window.browser?.activeTab, let url = URL(string: page.urlString),
-           let website = Self.website(of: url),
+           let website = ExtensionSiteAccess.website(of: url),
            requestsAccess(id: id, to: url) || isBlocked(id: id, on: website) {
             let blocking = blockingHost(id: id, for: website)
             let host = blocking ?? website
