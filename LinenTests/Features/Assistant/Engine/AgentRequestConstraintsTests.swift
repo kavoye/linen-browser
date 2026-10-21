@@ -84,8 +84,8 @@ struct AgentRequestConstraintsTests {
     @Test func aRefusedClickDoesNotPressTheButton() async {
         let view = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 600), configuration: WebViewPool.makeConfiguration())
         view.loadHTMLString("<form onsubmit='window.sent=1;return false'><input aria-label='Name'><button>Send</button></form>", baseURL: nil)
-        _ = await PageSettle.untilIdle(view, timeout: .seconds(10))
-        _ = await PageDriver.snapshot(view)
+        let listed = await waitUntil { await PageDriver.snapshot(view).contains("[2] button \"Send\"") }
+        #expect(listed, "The form never appeared in a snapshot")
 
         let refused = await PageDriver.click(ref: 2, label: "Send", in: view, constraints: AgentRequestConstraints(request: "Do not send it."))
         let typed = await PageDriver.type(text: "Ada", intoField: "", ref: 1, submit: true, in: view,
@@ -102,8 +102,8 @@ struct AgentRequestConstraintsTests {
         toolkit.resumeRequest("Fill in the form but don't send it.", answers: ["Size 9"])
 
         #expect(toolkit.requestConstraints.refusal(clicking: "Send", submits: false) != nil)
-        #expect(toolkit.userWords == ["Fill in the form but don't send it.", "Size 9"])
-        #expect(toolkit.askedUser)
+        #expect(toolkit.turn.userWords == ["Fill in the form but don't send it.", "Size 9"])
+        #expect(toolkit.turn.askedUser)
     }
 
     @Test func aPreferenceIsRemindedOnceBeforeTheFirstChange() {

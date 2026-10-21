@@ -16,7 +16,7 @@ struct ContextBreakdownTests {
             .response(.init(assetIDs: [], segments: [.text(.init(content: String(repeating: "b", count: 200)))])),
             .toolOutput(.init(id: "1", toolName: "readPage", segments: [.text(.init(content: String(repeating: "c", count: 300)))])),
         ])
-        let breakdown = AnyLanguageModelAgent.contextBreakdown(in: transcript, budget: budget)
+        let breakdown = TranscriptMetrics.contextBreakdown(in: transcript, budget: budget)
         #expect(breakdown.tokens[.messages] == 150)
         #expect(breakdown.tokens[.toolActivity] == 100)
         #expect(breakdown.tokens[.availableTools] == 900)

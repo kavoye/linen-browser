@@ -108,7 +108,7 @@ struct LoadToolsToolTests {
 
     @Test func withheldToolsAreLeftOutOfTheTurn() {
         let subject = agent()
-        subject.toolkit.withheldTools = ["readPage"]
+        subject.toolkit.turn.withheldTools = ["readPage"]
 
         #expect(!names(subject).contains("readPage"))
         #expect(names(subject).contains("goBack"))

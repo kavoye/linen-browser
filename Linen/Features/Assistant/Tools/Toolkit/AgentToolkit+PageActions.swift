@@ -53,13 +53,13 @@ extension AgentToolkit {
         let content = request + "\n" + output.split(separator: "\n", omittingEmptySubsequences: false)
             .filter { !$0.hasPrefix("observationID:") }.joined(separator: "\n")
         let missed = output.contains(" is not on this page.")
-        if missed, lastMiss == page {
-            repeatedRead = true
+        if missed, turn.lastMiss == page {
+            turn.repeatedRead = true
         }
-        lastMiss = missed ? page : nil
-        defer { lastReads[page] = content }
-        guard lastReads[page] == content, let controls = output.range(of: "CONTROLS:\n") else { return output }
-        repeatedRead = true
+        turn.lastMiss = missed ? page : nil
+        defer { turn.lastReads[page] = content }
+        guard turn.lastReads[page] == content, let controls = output.range(of: "CONTROLS:\n") else { return output }
+        turn.repeatedRead = true
         return Self.unchangedReadNote + "\n\n" + output[controls.lowerBound...]
     }
 
@@ -92,7 +92,7 @@ extension AgentToolkit {
             return output
         }
         if AgentRequestConstraints.isRefusal(output) {
-            refusedActions += 1
+            turn.refusedActions += 1
             completeTool(step, failed: true)
             return output
         }
@@ -146,7 +146,7 @@ extension AgentToolkit {
             return output
         }
         if AgentRequestConstraints.isRefusal(output) {
-            refusedActions += 1
+            turn.refusedActions += 1
             completeTool(step, failed: true)
             return output
         }

@@ -23,10 +23,10 @@ extension AnyLanguageModelAgent {
         var suggested: [String] = []
         for entry in transcript {
             switch entry {
-            case .prompt(let prompt) where !Self.isScaffolding(Self.text(in: prompt.segments)):
-                suggested = AgentToolCatalog.tools(forRequest: Self.text(in: prompt.segments))
+            case .prompt(let prompt) where !Self.isScaffolding(TranscriptMetrics.text(in: prompt.segments)):
+                suggested = AgentToolCatalog.tools(forRequest: TranscriptMetrics.text(in: prompt.segments))
             case .toolOutput(let output):
-                suggested += AgentToolCatalog.tools(forControlsIn: Self.text(in: output.segments)).filter { !suggested.contains($0) }
+                suggested += AgentToolCatalog.tools(forControlsIn: TranscriptMetrics.text(in: output.segments)).filter { !suggested.contains($0) }
             default:
                 break
             }
@@ -44,7 +44,7 @@ extension AnyLanguageModelAgent {
         let unwanted = other.lowercased()
         for entry in transcript.reversed() {
             guard case .toolOutput(let output) = entry else { continue }
-            let text = text(in: output.segments)
+            let text = TranscriptMetrics.text(in: output.segments)
             guard let start = text.range(of: "PAGE TEXT:\n") else { continue }
             let body = text[start.upperBound...]
             let lines = (body.range(of: "\n\n").map { body[..<$0.lowerBound] } ?? body).split(separator: "\n")

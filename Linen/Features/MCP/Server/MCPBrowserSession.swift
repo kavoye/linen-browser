@@ -98,7 +98,7 @@ final class MCPBrowserSession: Identifiable {
             toolkit.resetToolOutcome()
             let output: String
             do {
-                output = AnyLanguageModelAgent.text(in: try await AnyLanguageModelAgent.execute(tool, arguments: content))
+                output = TranscriptMetrics.text(in: try await AnyLanguageModelAgent.execute(tool, arguments: content))
             } catch {
                 _ = toolkit.takePendingScreenshot()
                 return failure("The arguments for \(name) don’t match its schema.")

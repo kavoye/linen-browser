@@ -235,7 +235,7 @@ struct EvalTrace {
         for entry in transcript {
             switch entry {
             case .prompt(let prompt):
-                let text = String(AnyLanguageModelAgent.text(in: prompt.segments).prefix(400))
+                let text = String(TranscriptMetrics.text(in: prompt.segments).prefix(400))
                 if positions[entry.id] != nil || steps.last?.kind != "prompt" || steps.last?.text != text {
                     add(entry.id, .init(kind: "prompt", tool: "", text: text))
                 }
@@ -245,9 +245,9 @@ struct EvalTrace {
                 }
             case .toolOutput(let output):
                 add("output" + output.id, .init(kind: "output", tool: output.toolName,
-                                                 text: String(AnyLanguageModelAgent.text(in: output.segments).prefix(1_200))))
+                                                 text: String(TranscriptMetrics.text(in: output.segments).prefix(1_200))))
             case .response(let response):
-                add(entry.id, .init(kind: "response", tool: "", text: String(AnyLanguageModelAgent.text(in: response.segments).prefix(1_200))))
+                add(entry.id, .init(kind: "response", tool: "", text: String(TranscriptMetrics.text(in: response.segments).prefix(1_200))))
             default:
                 break
             }

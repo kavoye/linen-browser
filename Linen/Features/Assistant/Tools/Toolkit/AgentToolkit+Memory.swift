@@ -8,14 +8,14 @@ extension AgentToolkit {
     func beginRequest(_ utterance: String) {
         let request = Self.userText(of: utterance)
         requestConstraints = AgentRequestConstraints(request: request)
-        userWords = [request]
+        turn.userWords = [request]
     }
 
     func resumeRequest(_ utterance: String, answers: [String]) {
         let request = Self.userText(of: utterance)
         requestConstraints = AgentRequestConstraints(request: request)
-        userWords = [request] + answers
-        askedUser = !answers.isEmpty
+        turn.userWords = [request] + answers
+        turn.askedUser = !answers.isEmpty
     }
 
     nonisolated static func userText(of utterance: String) -> String {
@@ -34,13 +34,13 @@ extension AgentToolkit {
     }
 
     var pendingPreference: String? {
-        guard let preference = requestConstraints.preference, !askedUser else { return nil }
+        guard let preference = requestConstraints.preference, !turn.askedUser else { return nil }
         return remembersUser && browser.memory.fact(about: preference) != nil ? nil : preference
     }
 
     func writeMemory(using model: any LanguageModel) async {
         guard remembersUser else { return }
-        let said = userWords.filter { !$0.isEmpty }.joined(separator: "\n")
+        let said = turn.userWords.filter { !$0.isEmpty }.joined(separator: "\n")
         let changes = await AssistantMemoryWriter.changes(said: said, notes: browser.memory.facts, model: model)
         for change in changes {
             if change.forget {
@@ -58,8 +58,8 @@ extension AgentToolkit {
     func rememberFact(_ subject: String, is value: String, source: AssistantMemory.Fact.Source) -> AgentMemoryUpdate? {
         guard remembersUser, let fact = browser.memory.remember(subject, is: value, source: source) else { return nil }
         let update = AgentMemoryUpdate(factID: fact.id, subject: fact.subject, value: fact.value)
-        memoryUpdates.removeAll { $0.factID == fact.id }
-        memoryUpdates.append(update)
+        turn.memoryUpdates.removeAll { $0.factID == fact.id }
+        turn.memoryUpdates.append(update)
         return update
     }
 
@@ -67,10 +67,10 @@ extension AgentToolkit {
         if let preference = requestConstraints.preference, remembersUser, browser.memory.fact(about: preference) != nil {
             return nil
         }
-        guard let preference = requestConstraints.preference, !askedUser, !preferenceReminded,
+        guard let preference = requestConstraints.preference, !turn.askedUser, !turn.preferenceReminded,
               ["clickOnPage", "typeOnPage", "fillFields", "selectOption", "setChecked"].contains(toolName)
         else { return nil }
-        preferenceReminded = true
+        turn.preferenceReminded = true
         return "This request depends on \(preference), which only the user knows. Nothing was changed. Ask them with askUser first."
     }
 }

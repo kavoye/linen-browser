@@ -27,7 +27,7 @@ extension AnyLanguageModelAgent {
             recordEvent(kind, values, diagnostics: &state.diagnostics, task: task)
         }
         func save() {
-            state.checkpoint.memoryUpdates = toolkit.memoryUpdates.isEmpty ? nil : toolkit.memoryUpdates
+            state.checkpoint.memoryUpdates = toolkit.turn.memoryUpdates.isEmpty ? nil : toolkit.turn.memoryUpdates
             var history = Array(state.session.transcript)
             if !state.submittedUtterance {
                 history.append(.prompt(.init(segments: [.text(.init(content: state.originalPrompt))] + state.originalImages.map { .image($0) })))
@@ -42,12 +42,10 @@ extension AnyLanguageModelAgent {
             log.saveCheckpoint(state.checkpoint, taskID: task.id)
             log.recordContextEstimate(
                 tabID: task.anchorID,
-                tokens: (state.checkpoint.openAI?.contextTokens ?? Self.estimatedTokens(in: state.checkpoint.transcript)) + toolSchemaTokens(for: state.checkpoint.transcript),
-                breakdown: Self.contextBreakdown(in: state.checkpoint.transcript, budget: budget, toolTokens: toolSchemaTokens(for: state.checkpoint.transcript))
+                tokens: (state.checkpoint.openAI?.contextTokens ?? TranscriptMetrics.estimatedTokens(in: state.checkpoint.transcript)) + toolSchemaTokens(for: state.checkpoint.transcript),
+                breakdown: TranscriptMetrics.contextBreakdown(in: state.checkpoint.transcript, budget: budget, toolTokens: toolSchemaTokens(for: state.checkpoint.transcript))
             )
-            if !discardedTabIDs.contains(task.anchorID) {
-                sessions[task.anchorID] = makeSession(transcript: state.checkpoint.transcript)
-            }
+            sessions.keep(makeSession(transcript: state.checkpoint.transcript), for: task.anchorID)
         }
 
         func publishProgress(_ raw: String) {
@@ -91,7 +89,7 @@ extension AnyLanguageModelAgent {
             if (error as? OpenAIFailure)?.isRateLimited == true {
                 state.stop = .rateLimited
             } else {
-                state.stop = Self.isContextWindowError(error) || error is AgentCompactionFailure ? .contextLimit : .providerError
+                state.stop = TranscriptMetrics.isContextWindowError(error) || error is AgentCompactionFailure ? .contextLimit : .providerError
             }
             if state.stop == .providerError || state.stop == .rateLimited {
                 let failure = error as? OpenAIFailure
@@ -111,12 +109,12 @@ extension AnyLanguageModelAgent {
         _ = await finishReply(
             stop: state.stop, text: state.finalText, session: state.session, nativeState: state.nativeState, task: task, reply: reply, speech: speech, event: event
         )
-        state.diagnostics.elapsedMilliseconds = Self.milliseconds(since: started)
+        state.diagnostics.elapsedMilliseconds = TranscriptMetrics.milliseconds(since: started)
         log.setDiagnostics(state.diagnostics, taskID: task.id)
-        if !Task.isCancelled, !task.isContinuation || toolkit.askedUser {
+        if !Task.isCancelled, !task.isContinuation || toolkit.turn.askedUser {
             await toolkit.writeMemory(using: memoryModel ?? model)
-            if !toolkit.memoryUpdates.isEmpty {
-                state.checkpoint.memoryUpdates = toolkit.memoryUpdates
+            if !toolkit.turn.memoryUpdates.isEmpty {
+                state.checkpoint.memoryUpdates = toolkit.turn.memoryUpdates
                 log.saveCheckpoint(state.checkpoint, taskID: task.id)
             }
         }
@@ -146,8 +144,8 @@ extension AnyLanguageModelAgent {
             state.session = sessionRemovingEmptyResponses(from: state.session)
             let calls = state.observer.calls
             if calls.isEmpty {
-                if toolkit.checkedAnswers < 2, let gap = toolkit.requestConstraints.uncoveredAlternative(in: answer) {
-                    toolkit.checkedAnswers += 1
+                if toolkit.turn.checkedAnswers < 2, let gap = toolkit.requestConstraints.uncoveredAlternative(in: answer) {
+                    toolkit.turn.checkedAnswers += 1
                     let finding = Self.earlierFinding(about: gap.missing, not: gap.covered, in: state.session.transcript)
                     state.prompt = toolkit.requestConstraints.incompleteAnswer(answer, earlier: finding) ?? Self.stepPrompt
                     continue
@@ -224,7 +222,7 @@ extension AnyLanguageModelAgent {
                 callbacks.event("attachment_text_fallback", [:])
                 return nil
             }
-            guard Self.isContextWindowError(error), !state.overflowRecovered else { throw error }
+            guard TranscriptMetrics.isContextWindowError(error), !state.overflowRecovered else { throw error }
             state.overflowRecovered = true
             callbacks.event("overflow_recovery", [:])
             try await compact(state, event: callbacks.event)
@@ -299,7 +297,7 @@ extension AnyLanguageModelAgent {
             let (output, failed) = await execute(call: call, reply: state.reply, event: callbacks.event)
             entries.append(.toolOutput(output))
             state.session = makeSession(transcript: Transcript(entries: entries))
-            let text = Self.text(in: output.segments)
+            let text = TranscriptMetrics.text(in: output.segments)
             if call.toolName == "askUser", !failed, !text.isEmpty {
                 state.checkpoint.userAnswers.append(text)
             }
@@ -312,12 +310,12 @@ extension AnyLanguageModelAgent {
                 }
             ), event: callbacks.event)
             needsRecovery = progress.recovery
-            needsAnswer = progress.answer || toolkit.refusedActions >= 2
+            needsAnswer = progress.answer || toolkit.turn.refusedActions >= 2
             state.stop = progress.stop ?? state.stop
         }
         let onlyRead = calls.allSatisfy { AgentProgressMonitor.readOnlyTools.contains($0.toolName) }
-        toolkit.withheldTools = withheldTools(afterRepeatedRead: toolkit.repeatedRead && onlyRead)
-        toolkit.repeatedRead = false
+        toolkit.turn.withheldTools = withheldTools(afterRepeatedRead: toolkit.turn.repeatedRead && onlyRead)
+        toolkit.turn.repeatedRead = false
         state.session = makeSession(transcript: settledTranscript(state.session.transcript))
         let readingInCircles = needsRecovery && onlyRead
         state.prompt = readingInCircles || needsAnswer ? readStreakPrompt(for: state.session.transcript)

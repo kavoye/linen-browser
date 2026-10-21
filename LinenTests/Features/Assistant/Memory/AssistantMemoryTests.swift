@@ -80,7 +80,7 @@ struct AssistantMemoryTests {
         subject.beginRequest("Set the lamp to my usual colour.")
 
         #expect(subject.rememberedContext().contains("Ask the user with askUser"))
-        subject.askedUser = true
+        subject.turn.askedUser = true
         #expect(subject.pendingPreference == nil)
     }
 
@@ -145,7 +145,7 @@ struct AssistantMemoryTests {
         #expect(prompt.contains("Please remember I like cars"))
         #expect(!prompt.contains("evil.example"))
         #expect(browser.memory.facts.map { "\($0.subject): \($0.value)" }.sorted() == ["interests: cars", "shoe size: 42"])
-        #expect(subject.memoryUpdates.map(\.subject).sorted() == ["interests", "shoe size"])
+        #expect(subject.turn.memoryUpdates.map(\.subject).sorted() == ["interests", "shoe size"])
     }
 
     @Test func theModelCanForgetAndRepeatsChangeNothing() async {
@@ -158,7 +158,7 @@ struct AssistantMemoryTests {
         await subject.writeMemory(using: NotesModel(#"{"changes":[{"subject":"shoe size","value":"","forget":true},{"subject":"diet","value":"vegetarian","forget":false}]}"#))
 
         #expect(browser.memory.facts.map(\.subject) == ["diet"])
-        #expect(subject.memoryUpdates.isEmpty)
+        #expect(subject.turn.memoryUpdates.isEmpty)
     }
 
     @Test func secretsAreNeverSavedEvenWhenTheModelTries() async {

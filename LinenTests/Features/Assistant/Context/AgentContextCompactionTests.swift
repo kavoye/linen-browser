@@ -166,7 +166,7 @@ struct AgentContextCompactionTests {
         fixture.log.recordContextEstimate(tabID: fixture.tabID, tokens: 17_700)
         fixture.agent.refreshContextEstimates()
         #expect(fixture.log.usage(forTab: fixture.tabID).estimatedContextTokens
-            == AnyLanguageModelAgent.estimatedTokens(in: checkpoint.transcript) + fixture.agent.budget.toolSchemaTokens)
+            == TranscriptMetrics.estimatedTokens(in: checkpoint.transcript) + fixture.agent.budget.toolSchemaTokens)
     }
 
     @Test func onDeviceBudgetCompactsRepeatedlyAndKeepsUserDecisions() async throws {
