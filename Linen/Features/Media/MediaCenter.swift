@@ -132,7 +132,7 @@ final class MediaCenter {
         }
         if message.hasPrefix("state:") {
             guard let fields = MediaPayload.fields(in: String(message.dropFirst("state:".count))) else { return }
-            applyTiming(fields, to: watched)
+            watched.applyTiming(fields)
             return
         }
         if message.hasPrefix("meta:") {
@@ -534,11 +534,11 @@ final class MediaCenter {
         }
         if let cssPoint = pipGesturePoint {
             pipGesturePoint = nil
-            synthesizeGestureClick(on: webView, atPagePoint: cssPoint)
+            MediaGestureClick.click(webView, atPagePoint: cssPoint)
             return
         }
         let rect = webView === controlledWebView ? model.playerViewportRect : pipTargetRect
-        synthesizeGestureClick(on: webView, viewportRect: rect)
+        MediaGestureClick.click(webView, viewportRect: rect)
     }
 
     // MARK: - Script messages
@@ -609,39 +609,7 @@ final class MediaCenter {
                 }
             }
         }
-        applyTiming(fields, to: model)
-    }
-
-    private func applyTiming(_ fields: [String: Double], to target: MediaModel) {
-        let isLive = fields["l"] == 1
-        if let time = fields["t"], abs(time - target.currentTime) > 0.05 {
-            target.currentTime = time
-        }
-        if let duration = fields["d"], duration > 0, duration != target.duration {
-            target.duration = duration
-        }
-        if isLive {
-            if !target.isLive {
-                target.isLive = true
-            }
-        } else if target.isLive, let duration = fields["d"], duration > 0 {
-            target.isLive = false
-        }
-        if let playing = fields["p"] {
-            let isPlaying = playing == 1
-            if isPlaying != target.isPlaying {
-                target.isPlaying = isPlaying
-            }
-        }
-        if let volume = fields["v"], abs(volume - target.volume) > 0.005 {
-            target.volume = volume
-        }
-        if let muted = fields["m"] {
-            let isMuted = muted == 1
-            if isMuted != target.isMuted {
-                target.isMuted = isMuted
-            }
-        }
+        model.applyTiming(fields)
     }
 
     private func applyRect(_ json: String) {
@@ -660,21 +628,7 @@ final class MediaCenter {
               let fields = try? JSONSerialization.jsonObject(with: data) as? [String: String]
         else { return }
 
-        let track = fields["t"] ?? ""
-        let artist = fields["a"] ?? ""
-        let album = fields["al"] ?? ""
-        if target.trackTitle != track {
-            target.trackTitle = track
-        }
-        if target.artist != artist {
-            target.artist = artist
-        }
-        if target.album != album {
-            target.album = album
-        }
-        if !track.isEmpty {
-            target.title = artist.isEmpty ? track : "\(track) — \(artist)"
-        }
+        target.applyTrack(fields)
 
         guard let art = fields["art"], let url = URL(string: art),
               let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http"
@@ -686,61 +640,6 @@ final class MediaCenter {
         }
         if url != target.artworkURL {
             target.artworkURL = url
-        }
-    }
-
-    private func synthesizeGestureClick(on webView: WKWebView, atPagePoint cssPoint: CGPoint) {
-        let bounds = webView.bounds
-        let raw = NSPoint(
-            x: cssPoint.x,
-            y: cssPoint.y + webView.obscuredContentInsets.top
-        )
-        let point = NSPoint(
-            x: min(max(raw.x, bounds.minX + 1), bounds.maxX - 1),
-            y: min(max(raw.y, bounds.minY + 1), bounds.maxY - 1)
-        )
-        deliverGestureClick(on: webView, at: point)
-    }
-
-    private func synthesizeGestureClick(on webView: WKWebView, viewportRect: CGRect?) {
-        let point: NSPoint
-        if let rect = viewportRect,
-           let crop = MediaCropMath.visibleCrop(
-               viewportRect: rect,
-               viewBounds: webView.bounds,
-               topInset: webView.obscuredContentInsets.top
-           ) {
-            point = NSPoint(x: crop.midX, y: crop.midY)
-        } else {
-            point = NSPoint(x: webView.bounds.midX, y: webView.bounds.midY)
-        }
-        deliverGestureClick(on: webView, at: point)
-    }
-
-    private func deliverGestureClick(on webView: WKWebView, at point: NSPoint) {
-        guard let window = webView.window else {
-            Pipeline.log.notice("media: no hosting window for gesture click")
-            return
-        }
-        let windowPoint = webView.convert(point, to: nil)
-        func mouseEvent(_ type: NSEvent.EventType) -> NSEvent? {
-            NSEvent.mouseEvent(
-                with: type,
-                location: windowPoint,
-                modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime,
-                windowNumber: window.windowNumber,
-                context: nil,
-                eventNumber: 0,
-                clickCount: 1,
-                pressure: 1
-            )
-        }
-        if let down = mouseEvent(.leftMouseDown) {
-            webView.mouseDown(with: down)
-        }
-        if let up = mouseEvent(.leftMouseUp) {
-            webView.mouseUp(with: up)
         }
     }
 }
