@@ -8,7 +8,7 @@ extension BrowserModel {
     // MARK: - Pinning
 
     func pin(_ tab: BrowserTab) {
-        guard let url = URL(string: tab.urlString), !tab.urlString.isEmpty else { return }
+        guard let url = tab.pinnableURL else { return }
         setPin(url, title: tab.title, for: tab)
     }
 
@@ -85,7 +85,7 @@ extension BrowserModel {
         for case .tab(let id) in reconciledTree().expanded(Set(items)) {
             guard let tab = tabsByID[id] else { continue }
             if pinned, tab.pinnedURL == nil {
-                guard let url = URL(string: tab.urlString), !tab.urlString.isEmpty else { continue }
+                guard let url = tab.pinnableURL else { continue }
                 tab.pinnedURL = url
                 tab.pinnedTitle = tab.title
                 changed = true

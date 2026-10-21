@@ -148,13 +148,13 @@ struct BrowserModelTests {
         #expect(copy.pinnedURL != nil)
     }
 
-    /// "Pin this" needs a page to mean; an empty tab has none to offer.
-    @Test func pinningAnEmptyTabRefuses() {
+    /// A new tab is the Start page, and pins as one.
+    @Test func pinningANewTabPinsTheStartPage() {
         let model = makeModel()
         let tab = model.newTab()
 
         model.pin(tab)
-        #expect(tab.pinnedURL == nil)
+        #expect(tab.pinnedURL == SystemPages.start)
     }
 
     @Test func aFolderGathersTabsAndDeletionFreesThemInPlace() {

@@ -147,14 +147,14 @@ struct PinnedSectionTests {
         ])
     }
 
-    @Test func theShelfCannotPinATabWithNoPage() {
+    @Test func theShelfPinsANewTabAsTheStartPage() {
         let model = model()
         _ = tab("https://one.example/", in: model)
         let blank = model.newTab()
 
         model.pinAtTop([.tab(blank.id)])
 
-        #expect(blank.pinnedURL == nil)
+        #expect(blank.pinnedURL == SystemPages.start)
     }
 
     // MARK: - Folders
@@ -337,7 +337,7 @@ struct PinnedSectionTests {
         #expect(kept.pinnedURL == nil)
     }
 
-    @Test func aTabWithNoPageCannotBePinnedByADrop() {
+    @Test func aDroppedNewTabPinsAsTheStartPage() {
         let model = model()
         let kept = tab("https://kept.example/", in: model)
         model.pin(kept)
@@ -346,7 +346,7 @@ struct PinnedSectionTests {
         model.move([.tab(blank.id)], into: nil, before: .tab(kept.id))
         model.setPinned(true, for: [.tab(blank.id)])
 
-        #expect(blank.pinnedURL == nil)
+        #expect(blank.pinnedURL == SystemPages.start)
     }
 
     @Test func editingThePinKeepsTheTabInTheSection() {
