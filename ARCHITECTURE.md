@@ -79,6 +79,11 @@ In both cases the title, address, favicon and WebKit interaction state remain, s
 activation loads the page again. Code that adds a new kind of in-progress page work must decide whether
 that work prevents discarding.
 
+Page scripts that must not wait on a busy page go through `PageReply`. It returns
+the script's answer or nil when the page has not answered within a ceiling, and
+also when the awaiting task is cancelled, so cancelling a caller releases it
+without waiting for the ceiling.
+
 `BrowserProfileContext` owns a profile's database, website data store, settings,
 permissions, history, downloads, conversation log, web view pool, and extension
 manager. Persistent windows using the same profile share this context. Tabs keep
