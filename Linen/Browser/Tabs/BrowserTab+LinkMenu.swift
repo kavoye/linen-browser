@@ -6,15 +6,15 @@ import Foundation
 extension BrowserTab {
     func connectLinkMenu(of view: TabWebView?) {
         view?.onOpenLinkInNewWindow = { [weak self] url, isPrivate in
-            self?.onOpenInNewWindow?(url, isPrivate, true)
+            self?.events.onOpenInNewWindow?(url, isPrivate, true)
         }
         view?.onOpenLinkInNewTab = { [weak self] url in
-            guard let open = self?.onOpenInNewTab else { return false }
+            guard let open = self?.events.onOpenInNewTab else { return false }
             open(url, false)
             return true
         }
         view?.onSearchSelection = { [weak self] url in
-            self?.onOpenInNewTab?(url, true)
+            self?.events.onOpenInNewTab?(url, true)
         }
     }
 

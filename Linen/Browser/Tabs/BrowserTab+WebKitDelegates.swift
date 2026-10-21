@@ -37,7 +37,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             }
             return
         }
-        if let tab, let onOpenInNewWindow = tab.onOpenInNewWindow,
+        if let tab, let onOpenInNewWindow = tab.events.onOpenInNewWindow,
            navigationAction.navigationType == .linkActivated,
            navigationAction.modifierFlags.isSuperset(of: [.command, .option]),
            navigationAction.targetFrame?.isMainFrame != false,
@@ -46,7 +46,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             onOpenInNewWindow(url, false, navigationAction.modifierFlags.contains(.shift))
             return
         }
-        if let tab, let onOpenInNewTab = tab.onOpenInNewTab,
+        if let tab, let onOpenInNewTab = tab.events.onOpenInNewTab,
            navigationAction.navigationType == .linkActivated,
            navigationAction.modifierFlags.contains(.command)
                || navigationAction.buttonNumber == Self.middleButton,
@@ -56,7 +56,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             onOpenInNewTab(url, navigationAction.modifierFlags.contains(.shift))
             return
         }
-        if let tab, let onOpenInPeek = tab.onOpenInPeek,
+        if let tab, let onOpenInPeek = tab.events.onOpenInPeek,
            navigationAction.navigationType == .linkActivated,
            navigationAction.modifierFlags == .shift,
            navigationAction.targetFrame?.isMainFrame != false,
@@ -83,7 +83,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             return
         }
         decisionHandler(.cancel)
-        tab.onNavigationOutsideExtension?(url)
+        tab.events.onNavigationOutsideExtension?(url)
     }
 
     /// WebKit numbers the middle button 4, not NSEvent's 2.
@@ -166,7 +166,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         for navigationAction: WKNavigationAction,
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
-        guard let tab, let onNewWindow = tab.onNewWindow else { return nil }
+        guard let tab, let onNewWindow = tab.events.onNewWindow else { return nil }
 
         let view = TabWebView(frame: webView.frame, configuration: configuration)
         tab.context.settings.apply(to: view)
@@ -180,7 +180,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     }
 
     func webViewDidClose(_ webView: WKWebView) {
-        tab?.onCloseRequested?()
+        tab?.events.onCloseRequested?()
     }
 
     /// `WKUIDelegatePrivate`. WebKit tells the app itself, so these arrive even
@@ -210,14 +210,14 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
 
     @objc(_webView:hasVideoInPictureInPictureDidChange:)
     func webView(_ webView: WKWebView, hasVideoInPictureInPictureDidChange isOut: Bool) {
-        tab?.onPictureInPictureChanged?(isOut)
+        tab?.events.onPictureInPictureChanged?(isOut)
     }
 
     /// WebKit requires an on-screen destination before returning video from PiP.
     /// This callback lets the app restore a minimized window first.
     @objc(_webViewFullscreenMayReturnToInline:)
     func webViewFullscreenMayReturnToInline(_ webView: WKWebView) {
-        tab?.onPictureReturnExpected?()
+        tab?.events.onPictureReturnExpected?()
     }
 
     // MARK: - Page dialogs
@@ -332,7 +332,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         mimeType: String,
         originatingURL: URL?
     ) {
-        guard let save = tab?.onSaveDocument else { return }
+        guard let save = tab?.events.onSaveDocument else { return }
         Task { await save(data, suggestedFilename, originatingURL, false) }
     }
 
@@ -346,7 +346,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         // WebKit's copy is read-only and has a temporary filename. Open the
         // saved download so Preview can edit it at the user's chosen location.
         completionHandler(false)
-        guard let save = tab?.onSaveDocument else { return }
+        guard let save = tab?.events.onSaveDocument else { return }
         let source = frame.request.url
         let filename = tab?.documentFilename(for: source) ?? fileURL.lastPathComponent
         let window = webView.window
@@ -404,7 +404,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     private func hand(_ download: WKDownload, source: URL?) {
         let origin = source ?? downloadSource
         downloadSource = nil
-        tab?.onDownload?(download, origin)
+        tab?.events.onDownload?(download, origin)
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -415,7 +415,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab?.provisionalNavigation = navigation
         tab?.refreshChrome()
         if let url = webView.url {
-            tab?.onNavigationStarted?(url)
+            tab?.events.onNavigationStarted?(url)
         }
     }
 
@@ -493,7 +493,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab.refreshChrome()
         tab.invalidateSessionState()
         guard tab.isShowingRealPage else {
-            tab.onNavigationFinished?(true)
+            tab.events.onNavigationFinished?(true)
             return
         }
         tab.didPresentContent()
@@ -504,7 +504,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab.restoreScrollOffsetIfNeeded()
         tab.probeReader()
         tab.offerTranslation()
-        tab.onNavigationFinished?(wasRestore || tab.isShowingError)
+        tab.events.onNavigationFinished?(wasRestore || tab.isShowingError)
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -552,5 +552,18 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         tab.isShowingError = true
         isLoadingErrorPage = true
         ErrorPage.show(error, in: webView, fallbackURL: fallback)
+    }
+}
+
+extension BrowserTab {
+    func movedWithinDocument(from previous: String) -> Bool {
+        guard isShowingRealPage, !isRestoring,
+              let url = webView.url, url == committedURL,
+              var before = URLComponents(string: previous),
+              var after = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        else { return false }
+        before.fragment = nil
+        after.fragment = nil
+        return before != after
     }
 }

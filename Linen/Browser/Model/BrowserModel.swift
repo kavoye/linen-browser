@@ -185,30 +185,30 @@ final class BrowserModel {
     }
 
     func bindCallbacks(to tab: BrowserTab) {
-        tab.onNavigationStarted = { [weak self, weak tab] url in
+        tab.events.onNavigationStarted = { [weak self, weak tab] url in
             guard let tab else { return }
             self?.onNavigationStarted?(tab, url)
         }
-        tab.onNavigationFinished = { [weak self, weak tab] wasRestore in
+        tab.events.onNavigationFinished = { [weak self, weak tab] wasRestore in
             self?.scheduleSave()
             guard !wasRestore, let tab, !tab.isPrivate else { return }
             self?.recordVisit(for: tab)
         }
-        tab.onSameDocumentNavigation = { [weak self] in
+        tab.events.onSameDocumentNavigation = { [weak self] in
             self?.scheduleSave()
         }
-        tab.onContentProcessTerminated = { [weak self, weak tab] in
+        tab.events.onContentProcessTerminated = { [weak self, weak tab] in
             guard let tab else { return }
             self?.onContentProcessTerminated?(tab)
         }
-        tab.isShown = { [weak self, weak tab] in
+        tab.events.isShown = { [weak self, weak tab] in
             guard let self, let tab else { return true }
             return activeTab === tab || isVisibleInSplit(tab)
         }
-        tab.onNavigationOutsideExtension = { [weak self] url in
+        tab.events.onNavigationOutsideExtension = { [weak self] url in
             self?.newTab(url: url)
         }
-        tab.onNewWindow = { [weak self, weak tab] view, activate in
+        tab.events.onNewWindow = { [weak self, weak tab] view, activate in
             let opened = self?.newTab(activate: activate, adopting: view, after: tab)
             if !activate {
                 self?.onTabAlert?(.openedInBackground)
@@ -216,7 +216,7 @@ final class BrowserModel {
             guard let self, let opened, let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }
-        tab.onOpenInNewTab = { [weak self, weak tab] url, activate in
+        tab.events.onOpenInNewTab = { [weak self, weak tab] url, activate in
             guard let self else { return }
             let opened = newTab(url: url, activate: activate, after: tab, transition: .link)
             if !activate {
@@ -225,37 +225,37 @@ final class BrowserModel {
             guard let tab, let origin = lastVisitID[tab.id] else { return }
             lastVisitID[opened.id] = origin
         }
-        tab.onOpenInNewWindow = { [weak self, weak tab] url, isPrivate, activate in
+        tab.events.onOpenInNewWindow = { [weak self, weak tab] url, isPrivate, activate in
             guard let tab, !tab.isClosed else { return }
             self?.onOpenInNewWindow?(tab, url, isPrivate, activate)
         }
-        tab.onOpenInPeek = { [weak self, weak tab] url, origin in
+        tab.events.onOpenInPeek = { [weak self, weak tab] url, origin in
             self?.onOpenInPeek?(tab, url, origin)
         }
-        tab.onSummarizeLink = { [weak self, weak tab] url, anchor in
+        tab.events.onSummarizeLink = { [weak self, weak tab] url, anchor in
             self?.onSummarizeLink?(tab, url, anchor)
         }
-        tab.onPageColorWillChange = { [weak self, weak tab] in
+        tab.events.onPageColorWillChange = { [weak self, weak tab] in
             guard let tab else { return }
             self?.onPageColorWillChange?(tab)
         }
-        tab.onCloseRequested = { [weak self, weak tab] in
+        tab.events.onCloseRequested = { [weak self, weak tab] in
             guard let tab else { return }
             self?.close(tab)
         }
-        tab.onPictureInPictureChanged = { [weak self, weak tab] isOut in
+        tab.events.onPictureInPictureChanged = { [weak self, weak tab] isOut in
             guard let tab else { return }
             self?.onPictureInPictureChanged?(tab, isOut)
         }
-        tab.onLinkHovered = { [weak self, weak tab] url, modifiers, anchor in
+        tab.events.onLinkHovered = { [weak self, weak tab] url, modifiers, anchor in
             guard let tab else { return }
             self?.onLinkHovered?(tab, url, modifiers, anchor)
         }
-        tab.onPictureReturnExpected = { [weak self, weak tab] in
+        tab.events.onPictureReturnExpected = { [weak self, weak tab] in
             guard let tab else { return }
             self?.onPictureReturnExpected?(tab)
         }
-        tab.onDownload = { [weak self, weak tab] download, source in
+        tab.events.onDownload = { [weak self, weak tab] download, source in
             self?.downloads.adopt(
                 download,
                 suggestedSource: source,
@@ -263,7 +263,7 @@ final class BrowserModel {
                 privately: tab?.isPrivate ?? false
             )
         }
-        tab.onSaveDocument = { [weak self, weak tab] data, filename, source, opensAfterSaving in
+        tab.events.onSaveDocument = { [weak self, weak tab] data, filename, source, opensAfterSaving in
             guard let self, let tab, !tab.isClosed else { return }
             let destination = await downloads.save(
                 data,
@@ -350,8 +350,8 @@ final class BrowserModel {
     /// Exclude peeked pages from the sidebar, saved session, and extensions until kept.
     func makePeekTab(_ url: URL) -> BrowserTab {
         let tab = makeTab(for: url)
-        tab.onOpenInPeek = nil
-        tab.onSummarizeLink = nil
+        tab.events.onOpenInPeek = nil
+        tab.events.onSummarizeLink = nil
         tab.load(url, transition: .link)
         return tab
     }

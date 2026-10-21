@@ -369,7 +369,7 @@ struct PrivateBrowsingTests {
         tab.urlString = "https://private.example/page"
         tab.title = "Secret"
 
-        tab.onNavigationFinished?(false)
+        tab.events.onNavigationFinished?(false)
 
         let visits = try database.writer.read { db in
             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM historyPage")
@@ -386,7 +386,7 @@ struct PrivateBrowsingTests {
         tab.urlString = "https://ordinary.example/page"
         tab.title = "Ordinary"
 
-        tab.onNavigationFinished?(false)
+        tab.events.onNavigationFinished?(false)
 
         let visits = try database.writer.read { db in
             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM historyPage")

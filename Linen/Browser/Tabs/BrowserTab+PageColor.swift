@@ -102,7 +102,7 @@ extension BrowserTab {
 
     private func setPageColor(_ color: NSColor?) {
         guard !Self.perceptuallyEqual(pageColor, color) else { return }
-        onPageColorWillChange?()
+        events.onPageColorWillChange?()
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) {

@@ -69,7 +69,7 @@ struct BrowserModelTests {
         let top = model.newTab()
         #expect(model.tabs.map(\.id) == [top.id, opener.id])
 
-        opener.onOpenInNewTab?(URL(string: "https://example.com/linked")!, false)
+        opener.events.onOpenInNewTab?(URL(string: "https://example.com/linked")!, false)
 
         #expect(model.tabs.count == 3)
         #expect(model.tabs[1] === opener)

@@ -85,8 +85,8 @@ struct PeekTests {
         let model = model()
         let peeked = model.makePeekTab(address)
 
-        #expect(peeked.onOpenInPeek == nil)
-        #expect(model.newTab().onOpenInPeek != nil)
+        #expect(peeked.events.onOpenInPeek == nil)
+        #expect(model.newTab().events.onOpenInPeek != nil)
     }
 
     @Test func theHeldPeekIsHandedOverOnlyOnce() {

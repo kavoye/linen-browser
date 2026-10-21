@@ -11,14 +11,6 @@ struct ExtensionPageHost {
     let icon: NSImage?
 }
 
-enum PageSecurity: Equatable {
-    case secure
-    case pending
-    case mixed
-    case insecure
-    case none
-}
-
 extension BrowserTab {
     enum InternalPage: String, Codable, CaseIterable {
         case history

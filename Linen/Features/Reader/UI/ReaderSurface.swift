@@ -108,7 +108,7 @@ struct ReaderSurface: View {
             block: highlightedBlock,
             onLoaded: { tab.retranslateShownSurface() },
             onOpenLink: { url, inNewTab, activate in
-                if inNewTab, let open = tab.onOpenInNewTab {
+                if inNewTab, let open = tab.events.onOpenInNewTab {
                     open(url, activate)
                 } else {
                     tab.load(url)

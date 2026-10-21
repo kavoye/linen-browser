@@ -191,7 +191,7 @@ struct PDFDownloadTests {
         ))
         tab.noteMainFrameResponse(response)
         var savedForPreview = false
-        tab.onSaveDocument = { data, filename, source, opensAfterSaving in
+        tab.events.onSaveDocument = { data, filename, source, opensAfterSaving in
             #expect(source == documentURL)
             #expect(data == self.bytes)
             #expect(opensAfterSaving)

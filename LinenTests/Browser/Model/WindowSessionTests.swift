@@ -97,7 +97,7 @@ struct WindowSessionTests {
         #expect(reopen(source).tabs.count == 1)
         #expect(reopen(destination).tabs.map(\.id) == [tab.id])
 
-        tab.onCloseRequested?()
+        tab.events.onCloseRequested?()
         #expect(destination.tabs.isEmpty)
         #expect(source.tabs.count == 1)
         #expect(!closed)

@@ -147,7 +147,7 @@ final class GeolocationBridge: NSObject {
 
         if request.isWatch {
             watches.append(request)
-            tab.onLocationRevoked = { [weak self, weak webView = request.webView] in
+            tab.events.onLocationRevoked = { [weak self, weak webView = request.webView] in
                 guard let webView else { return }
                 self?.stopWatches(for: webView)
             }

@@ -148,7 +148,7 @@ struct ProfileSwitchTests {
         #expect(coordinator.parkedModels[Profile.originalID] === browser)
         #expect(departingPeek.isClosed && visiblePeek.isClosed)
         #expect(coordinator.peek.tab == nil)
-        #expect(visiblePeek.onOpenInNewTab == nil)
+        #expect(visiblePeek.events.onOpenInNewTab == nil)
 
         await coordinator.switchProfile(to: .original())
 

@@ -154,7 +154,7 @@ struct NavigationPolicyTests {
     @Test func commandClickingALinkOpensATabInsteadOfNavigating() {
         let (tab, delegate) = subject()
         var opened: (URL, Bool)?
-        tab.onOpenInNewTab = { opened = ($0, $1) }
+        tab.events.onOpenInNewTab = { opened = ($0, $1) }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.command]
@@ -168,7 +168,7 @@ struct NavigationPolicyTests {
     @Test func commandShiftClickingAsksForTheTabToBeActivated() {
         let (tab, delegate) = subject()
         var opened: (URL, Bool)?
-        tab.onOpenInNewTab = { opened = ($0, $1) }
+        tab.events.onOpenInNewTab = { opened = ($0, $1) }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.command, .shift]
@@ -181,8 +181,8 @@ struct NavigationPolicyTests {
     @Test func commandOptionClickingOpensAWindowBehind() {
         let (tab, delegate) = subject()
         var opened: (URL, Bool, Bool)?
-        tab.onOpenInNewWindow = { opened = ($0, $1, $2) }
-        tab.onOpenInNewTab = { _, _ in Issue.record("command-option must not open a tab") }
+        tab.events.onOpenInNewWindow = { opened = ($0, $1, $2) }
+        tab.events.onOpenInNewTab = { _, _ in Issue.record("command-option must not open a tab") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.command, .option]
@@ -197,7 +197,7 @@ struct NavigationPolicyTests {
     @Test func commandOptionShiftClickingAsksForTheWindowToBeActivated() {
         let (tab, delegate) = subject()
         var opened: (URL, Bool, Bool)?
-        tab.onOpenInNewWindow = { opened = ($0, $1, $2) }
+        tab.events.onOpenInNewWindow = { opened = ($0, $1, $2) }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.command, .option, .shift]
@@ -219,8 +219,8 @@ struct NavigationPolicyTests {
     @Test func shiftClickingALinkPeeksAtIt() {
         let (tab, delegate) = subject()
         var peeked: URL?
-        tab.onOpenInPeek = { url, _ in peeked = url }
-        tab.onOpenInNewTab = { _, _ in Issue.record("shift alone must not open a tab") }
+        tab.events.onOpenInPeek = { url, _ in peeked = url }
+        tab.events.onOpenInNewTab = { _, _ in Issue.record("shift alone must not open a tab") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.shift]
@@ -232,8 +232,8 @@ struct NavigationPolicyTests {
 
     @Test func commandShiftIsATabRatherThanAPeek() {
         let (tab, delegate) = subject()
-        tab.onOpenInNewTab = { _, _ in }
-        tab.onOpenInPeek = { _, _ in Issue.record("command-shift must not peek") }
+        tab.events.onOpenInNewTab = { _, _ in }
+        tab.events.onOpenInPeek = { _, _ in Issue.record("command-shift must not peek") }
 
         _ = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, modifiers: [.command, .shift]
@@ -243,7 +243,7 @@ struct NavigationPolicyTests {
     @Test func middleClickingALinkOpensATabInTheBackground() {
         let (tab, delegate) = subject()
         var opened: (URL, Bool)?
-        tab.onOpenInNewTab = { opened = ($0, $1) }
+        tab.events.onOpenInNewTab = { opened = ($0, $1) }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated, button: Self.middleButton
@@ -257,8 +257,8 @@ struct NavigationPolicyTests {
     @Test func shiftMiddleClickingAsksForTheTabToBeActivated() {
         let (tab, delegate) = subject()
         var opened: (URL, Bool)?
-        tab.onOpenInNewTab = { opened = ($0, $1) }
-        tab.onOpenInPeek = { _, _ in Issue.record("shift with the middle button must not peek") }
+        tab.events.onOpenInNewTab = { opened = ($0, $1) }
+        tab.events.onOpenInPeek = { _, _ in Issue.record("shift with the middle button must not peek") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target",
@@ -273,7 +273,7 @@ struct NavigationPolicyTests {
 
     @Test func theMiddleButtonIsIgnoredWhenThePageNavigatesItself() {
         let (tab, delegate) = subject()
-        tab.onOpenInNewTab = { _, _ in Issue.record("a redirect must not open a tab") }
+        tab.events.onOpenInNewTab = { _, _ in Issue.record("a redirect must not open a tab") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .other, button: Self.middleButton
@@ -284,8 +284,8 @@ struct NavigationPolicyTests {
 
     @Test func modifiersAreIgnoredWhenThePageNavigatesItself() {
         let (tab, delegate) = subject()
-        tab.onOpenInNewTab = { _, _ in Issue.record("a redirect must not open a tab") }
-        tab.onOpenInPeek = { _, _ in Issue.record("a redirect must not peek") }
+        tab.events.onOpenInNewTab = { _, _ in Issue.record("a redirect must not open a tab") }
+        tab.events.onOpenInPeek = { _, _ in Issue.record("a redirect must not peek") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .other, modifiers: [.command, .shift]
@@ -296,7 +296,7 @@ struct NavigationPolicyTests {
 
     @Test func aPlainClickJustNavigates() {
         let (tab, delegate) = subject()
-        tab.onOpenInNewTab = { _, _ in Issue.record("a plain click must not open a tab") }
+        tab.events.onOpenInNewTab = { _, _ in Issue.record("a plain click must not open a tab") }
 
         let policy = decide(delegate, tab, action(
             "https://example.com/target", type: .linkActivated
@@ -401,7 +401,7 @@ struct NavigationPolicyTests {
 
     @Test func anExtensionPageMayMoveAroundItsOwnOrigin() {
         let (tab, delegate) = subject(extensionBase: Self.base)
-        tab.onNavigationOutsideExtension = { _ in Issue.record("its own origin is not outside") }
+        tab.events.onNavigationOutsideExtension = { _ in Issue.record("its own origin is not outside") }
 
         #expect(decide(delegate, tab, action("webkit-extension://abcdef/options.html")) == .allow)
     }
@@ -409,7 +409,7 @@ struct NavigationPolicyTests {
     @Test func anExtensionPageLeavingItsOriginIsHandedBackToTheBrowser() {
         let (tab, delegate) = subject(extensionBase: Self.base)
         var handedBack: URL?
-        tab.onNavigationOutsideExtension = { handedBack = $0 }
+        tab.events.onNavigationOutsideExtension = { handedBack = $0 }
 
         let policy = decide(delegate, tab, action("https://example.com/page"))
 
@@ -420,7 +420,7 @@ struct NavigationPolicyTests {
     @Test func anotherExtensionsOriginIsAlsoOutside() {
         let (tab, delegate) = subject(extensionBase: Self.base)
         var handedBack: URL?
-        tab.onNavigationOutsideExtension = { handedBack = $0 }
+        tab.events.onNavigationOutsideExtension = { handedBack = $0 }
 
         let policy = decide(delegate, tab, action("webkit-extension://ffffff/popup.html"))
 
@@ -430,14 +430,14 @@ struct NavigationPolicyTests {
 
     @Test func anExtensionPageKeepsItsBlankFrames() {
         let (tab, delegate) = subject(extensionBase: Self.base)
-        tab.onNavigationOutsideExtension = { _ in Issue.record("about: is not a destination") }
+        tab.events.onNavigationOutsideExtension = { _ in Issue.record("about: is not a destination") }
 
         #expect(decide(delegate, tab, action("about:blank")) == .allow)
     }
 
     @Test func anOrdinaryTabHasNoExtensionBoundaryToCross() {
         let (tab, delegate) = subject()
-        tab.onNavigationOutsideExtension = { _ in Issue.record("a web tab has no extension origin") }
+        tab.events.onNavigationOutsideExtension = { _ in Issue.record("a web tab has no extension origin") }
 
         #expect(decide(delegate, tab, action("https://example.com/page")) == .allow)
     }

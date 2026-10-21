@@ -28,9 +28,9 @@ struct ProfileHandoffTests {
         model.close(tab)
 
         #expect(tab.isClosed)
-        #expect(tab.onNavigationFinished == nil)
-        #expect(tab.onDownload == nil)
-        #expect(tab.onSaveDocument == nil)
+        #expect(tab.events.onNavigationFinished == nil)
+        #expect(tab.events.onDownload == nil)
+        #expect(tab.events.onSaveDocument == nil)
         #expect(tab.webView.navigationDelegate == nil)
         #expect(tab.webView.uiDelegate == nil)
     }
@@ -39,7 +39,7 @@ struct ProfileHandoffTests {
         let model = makeModel(.temporary())
         let tab = model.newTab()
         var deaths = 0
-        tab.onContentProcessTerminated = { deaths += 1 }
+        tab.events.onContentProcessTerminated = { deaths += 1 }
 
         tab.contentProcessDidTerminate()
         #expect(deaths == 1)
@@ -54,7 +54,7 @@ struct ProfileHandoffTests {
         let tab = model.newTab()
         tab.urlString = "https://example.com/"
         tab.title = "Example"
-        let reportFinished = tab.onNavigationFinished
+        let reportFinished = tab.events.onNavigationFinished
         #expect(reportFinished != nil)
 
         model.closeAllTabs()
@@ -99,7 +99,7 @@ struct ProfileHandoffTests {
         tab.urlString = "https://example.com/"
         tab.title = "Example"
 
-        tab.onNavigationFinished?(false)
+        tab.events.onNavigationFinished?(false)
 
         #expect(model.history.entries.map(\.url) == ["https://example.com/"])
     }
