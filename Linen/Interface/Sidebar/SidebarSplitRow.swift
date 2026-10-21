@@ -40,8 +40,8 @@ struct SidebarSplitRow: View {
     }
     @Environment(\.sidebarStyle) private var sidebarStyle
 
+    @State private var frameOwner = UUID()
     @State private var hoveringRow = false
-    @State private var windowFrame = SidebarRowAnchor()
 
     private var interaction: SplitRowInteraction {
         .mode(isOnScreen: isOnScreen)
@@ -112,19 +112,24 @@ struct SidebarSplitRow: View {
             .onHover { over in
                 withAnimation(Theme.Motion.quick) { hoveringRow = over }
                 if over {
-                    coordinator.tabPreview.hover(.split(split, panes), anchor: windowFrame.frame)
+                    coordinator.tabPreview.hover(
+                        .split(split, panes),
+                        anchor: context.frames.windowFrame(
+                            of: item,
+                            listOrigin: coordinator.sidebarDrag.listOriginInWindow
+                        ) ?? .zero
+                    )
                 } else {
                     coordinator.tabPreview.unhover(panes.first?.id ?? leading.id)
                 }
             }
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
-                context.frames.record(item, at: $0)
+                context.frames.record(item, at: $0, by: frameOwner)
             }
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-                windowFrame.frame = frame
-                coordinator.tabPreview.moved(panes.first?.id ?? leading.id, anchor: frame)
+            .onDisappear {
+                coordinator.tabPreview.unhover(panes.first?.id ?? leading.id)
+                context.frames.forget(item, recordedBy: frameOwner)
             }
-            .onDisappear { coordinator.tabPreview.unhover(panes.first?.id ?? leading.id) }
             .contextMenu { menu }
         }
     }
@@ -240,7 +245,7 @@ private struct SplitRowCell: View {
     }
 
     private var isFocused: Bool {
-        context.isActive(tab.id) && browser.isVisibleInSplit(tab)
+        context.isActive(tab) && browser.isVisibleInSplit(tab)
     }
 
     private var showsPinReturn: Bool {

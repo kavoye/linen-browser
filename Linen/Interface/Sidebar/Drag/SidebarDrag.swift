@@ -295,13 +295,30 @@ final class SidebarRowAnchor {
 
 final class SidebarFrames {
     private var slots: [SidebarItem: CGRect] = [:]
+    private var owners: [SidebarItem: UUID] = [:]
+    var contentOrigin: CGPoint = .zero
 
-    func record(_ item: SidebarItem, at frame: CGRect) {
+    func record(_ item: SidebarItem, at frame: CGRect, by owner: UUID? = nil) {
         slots[item] = frame
+        owners[item] = owner
+    }
+
+    func forget(_ item: SidebarItem, recordedBy owner: UUID) {
+        guard owners[item] == owner else { return }
+        slots[item] = nil
+        owners[item] = nil
     }
 
     subscript(item: SidebarItem) -> CGRect? {
-        slots[item]
+        slots[item].map(placed)
+    }
+
+    func windowFrame(of item: SidebarItem, listOrigin: CGPoint) -> CGRect? {
+        self[item]?.offsetBy(dx: listOrigin.x, dy: listOrigin.y)
+    }
+
+    private func placed(_ frame: CGRect) -> CGRect {
+        frame.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
     }
 
     func visible(in browser: BrowserModel) -> [SidebarItem: CGRect] {
@@ -329,6 +346,7 @@ final class SidebarFrames {
                 folderIDs.contains(id)
             }
         }
+        .mapValues(placed)
     }
 }
 
@@ -346,11 +364,11 @@ struct SidebarRowContext {
     var litTab: UUID?
     var isInteractive = true
 
-    func isActive(_ tabID: UUID) -> Bool {
+    func isActive(_ tab: BrowserTab) -> Bool {
         if let litTab {
-            return litTab == tabID
+            return litTab == tab.id
         }
-        return coordinator.sidebarDestination == .tab(tabID)
+        return tab.isSidebarActive
     }
 
     var refractsTabColor: Bool {
@@ -471,23 +489,38 @@ struct SidebarRows: View {
     let context: SidebarRowContext
     var parent: UUID?
     var ownsEnd = true
+    var seamAfter: SidebarItem?
 
     private var shown: [SidebarItem] {
-        guard context.isLeaving else { return items }
-        return items.filter { !context.isLifted($0) }
+        items.filter { item in
+            if context.isLeaving, context.isLifted(item) {
+                return false
+            }
+            switch item {
+            case .folder(let id):
+                return context.browser.folder(id: id) != nil
+            case .tab(let id):
+                return context.browser.tab(id: id) != nil && !context.browser.splits.isFollower(id)
+            }
+        }
     }
 
     var body: some View {
-        ForEach(Array(shown.enumerated()), id: \.element) { _, item in
-            if incoming(before: item) {
-                incomingMark
-            }
-            row(item)
-                .overlay {
-                    if let mark = context.dropMark(item) {
-                        SidebarDropMark(kind: mark, isArmed: true)
-                    }
+        ForEach(shown, id: \.self) { item in
+            VStack(spacing: depth == 0 ? 2 : 1) {
+                if incoming(before: item) {
+                    incomingMark
                 }
+                row(item)
+                    .overlay {
+                        if let mark = context.dropMark(item) {
+                            SidebarDropMark(kind: mark, isArmed: true)
+                        }
+                    }
+                if item == seamAfter {
+                    SidebarSectionSeam()
+                }
+            }
         }
         if ownsEnd, incoming(before: nil) {
             incomingMark

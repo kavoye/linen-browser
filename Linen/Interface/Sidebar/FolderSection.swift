@@ -9,6 +9,7 @@ struct FolderSection: View {
     let depth: Int
     let context: SidebarRowContext
 
+    @State private var frameOwner = UUID()
     @State private var isRenaming = false
     @State private var draftName = ""
     @FocusState private var renameFocused: Bool
@@ -16,7 +17,6 @@ struct FolderSection: View {
     @Environment(\.sidebarStyle) private var sidebarStyle
     @Environment(\.windowColorScheme) private var windowColorScheme
     @State private var hovering = false
-    @State private var windowFrame = SidebarRowAnchor()
 
     private var browser: BrowserModel {
         context.browser
@@ -143,19 +143,21 @@ struct FolderSection: View {
                     if over {
                         context.coordinator.tabPreview.hover(
                             .folder(folder, browser.tabs(in: folder)),
-                            anchor: windowFrame.frame
+                            anchor: context.frames.windowFrame(
+                                of: item,
+                                listOrigin: context.coordinator.sidebarDrag.listOriginInWindow
+                            ) ?? .zero
                         )
                     } else {
                         context.coordinator.tabPreview.unhover(folder.id)
                     }
                 }
-                .onDisappear { context.coordinator.tabPreview.unhover(folder.id) }
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
-                    context.frames.record(item, at: $0)
+                .onDisappear {
+                    context.coordinator.tabPreview.unhover(folder.id)
+                    context.frames.forget(item, recordedBy: frameOwner)
                 }
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-                    windowFrame.frame = frame
-                    context.coordinator.tabPreview.moved(folder.id, anchor: frame)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
+                    context.frames.record(item, at: $0, by: frameOwner)
                 }
                 .onTapGesture { tapped() }
                 .overlay {

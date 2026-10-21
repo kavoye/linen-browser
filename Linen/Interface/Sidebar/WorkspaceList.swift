@@ -6,6 +6,7 @@ import SwiftUI
 
 private nonisolated enum WorkspaceListCoordinateSpace {
     static let name = "sidebar-workspace"
+    static let content = "sidebar-workspace-content"
 }
 
 private enum SpringLoad {
@@ -97,7 +98,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             incoming: model.incoming,
             arriving: model.arriving,
             pinsCarried: pinsCarried,
-            space: WorkspaceListCoordinateSpace.name,
+            space: WorkspaceListCoordinateSpace.content,
             frames: frames
         )
     }
@@ -129,14 +130,14 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 2) {
+            LazyVStack(spacing: 2) {
                 let sections = sections
-                if !sections.kept.isEmpty {
-                    SidebarRows(items: sections.kept, depth: 0, context: context, ownsEnd: false)
-                    SidebarSectionSeam()
-                }
-
-                SidebarRows(items: sections.loose, depth: 0, context: context)
+                SidebarRows(
+                    items: sections.kept + sections.loose,
+                    depth: 0,
+                    context: context,
+                    seamAfter: sections.kept.last
+                )
 
                 Color.clear
                     .frame(height: 26 + bottomClearance)
@@ -147,6 +148,13 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
             }
             .padding(.leading, contentInsets.leading)
             .padding(.trailing, contentInsets.trailing)
+            .coordinateSpace(.named(WorkspaceListCoordinateSpace.content))
+            .onGeometryChange(for: CGPoint.self) {
+                $0.frame(in: .named(WorkspaceListCoordinateSpace.name)).origin
+            } action: { origin in
+                frames.contentOrigin = origin
+                followPreview()
+            }
             .opacity(coordinator.overlays.spaceSlide.isStaged ? 0 : 1)
             .animation(nil, value: coordinator.overlays.spaceSlide.isStaged)
         }
@@ -231,6 +239,17 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
 
     private func isExpanded(_ folderID: UUID) -> Bool {
         browser.folder(id: folderID)?.isExpanded ?? false
+    }
+
+    private func followPreview() {
+        guard let shown = coordinator.tabPreview.shown else { return }
+        let item: SidebarItem = if case .folder(let folder, _) = shown.subject {
+            .folder(folder.id)
+        } else {
+            .tab(shown.subject.id)
+        }
+        guard let anchor = frames.windowFrame(of: item, listOrigin: listOrigin) else { return }
+        coordinator.tabPreview.moved(shown.subject.id, anchor: anchor)
     }
 
     private var liveFrames: [SidebarItem: CGRect] {

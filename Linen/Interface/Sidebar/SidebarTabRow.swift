@@ -31,17 +31,21 @@ struct SidebarTabRow: View {
     private var isSelected: Bool {
         context.isSelected(item)
     }
+    private var windowAnchor: CGRect {
+        context.frames.windowFrame(of: item, listOrigin: coordinator.sidebarDrag.listOriginInWindow) ?? .zero
+    }
+
     private var isActive: Bool {
-        context.isActive(tab.id)
+        context.isActive(tab)
     }
 
     @Environment(\.sidebarStyle) private var sidebarStyle
+    @State private var frameOwner = UUID()
     @State private var hovering = false
     @State private var returnHovering = false
     @State private var isRenaming = false
     @State private var draftTitle = ""
     @FocusState private var renameFocused: Bool
-    @State private var windowFrame = SidebarRowAnchor()
     @State private var controlsWidth: CGFloat = 0
 
     private var showsTrailingControls: Bool {
@@ -266,11 +270,7 @@ struct SidebarTabRow: View {
             row
             .contentShape(Rectangle())
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(context.space)) } action: {
-                context.frames.record(item, at: $0)
-            }
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-                windowFrame.frame = frame
-                coordinator.tabPreview.moved(tab.id, anchor: frame)
+                context.frames.record(item, at: $0, by: frameOwner)
             }
             .onTapGesture { tapped() }
             .onMiddleClick {
@@ -280,12 +280,15 @@ struct SidebarTabRow: View {
             .onHover { over in
                 withAnimation(Theme.Motion.quick) { hovering = over }
                 if over, !isRenaming {
-                    coordinator.tabPreview.hover(tab, anchor: windowFrame.frame)
+                    coordinator.tabPreview.hover(tab, anchor: windowAnchor)
                 } else {
                     coordinator.tabPreview.unhover(tab.id)
                 }
             }
-            .onDisappear { coordinator.tabPreview.unhover(tab.id) }
+            .onDisappear {
+                coordinator.tabPreview.unhover(tab.id)
+                context.frames.forget(item, recordedBy: frameOwner)
+            }
             .contextMenu {
                 if selected.isEmpty {
                     menu
@@ -296,12 +299,23 @@ struct SidebarTabRow: View {
         }
     }
 
-    @ViewBuilder
     private var menu: some View {
+        SidebarTabMenuItems(tab: tab, item: item, browser: browser, coordinator: coordinator, onRename: beginRename)
+    }
+}
+
+private struct SidebarTabMenuItems: View {
+    let tab: BrowserTab
+    let item: SidebarItem
+    let browser: BrowserModel
+    let coordinator: AppCoordinator
+    let onRename: () -> Void
+
+    var body: some View {
         SidebarLinkMenuItems(tabs: [tab], coordinator: coordinator)
 
         Button {
-            beginRename()
+            onRename()
         } label: {
             Label("Rename", systemImage: "pencil")
         }

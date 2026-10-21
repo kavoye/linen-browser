@@ -14,7 +14,9 @@ import WebKit
 final class BrowserModel {
     let windowID: UUID
     var context: BrowserProfileContext = .shared(for: .original())
-    var tabs: [BrowserTab] = []
+    var tabs: [BrowserTab] = [] {
+        didSet { refreshSidebarActive() }
+    }
     var folders: [TabFolder] = []
     var storedTree = SidebarTree()
     var history: HistoryStore
@@ -68,6 +70,7 @@ final class BrowserModel {
             if let activeTabID {
                 noteActivation(activeTabID)
             }
+            refreshSidebarActive()
             let previous = oldValue.flatMap { id in tabs.first { $0.id == id } }
             previous?.isFrontmost = false
             activeTab?.isFrontmost = true
@@ -119,6 +122,7 @@ final class BrowserModel {
     private(set) var currentSpaceID: UUID? {
         didSet {
             guard oldValue != currentSpaceID else { return }
+            refreshSidebarActive()
             sidebarDidChange()
         }
     }
@@ -455,7 +459,19 @@ final class BrowserModel {
     var sidebarTree = SidebarTree()
     var spaceRoots: [UUID: [SidebarItem]] = [:]
 
-    var tabsByID: [UUID: BrowserTab] = [:]
+    var tabsByID: [UUID: BrowserTab] = [:] {
+        didSet { refreshSidebarActive() }
+    }
+
+    @ObservationIgnored private weak var sidebarActiveTab: BrowserTab?
+
+    private func refreshSidebarActive() {
+        let active = activeTab
+        guard active !== sidebarActiveTab else { return }
+        sidebarActiveTab?.isSidebarActive = false
+        active?.isSidebarActive = true
+        sidebarActiveTab = active
+    }
     var foldersByID: [UUID: TabFolder] = [:]
 
     @ObservationIgnored var saveTask: Task<Void, Never>?
