@@ -8,13 +8,18 @@ struct WebsiteDataPage: View {
     let dataStore: WKWebsiteDataStore
     let onBack: () -> Void
 
-    @State private var entries: [WebsiteData.Entry] = []
+    @State private var snapshot: WebsiteData.Snapshot?
+    @State private var removing: Set<String> = []
     @State private var query = ""
     @State private var isLoading = true
     @State private var removingName: String?
     @State private var confirmingRemoveAll = false
 
     @FocusState private var searchFocused: Bool
+
+    private var entries: [WebsiteData.Entry] {
+        snapshot?.entries ?? []
+    }
 
     private var shown: [WebsiteData.Entry] {
         entries.filter { WebsiteData.matches($0, query: query) }
@@ -66,14 +71,17 @@ struct WebsiteDataPage: View {
                 )
             } else {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { index, entry in
-                    if index > 0 {
-                        RowSeparator()
-                    }
                     SiteRow(host: entry.displayName, summary: entry.summary) {
-                        SettingsButton(title: "Remove…", isDestructive: true) {
-                            removingName = entry.displayName
+                        if removing.contains(entry.displayName) {
+                            Spinner(size: 12)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            SettingsButton(title: "Remove…", isDestructive: true) {
+                                removingName = entry.displayName
+                            }
                         }
                     }
+                    .separated(above: index > 0)
                 }
             }
         })
@@ -119,12 +127,15 @@ struct WebsiteDataPage: View {
     }
 
     private func reload() async {
-        entries = await WebsiteData.entries(in: dataStore)
+        snapshot = await WebsiteData.snapshot(of: dataStore)
         isLoading = false
     }
 
     private func remove(_ names: Set<String>) async {
-        await WebsiteData.remove(names, from: dataStore)
-        await reload()
+        guard let snapshot else { return }
+        removing.formUnion(names)
+        await WebsiteData.remove(names, of: snapshot, from: dataStore)
+        self.snapshot = self.snapshot?.removing(names)
+        removing.subtract(names)
     }
 }

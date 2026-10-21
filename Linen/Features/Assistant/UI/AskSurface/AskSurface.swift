@@ -128,15 +128,8 @@ struct AskSurface: View {
             )
         }
         .overlay(alignment: .top) {
-            if model.placement == .toolbar, let tab = model.browser.activeTab {
-                AddressLoadingIndicator(
-                    progress: tab.progress,
-                    isLoading: tab.isLoading,
-                    isSuppressed: model.isFocused || model.pendingQuestion != nil
-                )
-                .id(tab.id)
-                .frame(height: max(model.placement.rowHeight, model.interaction.rowHeight))
-                .clipShape(RoundedRectangle(cornerRadius: model.placement.cornerRadius, style: .continuous))
+            if model.placement == .toolbar {
+                AskSurfaceLoadingLine(model: model)
             }
         }
         .transformEnvironment(\.colorScheme) { if model.isPrivate { $0 = .dark } }
@@ -176,5 +169,22 @@ struct AskSurface: View {
             return .agent
         }
         return nil
+    }
+}
+
+private struct AskSurfaceLoadingLine: View {
+    let model: AskSurfaceModel
+
+    var body: some View {
+        if let tab = model.browser.activeTab {
+            AddressLoadingIndicator(
+                progress: tab.progress,
+                isLoading: tab.isLoading,
+                isSuppressed: model.isFocused || model.pendingQuestion != nil
+            )
+            .id(tab.id)
+            .frame(height: max(model.placement.rowHeight, model.interaction.rowHeight))
+            .clipShape(RoundedRectangle(cornerRadius: model.placement.cornerRadius, style: .continuous))
+        }
     }
 }

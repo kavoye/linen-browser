@@ -358,6 +358,7 @@ extension EnvironmentValues {
     @Entry var settingsCardInset: CGFloat = 0
 
     @Entry var settingsSectionLit = false
+    @Entry var settingsSurfaceIsFlat = false
 }
 
 extension View {

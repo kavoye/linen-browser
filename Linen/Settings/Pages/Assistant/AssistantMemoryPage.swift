@@ -58,7 +58,8 @@ struct AssistantMemoryPage: View {
             .padding(.top, 12)
         }
 
-        SettingsCard {
+        SettingsList {
+            let shown = shown
             if memory.facts.isEmpty {
                 SettingsEmptyState(
                     symbol: "square.and.pencil",
@@ -69,10 +70,8 @@ struct AssistantMemoryPage: View {
                 SettingsEmptyState(symbol: "magnifyingglass", title: "No matches", caption: "Try a different word.")
             } else {
                 ForEach(Array(shown.enumerated()), id: \.element.id) { index, fact in
-                    if index > 0 {
-                        RowSeparator()
-                    }
                     row(for: fact)
+                        .separated(above: index > 0)
                 }
             }
         }

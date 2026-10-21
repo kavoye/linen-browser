@@ -200,6 +200,21 @@ struct FaviconLoaderTests {
         #expect(stub.responses.requestCount == 1)
     }
 
+    @Test func aHostWithoutAnIconIsNotAskedAgain() async throws {
+        let directory = makeDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let stub = StubIconProtocol.fixture(payload: Data("not an icon".utf8))
+        defer { stub.close() }
+        let loader = FaviconLoader(cacheDirectory: directory, session: stub.session)
+
+        #expect(await loader.load(forHost: "example.com") == nil)
+        #expect(await loader.load(forHost: "example.com") == nil)
+        #expect(stub.responses.requestCount == 1)
+
+        loader.store(try iconData(), forHost: "example.com")
+        #expect(await loader.load(forHost: "example.com") != nil)
+    }
+
     @Test func invalidImageDataIsNotCached() {
         let directory = makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

@@ -5,7 +5,7 @@ import Foundation
 import WebKit
 
 enum WebsiteData {
-    enum Facet: String, CaseIterable, Identifiable, Hashable, Sendable {
+    nonisolated enum Facet: String, CaseIterable, Identifiable, Hashable, Sendable {
         case cookies
         case storage
         case serviceWorkers
@@ -56,34 +56,70 @@ enum WebsiteData {
         }
     }
 
-    static let allTypes: Set<String> = Facet.allCases.reduce(into: Set<String>()) {
+    nonisolated static let allTypes: Set<String> = Facet.allCases.reduce(into: Set<String>()) {
         $0.formUnion($1.types)
     }
 
-    struct Entry: Identifiable, Equatable, Sendable {
+    nonisolated struct Entry: Identifiable, Equatable, Sendable {
         let displayName: String
         let types: Set<String>
+        let facets: [Facet]
+        let summary: String
+
+        init(displayName: String, types: Set<String>) {
+            self.displayName = displayName
+            self.types = types
+            facets = Facet.facets(in: types)
+            summary = facets
+                .map { String(localized: $0.listName) }
+                .formatted(.list(type: .and, width: .narrow))
+        }
 
         var id: String {
             displayName
         }
+    }
 
-        var facets: [Facet] {
-            Facet.facets(in: types)
-        }
+    nonisolated struct RecordSummary: Sendable {
+        let displayName: String
+        let types: Set<String>
+    }
 
-        var summary: String {
-            facets
-                .map { String(localized: $0.listName) }
-                .formatted(.list(type: .and, width: .narrow))
+    struct Snapshot {
+        let entries: [Entry]
+        fileprivate let records: [String: [WKWebsiteDataRecord]]
+
+        func removing(_ names: Set<String>) -> Snapshot {
+            Snapshot(
+                entries: entries.filter { !names.contains($0.displayName) },
+                records: records.filter { !names.contains($0.key) }
+            )
         }
     }
 
-    static func entries(in store: WKWebsiteDataStore) async -> [Entry] {
-        await store.dataRecords(ofTypes: allTypes)
-            .map { Entry(displayName: $0.displayName, types: $0.dataTypes) }
+    @concurrent
+    nonisolated static func entries(from records: [RecordSummary]) async -> [Entry] {
+        records
+            .map { Entry(displayName: $0.displayName, types: $0.types) }
             .filter { !$0.facets.isEmpty }
-            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+            .map { ($0, $0.displayName) }
+            .sorted { $0.1.localizedStandardCompare($1.1) == .orderedAscending }
+            .map(\.0)
+    }
+
+    static func snapshot(of store: WKWebsiteDataStore) async -> Snapshot {
+        let records = await store.dataRecords(ofTypes: allTypes)
+        let summaries = records.map { RecordSummary(displayName: $0.displayName, types: $0.dataTypes) }
+        return Snapshot(
+            entries: await entries(from: summaries),
+            records: Dictionary(grouping: records, by: \.displayName)
+        )
+    }
+
+    static func remove(_ names: Set<String>, of snapshot: Snapshot, from store: WKWebsiteDataStore) async {
+        let records = names.flatMap { snapshot.records[$0] ?? [] }
+        guard !records.isEmpty else { return }
+        await store.removeData(ofTypes: allTypes, for: records)
     }
 
     static func remove(_ names: Set<String>, from store: WKWebsiteDataStore) async {

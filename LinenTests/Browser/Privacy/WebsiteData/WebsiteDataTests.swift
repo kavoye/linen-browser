@@ -83,4 +83,31 @@ struct WebsiteDataTests {
         #expect(WebsiteData.matches(github, query: ""))
         #expect(WebsiteData.matches(github, query: "   "))
     }
+
+    @Test func theListKeepsDescribableSitesInNameOrder() async {
+        let entries = await WebsiteData.entries(from: [
+            .init(displayName: "zeta.com", types: [WKWebsiteDataTypeCookies]),
+            .init(displayName: "Alpha.com", types: [WKWebsiteDataTypeDiskCache]),
+            .init(displayName: "odd.com", types: ["com.example.somethingElse"]),
+        ])
+        #expect(entries.map(\.displayName) == ["Alpha.com", "zeta.com"])
+        #expect(entries.first?.summary.contains("cached files") == true)
+    }
+
+    @MainActor
+    @Test func removingASiteDropsOnlyItsRowWithoutCountingAgain() async throws {
+        let store = WKWebsiteDataStore.nonPersistent()
+        for host in ["keep.example", "drop.example"] {
+            let cookie = try #require(HTTPCookie(properties: [
+                .domain: host, .path: "/", .name: "session", .value: "1",
+            ]))
+            await store.httpCookieStore.setCookie(cookie)
+        }
+        let snapshot = await WebsiteData.snapshot(of: store)
+        #expect(snapshot.entries.map(\.displayName) == ["drop.example", "keep.example"])
+
+        await WebsiteData.remove(["drop.example"], of: snapshot, from: store)
+        #expect(snapshot.removing(["drop.example"]).entries.map(\.displayName) == ["keep.example"])
+        #expect(await WebsiteData.snapshot(of: store).entries.map(\.displayName) == ["keep.example"])
+    }
 }

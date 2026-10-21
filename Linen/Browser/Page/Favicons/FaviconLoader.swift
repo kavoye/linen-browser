@@ -33,6 +33,14 @@ final class FaviconLoader {
     private static let guessExtension = "guess"
 
     private var guessed: Set<String> = []
+    private var missing: [String: Date] = [:]
+    private var notOnDisk: Set<String> = []
+    private static let missingRetry: TimeInterval = 15 * 60
+
+    private func isMissing(_ key: String) -> Bool {
+        guard let since = missing[key] else { return false }
+        return Date().timeIntervalSince(since) < Self.missingRetry
+    }
 
     enum IconScheme: String {
         case light
@@ -62,11 +70,17 @@ final class FaviconLoader {
         sessionOnly.removeAll()
     }
 
+    func memoryCached(for host: String) -> NSImage? {
+        let key = key(host)
+        return sessionOnly[key] ?? cache[key]
+    }
+
     func cached(for host: String) -> NSImage? {
         let key = key(host)
         if let image = sessionOnly[key] ?? cache[key] {
             return image
         }
+        guard !isMissing(key), !notOnDisk.contains(key) else { return nil }
 
         for isGuess in [false, true] {
             let file = cacheFile(for: key, isGuess: isGuess)
@@ -79,6 +93,7 @@ final class FaviconLoader {
             }
             return image
         }
+        notOnDisk.insert(key)
         return nil
     }
 
@@ -91,6 +106,8 @@ final class FaviconLoader {
         cache[key] = nil
         sessionOnly[key] = nil
         guessed.remove(key)
+        missing[key] = nil
+        notOnDisk.remove(key)
         try? FileManager.default.removeItem(at: cacheFile(for: key))
         try? FileManager.default.removeItem(at: cacheFile(for: key, isGuess: true))
     }
@@ -114,10 +131,16 @@ final class FaviconLoader {
         if let hit = cached(for: host) {
             return hit
         }
+        let key = key(host)
+        guard !isMissing(key) else { return nil }
 
-        return await coalesced(key: key(host)) { [weak self] in
+        let image = await coalesced(key: key) { [weak self] in
             await self?.fetchAndCache(url, forHost: host, isGuess: true)
         }
+        if image == nil, cached(for: host) == nil {
+            missing[key] = Date()
+        }
+        return image
     }
 
     nonisolated private static func fallbackURL(for pageURL: URL) -> URL? {
@@ -246,6 +269,8 @@ final class FaviconLoader {
         cache.removeAll()
         sessionOnly.removeAll()
         guessed.removeAll()
+        missing.removeAll()
+        notOnDisk.removeAll()
         guard let files = try? FileManager.default.contentsOfDirectory(
             at: cacheDirectory,
             includingPropertiesForKeys: [.contentModificationDateKey],
@@ -277,6 +302,8 @@ final class FaviconLoader {
               Self.carriesAnImage(data) else { return nil }
 
         let key = key(host)
+        missing[key] = nil
+        notOnDisk.remove(key)
         if isGuess {
             guessed.insert(key)
         } else {

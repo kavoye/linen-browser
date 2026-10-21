@@ -31,6 +31,7 @@ struct DownloadsView: View {
                 } else {
                     ForEach(downloads.items) { item in
                         DownloadFileRow(item: item, downloads: downloads)
+                            .equatable()
                     }
                 }
             }
@@ -70,9 +71,13 @@ struct DownloadsView: View {
     }
 }
 
-private struct DownloadFileRow: View {
+private struct DownloadFileRow: View, Equatable {
     let item: DownloadManager.Item
     let downloads: DownloadManager
+
+    static func == (lhs: DownloadFileRow, rhs: DownloadFileRow) -> Bool {
+        lhs.item == rhs.item && lhs.downloads === rhs.downloads
+    }
 
     @State private var hovering = false
 

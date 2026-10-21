@@ -52,13 +52,14 @@ struct ReleaseNotesView: View {
             .padding(.horizontal, 12)
             .padding(.top, 28)
         } else {
-            VStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(notes.releases.enumerated()), id: \.element.id) { index, release in
-                    if index > 0 {
-                        RowSeparator()
-                            .padding(.vertical, 20)
-                    }
-                    ReleaseNotesSection(release: release, isRunning: notes.isRunning(release))
+                    ReleaseNotesSection(
+                        release: release,
+                        isRunning: notes.isRunning(release),
+                        isFirst: index == 0
+                    )
+                    .equatable()
                 }
             }
             .padding(.horizontal, 12)
@@ -76,15 +77,26 @@ struct ReleaseNotesView: View {
     }
 }
 
-private struct ReleaseNotesSection: View {
+private struct ReleaseNotesSection: View, Equatable {
     let release: GitHubRelease
     let isRunning: Bool
+    let isFirst: Bool
 
     private var notes: String {
         (release.body ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if !isFirst {
+                RowSeparator()
+                    .padding(.vertical, 20)
+            }
+            details
+        }
+    }
+
+    private var details: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 7) {

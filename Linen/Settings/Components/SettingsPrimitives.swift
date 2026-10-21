@@ -50,7 +50,35 @@ extension View {
         isLifted: Bool = false,
         in shape: S
     ) -> some View {
-        controlGlassSurface(isActive: isActive, tint: tint, isLifted: isLifted, in: shape)
+        modifier(SettingsSurface(isActive: isActive, tint: tint, isLifted: isLifted, shape: shape))
+    }
+}
+
+private struct SettingsSurface<S: InsettableShape>: ViewModifier {
+    let isActive: Bool
+    let tint: Color?
+    let isLifted: Bool
+    let shape: S
+
+    @Environment(\.settingsSurfaceIsFlat) private var isFlat
+
+    private var wash: Color {
+        (tint ?? .primary).opacity(isActive ? 0.07 : 0.04)
+    }
+
+    private var outline: Color {
+        (tint ?? .primary).opacity(isActive ? 0.20 : 0.12)
+    }
+
+    func body(content: Content) -> some View {
+        if isFlat {
+            content
+                .background(shape.fill(wash))
+                .overlay { shape.strokeBorder(outline, lineWidth: 1) }
+                .contentShape(shape)
+        } else {
+            content.controlGlassSurface(isActive: isActive, tint: tint, isLifted: isLifted, in: shape)
+        }
     }
 }
 
@@ -363,6 +391,17 @@ struct DetailRow<Content: View>: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+}
+
+extension View {
+    func separated(above: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if above {
+                RowSeparator()
+            }
+            self
         }
     }
 }

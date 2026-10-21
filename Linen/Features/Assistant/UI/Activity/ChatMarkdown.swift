@@ -16,16 +16,23 @@ struct ChatMarkdown: View {
     }
 
     var body: some View {
+        if let onOpenLink {
+            content
+                .environment(\.openURL, OpenURLAction { url in
+                    onOpenLink(url)
+                    return .handled
+                })
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: spacing) {
             ForEach(blocks) { block in
                 row(block)
             }
         }
-        .environment(\.openURL, OpenURLAction { url in
-            guard let onOpenLink else { return .systemAction }
-            onOpenLink(url)
-            return .handled
-        })
     }
 
     @ViewBuilder

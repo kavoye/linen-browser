@@ -175,9 +175,15 @@ enum SiteSettingsIndex {
             byOrigin[origin] = found
         }
 
+        var originsByHost = Dictionary(grouping: byOrigin.values, by: \.host).mapValues { $0.map(\.origin) }
+
         func origins(forHost host: String) -> [String] {
-            let matching = byOrigin.keys.filter { self.host(of: $0) == host }
-            return matching.isEmpty ? ["https://\(host)"] : Array(matching)
+            if let known = originsByHost[host] {
+                return known
+            }
+            let made = "https://\(host)"
+            originsByHost[host] = [made]
+            return [made]
         }
 
         for host in exemptHosts.map(ContentBlocker.normalized) {
@@ -199,8 +205,8 @@ enum SiteSettingsIndex {
 
         return byOrigin.values
             .filter { !$0.isEmpty }
-            .sorted { left, right in
-                left.displayName.localizedStandardCompare(right.displayName) == .orderedAscending
-            }
+            .map { ($0, $0.displayName) }
+            .sorted { $0.1.localizedStandardCompare($1.1) == .orderedAscending }
+            .map(\.0)
     }
 }

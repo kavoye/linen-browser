@@ -55,26 +55,28 @@ struct RemoteSiteBadge: View {
     let host: String
     let size: CGFloat
 
-    @State private var icon: NSImage?
+    @State private var loaded: (host: String, icon: NSImage)?
 
     var body: some View {
-        Group {
-            if let icon {
-                FaviconImage(image: icon)
-                    .clipShape(RoundedRectangle(cornerRadius: size / 5, style: .continuous))
-            } else {
-                Image(systemName: "globe")
-                    .font(.system(size: size * 0.75))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .frame(width: size, height: size)
-        .task(id: host) {
-            if let cached = favicons.cached(for: host) {
-                icon = cached
-            } else {
-                icon = await favicons.load(forHost: host)
-            }
+        if let icon = favicons.memoryCached(for: host) ?? loaded.flatMap({ $0.host == host ? $0.icon : nil }) {
+            FaviconImage(image: icon)
+                .clipShape(RoundedRectangle(cornerRadius: size / 5, style: .continuous))
+                .frame(width: size, height: size)
+        } else {
+            Image(systemName: "globe")
+                .font(.system(size: size * 0.75))
+                .foregroundStyle(.tertiary)
+                .frame(width: size, height: size)
+                .task(id: host) {
+                    let icon = if let cached = favicons.cached(for: host) {
+                        cached
+                    } else {
+                        await favicons.load(forHost: host)
+                    }
+                    if let icon {
+                        loaded = (host, icon)
+                    }
+                }
         }
     }
 }

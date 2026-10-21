@@ -67,7 +67,7 @@ struct PasswordSettings: View {
             }
         }
         AutofillSavePromptReset(kind: .password, profileID: model.profileID)
-        SettingsSection(title: "Saved passwords", symbol: "key", accessory: {
+        SettingsSection(title: "Saved passwords", symbol: "key", isLongList: true, accessory: {
             HStack(spacing: 10) {
                 if model.isLoaded, !model.entries.isEmpty {
                     ToolbarSearchField(query: $query, placeholder: "Search passwords")
@@ -77,14 +77,15 @@ struct PasswordSettings: View {
             }
         }, content: {
             if model.isLoaded {
+                let shown = model.entries.filter {
+                    query.isEmpty || $0.origin.localizedCaseInsensitiveContains(query) || $0.username.localizedCaseInsensitiveContains(query)
+                }
                 if model.entries.isEmpty {
                     SettingsEmptyState(symbol: "key", title: "No saved passwords", caption: "Save a login to see it here.")
-                } else if !query.isEmpty, !model.entries.contains(where: {
-                    $0.origin.localizedCaseInsensitiveContains(query) || $0.username.localizedCaseInsensitiveContains(query)
-                }) {
+                } else if shown.isEmpty {
                     SettingsEmptyState(symbol: "magnifyingglass", title: "No matches", caption: "No passwords match your search.")
                 }
-                ForEach(model.entries.filter { query.isEmpty || $0.origin.localizedCaseInsensitiveContains(query) || $0.username.localizedCaseInsensitiveContains(query) }) { entry in
+                ForEach(shown) { entry in
                     SiteRow(host: entry.origin, summary: entry.username) {
                         HStack(spacing: 8) {
                             Button("Edit…") { Task { editing = await model.password(entry.id) } }
