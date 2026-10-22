@@ -345,9 +345,7 @@ final class BrowserModel {
         let transition = tab.awaitsVisit ? tab.pendingTransition : transition ?? tab.pendingTransition
         tab.noteNavigationEnded()
         let previous = lastVisitID[tab.id]
-        let trail = continuesTrail(from: previous, to: tab.urlString, transition: transition)
-            ? visitTrail[tab.id]
-            : nil
+        let trail = continuesTrail(from: previous, to: tab.urlString) ? visitTrail[tab.id] : nil
         let visitID = history.record(
             url: tab.urlString,
             title: tab.title,
@@ -360,10 +358,8 @@ final class BrowserModel {
         visitTrail[tab.id] = trail ?? visitID
     }
 
-    private func continuesTrail(from visit: Int64?, to url: String, transition: HistoryStore.Transition) -> Bool {
-        guard let visit else { return false }
-        guard transition == .typed else { return true }
-        guard let previous = history.visits.first(where: { $0.id == visit }) else { return false }
+    private func continuesTrail(from visit: Int64?, to url: String) -> Bool {
+        guard let visit, let previous = history.visits.first(where: { $0.id == visit }) else { return false }
         return Self.site(of: previous.url) == Self.site(of: url)
     }
 

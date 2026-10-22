@@ -571,15 +571,19 @@ struct BrowserModelTests {
         tab.events.onNavigationFinished?(false)
     }
 
-    @Test func aTabsJourneyIsOneTrail() {
+    @Test func aTrailStaysInsideOneSite() {
         let model = makeModel()
         let tab = model.newTab()
         visit(tab, "https://jira.example/board", .typed)
         visit(tab, "https://jira.example/browse/1")
         visit(tab, "https://jira.example/browse/1", .reload)
         visit(tab, "https://docs.example/spec")
+        visit(tab, "https://jira.example/browse/1", .backForward)
 
-        #expect(Set(model.history.visits.map(\.trail)).count == 1)
+        let trails = model.history.visits.map(\.trail)
+        #expect(Set(trails[2...]).count == 1)
+        #expect(trails[1] != trails[2], "a link to another site starts a trail")
+        #expect(trails[0] != trails[1] && trails[0] != trails[2], "going back to a site starts a trail")
     }
 
     @Test func aNewTabStartsANewTrail() {
