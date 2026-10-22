@@ -21,7 +21,7 @@ struct GitHubFilterPicker: View {
             }
             .font(Theme.Font.control.weight(.semibold))
             .padding(.horizontal, 7).padding(.vertical, 5)
-            .background(presented || hovering ? Theme.Wash.hover : .clear, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
+            .hoverSheet(isActive: presented || hovering, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -49,6 +49,7 @@ struct GitHubFilterMenu: View {
     let onDismiss: () -> Void
     @State private var search = ""
     @State private var highlightedID: String?
+    @State private var pointerHighlighted = false
     @FocusState private var searchFocused: Bool
 
     private var matches: [GitHubFilter] {
@@ -82,7 +83,12 @@ struct GitHubFilterMenu: View {
                             GitHubFilterMenuRow(
                                 filter: filter, selected: selectedID == filter.id, highlighted: highlightedID == filter.id,
                                 canDelete: filters.count > 2,
-                                onSelect: { onSelect(filter.id) }, onEdit: { onEdit(filter) }, onDelete: { onDelete(filter.id) }
+                                onSelect: { onSelect(filter.id) }, onEdit: { onEdit(filter) }, onDelete: { onDelete(filter.id) },
+                                onPointer: {
+                                    guard highlightedID != filter.id else { return }
+                                    pointerHighlighted = true
+                                    highlightedID = filter.id
+                                }
                             )
                             .id(filter.id)
                             if filter.id == GitHubFilter.inboxID, filter.id != matches.last?.id {
@@ -98,9 +104,10 @@ struct GitHubFilterMenu: View {
                 }
                 .frame(height: min(300, CGFloat(max(matches.count, 1)) * 50))
                 .onChange(of: highlightedID) { _, id in
-                    if let id {
+                    if let id, !pointerHighlighted {
                         proxy.scrollTo(id)
                     }
+                    pointerHighlighted = false
                 }
             }
             Divider().padding(.horizontal, 10)
@@ -136,6 +143,7 @@ private struct GitHubFilterMenuRow: View {
     let onSelect: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
+    let onPointer: () -> Void
     @State private var hovering = false
 
     private var editable: Bool {
@@ -173,9 +181,11 @@ private struct GitHubFilterMenuRow: View {
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(highlighted || hovering ? Theme.Wash.selection : .clear,
-                    in: RoundedRectangle(cornerRadius: Theme.Radius.control))
-        .onHover { hovering = $0 }
+        .hoverSheet(isActive: highlighted, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
+        .onHover { over in
+            hovering = over
+            if over { onPointer() }
+        }
         .contextMenu {
             if editable {
                 actions
