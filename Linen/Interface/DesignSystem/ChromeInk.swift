@@ -61,7 +61,9 @@ struct HoverSheet<S: InsettableShape>: View {
     }
 
     private var fill: Color {
-        if let tint { return tint.opacity(0.14) }
+        if let tint {
+            return tint.opacity(0.14)
+        }
         return isLight ? .white.opacity(0.85) : Color(white: 0.26).opacity(0.85)
     }
 

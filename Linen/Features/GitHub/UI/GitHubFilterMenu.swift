@@ -184,7 +184,9 @@ private struct GitHubFilterMenuRow: View {
         .hoverSheet(isActive: highlighted, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
         .onHover { over in
             hovering = over
-            if over { onPointer() }
+            if over {
+                onPointer()
+            }
         }
         .contextMenu {
             if editable {
