@@ -4,7 +4,7 @@
 import AppKit
 import SwiftUI
 
-private struct StartPageSurface<S: Shape>: ViewModifier {
+private struct StartPageSurface<S: InsettableShape>: ViewModifier {
     let isHovering: Bool
     let shape: S
 
@@ -18,23 +18,21 @@ private struct StartPageSurface<S: Shape>: ViewModifier {
         ChromeInk.wash(onLight: onLight, opacity: onLight ? 0.025 : 0.04)
     }
 
-    private var hoverFill: AnyShapeStyle {
-        isHovering ? ChromeInk.hoverStyle : AnyShapeStyle(.clear)
-    }
-
     func body(content: Content) -> some View {
         content
             .background {
                 shape
                     .fill(baseFill)
-                    .overlay { shape.fill(hoverFill) }
+                    .overlay {
+                        HoverSheet(isActive: isHovering, shape: shape)
+                    }
             }
             .contentShape(shape)
     }
 }
 
 extension View {
-    func startPageSurface<S: Shape>(
+    func startPageSurface<S: InsettableShape>(
         isHovering: Bool = false,
         in shape: S
     ) -> some View {

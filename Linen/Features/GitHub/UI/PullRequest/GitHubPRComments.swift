@@ -114,7 +114,7 @@ private struct GitHubCommentRow: View {
             }
         }
         .padding(.vertical, 4).padding(.horizontal, 6)
-        .background(hovering || expanded ? Theme.Wash.hover : .clear, in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
+        .hoverSheet(isActive: hovering || expanded, in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
         .padding(.horizontal, -6)
         .onHover { hovering = $0 }
     }
@@ -132,7 +132,7 @@ struct GitHubLinkRow<Content: View>: View {
         } label: {
             HStack(alignment: .top, spacing: 6) { content }
                 .padding(.vertical, 4).padding(.horizontal, 6)
-                .background(hovering && url != nil ? Theme.Wash.hover : .clear, in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
+                .hoverSheet(isActive: hovering && url != nil, in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

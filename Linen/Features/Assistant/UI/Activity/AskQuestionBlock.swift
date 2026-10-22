@@ -198,9 +198,11 @@ private struct OptionRow: View {
             .padding(.horizontal, Self.bleed)
             .padding(.vertical, 7)
             .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
-                    .fill(hovering ? Theme.Wash.hairline : .clear)
-                    .padding(1)
+                HoverSheet(
+                    isActive: hovering,
+                    shape: RoundedRectangle(cornerRadius: Theme.Radius.hover, style: .continuous)
+                )
+                .padding(1)
             )
             .contentShape(Rectangle())
         }
