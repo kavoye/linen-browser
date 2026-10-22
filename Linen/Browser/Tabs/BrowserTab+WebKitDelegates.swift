@@ -511,6 +511,9 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         if (error as? URLError)?.code != .cancelled {
             tab?.autofillSave.submissions.clear()
         }
+        if tab?.committedNavigation === navigation {
+            tab?.noteNavigationEnded()
+        }
         tab?.isRestoring = false
         tab?.finishReclaim()
         tab?.releasePageColorHold()
@@ -529,6 +532,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
         if let tab, tab.provisionalNavigation === navigation {
             pendingMainFrameURL = nil
             tab.provisionalNavigation = nil
+            tab.noteNavigationEnded()
             tab.releasePageColorHold()
             tab.refreshPageColor()
         }

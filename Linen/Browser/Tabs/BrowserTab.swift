@@ -334,10 +334,18 @@ final class BrowserTab: Identifiable {
         webView.stopLoading()
         stoppedNavigation = true
         isLoading = false
+        awaitsVisit = false
     }
+
+    private(set) var awaitsVisit = false
 
     func noteNavigationStarted() {
         stoppedNavigation = false
+        awaitsVisit = true
+    }
+
+    func noteNavigationEnded() {
+        awaitsVisit = false
     }
 
     func reload() {
@@ -387,6 +395,7 @@ final class BrowserTab: Identifiable {
         hasVideo = false
         isPictureOut = false
         committedURL = nil
+        awaitsVisit = false
         pendingTransition = .reload
         clearPageActivity()
         invalidateSessionState()
@@ -447,6 +456,7 @@ final class BrowserTab: Identifiable {
     func contentProcessDidTerminate() {
         guard !isClosed else { return }
         isPlayingAudio = false
+        awaitsVisit = false
         events.onContentProcessTerminated?()
         if events.isShown?() == false {
             Pipeline.log.notice("web content process died in a background tab; restoring it when shown")

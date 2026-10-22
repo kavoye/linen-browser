@@ -191,13 +191,13 @@ final class BrowserModel {
     func bindCallbacks(to tab: BrowserTab) {
         tab.events.onNavigationStarted = { [weak self, weak tab] url in
             guard let tab else { return }
+            self?.heldInPageMove[tab.id] = nil
             self?.onNavigationStarted?(tab, url)
         }
         tab.events.onNavigationFinished = { [weak self, weak tab] wasRestore in
             self?.scheduleSave()
-            guard !wasRestore, let tab, !tab.isPrivate else { return }
-            self?.heldInPageMove[tab.id] = nil
-            self?.recordVisit(for: tab)
+            guard let tab else { return }
+            self?.noteNavigationFinished(of: tab, wasRestore: wasRestore)
         }
         tab.events.onSameDocumentNavigation = { [weak self] in
             self?.scheduleSave()
@@ -296,14 +296,31 @@ final class BrowserModel {
     var visitTrail: [UUID: Int64] = [:]
     private var heldInPageMove: [UUID: String] = [:]
 
-    private func lastVisitTitle(of tab: BrowserTab) -> String? {
+    private func lastVisit(of tab: BrowserTab) -> HistoryStore.VisitedPage? {
         guard let last = lastVisitID[tab.id] else { return nil }
-        return history.visits.first { $0.id == last }?.title
+        return history.visits.first { $0.id == last }
+    }
+
+    private func lastVisitTitle(of tab: BrowserTab) -> String? {
+        lastVisit(of: tab)?.title
+    }
+
+    private func lastVisitURL(of tab: BrowserTab) -> String? {
+        lastVisit(of: tab)?.url
+    }
+
+    private func noteNavigationFinished(of tab: BrowserTab, wasRestore: Bool) {
+        defer { tab.noteNavigationEnded() }
+        guard !wasRestore, !tab.isPrivate else { return }
+        heldInPageMove[tab.id] = nil
+        if tab.awaitsVisit || lastVisitURL(of: tab) != tab.urlString {
+            recordVisit(for: tab)
+        }
     }
 
     private func noteInPageMove(of tab: BrowserTab) {
         guard !tab.isPrivate else { return }
-        if lastVisitTitle(of: tab) == tab.title {
+        if tab.awaitsVisit || lastVisitTitle(of: tab) == tab.title {
             heldInPageMove[tab.id] = tab.urlString
         } else {
             heldInPageMove[tab.id] = nil
@@ -314,7 +331,7 @@ final class BrowserModel {
     private func noteTitleChange(of tab: BrowserTab) {
         guard !tab.isPrivate else { return }
         if let held = heldInPageMove[tab.id], held == tab.urlString {
-            guard lastVisitTitle(of: tab) != tab.title else { return }
+            guard tab.awaitsVisit || lastVisitTitle(of: tab) != tab.title else { return }
             heldInPageMove[tab.id] = nil
             recordVisit(for: tab, transition: .inPage)
             return
@@ -325,7 +342,8 @@ final class BrowserModel {
 
     private func recordVisit(for tab: BrowserTab, transition: HistoryStore.Transition? = nil) {
         guard !tab.isPrivate, !tab.isClosed, tabsByID[tab.id] === tab else { return }
-        let transition = transition ?? tab.pendingTransition
+        let transition = tab.awaitsVisit ? tab.pendingTransition : transition ?? tab.pendingTransition
+        tab.noteNavigationEnded()
         let previous = lastVisitID[tab.id]
         let trail = continuesTrail(from: previous, to: tab.urlString, transition: transition)
             ? visitTrail[tab.id]

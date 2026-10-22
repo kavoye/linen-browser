@@ -455,6 +455,115 @@ struct BrowserModelTests {
         #expect(model.history.visits.map(\.url) == [b.absoluteString, a.absoluteString])
     }
 
+    @Test(arguments: ["A", "B"])
+    func anAddressChangeWhileLoadingBelongsToTheLoad(title: String) async throws {
+        let image = ResponseGate()
+        defer { image.open() }
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/a": .html("<!doctype html><title>A</title><p>A</p>"),
+            "/b": .html("""
+                <!doctype html><title>\(title)</title>
+                <script>history.replaceState({}, '', '/b?ready')</script>
+                <img src="/slow">
+                """),
+            "/slow": .html("", gate: image),
+        ])
+        defer { withExtendedLifetime(server) {} }
+        let a = try server.url("/a")
+        var other = try #require(URLComponents(url: try server.url("/b?ready"), resolvingAgainstBaseURL: false))
+        other.host = "localhost"
+        let ready = try #require(other.url)
+        let model = makeModel()
+        let tab = model.newTab(url: a)
+        #expect(await settled(tab, at: a))
+        #expect(await waitUntil { model.history.visits.count == 1 })
+
+        other.query = nil
+        tab.load(try #require(other.url))
+        #expect(await waitUntil { tab.urlString == ready.absoluteString })
+        _ = try await tab.webView.evaluateJavaScript("document.title = 'Loaded'")
+        #expect(await waitUntil { tab.title == "Loaded" })
+        image.open()
+        #expect(await settled(tab, at: ready))
+        #expect(await waitUntil { model.history.visits.first?.url == ready.absoluteString })
+
+        let visits = model.history.visits
+        #expect(visits.map(\.url) == [ready.absoluteString, a.absoluteString])
+        #expect(visits.map(\.transition) == [.typed, .typed])
+        #expect(visits.first?.trail != visits.last?.trail)
+    }
+
+    @Test func anInPageMoveDuringASlowLoadIsKept() async throws {
+        let image = ResponseGate()
+        defer { image.open() }
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/board": .html("<!doctype html><title>Board</title><img src=\"/slow\">"),
+            "/slow": .html("", gate: image),
+        ])
+        defer { withExtendedLifetime(server) {} }
+        let first = try server.url("/browse/1")
+        let second = try server.url("/browse/2")
+        let model = makeModel()
+        let tab = model.newTab(url: try server.url("/board"))
+        let recordFinish = tab.events.onNavigationFinished
+        var finished = false
+        tab.events.onNavigationFinished = { wasRestore in
+            recordFinish?(wasRestore)
+            finished = true
+        }
+        #expect(await waitUntil { tab.title == "Board" })
+
+        _ = try await tab.webView.evaluateJavaScript("""
+            history.pushState({}, '', '/browse/1');
+            document.title = 'Ticket 1';
+            """)
+        #expect(await waitUntil { model.history.visits.first?.url == first.absoluteString })
+        image.open()
+        #expect(await waitUntil { finished })
+
+        _ = try await tab.webView.evaluateJavaScript("""
+            history.pushState({}, '', '/browse/2');
+            document.title = 'Ticket 2';
+            """)
+        #expect(await waitUntil { model.history.visits.first?.url == second.absoluteString })
+
+        let visits = model.history.visits
+        #expect(visits.map(\.url) == [second.absoluteString, first.absoluteString])
+        #expect(visits.map(\.transition) == [.inPage, .typed])
+        #expect(Set(visits.map(\.trail)).count == 1)
+    }
+
+    @Test func aStoppedLoadLeavesInPageMovesAsVisits() async throws {
+        let gate = ResponseGate()
+        defer { gate.open() }
+        let server = try await HTTPFixtureServer.start(routes: [
+            "/a": .html("<!doctype html><title>A</title><p>A</p>"),
+            "/b": .html("<!doctype html><title>B</title><p>B</p>", gate: gate),
+        ])
+        defer { withExtendedLifetime(server) {} }
+        let a = try server.url("/a")
+        let moved = try server.url("/a2")
+        let model = makeModel()
+        let tab = model.newTab(url: a)
+        #expect(await settled(tab, at: a))
+        #expect(await waitUntil { model.history.visits.count == 1 })
+
+        tab.load(try server.url("/b"))
+        #expect(await gate.waitForRequest())
+        tab.webView.stopLoading()
+        #expect(await waitUntil { !tab.awaitsVisit })
+
+        _ = try await tab.webView.evaluateJavaScript("""
+            history.pushState({}, '', '/a2');
+            document.title = 'A2';
+            """)
+        #expect(await waitUntil { model.history.visits.first?.url == moved.absoluteString })
+
+        let visits = model.history.visits
+        #expect(visits.map(\.transition) == [.inPage, .typed])
+        #expect(Set(visits.map(\.trail)).count == 1)
+    }
+
     private func visit(_ tab: BrowserTab, _ url: String, _ transition: HistoryStore.Transition = .link) {
         tab.noteTransition(transition)
         tab.urlString = url
