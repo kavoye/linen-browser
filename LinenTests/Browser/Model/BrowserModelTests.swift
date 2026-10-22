@@ -607,6 +607,22 @@ struct BrowserModelTests {
         #expect(trails[0] != trails[1])
     }
 
+    @Test func aRestoredTabContinuesItsTrail() throws {
+        let database = AppDatabase.temporary()
+        let model = BrowserModel(windowID: UUID(), database: database)
+        visit(model.newTab(), "https://duckduckgo.com/?q=rover", .typed)
+        model.saveBlocking()
+
+        let restored = BrowserModel(windowID: model.windowID, database: database)
+        restored.restoreSession()
+        let tab = try #require(restored.tabs.first)
+        visit(tab, "https://duckduckgo.com/?q=rover&ia=images")
+
+        let visits = restored.history.visits
+        #expect(visits.map(\.url) == ["https://duckduckgo.com/?q=rover&ia=images", "https://duckduckgo.com/?q=rover"])
+        #expect(Set(visits.map(\.trail)).count == 1)
+    }
+
     @Test func anInPageMoveWithTheSameTitleAddsNoRow() {
         let model = makeModel()
         let tab = model.newTab()

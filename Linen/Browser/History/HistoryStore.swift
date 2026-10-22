@@ -172,7 +172,7 @@ final class HistoryStore {
             try db.execute(
                 sql: """
                     INSERT INTO historyVisit (url, visitedAt, transition, fromVisit, trail)
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, (SELECT id FROM historyVisit WHERE id = ?), ?)
                     """,
                 arguments: [url, now, transition.rawValue, transition.carriesReferrer ? fromVisit : nil, trail]
             )

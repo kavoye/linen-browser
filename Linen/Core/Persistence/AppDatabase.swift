@@ -239,6 +239,7 @@ struct AppDatabase: Sendable {
         try defineWindowSessions(in: db)
         try defineTabArchive(in: db)
         try defineSessionSpaces(in: db)
+        try defineSessionVisits(in: db)
         try defineContextClears(in: db)
         try defineOpenedTabs(in: db)
         try defineAssistantMemory(in: db)
@@ -290,6 +291,15 @@ struct AppDatabase: Sendable {
             guard try !db.columns(in: table).contains(where: { $0.name == "spaceID" }) else { continue }
             try db.alter(table: table) { t in
                 t.add(column: "spaceID", .blob)
+            }
+        }
+    }
+
+    private nonisolated static func defineSessionVisits(in db: Database) throws {
+        let columns = try db.columns(in: "sessionTab").map(\.name)
+        for column in ["lastVisit", "visitTrail"] where !columns.contains(column) {
+            try db.alter(table: "sessionTab") { t in
+                t.add(column: column, .integer)
             }
         }
     }

@@ -264,6 +264,7 @@ extension BrowserModel {
         storedTree = reconciledTree().removing([.tab(tab.id)])
         sidebarDidChange()
         lastVisitID[tab.id] = nil
+        visitTrail[tab.id] = nil
         recentlyActive.removeAll { $0 == tab.id }
         if let switcherIndex {
             switcherTabClosed(at: switcherIndex)

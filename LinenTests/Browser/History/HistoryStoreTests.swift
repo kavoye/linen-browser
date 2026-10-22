@@ -368,6 +368,23 @@ struct HistoryStoreTests {
         #expect(store.visits.count == 1)
     }
 
+    @Test func aVisitFromARemovedVisitIsStillRecorded() throws {
+        let (store, _) = makeStore()
+        let removed = try #require(store.record(url: "https://example.com/a", title: "A"))
+        store.removeVisits([removed])
+
+        let visit = store.record(
+            url: "https://example.com/b",
+            title: "B",
+            transition: .link,
+            fromVisit: removed,
+            trail: removed
+        )
+
+        #expect(visit != nil)
+        #expect(store.visits.map(\.url) == ["https://example.com/b"])
+    }
+
     @Test func removingNoVisitsChangesNothing() {
         let (store, _) = makeStore()
         store.record(url: "https://example.com/a", title: "Only")

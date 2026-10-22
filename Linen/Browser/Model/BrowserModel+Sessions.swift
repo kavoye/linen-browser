@@ -115,6 +115,8 @@ extension BrowserModel {
         var isActive: Bool
         var lastActiveAt: Date?
         var spaceID: UUID?
+        var lastVisit: Int64?
+        var visitTrail: Int64?
     }
 
     private nonisolated struct FolderRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
@@ -293,7 +295,9 @@ extension BrowserModel {
                 internalPage: tab.internalPage,
                 isActive: tab.id == activeTabID,
                 lastActiveAt: tab.lastActiveAt,
-                spaceID: tab.spaceID
+                spaceID: tab.spaceID,
+                lastVisit: lastVisitID[tab.id],
+                visitTrail: visitTrail[tab.id]
             )
         }
         writtenStateGeneration = writtenStateGeneration.filter { id, _ in
@@ -380,8 +384,8 @@ extension BrowserModel {
                 sql: """
                     INSERT INTO sessionTab
                         (id, windowID, title, customTitle, url, state, pinnedURL, pinnedTitle,
-                         internalPage, isActive, lastActiveAt, spaceID)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         internalPage, isActive, lastActiveAt, spaceID, lastVisit, visitTrail)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(id) DO UPDATE SET
                         windowID = excluded.windowID,
                         title = excluded.title,
@@ -393,12 +397,15 @@ extension BrowserModel {
                         internalPage = excluded.internalPage,
                         isActive = excluded.isActive,
                         lastActiveAt = excluded.lastActiveAt,
-                        spaceID = excluded.spaceID
+                        spaceID = excluded.spaceID,
+                        lastVisit = excluded.lastVisit,
+                        visitTrail = excluded.visitTrail
                     """,
                 arguments: [
                     tab.id, tab.windowID, tab.title, tab.customTitle, tab.url, tab.state,
                     tab.pinnedURL, tab.pinnedTitle,
                     tab.internalPage?.rawValue, tab.isActive, tab.lastActiveAt, tab.spaceID,
+                    tab.lastVisit, tab.visitTrail,
                 ]
             )
         }
@@ -438,6 +445,32 @@ extension BrowserModel {
             else { return }
             tab.favicon = icon
         }
+    }
+
+    private static func sidebarTree(
+        from items: [ItemRecord],
+        tabs: Set<UUID>,
+        folders: [UUID: TabFolder]
+    ) -> SidebarTree {
+        var root: [SidebarItem] = []
+        var children: [UUID: [SidebarItem]] = [:]
+        for record in items {
+            let item: SidebarItem
+            if let id = record.tabID, tabs.contains(id) {
+                item = .tab(id)
+            } else if let id = record.folderID, let folder = folders[id] {
+                item = .folder(folder.id)
+            } else {
+                continue
+            }
+            if let parentID = record.parentID {
+                guard let parent = folders[parentID] else { continue }
+                children[parent.id, default: []].append(item)
+            } else {
+                root.append(item)
+            }
+        }
+        return SidebarTree(root: root, children: children)
     }
 
     func restoreSession(lazily: Bool = false) {
@@ -511,6 +544,8 @@ extension BrowserModel {
             tab.pinnedURL = record.pinnedURL
             tab.pinnedTitle = record.pinnedTitle ?? ""
             tab.spaceID = record.spaceID
+            lastVisitID[tab.id] = record.lastVisit
+            visitTrail[tab.id] = record.visitTrail
             tab.lastActiveAt = record.lastActiveAt.map { min($0 + closedFor, now) } ?? now
             tab.deferRestore(state: record.state, url: restoredURL)
             if let host = URL(string: record.url)?.host() {
@@ -531,25 +566,7 @@ extension BrowserModel {
             folders.append(folder)
         }
 
-        var root: [SidebarItem] = []
-        var children: [UUID: [SidebarItem]] = [:]
-        for record in stored.items {
-            let item: SidebarItem
-            if let id = record.tabID, byID[id] != nil {
-                item = .tab(id)
-            } else if let id = record.folderID, let folder = foldersByStoredID[id] {
-                item = .folder(folder.id)
-            } else {
-                continue
-            }
-            if let parentID = record.parentID {
-                guard let parent = foldersByStoredID[parentID] else { continue }
-                children[parent.id, default: []].append(item)
-            } else {
-                root.append(item)
-            }
-        }
-        storedTree = SidebarTree(root: root, children: children)
+        storedTree = Self.sidebarTree(from: stored.items, tabs: Set(byID.keys), folders: foldersByStoredID)
         splits = TabSplits(grids)
         sidebarDidChange()
 
@@ -633,6 +650,7 @@ extension BrowserModel {
         activeTabID = nil
         closedTabs = []
         lastVisitID = [:]
+        visitTrail = [:]
         recentlyActive = []
         writtenStateGeneration = [:]
         sidebarDidChange()
