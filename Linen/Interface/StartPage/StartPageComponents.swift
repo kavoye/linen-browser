@@ -280,6 +280,7 @@ struct HistoryRow: View {
     var disclosure: Disclosure?
     var showsHost = true
     var showsGuide = false
+    var endsGuide = false
 
     struct Disclosure {
         let count: Int
@@ -369,9 +370,8 @@ struct HistoryRow: View {
         }
         .overlay(alignment: .leading) {
             if showsGuide {
-                Rectangle()
-                    .fill(Theme.Wash.strong)
-                    .frame(width: 1)
+                TrailGuide(ends: endsGuide)
+                    .stroke(Theme.Wash.strong, lineWidth: 1)
                     .padding(.leading, 12 + 7)
             }
         }
@@ -417,7 +417,29 @@ extension HistoryRow: Equatable {
             && lhs.disclosure?.isExpanded == rhs.disclosure?.isExpanded
             && lhs.showsHost == rhs.showsHost
             && lhs.showsGuide == rhs.showsGuide
+            && lhs.endsGuide == rhs.endsGuide
             && lhs.isPrivate == rhs.isPrivate
+    }
+}
+
+private struct TrailGuide: Shape {
+    let ends: Bool
+
+    nonisolated func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let x = rect.minX + 0.5
+        path.move(to: CGPoint(x: x, y: rect.minY))
+        guard ends else {
+            path.addLine(to: CGPoint(x: x, y: rect.maxY))
+            return path
+        }
+        let radius: CGFloat = 8
+        path.addLine(to: CGPoint(x: x, y: rect.midY - radius))
+        path.addQuadCurve(
+            to: CGPoint(x: x + radius, y: rect.midY),
+            control: CGPoint(x: x, y: rect.midY)
+        )
+        return path
     }
 }
 

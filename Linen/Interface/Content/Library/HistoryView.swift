@@ -59,6 +59,7 @@ struct HistoryView: View {
         let indent: CGFloat
         var disclosure: Trail?
         var isNested = false
+        var isLastNested = false
         var showsHost = true
 
         var id: String {
@@ -70,18 +71,20 @@ struct HistoryView: View {
         var lines: [Line] = []
         for trail in day.trails {
             let root = trail.root
+            let pages = trail.pages
             lines.append(Line(
                 row: root,
                 indent: 0,
-                disclosure: trail.pages.isEmpty ? nil : trail
+                disclosure: pages.isEmpty ? nil : trail
             ))
-            guard !trail.pages.isEmpty, !collapsedTrails.contains(trail.id) else { continue }
+            guard !pages.isEmpty, !collapsedTrails.contains(trail.id) else { continue }
             let site = URL(string: root.entry.url)?.displayHost
-            for page in trail.pages {
+            for page in pages {
                 lines.append(Line(
                     row: page,
                     indent: HistoryRow.nestedIndent,
                     isNested: true,
+                    isLastNested: page.id == pages.last?.id,
                     showsHost: URL(string: page.entry.url)?.displayHost != site
                 ))
             }
@@ -111,7 +114,8 @@ struct HistoryView: View {
                 )
             },
             showsHost: line.showsHost,
-            showsGuide: line.isNested
+            showsGuide: line.isNested,
+            endsGuide: line.isLastNested
         )
         .equatable()
         .padding(.top, line.isNested ? 0 : 2)
@@ -185,6 +189,10 @@ struct HistoryView: View {
         let entry: HistoryStore.Entry
         var visitIDs: [Int64]
         var trail: Int64?
+
+        var firstVisit: Int64 {
+            visitIDs.min() ?? .max
+        }
     }
 
     struct Trail: Identifiable {
@@ -192,11 +200,11 @@ struct HistoryView: View {
         var rows: [Row]
 
         var root: Row {
-            rows.min { ($0.visitIDs.min() ?? .max) < ($1.visitIDs.min() ?? .max) } ?? rows[0]
+            rows.min { $0.firstVisit < $1.firstVisit } ?? rows[0]
         }
         var pages: [Row] {
             let root = root.id
-            return rows.filter { $0.id != root }
+            return rows.filter { $0.id != root }.sorted { $0.firstVisit < $1.firstVisit }
         }
     }
 

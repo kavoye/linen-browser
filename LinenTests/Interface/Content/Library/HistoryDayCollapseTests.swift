@@ -72,7 +72,7 @@ struct HistoryDayCollapseTests {
         #expect(HistoryView.days(collapsing: [], calendar: calendar).isEmpty)
     }
 
-    @Test func aTrailGroupsUnderItsFirstPage() {
+    @Test func aTrailReadsInTheOrderItWasBrowsed() {
         let days = HistoryView.days(collapsing: [
             row("https://jira.example/browse/2", at: today.addingTimeInterval(4000), visit: 4, trail: 1),
             row("https://twitch.example/", at: today.addingTimeInterval(3900), visit: 3, trail: 3),
@@ -83,7 +83,7 @@ struct HistoryDayCollapseTests {
         let trails = days.first?.trails ?? []
         #expect(trails.map(\.rows.count) == [3, 1])
         #expect(trails.first?.root.entry.title == "Board")
-        #expect(trails.first?.pages.map(\.id) == ["visit-4", "visit-2"])
+        #expect(trails.first?.pages.map(\.id) == ["visit-2", "visit-4"])
     }
 
     @Test func aRevisitInsideATrailCollapses() {
