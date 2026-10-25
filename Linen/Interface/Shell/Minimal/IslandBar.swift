@@ -208,11 +208,13 @@ struct IslandBar: View {
                 IslandMoreMenu(coordinator: coordinator, isPresented: $isMoreOpen)
             }
 
-            UpdateBanner(coordinator: coordinator)
-                .environment(\.sidebarStyle, .icons)
-                .frame(width: 30)
-                .environment(\.chromeIconExtent, 28)
-                .environment(\.chromeHoverLifts, false)
+            if UpdateBanner.isVisible(for: coordinator) {
+                UpdateBanner(coordinator: coordinator)
+                    .environment(\.sidebarStyle, .icons)
+                    .frame(width: 30)
+                    .environment(\.chromeIconExtent, 28)
+                    .environment(\.chromeHoverLifts, false)
+            }
 
             SidePanelToggle(coordinator: coordinator)
         }

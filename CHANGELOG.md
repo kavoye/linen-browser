@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.4
+
+### Improved
+
+- **History trails.** Pages in a trail appear in the order you visited them, and
+  each trail stays within one website.
+- **GitHub filters.** The highlighted filter follows the pointer in the filter
+  menu.
+- **Hover feedback.** Hovered controls have a clearer fill and border across
+  the Start Page, Reader, Autofill, Assistant, and GitHub.
+
+### Fixed
+
+- **History trails in restored tabs.** Browsing in a restored tab continues its
+  existing trail.
+- **In-page navigation in History.** Linen waits for a page to load before it
+  records in-page moves.
+
 ## 0.9.3
 
 ### New
