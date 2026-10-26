@@ -42,92 +42,37 @@ enum ChromeInk {
     static func wash(onLight: Bool, opacity: Double) -> Color {
         (onLight ? Color.black : Color.white).opacity(opacity)
     }
-}
 
-struct HoverSheet<S: InsettableShape>: View {
-    let isActive: Bool
-    let shape: S
-    var tint: Color?
-
-    @Environment(\.chromeWash) private var wash
-    @Environment(\.colorScheme) private var scheme
-
-    private var isLight: Bool {
-        wash?.isLight ?? (scheme == .light)
+    static var hoverStyle: AnyShapeStyle {
+        AnyShapeStyle(Color.primary.opacity(0.10))
     }
 
-    private var ink: Color {
-        isLight ? .black : .white
-    }
-
-    private var fill: Color {
-        if let tint {
-            return tint.opacity(0.14)
-        }
-        return isLight ? .white.opacity(0.85) : Color(white: 0.26).opacity(0.85)
-    }
-
-    private var edge: Color {
-        tint?.opacity(0.22) ?? ink.opacity(isLight ? 0.16 : 0.10)
-    }
-
-    private var highlight: LinearGradient {
-        LinearGradient(
-            colors: [.white.opacity(isLight ? 0.7 : 0.18), .white.opacity(0)],
-            startPoint: .top,
-            endPoint: .center
-        )
-    }
-
-    private var shade: LinearGradient {
-        LinearGradient(
-            colors: [ink.opacity(0), ink.opacity(isLight ? 0.10 : 0)],
-            startPoint: .center,
-            endPoint: .bottom
-        )
-    }
-
-    var body: some View {
-        if isActive {
-            ZStack {
-                shape.fill(fill)
-                    .shadow(color: .black.opacity(isLight && tint == nil ? 0.10 : 0), radius: 3, y: 1)
-                shape.strokeBorder(edge, lineWidth: 0.5)
-                shape.strokeBorder(highlight, lineWidth: 1)
-                shape.strokeBorder(shade, lineWidth: 1)
-            }
-            .allowsHitTesting(false)
-        }
+    static func hoverStyle(on wash: ChromeWash) -> AnyShapeStyle {
+        AnyShapeStyle(wash.layer(0.10))
     }
 }
 
-extension View {
-    func hoverSheet<S: InsettableShape>(
-        isActive: Bool,
-        in shape: S,
-        tint: Color? = nil
-    ) -> some View {
-        background {
-            HoverSheet(isActive: isActive, shape: shape, tint: tint)
-        }
-    }
-}
-
-private struct GlassSurface<S: InsettableShape>: ViewModifier {
+private struct GlassSurface<S: Shape>: ViewModifier {
     let isActive: Bool
     let isEnabled: Bool
     let shape: S
 
+    @Environment(\.chromeWash) private var wash
+
+    private var hoverFill: AnyShapeStyle {
+        isActive ? ChromeInk.hoverStyle(on: wash) : AnyShapeStyle(.clear)
+    }
+
     func body(content: Content) -> some View {
         content
             .glassEffect(isEnabled ? .regular : .identity, in: shape)
-            .hoverSheet(isActive: isActive, in: shape)
+            .background { shape.fill(hoverFill) }
             .contentShape(shape)
     }
 }
 
 extension View {
-    func glassSurface<S: InsettableShape>(
+    func glassSurface<S: Shape>(
         isActive: Bool = false,
         isEnabled: Bool = true,
         in shape: S
@@ -198,19 +143,25 @@ extension View {
     }
 }
 
-private struct HoverBackground<S: InsettableShape>: ViewModifier {
+private struct HoverBackground<S: Shape>: ViewModifier {
     let isActive: Bool
     let shape: S
 
+    @Environment(\.chromeWash) private var wash
+
+    private var fill: AnyShapeStyle {
+        isActive ? ChromeInk.hoverStyle(on: wash) : AnyShapeStyle(.clear)
+    }
+
     func body(content: Content) -> some View {
         content
-            .hoverSheet(isActive: isActive, in: shape)
+            .background { shape.fill(fill) }
             .contentShape(shape)
     }
 }
 
 extension View {
-    func hoverBackground<S: InsettableShape>(isActive: Bool, in shape: S) -> some View {
+    func hoverBackground<S: Shape>(isActive: Bool, in shape: S) -> some View {
         modifier(HoverBackground(isActive: isActive, shape: shape))
     }
 
@@ -246,7 +197,7 @@ extension View {
     }
 }
 
-private struct SelectionBackground<S: InsettableShape>: ViewModifier {
+private struct SelectionBackground<S: Shape>: ViewModifier {
     let isSelected: Bool
     let isHovering: Bool
     let rests: Bool
@@ -262,15 +213,26 @@ private struct SelectionBackground<S: InsettableShape>: ViewModifier {
         return .identity
     }
 
+    @Environment(\.chromeWash) private var wash
+
+    private var hoverFill: AnyShapeStyle {
+        isHovering && !isSelected
+            ? ChromeInk.hoverStyle(on: wash)
+            : AnyShapeStyle(.clear)
+    }
+
     func body(content: Content) -> some View {
         content
-            .hoverSheet(isActive: isHovering && !isSelected, in: shape)
+            .background {
+                shape
+                    .fill(hoverFill)
+            }
             .glassEffect(glass, in: shape)
     }
 }
 
 extension View {
-    func selectionBackground<S: InsettableShape>(
+    func selectionBackground<S: Shape>(
         isSelected: Bool,
         isHovering: Bool,
         rests: Bool = false,
@@ -441,7 +403,7 @@ extension View {
 }
 
 extension EnvironmentValues {
-    @Entry var chromeWash: ChromeWash?
+    @Entry var chromeWash: ChromeWash = .neutral
 
     @Entry var chromeIsLight: Bool = false
     @Entry var chromeIconExtent: CGFloat = 16

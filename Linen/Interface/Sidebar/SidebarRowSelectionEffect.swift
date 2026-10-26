@@ -12,9 +12,14 @@ private struct SidebarRowSelectionEffect: ViewModifier {
     var radius = Theme.Radius.hover
 
     @Environment(\.windowColorScheme) private var windowColorScheme
+    @Environment(\.chromeWash) private var wash
 
-    private var showsHover: Bool {
-        isHovering && !isSelected
+    private var fill: AnyShapeStyle {
+        guard isHovering, !isSelected else { return AnyShapeStyle(.clear) }
+        if let hoverTint {
+            return AnyShapeStyle(hoverTint.opacity(0.18))
+        }
+        return ChromeInk.hoverStyle(on: wash)
     }
 
     private var wearsGlass: Bool {
@@ -56,7 +61,7 @@ private struct SidebarRowSelectionEffect: ViewModifier {
                             shape.strokeBorder(surfaceEdge, lineWidth: 1)
                         }
                     }
-                    HoverSheet(isActive: showsHover, shape: shape, tint: hoverTint)
+                    shape.fill(fill)
                 }
                 .environment(\.colorScheme, windowColorScheme)
                 .allowsHitTesting(false)

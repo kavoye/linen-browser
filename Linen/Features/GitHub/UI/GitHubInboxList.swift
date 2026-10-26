@@ -260,7 +260,8 @@ struct GitHubInboxRow: View, Equatable {
             if hovering && item.isUnread {
                 Button(action: onRead) {
                     Image(systemName: "checkmark").font(Theme.Font.caption).padding(.horizontal, 4).padding(.vertical, 1)
-                        .hoverSheet(isActive: hoveringRead, in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
+                        .background(hoveringRead ? Theme.Wash.selection : .clear,
+                                    in: RoundedRectangle(cornerRadius: Theme.Radius.tight))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).foregroundStyle(hoveringRead ? .primary : .secondary).disabled(markingRead)
@@ -270,9 +271,8 @@ struct GitHubInboxRow: View, Equatable {
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(selected ? Theme.Wash.selection : .clear,
+        .background(selected ? Theme.Wash.selection : hovering ? Theme.Wash.hover : .clear,
                     in: RoundedRectangle(cornerRadius: Theme.Radius.control))
-        .hoverSheet(isActive: hovering && !selected, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
         .onHover { hovering = $0 }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { rect in
             presenter?.moved(item.id, anchor: rect)

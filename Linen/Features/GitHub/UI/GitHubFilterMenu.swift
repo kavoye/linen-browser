@@ -21,7 +21,7 @@ struct GitHubFilterPicker: View {
             }
             .font(Theme.Font.control.weight(.semibold))
             .padding(.horizontal, 7).padding(.vertical, 5)
-            .hoverSheet(isActive: presented || hovering, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
+            .background(presented || hovering ? Theme.Wash.hover : .clear, in: RoundedRectangle(cornerRadius: Theme.Radius.chip))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -181,7 +181,8 @@ private struct GitHubFilterMenuRow: View {
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .hoverSheet(isActive: highlighted, in: RoundedRectangle(cornerRadius: Theme.Radius.control))
+        .background(highlighted || hovering ? Theme.Wash.selection : .clear,
+                    in: RoundedRectangle(cornerRadius: Theme.Radius.control))
         .onHover { over in
             hovering = over
             if over {

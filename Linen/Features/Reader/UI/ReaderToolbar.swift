@@ -71,7 +71,6 @@ struct ReaderToolbar: View {
         .frame(height: 36)
         .glassSurface(in: shape)
         .environment(\.colorScheme, scheme)
-        .environment(\.chromeWash, nil)
         .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
     }
 
@@ -158,7 +157,11 @@ private struct ReaderToolbarButton: View {
     @State private var hovering = false
 
     private var fill: Color {
-        isEnabled && configuration.isPressed ? .primary.opacity(0.16) : .clear
+        guard isEnabled else { return .clear }
+        if configuration.isPressed {
+            return .primary.opacity(0.16)
+        }
+        return hovering ? .primary.opacity(0.08) : .clear
     }
 
     var body: some View {
@@ -167,7 +170,6 @@ private struct ReaderToolbarButton: View {
             .padding(.horizontal, 8)
             .frame(minWidth: 28, minHeight: 28)
             .background(fill, in: shape)
-            .hoverSheet(isActive: isEnabled && (hovering || configuration.isPressed), in: shape)
             .contentShape(shape)
             .opacity(isEnabled ? 1 : 0.35)
             .onHover { hovering = $0 }

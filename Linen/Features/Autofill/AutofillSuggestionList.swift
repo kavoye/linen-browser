@@ -87,7 +87,7 @@ struct AutofillSuggestionList: View {
                                         .padding(.horizontal, 9)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                     .contentShape(.rect)
-                    .hoverSheet(isActive: footerHovered, in: .rect(cornerRadius: 5))
+                    .background(footerHovered ? Color.primary.opacity(0.1) : .clear, in: .rect(cornerRadius: 5))
             }
             .buttonStyle(.plain).focusable(false)
             .frame(height: AutofillSuggestionLayout.footerHeight)
