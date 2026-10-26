@@ -51,11 +51,11 @@ struct ProfileSettingsTests {
 
         first.isMinimal = true
         first.minimalBarEdge = .top
-        first.hidesMinimalBar = true
+        first.minimalBarHiding = .tenSeconds
 
         #expect(second.isMinimal)
         #expect(second.minimalBarEdge == .top)
-        #expect(second.hidesMinimalBar)
+        #expect(second.minimalBarHiding == .tenSeconds)
         second.isMinimal = false
         #expect(!first.isMinimal)
     }

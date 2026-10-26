@@ -2597,8 +2597,8 @@
     "Hi, I’m %@. This is how I sound in Linen." : {
       "comment" : "Sample sentence an OpenAI voice speaks aloud when the user previews it in Voice settings. %@ is the voice’s name, such as Cedar. Never translated."
     },
-    "Hide bar automatically" : {
-      "comment" : "Appearance setting title for the Minimal window style. When on, the floating bar hides while the user scrolls or reads."
+    "Hide bar" : {
+      "comment" : "Appearance setting title for the Minimal window style, and its Settings search title. A pop-up menu that chooses when the floating bar hides: never, while the user scrolls, or after it goes unused for a few seconds."
     },
     "Hide details" : {
 
@@ -2632,9 +2632,6 @@
     },
     "Hide tab titles in the sidebar to save space." : {
       "comment" : "Caption under the Show only tab icons switch in Appearance settings, and its Settings search description. The sidebar keeps each website icon and drops the tab title, so it takes less room."
-    },
-    "Hide the bar while you scroll. Move the pointer to the edge of the window to show it." : {
-      "comment" : "Caption under the Hide bar automatically setting."
     },
     "Hide Video" : {
       "comment" : "Tooltip on the eye button in the media dock; it hides the picture while playback and the controls carry on. Title Case, narrow dock."
@@ -3351,6 +3348,9 @@
     },
     "Move Tab to Window" : {
 
+    },
+    "Move the pointer to the edge of the window to show the bar." : {
+      "comment" : "Caption under the Hide bar setting, and its Settings search description."
     },
     "Move the video into Picture in Picture and back." : {
       "comment" : "Caption for the Picture in Picture tool in assistant settings."
@@ -5088,6 +5088,66 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "A week"
+          }
+        }
+      }
+    },
+    "settings.minimalBarHide.fiveSeconds" : {
+      "comment" : "Option in the Hide bar pop-up menu in Appearance settings for the Minimal window style: the bar hides 5 seconds after it goes unused.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "After 5 seconds"
+          }
+        }
+      }
+    },
+    "settings.minimalBarHide.never" : {
+      "comment" : "Option in the Hide bar pop-up menu in Appearance settings for the Minimal window style: the floating bar always stays on screen. This is the default.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Never"
+          }
+        }
+      }
+    },
+    "settings.minimalBarHide.tenSeconds" : {
+      "comment" : "Option in the Hide bar pop-up menu in Appearance settings for the Minimal window style: the bar hides 10 seconds after it goes unused.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "After 10 seconds"
+          }
+        }
+      }
+    },
+    "settings.minimalBarHide.thirtySeconds" : {
+      "comment" : "Option in the Hide bar pop-up menu in Appearance settings for the Minimal window style: the bar hides 30 seconds after it goes unused.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "After 30 seconds"
+          }
+        }
+      }
+    },
+    "settings.minimalBarHide.whileScrolling" : {
+      "comment" : "Option in the Hide bar pop-up menu in Appearance settings for the Minimal window style: the bar hides while the user scrolls the website.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "While scrolling"
           }
         }
       }

@@ -35,7 +35,7 @@ extension BrowserSettings {
         case Key.minimalBar:
             minimalBarEdge = source.minimalBarEdge
         case Key.minimalBarAutoHide:
-            hidesMinimalBar = source.hidesMinimalBar
+            minimalBarHiding = source.minimalBarHiding
         case Key.automaticPiP:
             automaticPictureInPicture = source.automaticPictureInPicture
         case Key.videoInPlayer:

@@ -57,6 +57,17 @@ struct MinimalShell: View {
     private var barOnTop: Bool {
         barEdge == .top
     }
+
+    private var idleHideDelay: Duration? {
+        guard isIslandRaised, hasArrived, !chromeIsBusy,
+              !coordinator.overlays.isPointerOnPageCover,
+              !coordinator.overlays.isTabListOpen,
+              !coordinator.overlays.isProfileSwitcherOpen,
+              !coordinator.palette.isOpen
+        else { return nil }
+        return coordinator.settings.minimalBarHiding.interval
+    }
+
     private static let mediaCardWidth: CGFloat = 280
     private static let cornerInset: CGFloat = 14
 
@@ -84,7 +95,7 @@ struct MinimalShell: View {
         ZStack(alignment: .leading) {
             MinimalShellSensor(
                 onScroll: { towardTop in
-                    guard coordinator.settings.hidesMinimalBar,
+                    guard coordinator.settings.minimalBarHiding == .whileScrolling,
                           !chromeIsBusy,
                           !coordinator.overlays.isPointerOnPageCover,
                           !coordinator.overlays.isTabListOpen
@@ -268,8 +279,8 @@ struct MinimalShell: View {
             }
         }
         .onChange(of: browser.activeTab?.urlString) { _, _ in raiseIsland(true) }
-        .onChange(of: coordinator.settings.hidesMinimalBar) { _, hides in
-            if !hides {
+        .onChange(of: coordinator.settings.minimalBarHiding) { _, hiding in
+            if hiding == .never {
                 raiseIsland(true)
             }
         }
@@ -290,6 +301,12 @@ struct MinimalShell: View {
             if notice != nil {
                 raiseIsland(true)
             }
+        }
+        .task(id: idleHideDelay) {
+            guard let delay = idleHideDelay else { return }
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            raiseIsland(false)
         }
     }
 

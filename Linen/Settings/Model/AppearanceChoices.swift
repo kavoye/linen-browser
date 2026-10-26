@@ -53,6 +53,46 @@ enum MinimalBarEdge: String, CaseIterable, Identifiable {
     }
 }
 
+enum MinimalBarHiding: String, CaseIterable, Identifiable {
+    case never
+    case whileScrolling
+    case fiveSeconds
+    case tenSeconds
+    case thirtySeconds
+
+    var id: String {
+        rawValue
+    }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .never:
+            LocalizedStringResource("settings.minimalBarHide.never", defaultValue: "Never")
+        case .whileScrolling:
+            LocalizedStringResource("settings.minimalBarHide.whileScrolling", defaultValue: "While scrolling")
+        case .fiveSeconds:
+            LocalizedStringResource("settings.minimalBarHide.fiveSeconds", defaultValue: "After 5 seconds")
+        case .tenSeconds:
+            LocalizedStringResource("settings.minimalBarHide.tenSeconds", defaultValue: "After 10 seconds")
+        case .thirtySeconds:
+            LocalizedStringResource("settings.minimalBarHide.thirtySeconds", defaultValue: "After 30 seconds")
+        }
+    }
+
+    var interval: Duration? {
+        switch self {
+        case .never, .whileScrolling:
+            nil
+        case .fiveSeconds:
+            .seconds(5)
+        case .tenSeconds:
+            .seconds(10)
+        case .thirtySeconds:
+            .seconds(30)
+        }
+    }
+}
+
 enum LoomStyle: String, CaseIterable, Identifiable {
     case standard
     case transparent

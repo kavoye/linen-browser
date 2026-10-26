@@ -157,10 +157,10 @@ final class BrowserSettings {
         }
     }
 
-    var hidesMinimalBar: Bool {
+    var minimalBarHiding: MinimalBarHiding {
         didSet {
-            guard hidesMinimalBar != oldValue else { return }
-            write(hidesMinimalBar, forKey: Key.minimalBarAutoHide)
+            guard minimalBarHiding != oldValue else { return }
+            write(minimalBarHiding.rawValue, forKey: Key.minimalBarAutoHide)
         }
     }
 
@@ -547,7 +547,8 @@ final class BrowserSettings {
         hasSolidSidePanel = store.object(Key.solidSidePanel) as? Bool ?? false
         isMinimal = store.object(Key.minimal) as? Bool ?? false
         minimalBarEdge = store.string(Key.minimalBar).flatMap(MinimalBarEdge.init(rawValue:)) ?? .bottom
-        hidesMinimalBar = store.object(Key.minimalBarAutoHide) as? Bool ?? false
+        minimalBarHiding = store.string(Key.minimalBarAutoHide).flatMap(MinimalBarHiding.init(rawValue:))
+            ?? (store.object(Key.minimalBarAutoHide) as? Bool == true ? .whileScrolling : .never)
         tabSleep = store.string(Key.tabSleep).flatMap(TabSleep.init(rawValue:))
             ?? (store.object(Key.tabSleep) as? Bool == true ? .whenMemoryIsLow : .never)
         archiveTabsAfter = store.string(Key.archiveTabsAfter)

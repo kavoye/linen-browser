@@ -113,10 +113,19 @@ struct ThemePickerTests {
         defer { suite.removePersistentDomain(forName: name) }
 
         let settings = BrowserSettings(defaults: suite)
-        #expect(!settings.hidesMinimalBar)
+        #expect(settings.minimalBarHiding == .never)
 
-        settings.hidesMinimalBar = true
-        #expect(BrowserSettings(defaults: suite).hidesMinimalBar)
+        settings.minimalBarHiding = .thirtySeconds
+        #expect(BrowserSettings(defaults: suite).minimalBarHiding == .thirtySeconds)
+    }
+
+    @Test func theOldAutoHideSwitchMeansHidingWhileScrolling() throws {
+        let name = TestDefaults.name("MinimalBarAutoHideLegacyTests")
+        let suite = try #require(UserDefaults(suiteName: name))
+        defer { suite.removePersistentDomain(forName: name) }
+        suite.set(true, forKey: "appearance.minimalBarAutoHide")
+
+        #expect(BrowserSettings(defaults: suite).minimalBarHiding == .whileScrolling)
     }
 
     @Test func legacyWebsiteTintStyleMigratesToStandardWithTintEnabled() throws {

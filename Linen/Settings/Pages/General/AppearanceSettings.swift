@@ -121,10 +121,15 @@ private struct WindowStyleSettingsSection: View {
         RowSeparator()
 
         DetailRow(
-            title: "Hide bar automatically",
-            caption: "Hide the bar while you scroll. Move the pointer to the edge of the window to show it."
+            title: "Hide bar",
+            caption: "Move the pointer to the edge of the window to show the bar."
         ) {
-            SettingsToggle($settings.hidesMinimalBar)
+            SettingsMenu(
+                options: MinimalBarHiding.allCases.map {
+                    .init(value: $0, label: String(localized: $0.label))
+                },
+                selection: $settings.minimalBarHiding
+            )
         }
         .settingsAnchor("appearance.minimalBarAutoHide")
     }
