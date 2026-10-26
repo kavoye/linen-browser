@@ -149,7 +149,7 @@ enum SettingsIndex {
                       ["sidebar", "tabs", "tab list", "column", "hide"]),
         SettingsEntry("appearance.refraction", .appearance, "Tint selected tab", "Color the selected tab to match its website icon.",
                       ["refract", "glass", "colour", "color", "tint", "selected tab", "favicon", "sidebar"]),
-        SettingsEntry("appearance.sidebarStyle", .appearance, "Show only tab icons", "Narrow the list of tabs to website icons.",
+        SettingsEntry("appearance.sidebarStyle", .appearance, "Show only tab icons", "Hide tab titles in the sidebar to save space.",
                       ["sidebar", "icons", "icons only", "narrow", "compact", "tabs", "tab list"]),
         SettingsEntry("appearance.solidSidePanel", .appearance, "Solid side panel", "Make the side panel easier to read over busy websites.",
                       ["side panel", "transparency", "transparent", "opaque", "solid", "glass", "contrast", "assistant"]),

@@ -54,7 +54,7 @@ private struct WindowStyleSettingsSection: View {
 
     private static let standardAnchors = [
         "appearance.background", "appearance.transparency", "appearance.websiteTint",
-        "appearance.refraction", "appearance.sidebar", "appearance.solidSidePanel",
+        "appearance.refraction", "appearance.sidebar", "appearance.sidebarStyle", "appearance.solidSidePanel",
     ]
 
     private static let minimalAnchors = ["appearance.minimalBar", "appearance.minimalBarAutoHide"]
@@ -95,7 +95,7 @@ private struct WindowStyleSettingsSection: View {
 
         DetailRow(
             title: "Show only tab icons",
-            caption: "Narrow the list of tabs to website icons."
+            caption: "Hide tab titles in the sidebar to save space."
         ) {
             SettingsToggle(Binding(
                 get: { sidebar.style == .icons },
@@ -127,8 +127,6 @@ private struct WindowStyleSettingsSection: View {
             SettingsToggle($settings.hidesMinimalBar)
         }
         .settingsAnchor("appearance.minimalBarAutoHide")
-
-        tabIconsRow
     }
 
     @ViewBuilder private var standardRows: some View {

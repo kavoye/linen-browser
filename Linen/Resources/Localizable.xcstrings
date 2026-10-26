@@ -2630,6 +2630,9 @@
     "Hide Sidebar" : {
       "comment" : "View menu item that hides the tab sidebar; the same item reads “Show Sidebar” while it is hidden. Title Case."
     },
+    "Hide tab titles in the sidebar to save space." : {
+      "comment" : "Caption under the Show only tab icons switch in Appearance settings, and its Settings search description. The sidebar keeps each website icon and drops the tab title, so it takes less room."
+    },
     "Hide the bar while you scroll. Move the pointer to the edge of the window to show it." : {
       "comment" : "Caption under the Hide bar automatically setting."
     },
@@ -3396,9 +3399,6 @@
     },
     "Name on card" : {
 
-    },
-    "Narrow the list of tabs to website icons." : {
-      "comment" : "Caption under the Show only tab icons switch in Appearance settings, and its Settings search description. The list of tabs keeps each website icon and drops its title."
     },
     "Natural" : {
       "comment" : "Option in the Style segmented control in Voice settings: the OpenAI voice speaks clearly and naturally. This is the default."
