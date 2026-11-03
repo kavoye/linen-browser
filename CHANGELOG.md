@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.5
+
+### Improved
+
+- **Minimal bar hiding.** Choose when the bar hides in Appearance settings:
+  never, while you scroll, or after 5, 10, or 30 seconds.
+- **Hover feedback.** Hovered controls use a flat fill again.
+
+### Fixed
+
+- **Show only tab icons.** Appearance settings shows this option only for the
+  Standard window style.
+
 ## 0.9.4
 
 ### Improved
