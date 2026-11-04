@@ -93,6 +93,7 @@ final class BrowserModel {
     var extensionPageHost: ((URL) -> ExtensionPageHost?)?
     var onTabOpened: ((BrowserTab) -> Void)?
     var onNavigationStarted: ((BrowserTab, URL) -> Void)?
+    var onTabPropertiesChanged: ((BrowserTab, WKWebExtension.TabChangedProperties) -> Void)?
     var onTabClosed: ((BrowserTab) -> Void)?
     var onTabReopened: ((UUID, BrowserTab) -> Void)?
     var onClosedTabForgotten: ((UUID) -> Void)?
@@ -209,6 +210,10 @@ final class BrowserModel {
         tab.events.onTitleChanged = { [weak self, weak tab] in
             guard let tab else { return }
             self?.noteTitleChange(of: tab)
+        }
+        tab.events.onPropertiesChanged = { [weak self, weak tab] properties in
+            guard let tab else { return }
+            self?.onTabPropertiesChanged?(tab, properties)
         }
         tab.events.onContentProcessTerminated = { [weak self, weak tab] in
             guard let tab else { return }

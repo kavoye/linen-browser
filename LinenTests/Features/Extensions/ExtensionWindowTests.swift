@@ -275,4 +275,64 @@ struct ExtensionWindowTests {
         #expect(personal.tabAdapters[workTab.id] == nil)
         #expect(personal.action(for: id, in: sibling) != nil)
     }
+
+    @Test func aBackgroundWorkerHearsATabLoad() async throws {
+        let package = TestFiles.directory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: package) }
+        try Data(#"""
+        {"manifest_version": 3, "name": "Tab events", "version": "1.0",
+         "permissions": ["tabs"], "host_permissions": ["https://linen.test/*"],
+         "background": {"service_worker": "worker.js"}}
+        """#.utf8).write(to: package.appendingPathComponent("manifest.json"))
+        try #"""
+        const heard = name => chrome.tabs.create({ url: `https://linen.test/heard/${name}`, active: false });
+        chrome.tabs.onUpdated.addListener((id, change, tab) => {
+            if (tab.url !== "https://linen.test/page") return;
+            if (change.status === "complete" && tab.status === "complete") heard("complete");
+            if (change.url === "https://linen.test/page") heard("url");
+            if (change.title === "Loaded") heard("title");
+        });
+        """#.write(to: package.appendingPathComponent("worker.js"), atomically: true, encoding: .utf8)
+
+        let manager = ExtensionManager()
+        let controller = manager.controller
+        let browser = BrowserModel(database: .temporary(), webViewFactory: {
+            let configuration = WKWebViewConfiguration()
+            configuration.webExtensionController = controller
+            return WKWebView(frame: .zero, configuration: configuration)
+        })
+        manager.register(browser: browser)
+        let webExtension = try await WKWebExtension(resourceBaseURL: package)
+        let context = WKWebExtensionContext(for: webExtension)
+        for permission in webExtension.requestedPermissions {
+            context.setPermissionStatus(.grantedExplicitly, for: permission)
+        }
+        for pattern in webExtension.allRequestedMatchPatterns {
+            context.setPermissionStatus(.grantedExplicitly, for: pattern)
+        }
+        try manager.controller.load(context)
+        defer {
+            try? manager.controller.unload(context)
+            manager.unregister(browser: browser)
+            browser.closeAllTabs(saving: false)
+        }
+        try await context.loadBackgroundContent()
+
+        let tab = browser.newTab()
+        tab.webView.loadHTMLString(
+            "<title>Loaded</title>",
+            baseURL: URL(string: "https://linen.test/page")
+        )
+
+        var heard: Set<String> = []
+        let settled = await waitUntil(timeout: .seconds(15)) {
+            heard = Set(browser.tabs.compactMap { tab in
+                URL(string: tab.urlString).flatMap { $0.path.hasPrefix("/heard/") ? $0.lastPathComponent : nil }
+            })
+            return heard.count == 3
+        }
+        #expect(settled, "Heard \(heard.sorted())")
+        #expect(heard == ["complete", "title", "url"])
+    }
 }

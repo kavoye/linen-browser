@@ -102,6 +102,10 @@ extension ExtensionManager {
             guard let self, let adapter, owns(adapter) else { return }
             wakeBackgrounds(for: url)
         }
+        browser.onTabPropertiesChanged = { [weak self, weak adapter] tab, properties in
+            guard let self, let adapter, owns(adapter), let changed = tabAdapters[tab.id] else { return }
+            controller.didChangeTabProperties(properties, for: changed)
+        }
         if hasStarted {
             controller.didOpenWindow(adapter)
         }
@@ -129,6 +133,7 @@ extension ExtensionManager {
         browser.onTabClosed = nil
         browser.onActiveTabChanged = nil
         browser.onNavigationStarted = nil
+        browser.onTabPropertiesChanged = nil
         browser.onTabTransferredIn = nil
         for tabAdapter in closingTabs {
             if let tab = tabAdapter.tab {

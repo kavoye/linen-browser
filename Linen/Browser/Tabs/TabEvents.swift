@@ -12,6 +12,7 @@ final class TabEvents {
     var onSameDocumentNavigation: (() -> Void)?
     var onInPageMove: (() -> Void)?
     var onTitleChanged: (() -> Void)?
+    var onPropertiesChanged: ((WKWebExtension.TabChangedProperties) -> Void)?
     var onNewWindow: ((WKWebView, Bool) -> Void)?
     var onOpenInNewTab: ((URL, Bool) -> Void)?
     var onOpenInNewWindow: ((URL, Bool, Bool) -> Void)?
@@ -35,6 +36,7 @@ final class TabEvents {
         onSameDocumentNavigation = nil
         onInPageMove = nil
         onTitleChanged = nil
+        onPropertiesChanged = nil
         onNewWindow = nil
         onOpenInNewTab = nil
         onOpenInNewWindow = nil

@@ -38,7 +38,7 @@ struct PasswordSettings: View {
         VStack(alignment: .leading, spacing: SettingsMetrics.headerGap) {
             SettingsCard {
                 if let provider {
-                    DetailRow(title: "Password filling") {
+                    DetailRow(title: "Password filling", controlWidth: nil) {
                         Text("Managed by \(provider.displayName)").foregroundStyle(.secondary)
                     }
                 } else {

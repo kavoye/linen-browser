@@ -103,13 +103,16 @@ final class TabWebViewBinding {
         }
         observations.watch(webView, \.isLoading, initially: true) { [weak tab] _ in
             tab?.refreshChrome()
+            tab?.events.onPropertiesChanged?(.loading)
         }
         observations.watch(webView, \.url) { [weak tab] view in
             tab?.pageDidChangeInPlace(view)
+            tab?.events.onPropertiesChanged?(.URL)
         }
         observations.watch(webView, \.title) { [weak tab] _ in
             tab?.refreshChrome()
             tab?.events.onTitleChanged?()
+            tab?.events.onPropertiesChanged?(.title)
         }
         observations.watch(webView, \.canGoBack) { [weak tab] _ in
             tab?.refreshChrome()
