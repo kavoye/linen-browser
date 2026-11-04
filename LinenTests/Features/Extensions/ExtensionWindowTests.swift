@@ -298,7 +298,7 @@ struct ExtensionWindowTests {
         let manager = ExtensionManager()
         let controller = manager.controller
         let browser = BrowserModel(database: .temporary(), webViewFactory: {
-            let configuration = WKWebViewConfiguration()
+            let configuration = WebViewPool.makeConfiguration()
             configuration.webExtensionController = controller
             return WKWebView(frame: .zero, configuration: configuration)
         })
