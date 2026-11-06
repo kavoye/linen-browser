@@ -70,6 +70,10 @@ final class FrameGate {
     }
 }
 
+extension Transaction {
+    @Entry var isSeamReset = false
+}
+
 struct SplitSurface: View {
     let browser: BrowserModel
     let coordinator: AppCoordinator
@@ -78,6 +82,7 @@ struct SplitSurface: View {
     let panes: [BrowserTab]
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let pull: PullState
 
     @State private var seamGrab: CGSize?
@@ -127,7 +132,11 @@ struct SplitSurface: View {
                 surfaceFrame = frame
             }
         }
-        .animation(nil, value: split)
+        .transaction(value: split) { transaction in
+            if !transaction.isSeamReset {
+                transaction.animation = nil
+            }
+        }
         .animation(Theme.Motion.settle, value: carriedPane)
     }
 
@@ -196,10 +205,7 @@ struct SplitSurface: View {
                     gate.flush()
                     browser.scheduleSave()
                 },
-                onReset: {
-                    apply(seam, leading: 0.5)
-                    browser.scheduleSave()
-                }
+                onReset: { reset(seam) }
             )
             .frame(width: seam.rect.width, height: seam.rect.height)
             .offset(x: seam.rect.minX, y: seam.rect.minY)
@@ -229,6 +235,15 @@ struct SplitSurface: View {
             NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
         }
         gate.offer { apply(seam, leading: share) }
+    }
+
+    private func reset(_ seam: SplitSeam) {
+        var transaction = Transaction(animation: reduceMotion ? nil : Theme.Motion.drift)
+        transaction.isSeamReset = true
+        withTransaction(transaction) {
+            apply(seam, leading: 0.5)
+        }
+        browser.scheduleSave()
     }
 
     private func apply(_ seam: SplitSeam, leading: CGFloat) {
