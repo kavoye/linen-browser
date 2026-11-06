@@ -144,8 +144,8 @@ that runs from an approved ref can read them.
 4. Select Add deployment branch or tag rule again. Set the ref type to
    **Branch**. Enter `main`.
 5. Make sure the list reads "1 branch and 1 tag allowed". A release comes from
-   the tag. A preview build comes from the branch, because `workflow_run` runs
-   from `main` and not from a tag. With no branch in the list, each preview
+   the tag. A preview build comes from the branch, because CI runs from `main`
+   and not from a tag. With no branch in the list, each preview
    build fails when it asks for the certificate.
 6. Add the seven secrets from the next section as environment secrets.
 
@@ -370,19 +370,22 @@ Preview. Sparkle reads the other feed at the next check, with no restart.
 
 ### What the workflow does
 
-`.github/workflows/tip.yml` runs each time CI passes on `main`. No manual trigger
-or tag is needed. The workflow:
+`.github/workflows/ci.yml` builds a preview on each push to `main`. No manual
+trigger or tag is needed. The workflow:
 
 1. Reads the version: the last `v` tag, then the number of commits after it,
    such as `0.1.2 (4)`.
 2. Uses the tag alone when that count is zero, such as `0.1.2`. The commit is
    the release itself.
-3. Builds an archive, signs the app, and sends it to Apple for notarization.
-4. Builds a zip file, and no disk image.
-5. Signs the app for Sparkle and writes `appcast-tip.xml`.
-6. Moves the `tip` tag to that commit.
-7. Updates the `tip` pre-release with the two files.
-8. Deletes every zip file outside the five most recent.
+3. Runs the tests and builds an archive at the same time. The archive job has
+   no signing secrets.
+4. Stops if the tests fail. No signing key is used.
+5. Signs the app and sends it to Apple for notarization.
+6. Builds a zip file, and no disk image.
+7. Signs the app for Sparkle and writes `appcast-tip.xml`.
+8. Moves the `tip` tag to that commit.
+9. Updates the `tip` pre-release with the two files.
+10. Deletes every zip file outside the five most recent.
 
 The workflow takes 20 to 30 minutes. Ten commits in ten minutes produce one
 build: a new run cancels the one before it, and the last commit is what
