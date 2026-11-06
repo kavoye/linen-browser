@@ -135,6 +135,11 @@ struct AttachmentComposerStatus: View {
                 ProgressView().controlSize(.mini)
                 Text("Preparing attachments…").font(.caption).foregroundStyle(.secondary)
             }
+        } else if isTextOnly, attachments.isRecognizing {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.mini)
+                Text("Reading text in attachments…").font(.caption).foregroundStyle(.secondary)
+            }
         }
         if let error = attachments.error {
             HStack(alignment: .top) {

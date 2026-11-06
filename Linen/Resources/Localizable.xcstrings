@@ -4330,6 +4330,9 @@
     "Reading speed" : {
 
     },
+    "Reading text in attachments…" : {
+      "comment" : "Status above the assistant composer while on-device text recognition runs on attached images. Shown only for models that can’t read images, because Send waits for it."
+    },
     "Reading this page…" : {
 
     },

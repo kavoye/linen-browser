@@ -13,7 +13,7 @@ nonisolated struct AssistantAttachment: Codable, Identifiable, Equatable, Sendab
     let name: String
     let contentType: String
     let data: Data
-    let text: String
+    var text: String
     let images: [Image]
 
     var byteCount: Int {

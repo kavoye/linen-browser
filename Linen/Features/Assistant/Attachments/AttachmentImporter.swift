@@ -15,7 +15,22 @@ nonisolated enum AttachmentImporter {
         "java", "kt", "sh", "sql", "toml", "ini", "log", "tex", "diff", "patch", "rtf",
     ]
 
+    struct Draft: Sendable {
+        let file: AssistantAttachment
+        let needsRecognition: Bool
+    }
+
     static func read(_ url: URL) throws -> AssistantAttachment {
+        let source = try load(url)
+        return try prepare(data: source.data, name: url.lastPathComponent, type: source.type)
+    }
+
+    static func draft(_ url: URL) throws -> Draft {
+        let source = try load(url)
+        return try draft(data: source.data, name: url.lastPathComponent, type: source.type)
+    }
+
+    private static func load(_ url: URL) throws -> (data: Data, type: UTType?) {
         let scoped = url.startAccessingSecurityScopedResource()
         defer {
             if scoped {
@@ -32,10 +47,22 @@ nonisolated enum AttachmentImporter {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         let data = try handle.read(upToCount: AssistantAttachment.maximumFileBytes + 1) ?? Data()
-        return try prepare(data: data, name: url.lastPathComponent, type: values.contentType)
+        return (data, values.contentType)
     }
 
     static func prepare(data: Data, name: String, type: UTType? = nil) throws -> AssistantAttachment {
+        try build(data: data, name: name, type: type, recognizesText: true).file
+    }
+
+    static func draft(data: Data, name: String, type: UTType? = nil) throws -> Draft {
+        try build(data: data, name: name, type: type, recognizesText: false)
+    }
+
+    static func recognizedText(in file: AssistantAttachment) throws -> String {
+        try prepare(data: file.data, name: file.name, type: UTType(file.contentType)).text
+    }
+
+    private static func build(data: Data, name: String, type: UTType?, recognizesText: Bool) throws -> Draft {
         try Task.checkCancellation()
         guard !data.isEmpty else {
             throw AttachmentFailure.message(String(localized: "This file is empty."))
@@ -47,12 +74,14 @@ nonisolated enum AttachmentImporter {
         let type = type ?? UTType(filenameExtension: ext) ?? .data
         var text: String
         var images: [AssistantAttachment.Image] = []
+        var needsRecognition = false
         if type.conforms(to: .pdf) || ext == "pdf" {
-            (text, images) = try pdf(data)
+            (text, images, needsRecognition) = try pdf(data, recognizesText: recognizesText)
         } else if type.conforms(to: .image) {
             let image = try normalizedImage(data)
             images = [.init(data: image.data, mimeType: "image/jpeg")]
-            text = try recognize(image.cgImage)
+            text = recognizesText ? try recognize(image.cgImage) : ""
+            needsRecognition = !recognizesText
         } else if type.conforms(to: .rtf) || ext == "rtf" {
             text = try NSAttributedString(
                 data: data, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil
@@ -65,10 +94,11 @@ nonisolated enum AttachmentImporter {
         guard text.count <= AssistantAttachment.maximumTextCharacters else {
             throw AttachmentFailure.message(String(localized: "This document contains too much text. Attach a shorter selection."))
         }
-        return AssistantAttachment(
+        let file = AssistantAttachment(
             id: UUID(), name: name, contentType: (ext == "pdf" ? UTType.pdf : type).identifier,
             data: data, text: text, images: images
         )
+        return Draft(file: file, needsRecognition: needsRecognition)
     }
 
     static func decodeText(_ data: Data) throws -> String {
@@ -145,7 +175,10 @@ nonisolated enum AttachmentImporter {
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
     }
 
-    private static func pdf(_ data: Data) throws -> (String, [AssistantAttachment.Image]) {
+    private static func pdf(
+        _ data: Data,
+        recognizesText: Bool
+    ) throws -> (String, [AssistantAttachment.Image], Bool) {
         guard let document = PDFDocument(data: data), !document.isLocked, document.pageCount > 0 else {
             throw AttachmentFailure.message(String(localized: "This PDF is locked or couldn’t be read. Attach an unlocked copy."))
         }
@@ -154,6 +187,7 @@ nonisolated enum AttachmentImporter {
         }
         var pages: [String] = []
         var images: [AssistantAttachment.Image] = []
+        var needsRecognition = false
         for index in 0..<document.pageCount {
             try Task.checkCancellation()
             guard let page = document.page(at: index) else { continue }
@@ -167,13 +201,17 @@ nonisolated enum AttachmentImporter {
             }
             var text = (page.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             if text.isEmpty {
-                text = try recognize(cgImage)
+                if recognizesText {
+                    text = try recognize(cgImage)
+                } else {
+                    needsRecognition = true
+                }
             }
             if !text.isEmpty {
                 pages.append("Page \(index + 1):\n\(text)")
             }
             images.append(.init(data: try jpeg(cgImage), mimeType: "image/jpeg"))
         }
-        return (pages.joined(separator: "\n\n"), images)
+        return (pages.joined(separator: "\n\n"), images, needsRecognition)
     }
 }

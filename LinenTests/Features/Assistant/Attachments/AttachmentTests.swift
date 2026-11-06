@@ -192,6 +192,82 @@ struct AttachmentTests {
         #expect(draft.files.map(\.name) == ["new.txt"])
     }
 
+    @Test func anImageAttachesBeforeItsTextIsRead() async throws {
+        let gate = AsyncStream<Void>.makeStream()
+        let draft = AttachmentDraft { _ in
+            for await _ in gate.stream {
+                break
+            }
+            return "INVOICE 42"
+        }
+        draft.add([.bytes(try image(), name: "receipt.png", type: .png)])
+
+        #expect(await waitForObservation { !draft.isImporting })
+        #expect(draft.files.count == 1)
+        #expect(draft.files.first?.images.count == 1)
+        #expect(draft.files.first?.text == "")
+        #expect(draft.isRecognizing)
+        #expect(draft.isReady(textOnly: false))
+        #expect(!draft.isReady(textOnly: true))
+
+        gate.continuation.yield()
+        #expect(await waitForObservation { !draft.isRecognizing })
+        #expect(draft.files.first?.text == "INVOICE 42")
+        #expect(draft.isReady(textOnly: true))
+    }
+
+    @Test func clearingDuringRecognitionDiscardsTheText() async throws {
+        let gate = AsyncStream<Void>.makeStream()
+        let draft = AttachmentDraft { _ in
+            for await _ in gate.stream {
+                break
+            }
+            return "Late text"
+        }
+        draft.add([.bytes(try image(), name: "receipt.png", type: .png)])
+        #expect(await waitForObservation { draft.isRecognizing })
+
+        draft.clear()
+        gate.continuation.yield()
+
+        #expect(!draft.isRecognizing)
+        #expect(draft.files.isEmpty)
+    }
+
+    @Test func removingAnImageDuringRecognitionKeepsTheOthers() async throws {
+        let gate = AsyncStream<Void>.makeStream()
+        let draft = AttachmentDraft { _ in
+            for await _ in gate.stream {
+                break
+            }
+            return "Read"
+        }
+        draft.add([
+            .bytes(try image(), name: "one.png", type: .png),
+            .bytes(try image(), name: "two.png", type: .png),
+        ])
+        #expect(await waitForObservation { draft.files.count == 2 })
+
+        draft.files.removeAll { $0.name == "one.png" }
+        gate.continuation.yield()
+        gate.continuation.yield()
+
+        #expect(await waitForObservation { !draft.isRecognizing })
+        #expect(draft.files.map(\.name) == ["two.png"])
+        #expect(draft.files.first?.text == "Read")
+    }
+
+    @Test func aDraftWithoutTextReportsThatItNeedsRecognition() throws {
+        let image = try AttachmentImporter.draft(data: try image(), name: "receipt.png", type: .png)
+        #expect(image.needsRecognition)
+        #expect(image.file.text.isEmpty)
+        #expect(image.file.images.count == 1)
+
+        let notes = try AttachmentImporter.draft(data: Data("Hello".utf8), name: "notes.md")
+        #expect(!notes.needsRecognition)
+        #expect(notes.file.text == "Hello")
+    }
+
     private func image() throws -> Data {
         let image = NSImage(size: NSSize(width: 600, height: 160))
         image.lockFocus()
