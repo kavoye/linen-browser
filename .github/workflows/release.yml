@@ -17,7 +17,7 @@ env:
   SCHEME: Linen
   APP: Linen
   TEAM_ID: T8677WC8DG
-  XCODE: '27.0'
+  XCODE: '27.2'
   DD: ${{ github.workspace }}/build/DD
 
 jobs:
@@ -134,6 +134,7 @@ jobs:
         run: |
           xcodebuild -resolvePackageDependencies \
             -project "$PROJECT" -scheme "$SCHEME" -derivedDataPath "$DD" \
+            -IDEPackageEnablePrebuilts=NO \
             -onlyUsePackageVersionsFromResolvedFile
 
       - name: Check acknowledgements
@@ -208,6 +209,7 @@ jobs:
             -destination 'generic/platform=macOS' \
             -archivePath build/"$APP".xcarchive \
             -derivedDataPath "$DD" \
+            -IDEPackageEnablePrebuilts=NO \
             -disableAutomaticPackageResolution \
             -skipMacroValidation -skipPackagePluginValidation \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
