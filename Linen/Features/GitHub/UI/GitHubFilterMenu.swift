@@ -198,8 +198,8 @@ private struct GitHubFilterMenuRow: View {
 
     @ViewBuilder
     private var actions: some View {
-        Button("Edit Filter…", action: onEdit)
-        Button("Delete Filter", role: .destructive, action: onDelete).disabled(!canDelete)
+        Button("Edit Filter…", systemImage: "pencil", action: onEdit)
+        Button("Delete Filter", systemImage: "trash", role: .destructive, action: onDelete).disabled(!canDelete)
     }
 }
 

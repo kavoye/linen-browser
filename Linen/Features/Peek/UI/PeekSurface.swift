@@ -245,7 +245,11 @@ struct PeekRowBadge: View {
         .accessibilityLabel(Text(toggleLabel))
         .accessibilityValue(Text(verbatim: tab.title))
         .contextMenu {
-            Button(toggleLabel) { coordinator.togglePeekVisibility() }
+            Button {
+                coordinator.togglePeekVisibility()
+            } label: {
+                Label(toggleLabel, systemImage: "rectangle.portrait.on.rectangle.portrait")
+            }
             Divider()
             Button("Reload", systemImage: "arrow.clockwise") { tab.webView.reload() }
             Button("Back", systemImage: "chevron.left") { tab.goBack() }

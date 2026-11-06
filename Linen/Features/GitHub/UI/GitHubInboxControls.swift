@@ -33,12 +33,12 @@ struct GitHubInboxHeader<Picker: View>: View {
                     Text("Signed in as \(account.login)")
                     Divider()
                 }
-                Toggle("Notify About My Pull Requests", isOn: $model.notifiesAboutPullRequests)
+                Toggle("Notify About My Pull Requests", systemImage: "bell", isOn: $model.notifiesAboutPullRequests)
                 Divider()
-                Button("Manage GitHub Access", action: onManage)
-                Button("Include Private Repositories…", action: onPrivateAccess)
+                Button("Manage GitHub Access", systemImage: "key", action: onManage)
+                Button("Include Private Repositories…", systemImage: "lock", action: onPrivateAccess)
                 Divider()
-                Button("Disconnect GitHub", role: .destructive, action: model.disconnect)
+                Button("Disconnect GitHub", systemImage: "person.slash", role: .destructive, action: model.disconnect)
             }
         }
         .padding(.horizontal, 10).padding(.top, 2).padding(.bottom, 4)

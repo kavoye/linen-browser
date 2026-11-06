@@ -349,17 +349,17 @@ struct HistoryRow: View {
         .help(Text(verbatim: entry.url))
         .contextMenu {
             if let onOpenInNewTab {
-                Button("Open in New Tab") { onOpenInNewTab(false) }
+                Button("Open in New Tab", systemImage: "arrow.up.forward.square") { onOpenInNewTab(false) }
             }
             if let onOpenInNewWindow {
                 LinkWindowMenuItems(isPrivate: isPrivate, onOpen: onOpenInNewWindow)
             }
-            Button("Copy Link") {
+            Button("Copy Link", systemImage: "link") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(entry.url, forType: .string)
             }
             if let onRemove {
-                Button("Remove from History", role: .destructive, action: onRemove)
+                Button("Remove from History", systemImage: "trash", role: .destructive, action: onRemove)
             }
         }
         .overlay(alignment: .trailing) {

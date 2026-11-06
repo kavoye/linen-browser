@@ -486,7 +486,7 @@ private struct SidePanelTabChip: View {
         .help(isSelected ? "" : String(localized: tab.kind.title))
         .contextMenu {
             if let onRemove {
-                Button("Remove from Side Panel", action: onRemove)
+                Button("Remove from Side Panel", systemImage: "minus", action: onRemove)
             }
         }
         .accessibilityElement(children: .ignore)

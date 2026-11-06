@@ -61,7 +61,11 @@ struct SidebarPinMenuItems: View {
                     Label("Edit…", systemImage: "pencil")
                 }
             } label: {
-                Label("Edit Pinned Page", systemImage: "pin.circle")
+                Label {
+                    Text("Edit Pinned Page")
+                } icon: {
+                    Image(nsImage: MenuItemImages.blank)
+                }
             }
         }
     }
@@ -119,7 +123,11 @@ struct SidebarFolderMenuItems: View {
                 Button {
                     browser.move(items, into: folder)
                 } label: {
-                    Text(verbatim: folder.name)
+                    Label {
+                        Text(verbatim: folder.name)
+                    } icon: {
+                        Image(systemName: "folder")
+                    }
                 }
             }
             if !targets.isEmpty {

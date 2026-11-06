@@ -59,7 +59,7 @@ private struct TranslationMenu: View {
                 Button {
                     coordinator.translatePage(tab, to: language)
                 } label: {
-                    Text("Translate to \(TranslationLanguage.name(language))")
+                    Label("Translate to \(TranslationLanguage.name(language))", systemImage: "translate")
                 }
                 .disabled(isShowing(language))
             }
@@ -67,7 +67,7 @@ private struct TranslationMenu: View {
             Button {
                 coordinator.openPreferredLanguages()
             } label: {
-                Text("Preferred Languages…")
+                Label("Preferred Languages…", systemImage: "globe")
             }
 
             Divider()

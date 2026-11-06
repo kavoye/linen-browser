@@ -13,6 +13,8 @@ if CommandLine.arguments.contains("--mcp") {
 
 UserDefaults.standard.set("WhenScrolling", forKey: "AppleShowScrollBars")
 
+MenuItemImages.show()
+
 let application = NSApplication.shared
 let appDelegate = AppDelegate()
 application.delegate = appDelegate

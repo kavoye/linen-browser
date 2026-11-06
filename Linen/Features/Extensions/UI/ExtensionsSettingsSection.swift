@@ -67,21 +67,21 @@ private struct ExtensionRowMenu: View {
 
     var body: some View {
         SettingsMoreMenu {
-            Button("Check for Updates") {
+            Button("Check for Updates", systemImage: "arrow.triangle.2.circlepath") {
                 Task { await manager.checkForUpdate(id: record.id) }
             }
             .disabled(isChecking)
 
             if manager.hasOptionsPage(id: record.id) {
-                Button(String(localized: "extension.menu.settings", defaultValue: "Settings")) {
+                Button(String(localized: "extension.menu.settings", defaultValue: "Settings"), systemImage: "gearshape") {
                     manager.openOptionsPage(id: record.id)
                 }
             }
 
             if !record.blockedHosts.isEmpty {
-                Menu("Blocked Websites") {
+                Menu("Blocked Websites", systemImage: "hand.raised") {
                     ForEach(record.blockedHosts, id: \.self) { host in
-                        Button("Allow on \(host)") {
+                        Button("Allow on \(host)", systemImage: "checkmark.shield") {
                             manager.setAllowed(true, on: host, id: record.id)
                         }
                     }
@@ -90,7 +90,7 @@ private struct ExtensionRowMenu: View {
 
             Divider()
 
-            Button("Remove Extension…", role: .destructive) {
+            Button("Remove Extension…", systemImage: "trash", role: .destructive) {
                 manager.confirmUninstall(id: record.id)
             }
         }

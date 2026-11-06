@@ -12,6 +12,7 @@ enum TabContextMenu {
             title: String(localized: "Open Link in New Private Window"), action: action, keyEquivalent: ""
         )
         privateWindow.identifier = .init("LinenOpenLinkInNewPrivateWindow")
+        privateWindow.image = NSImage(systemSymbolName: "hand.raised", accessibilityDescription: nil)
         privateWindow.target = target
         privateWindow.tag = 1
         privateWindow.keyEquivalentModifierMask = []
@@ -21,6 +22,7 @@ enum TabContextMenu {
             title: String(localized: "Open Link in New Window"), action: action, keyEquivalent: ""
         )
         window.identifier = .init("LinenOpenLinkInNewWindow")
+        window.image = NSImage(systemSymbolName: "macwindow.badge.plus", accessibilityDescription: nil)
         window.target = target
         window.keyEquivalentModifierMask = []
         privateWindow.isAlternate = true

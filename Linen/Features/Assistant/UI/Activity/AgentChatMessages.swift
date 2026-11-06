@@ -100,19 +100,19 @@ struct AgentTaskTraceView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: trace.response.isEmpty)
         .animation(Theme.Motion.quick, value: hovering)
         .contextMenu {
-            Button("Copy Answer") { copy(trace.response) }
+            Button("Copy Answer", systemImage: "doc.on.doc") { copy(trace.response) }
                 .disabled(trace.response.isEmpty)
             if trace.hasUserPrompt {
-                Button("Copy Question") { copy(trace.prompt) }
-                Button("Ask Again") { onRetry(trace) }
-                Button("Edit Question") { onEdit(trace) }
+                Button("Copy Question", systemImage: "questionmark.bubble") { copy(trace.prompt) }
+                Button("Ask Again", systemImage: "arrow.clockwise") { onRetry(trace) }
+                Button("Edit Question", systemImage: "pencil") { onEdit(trace) }
             }
-            Button("Copy Diagnostics") { copy(trace.diagnostics.exported()) }
+            Button("Copy Diagnostics", systemImage: "stethoscope") { copy(trace.diagnostics.exported()) }
             Divider()
             if isSpeaking {
-                Button("Stop Speaking") { onSpeak(trace) }
+                Button("Stop Speaking", systemImage: "speaker.slash") { onSpeak(trace) }
             } else {
-                Button("Speak Answer") { onSpeak(trace) }
+                Button("Speak Answer", systemImage: "speaker.wave.2") { onSpeak(trace) }
                     .disabled(trace.response.isEmpty)
             }
         }

@@ -90,18 +90,18 @@ private struct DownloadsPreviewRow: View {
 
     @ViewBuilder private var menu: some View {
         if item.state == .finished {
-            Button("Open", action: action)
-            Button("Show in Finder") { downloads.revealInFinder(item) }
+            Button("Open", systemImage: "arrow.up.forward.app", action: action)
+            Button("Show in Finder", systemImage: "folder") { downloads.revealInFinder(item) }
         }
         if item.isRunning {
-            Button("Stop") { downloads.cancel(item) }
+            Button("Stop", systemImage: "stop") { downloads.cancel(item) }
         }
         if downloads.canResume(item) {
-            Button("Resume") { downloads.resume(item) }
+            Button("Resume", systemImage: "play") { downloads.resume(item) }
         }
         if !item.isRunning {
             Divider()
-            Button("Remove from List", role: .destructive) { downloads.remove(item) }
+            Button("Remove from List", systemImage: "trash", role: .destructive) { downloads.remove(item) }
         }
     }
 

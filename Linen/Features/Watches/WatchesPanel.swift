@@ -90,10 +90,10 @@ private struct WatchRow: View {
         .padding(.vertical, 9)
         .onHover { hovering = $0 }
         .contextMenu {
-            Button("Open Page", action: onOpen)
-            Button("Check Now", action: onCheck)
+            Button("Open Page", systemImage: "arrow.up.forward.square", action: onOpen)
+            Button("Check Now", systemImage: "arrow.clockwise", action: onCheck)
             Divider()
-            Button("Stop Watching", action: onStop)
+            Button("Stop Watching", systemImage: "eye.slash", action: onStop)
         }
     }
 }

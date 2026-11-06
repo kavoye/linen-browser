@@ -443,7 +443,7 @@ struct SidebarStyleMenuItems: View {
             get: { sidebar.isIconsOnly },
             set: { sidebar.setIconsOnly($0) }
         )) {
-            Text("Icons Only")
+            Label("Icons Only", systemImage: "sidebar.squares.left")
         }
     }
 }

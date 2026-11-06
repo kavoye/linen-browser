@@ -42,12 +42,12 @@ private struct MCPClientSetupRow: View {
                 .accessibilityLabel(Text("Add Linen to \(target.kind.name)"))
 
                 SettingsMoreMenu {
-                    Button("Choose Configuration…") { chooseConfiguration() }
-                    Button("Show Configuration") {
+                    Button("Choose Configuration…", systemImage: "doc.badge.gearshape") { chooseConfiguration() }
+                    Button("Show Configuration", systemImage: "folder") {
                         NSWorkspace.shared.activateFileViewerSelecting([configurationURL])
                     }
                     if let backupURL {
-                        Button("Show Backup") { NSWorkspace.shared.activateFileViewerSelecting([backupURL]) }
+                        Button("Show Backup", systemImage: "clock.arrow.circlepath") { NSWorkspace.shared.activateFileViewerSelecting([backupURL]) }
                     }
                 }
                 .accessibilityLabel(Text("Setup Options for \(target.kind.name)"))

@@ -159,8 +159,8 @@ private struct AutofillSaveActions: View {
     var body: some View {
         HStack(spacing: 8) {
             Menu {
-                Button("Review Details…", action: review)
-                Button("Never for This Site") { Task { await session.never(offer) } }
+                Button("Review Details…", systemImage: "pencil", action: review)
+                Button("Never for This Site", systemImage: "hand.raised.slash") { Task { await session.never(offer) } }
             } label: {
                 Text(Image(systemName: "ellipsis"))
             }

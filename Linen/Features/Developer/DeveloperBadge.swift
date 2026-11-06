@@ -117,7 +117,7 @@ enum DeveloperMenu {
         }
         if let host = DeveloperMode.host(of: URL(string: tab.urlString)) {
             menu.addItem(.separator())
-            menu.addItem(title: String(localized: "Turn Off Developer Mode for “\(host)”")) { [weak tab] in
+            menu.addItem(title: String(localized: "Turn Off Developer Mode for “\(host)”"), image: symbol("xmark")) { [weak tab] in
                 tab?.setDeveloperMode(false)
             }
         }

@@ -168,7 +168,7 @@ struct LyricsBoard: View {
         LyricsChromeMenuButton(symbol: "ellipsis", help: "Choose a Different Match") {
             let menu = NSMenu()
             if lyrics.alternatives.isEmpty {
-                menu.addItem(title: String(localized: "Find Another Match")) {
+                menu.addItem(title: String(localized: "Find Another Match"), image: NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil)) {
                     Task { await lyrics.findAlternatives() }
                 }
                 menu.items.last?.isEnabled = !lyrics.isFindingAlternatives

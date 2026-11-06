@@ -11,7 +11,7 @@ struct LinkWindowMenuItems: View {
         if isPrivate {
             privateWindow
         } else {
-            Button("Open Link in New Window") { onOpen(false) }
+            Button("Open Link in New Window", systemImage: "macwindow.badge.plus") { onOpen(false) }
                 .modifierKeyAlternate(.option) {
                     privateWindow
                 }
@@ -19,6 +19,6 @@ struct LinkWindowMenuItems: View {
     }
 
     private var privateWindow: some View {
-        Button("Open Link in New Private Window") { onOpen(true) }
+        Button("Open Link in New Private Window", systemImage: "hand.raised") { onOpen(true) }
     }
 }

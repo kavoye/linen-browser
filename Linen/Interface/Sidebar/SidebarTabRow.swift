@@ -366,7 +366,11 @@ private struct SidebarTabMenuItems: View {
                         browser.closeOthers(tab)
                     }
                 } label: {
-                    Label("Close Other Tabs", systemImage: "xmark.square")
+                    Label {
+                        Text("Close Other Tabs")
+                    } icon: {
+                        Image(nsImage: MenuItemImages.blank)
+                    }
                 }
             }
         }
@@ -553,7 +557,7 @@ struct SidebarWindowMenuItems: View {
 
     var body: some View {
         Menu {
-            Button("New Window") {
+            Button("New Window", systemImage: "macwindow.badge.plus") {
                 coordinator.moveTabToNewWindow(tab)
             }
             let destinations = coordinator.otherWindows
@@ -563,7 +567,11 @@ struct SidebarWindowMenuItems: View {
                     Button {
                         coordinator.moveTab(tab, to: destination)
                     } label: {
-                        Text(verbatim: destination.windowTitle)
+                        Label {
+                            Text(verbatim: destination.windowTitle)
+                        } icon: {
+                            Image(systemName: "macwindow")
+                        }
                     }
                 }
             }

@@ -142,7 +142,7 @@ enum TabsHoldMenu {
             coordinator?.closeActiveTabAskingIfPinned()
         }
         if browser.tabs.count > 1 {
-            menu.addItem(title: String(localized: "Close Other Tabs"), image: symbol("xmark.square")) { [weak browser, weak tab] in
+            menu.addItem(title: String(localized: "Close Other Tabs")) { [weak browser, weak tab] in
                 guard let browser, let tab else { return }
                 let count = browser.tabs.count - 1
                 Task {

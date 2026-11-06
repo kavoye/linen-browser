@@ -23,18 +23,21 @@ extension ExtensionManager {
         let pinTitle: LocalizedStringResource = isPinned ? "Hide from Toolbar" : "Show in Toolbar"
         menu.addItem(appMenuItem(
             title: String(localized: pinTitle),
+            symbol: isPinned ? "eye.slash" : "eye",
             action: #selector(togglePinnedFromMenu(_:)),
             id: id, browser: browser
         ))
         if context.optionsPageURL != nil {
             menu.addItem(appMenuItem(
                 title: String(localized: "extension.menu.settings", defaultValue: "Settings"),
+                symbol: "gearshape",
                 action: #selector(openOptionsFromMenu(_:)),
                 id: id, browser: browser
             ))
         }
         menu.addItem(appMenuItem(
             title: String(localized: "Manage Extensions…"),
+            symbol: "puzzlepiece.extension",
             action: #selector(manageFromMenu(_:)),
             id: id, browser: browser
         ))
@@ -47,6 +50,7 @@ extension ExtensionManager {
             let host = blocking ?? website
             let item = appMenuItem(
                 title: String(localized: "Allow on \(host)"),
+                symbol: "checkmark.shield",
                 action: #selector(toggleWebsiteFromMenu(_:)),
                 id: id, browser: browser
             )
@@ -57,12 +61,14 @@ extension ExtensionManager {
         }
         menu.addItem(appMenuItem(
             title: String(localized: "Disable Extension"),
+            symbol: "nosign",
             action: #selector(disableFromMenu(_:)),
             id: id, browser: browser
         ))
         if known?.isSystem != true {
             menu.addItem(appMenuItem(
                 title: String(localized: "Remove Extension…"),
+                symbol: "trash",
                 action: #selector(removeFromMenu(_:)),
                 id: id, browser: browser
             ))
@@ -81,8 +87,15 @@ extension ExtensionManager {
         }
     }
 
-    private func appMenuItem(title: String, action: Selector, id: String, browser: BrowserModel?) -> NSMenuItem {
+    private func appMenuItem(
+        title: String,
+        symbol: String,
+        action: Selector,
+        id: String,
+        browser: BrowserModel?
+    ) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
         item.target = self
         item.representedObject = MenuTarget(id: id, browser: browser ?? preferredWindowAdapter?.browser)
         return item

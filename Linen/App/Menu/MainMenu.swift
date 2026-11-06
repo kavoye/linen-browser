@@ -74,7 +74,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(.separator())
 
         let services = NSMenu(title: "Services")
-        menu.addItem(submenu(services, titled: "Services"))
+        menu.addItem(submenu(services, titled: "Services", symbol: "gearshape.2"))
         NSApp.servicesMenu = services
 
         menu.addItem(.separator())
@@ -154,7 +154,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         find.addItem(command("Find…", #selector(openFind), key: "f"))
         find.addItem(command("Find Next", #selector(findNext), key: "g"))
         find.addItem(command("Find Previous", #selector(findPrevious), key: "g", modifiers: [.command, .shift]))
-        menu.addItem(submenu(find, titled: "Find"))
+        menu.addItem(submenu(find, titled: "Find", symbol: "text.magnifyingglass"))
         return menu
     }
 
@@ -181,7 +181,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(command("Show Reader", #selector(toggleReader), key: "r", modifiers: [.command, .option]))
         menu.addItem(command("Translate Page", #selector(toggleTranslation)))
         menu.addItem(.separator())
-        menu.addItem(submenu(splitViewMenu(), titled: "Split View"))
+        menu.addItem(submenu(splitViewMenu(), titled: "Split View", symbol: "rectangle.split.2x1"))
         menu.addItem(.separator())
         menu.addItem(command(
             "Use Minimal Window Style",
@@ -208,7 +208,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         developer.addItem(command("Restart Page", #selector(restartPage)))
         developer.addItem(.separator())
         developer.addItem(command("Developer Mode", #selector(toggleDeveloperMode)))
-        menu.addItem(submenu(developer, titled: "Developer"))
+        menu.addItem(submenu(developer, titled: "Developer", symbol: "hammer"))
         return menu
     }
 
@@ -605,11 +605,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             menuItem.title = String(localized: windowStyleTitle)
             return true
         case #selector(moveMinimalBar):
-            let barTitle: LocalizedStringResource = coordinator.settings.minimalBarEdge == .top
-                ? "Move Bar to Bottom"
-                : "Move Bar to Top"
-            menuItem.title = String(localized: barTitle)
-            return coordinator.settings.isMinimal
+            return validateMoveBarItem(menuItem)
         default:
             return true
         }
@@ -623,13 +619,29 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         return coordinator.browser.activeTab != nil
     }
 
+    private func validateMoveBarItem(_ item: NSMenuItem) -> Bool {
+        let barIsAtTop = coordinator.settings.minimalBarEdge == .top
+        let title: LocalizedStringResource = barIsAtTop ? "Move Bar to Bottom" : "Move Bar to Top"
+        item.title = String(localized: title)
+        item.image = NSImage(
+            systemSymbolName: barIsAtTop ? "rectangle.bottomthird.inset.filled" : "rectangle.topthird.inset.filled",
+            accessibilityDescription: nil
+        )
+        return coordinator.settings.isMinimal
+    }
+
     // MARK: - Building blocks
 
-    private func submenu(_ menu: NSMenu, titled title: LocalizedStringResource) -> NSMenuItem {
+    private func submenu(
+        _ menu: NSMenu,
+        titled title: LocalizedStringResource,
+        symbol: String? = nil
+    ) -> NSMenuItem {
         let name = String(localized: title)
         let holder = NSMenuItem(title: name, action: nil, keyEquivalent: "")
         menu.title = name
         holder.submenu = menu
+        holder.image = symbol.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
         return holder
     }
 
@@ -653,6 +665,78 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         makeItem(title, action, key: key, modifiers: modifiers)
     }
 
+    private static let symbols: [Selector: String] = [
+        #selector(NSApplication.orderFrontStandardAboutPanel(_:)): "info",
+        #selector(checkForUpdates): "arrow.triangle.2.circlepath",
+        #selector(showReleaseNotes): "doc.text",
+        #selector(reportProblem): "exclamationmark.bubble",
+        #selector(openGitHubRepository): "chevron.left.forwardslash.chevron.right",
+        #selector(openSettings): "gearshape",
+        #selector(NSApplication.hide(_:)): "eye.slash",
+        #selector(NSApplication.hideOtherApplications(_:)): "rectangle.on.rectangle.slash",
+        #selector(NSApplication.unhideAllApplications(_:)): "eye",
+        #selector(NSApplication.terminate(_:)): "power",
+        #selector(newTab): "plus.square",
+        #selector(newWindow): "macwindow.badge.plus",
+        #selector(newPrivateWindow): "hand.raised",
+        #selector(reopenClosedTab): "arrow.uturn.backward.square",
+        #selector(reopenClosedWindow): "macwindow",
+        #selector(closeTab): "xmark",
+        #selector(NSWindow.performClose(_:)): "xmark.square",
+        #selector(duplicateTab): "plus.square.on.square",
+        #selector(pinPage): "pin",
+        #selector(returnToPin): "arrow.uturn.backward",
+        #selector(openLocation): "globe",
+        #selector(openPalette): "magnifyingglass",
+        #selector(openDownloads): "arrow.down",
+        #selector(printPage): "printer",
+        Selector(("undo:")): "arrow.uturn.backward",
+        Selector(("redo:")): "arrow.uturn.forward",
+        #selector(NSText.cut(_:)): "scissors",
+        #selector(NSText.copy(_:)): "doc.on.doc",
+        #selector(NSText.paste(_:)): "doc.on.clipboard",
+        #selector(NSTextView.pasteAsPlainText(_:)): "textformat",
+        #selector(NSText.delete(_:)): "trash",
+        #selector(NSText.selectAll(_:)): "selection.pin.in.out",
+        #selector(copyPageURL): "link",
+        #selector(searchSelection): "character.magnify",
+        #selector(openFind): "text.magnifyingglass",
+        #selector(findNext): "chevron.down",
+        #selector(findPrevious): "chevron.up",
+        #selector(reload): "arrow.clockwise",
+        #selector(hardReload): "arrow.2.circlepath",
+        #selector(stopLoading): "stop",
+        #selector(actualSize): "1.magnifyingglass",
+        #selector(zoomIn): "plus.magnifyingglass",
+        #selector(zoomOut): "minus.magnifyingglass",
+        #selector(toggleReader): "doc.plaintext",
+        #selector(toggleTranslation): "translate",
+        #selector(NSWindow.toggleFullScreen(_:)): "arrow.up.left.and.arrow.down.right.rectangle",
+        #selector(toggleSidebar): "sidebar.left",
+        #selector(toggleSidePanel): "sidebar.right",
+        #selector(toggleMinimal): "rectangle.compress.vertical",
+        #selector(moveMinimalBar): "rectangle.topthird.inset.filled",
+        #selector(showWebInspector): "wrench.and.screwdriver",
+        #selector(restartPage): "arrow.trianglehead.2.clockwise",
+        #selector(toggleDeveloperMode): "hammer",
+        #selector(splitRight): "rectangle.split.2x1",
+        #selector(splitDown): "rectangle.split.1x2",
+        #selector(focusOtherPane): "rectangle.lefthalf.inset.filled",
+        #selector(swapPanes): "arrow.left.arrow.right",
+        #selector(toggleSplitAxis): "rectangle.landscape.rotate",
+        #selector(exitSplit): "rectangle",
+        #selector(closeOtherPanes): "xmark.square",
+        #selector(goBack): "chevron.left",
+        #selector(goForward): "chevron.right",
+        #selector(showHistory): "clock",
+        #selector(clearHistory): "clock.badge.xmark",
+        #selector(NSWindow.performMiniaturize(_:)): "minus.square",
+        #selector(NSWindow.performZoom(_:)): "square.arrowtriangle.4.outward",
+        #selector(nextTab): "chevron.right.square",
+        #selector(previousTab): "chevron.left.square",
+        #selector(NSApplication.arrangeInFront(_:)): "macwindow.on.rectangle",
+    ]
+
     private func makeItem(
         _ title: LocalizedStringResource,
         _ action: Selector,
@@ -667,6 +751,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         }
         let item = NSMenuItem(title: String(localized: title), action: action, keyEquivalent: key)
         item.keyEquivalentModifierMask = key.isEmpty ? [] : modifiers
+        item.image = Self.symbols[action].flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
         return item
     }
 
