@@ -254,7 +254,7 @@ private enum FolderContextMenu {
         }
 
         menu.addItem(actionItem(
-            title: String(localized: "Rename"),
+            title: String(localized: "Rename…"),
             symbol: "pencil",
             action: onRename
         ))
@@ -346,7 +346,7 @@ private enum FolderContextMenu {
             move.addItem(.separator())
         }
         move.addItem(actionItem(
-            title: String(localized: "New Folder…"),
+            title: String(localized: "New Folder"),
             symbol: "folder.badge.plus",
             action: { [weak browser] in browser?.createFolder(containing: items) }
         ))

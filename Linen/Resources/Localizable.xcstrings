@@ -10,11 +10,17 @@
     "Developer Mode" : {
       "comment" : "Menu bar command under View, in the Developer submenu, shown when the page has no website to name. Title Case."
     },
+    "Duplicate" : {
+      "comment" : "Item in the context menu of a tab row in the sidebar; it opens a second tab on the same page. Verb, Title Case."
+    },
     "Linen on GitHub…" : {
       "comment" : "The Help menu item that opens Linen’s GitHub repository in a new tab. “GitHub” is a product name."
     },
     "Show Downloads" : {
       "comment" : "Menu bar command under View, shortcut ⌥⌘L, which opens the list of downloads. Title Case."
+    },
+    "Move to Window" : {
+
     },
     "Next Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘] and ⌃Tab, which switches to the tab after the current one. Title Case."
@@ -24,6 +30,9 @@
     },
     "Previous Tab" : {
       "comment" : "Menu bar command under Window, shortcuts ⇧⌘[ and ⌃⇧Tab, which switches to the tab before the current one. Title Case."
+    },
+    "Rename…" : {
+      "comment" : "First item in the context menu of a sidebar folder; it starts editing the folder's name inline. Verb, Title Case. Also the same item on a tab row."
     },
     "Reopen Closed Tab" : {
       "comment" : "Menu bar command under File, shortcut ⇧⌘T. Title Case."
@@ -36,6 +45,66 @@
     },
     "Show History" : {
       "comment" : "Menu bar command under History, shortcut ⌘Y, which opens the full history list. Title Case."
+    },
+    "tab.menu.close" : {
+      "comment" : "Item in the context menu of a tab row in the sidebar; it closes that tab. Verb, Title Case.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "tab.menu.mute" : {
+      "comment" : "Item in the context menu of a tab row in the sidebar; it silences that tab. Verb, Title Case.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mute"
+          }
+        }
+      }
+    },
+    "tab.menu.pin" : {
+      "comment" : "Item in the context menu of a tab row in the sidebar; it pins the page in that tab. Verb, Title Case.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pin"
+          }
+        }
+      }
+    },
+    "tab.menu.unmute" : {
+      "comment" : "Item in the context menu of a muted tab row in the sidebar; it lets the sound back. Verb, Title Case.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unmute"
+          }
+        }
+      }
+    },
+    "tab.menu.unpin" : {
+      "comment" : "Item in the context menu of a pinned tab row in the sidebar; it takes the pin off the tab. Verb, Title Case.",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Unpin"
+          }
+        }
+      }
     },
     "“%@” is playing" : {
       "comment" : "Tooltip on the speaker glyph of a collapsed folder in the sidebar, saying which tab inside it is making sound. %@ is the tab's title, written by the website — never translated. Keep the curly quotation marks around it."
@@ -3376,9 +3445,6 @@
     "Move Pointer" : {
 
     },
-    "Move Tab to Window" : {
-
-    },
     "Move the pointer to the edge of the window to show the bar." : {
       "comment" : "Caption under the Hide bar setting, and its Settings search description."
     },
@@ -3473,10 +3539,7 @@
 
     },
     "New Folder" : {
-      "comment" : "The name a newly created sidebar folder carries until it is renamed. Title Case, the way macOS names new folders."
-    },
-    "New Folder…" : {
-      "comment" : "Last item of that “Move to Folder” submenu; it makes a new folder with the rows the menu acts on — the one tab, or every selected row — in it. The real ellipsis character marks that a name is asked for — keep it. Title Case."
+      "comment" : "The name a newly created sidebar folder carries until it is renamed, and the sidebar and tab menu command that creates one. Title Case, the way macOS names new folders."
     },
     "New issue" : {
       "comment" : "Command palette GitHub mode: opens the page to file a new issue in the repository."
@@ -4579,9 +4642,6 @@
     },
     "Remove…" : {
       "comment" : "Button on the Website Data settings page that opens the confirmation dialog for deleting a website’s stored data. Imperative verb; the real ellipsis is the promise that a dialog follows, so keep it."
-    },
-    "Rename" : {
-      "comment" : "First item in the context menu of a sidebar folder; it starts editing the folder's name inline. Verb, Title Case."
     },
     "Reopen Last Closed Tab" : {
       "comment" : "Menu bar command under File, shortcut ⇧⌘T. Title Case and established browser terminology."

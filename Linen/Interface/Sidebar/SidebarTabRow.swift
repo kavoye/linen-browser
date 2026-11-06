@@ -314,15 +314,16 @@ private struct SidebarTabMenuItems: View {
     var body: some View {
         SidebarLinkMenuItems(tabs: [tab], coordinator: coordinator)
 
+        SidebarPinMenuItems(tab: tab, browser: browser)
         Button {
             onRename()
         } label: {
-            Label("Rename", systemImage: "pencil")
+            Label("Rename…", systemImage: "pencil")
         }
         Button {
             browser.duplicate(tab)
         } label: {
-            Label("Duplicate Tab", systemImage: "plus.square.on.square")
+            Label("Duplicate", systemImage: "plus.square.on.square")
         }
         if let anchor = browser.activeTab, anchor !== tab {
             Button {
@@ -340,7 +341,6 @@ private struct SidebarTabMenuItems: View {
         }
         Divider()
 
-        SidebarPinMenuItems(tab: tab, browser: browser)
         SidebarAudioMenuItems(tab: tab, coordinator: coordinator)
         SidebarFolderMenuItems(items: [item], browser: browser)
         SidebarSpaceMenuItems(items: [item], coordinator: coordinator)
@@ -353,7 +353,7 @@ private struct SidebarTabMenuItems: View {
             Button(role: .destructive) {
                 browser.close(tab)
             } label: {
-                Label("Close Tab", systemImage: "xmark")
+                Label(String(localized: "tab.menu.close", defaultValue: "Close"), systemImage: "xmark")
             }
             if browser.tabs.count > 1 {
                 Button(role: .destructive) {
@@ -568,7 +568,7 @@ struct SidebarWindowMenuItems: View {
                 }
             }
         } label: {
-            Label("Move Tab to Window", systemImage: "macwindow.on.rectangle")
+            Label("Move to Window", systemImage: "macwindow.on.rectangle")
         }
         .disabled(coordinator.browser.opensPrivately)
     }

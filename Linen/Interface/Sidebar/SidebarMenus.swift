@@ -36,7 +36,7 @@ struct SidebarPinMenuItems: View {
             Button {
                 browser.pin(tab)
             } label: {
-                Label("Pin This Page", systemImage: "pin")
+                Label(String(localized: "tab.menu.pin", defaultValue: "Pin"), systemImage: "pin")
             }
             .disabled(tab.urlString.isEmpty)
         } else {
@@ -44,7 +44,7 @@ struct SidebarPinMenuItems: View {
                 Button {
                     browser.returnToPin(tab)
                 } label: {
-                    Label("Back to Pinned Page", systemImage: "arrow.uturn.backward")
+                    Label("Back to Pin", systemImage: "arrow.uturn.backward")
                 }
             }
             Menu {
@@ -64,7 +64,6 @@ struct SidebarPinMenuItems: View {
                 Label("Edit Pinned Page", systemImage: "pin.circle")
             }
         }
-        Divider()
     }
 }
 
@@ -76,7 +75,7 @@ struct SidebarUnpinButton: View {
         Button {
             browser.unpin(tab)
         } label: {
-            Label("Unpin Tab", systemImage: "pin.slash")
+            Label(String(localized: "tab.menu.unpin", defaultValue: "Unpin"), systemImage: "pin.slash")
         }
     }
 }
@@ -90,9 +89,9 @@ struct SidebarAudioMenuItems: View {
             coordinator.toggleMute(tab: tab)
         } label: {
             if tab.isMuted {
-                Label("Unmute Tab", systemImage: "speaker.wave.2")
+                Label(String(localized: "tab.menu.unmute", defaultValue: "Unmute"), systemImage: "speaker.wave.2")
             } else {
-                Label("Mute Tab", systemImage: "speaker.slash")
+                Label(String(localized: "tab.menu.mute", defaultValue: "Mute"), systemImage: "speaker.slash")
             }
         }
         Divider()
@@ -129,7 +128,7 @@ struct SidebarFolderMenuItems: View {
             Button {
                 browser.createFolder(containing: items)
             } label: {
-                Label("New Folder…", systemImage: "folder.badge.plus")
+                Label("New Folder", systemImage: "folder.badge.plus")
             }
         } label: {
             Label("Move to Folder", systemImage: "folder")

@@ -114,7 +114,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         Button {
             _ = browser.createFolder(containing: [] as [SidebarItem])
         } label: {
-            Label("New Folder…", systemImage: "folder.badge.plus")
+            Label("New Folder", systemImage: "folder.badge.plus")
         }
 
         if browser.tabs.count > 1 {
