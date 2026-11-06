@@ -1365,6 +1365,9 @@
     "Choose files, not folders." : {
 
     },
+    "Choose Files…" : {
+      "comment" : "Row in the assistant’s add menu. Opens the file picker."
+    },
     "Choose From Menus" : {
       "comment" : "Tool name in assistant settings: picking an option in a dropdown on a web page."
     },
@@ -2370,7 +2373,7 @@
       "comment" : "Title of the File menu in the menu bar. Use the standard macOS wording."
     },
     "Files" : {
-
+      "comment" : "Section header in the assistant’s add menu."
     },
     "Files you downloaded stay on your Mac." : {
       "comment" : "Caption under the Clear download list row in Downloads settings. Clearing the list never deletes the files."
@@ -4918,6 +4921,9 @@
     "Search suggestions" : {
       "comment" : "Title of the row that turns on completions offered by the search engine while typing, and the same wording in the Settings search index. A noun phrase. Sentence case."
     },
+    "Search tabs" : {
+      "comment" : "Placeholder and accessibility label of the search field in the assistant’s add menu."
+    },
     "Search tabs, history, actions, or ask" : {
       "comment" : "Placeholder in the ⌘K palette's field when the browser is set to agent-only input, so there is no web search to offer. “Search” governs tabs, history and actions; “ask” means put the question to the assistant. Sentence case."
     },
@@ -6419,6 +6425,9 @@
     },
     "View downloads and their saved locations." : {
       "comment" : "Caption describing the Recent downloads list in the Settings search results. Where it was saved means which folder the file went to."
+    },
+    "View More" : {
+      "comment" : "Row in the assistant’s add menu. Shows the rest of the open tabs."
     },
     "View on GitHub" : {
       "comment" : "Button in the release notes sheet that opens the release page in a browser. View is a verb; GitHub is a product name — leave as is."

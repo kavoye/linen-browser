@@ -6,6 +6,8 @@ import SwiftUI
 struct AssistantComposerToolbar: View {
     let coordinator: AppCoordinator
     let attachments: AttachmentDraft
+    let attachedTabIDs: Set<UUID>
+    let onAttachTab: (BrowserTab) -> Void
     let stops: Bool
     let canSend: Bool
     var offersVoice = false
@@ -31,7 +33,12 @@ struct AssistantComposerToolbar: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            AssistantAttachmentButton(attachments: attachments)
+            AssistantAttachmentButton(
+                browser: coordinator.browser,
+                attachments: attachments,
+                attachedTabIDs: attachedTabIDs,
+                onAttachTab: onAttachTab
+            )
 
             ComposerPicker(
                 sections: [.providers, .models], coordinator: coordinator,
@@ -118,15 +125,19 @@ struct AssistantComposerToolbar: View {
 }
 
 private struct AssistantAttachmentButton: View {
+    let browser: BrowserModel
     let attachments: AttachmentDraft
+    let attachedTabIDs: Set<UUID>
+    let onAttachTab: (BrowserTab) -> Void
 
     @State private var hovering = false
+    @State private var isPresenting = false
 
     var body: some View {
-        Button { attachments.chooseFiles() } label: {
+        Button { isPresenting = true } label: {
             Image(systemName: "plus")
                 .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(hovering ? .primary : .secondary)
+                .foregroundStyle(hovering || isPresenting ? .primary : .secondary)
                 .hoverLift(hovering)
                 .frame(height: 28)
                 .contentShape(Rectangle())
@@ -135,6 +146,23 @@ private struct AssistantAttachmentButton: View {
         .onHover { hovering = $0 }
         .accessibilityLabel("Add Attachments")
         .help("Add Attachments")
+        .arrowlessPopover(isPresented: $isPresenting, leadingWidth: AssistantAttachMenu.width) {
+            AssistantAttachMenu(
+                tabs: browser.tabs,
+                activeTabID: browser.activeTab?.id,
+                attachedTabIDs: attachedTabIDs,
+                onAttachTab: { tab in
+                    isPresenting = false
+                    onAttachTab(tab)
+                },
+                onChooseFiles: {
+                    isPresenting = false
+                    attachments.chooseFiles()
+                },
+                onCancel: { isPresenting = false }
+            )
+            .chromePopoverAppearance()
+        }
     }
 }
 

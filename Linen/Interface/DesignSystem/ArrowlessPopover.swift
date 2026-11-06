@@ -7,14 +7,16 @@ import SwiftUI
 extension View {
     func arrowlessPopover<Content: View>(
         isPresented: Binding<Bool>,
+        leadingWidth: CGFloat? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        background(ArrowlessPopoverAnchor(isPresented: isPresented, content: content))
+        background(ArrowlessPopoverAnchor(isPresented: isPresented, leadingWidth: leadingWidth, content: content))
     }
 }
 
 private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
     @Binding var isPresented: Bool
+    let leadingWidth: CGFloat?
     let content: () -> Content
 
     func makeCoordinator() -> Coordinator {
@@ -29,16 +31,28 @@ private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
         let coordinator = context.coordinator
         let environment = context.environment
         coordinator.dismiss = { if isPresented { isPresented = false } }
+        coordinator.growsFromLeadingCorner = leadingWidth != nil
         coordinator.hosting.rootView = AnyView(
             content().transformEnvironment(\.self) { $0 = environment }
         )
         let popover = coordinator.popover
         if isPresented, !popover.isShown, view.window != nil {
             popover.appearance = NSAppearance(named: environment.chromeIsLight ? .aqua : .darkAqua)
-            popover.show(relativeTo: view.bounds, of: view, preferredEdge: .maxY)
+            let anchor = positioningView(in: view, coordinator: coordinator)
+            popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY)
         } else if !isPresented, popover.isShown {
             popover.close()
         }
+    }
+
+    private func positioningView(in view: NSView, coordinator: Coordinator) -> NSView {
+        guard let leadingWidth else { return view }
+        let anchor = coordinator.leadingAnchor
+        anchor.frame = CGRect(x: 0, y: 0, width: leadingWidth, height: view.bounds.height)
+        if anchor.superview !== view {
+            view.addSubview(anchor)
+        }
+        return anchor
     }
 
     static func dismantleNSView(_ view: NSView, coordinator: Coordinator) {
@@ -48,7 +62,9 @@ private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
     final class Coordinator: NSObject, NSPopoverDelegate {
         let popover = NSPopover()
         let hosting = NSHostingController(rootView: AnyView(EmptyView()))
+        let leadingAnchor = NSView()
         var dismiss: () -> Void = {}
+        var growsFromLeadingCorner = false
 
         override init() {
             super.init()
@@ -62,8 +78,25 @@ private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
             }
         }
 
+        func popoverWillShow(_ notification: Notification) {
+            pinAnchorToLeadingCorner()
+        }
+
+        func popoverWillClose(_ notification: Notification) {
+            pinAnchorToLeadingCorner()
+        }
+
         func popoverDidClose(_ notification: Notification) {
             dismiss()
+        }
+
+        private func pinAnchorToLeadingCorner() {
+            guard growsFromLeadingCorner,
+                  let window = hosting.view.window,
+                  window.responds(to: Selector(("setAnchorPoint:")))
+            else { return }
+            let leading = hosting.view.convert(hosting.view.bounds, to: nil).minX
+            window.setValue(NSPoint(x: leading, y: 0), forKey: "anchorPoint")
         }
     }
 }

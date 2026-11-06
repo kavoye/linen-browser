@@ -115,6 +115,8 @@ struct AssistantComposer: View {
 
             AssistantComposerToolbar(
                 coordinator: coordinator, attachments: attachments,
+                attachedTabIDs: Set(attached),
+                onAttachTab: attach,
                 stops: stops,
                 canSend: stops || (attachments.isReady(textOnly: effectiveTextOnly) && !isSending && (!trimmed.isEmpty || !attachments.files.isEmpty)),
                 offersVoice: trimmed.isEmpty && attachments.files.isEmpty && !attachments.isImporting && !isSending && !isAnsweringAQuestion

@@ -92,7 +92,8 @@ struct AskSurfaceInteraction: Equatable {
         fragment: String,
         tabs: [BrowserTab],
         mentionedTabIDs: Set<UUID>,
-        activeTabID: UUID?
+        activeTabID: UUID?,
+        limit: Int = 5
     ) -> [BrowserTab] {
         let needle = fragment.lowercased()
         let candidates = tabs.filter { tab in
@@ -105,7 +106,7 @@ struct AskSurfaceInteraction: Equatable {
         }
         let current = candidates.filter { $0.id == activeTabID }
         let others = candidates.filter { $0.id != activeTabID }
-        return Array((current + others).prefix(5))
+        return Array((current + others).prefix(limit))
     }
 
     static func removingMentionFragment(from text: String) -> String {

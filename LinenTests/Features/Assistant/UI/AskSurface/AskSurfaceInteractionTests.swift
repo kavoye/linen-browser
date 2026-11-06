@@ -35,6 +35,35 @@ struct AskSurfaceInteractionTests {
         ).isEmpty)
     }
 
+    @Test func theAttachMenuCollapsesUntilSearchedOrExpanded() {
+        let tabs = (0..<8).map { index in
+            let tab = BrowserTab()
+            tab.title = "Item \(index)"
+            tab.urlString = "https://shop.example/item/\(index)"
+            return tab
+        }
+        let matches = AskSurfaceInteraction.mentionCandidates(
+            fragment: "", tabs: tabs, mentionedTabIDs: [], activeTabID: nil, limit: .max
+        )
+        #expect(matches.count == 8)
+        #expect(AssistantAttachMenu.listed(matches, isSearching: false, isExpanded: false).count == 5)
+        #expect(AssistantAttachMenu.listed(matches, isSearching: false, isExpanded: true).count == 8)
+        #expect(AssistantAttachMenu.listed(matches, isSearching: true, isExpanded: false).count == 8)
+    }
+
+    @Test func theAttachMenuHighlightsOneRowAndFallsBackToTheFirst() {
+        let tabs = (0..<3).map { _ in BrowserTab() }
+        let collapsed = AssistantAttachMenu.items(listed: Array(tabs.prefix(2)), matchCount: 3)
+        #expect(collapsed == [.tab(tabs[0].id), .tab(tabs[1].id), .viewMore, .upload])
+        #expect(AssistantAttachMenu.current(nil, in: collapsed) == .tab(tabs[0].id))
+        #expect(AssistantAttachMenu.current(.upload, in: collapsed) == .upload)
+        #expect(AssistantAttachMenu.current(.tab(tabs[2].id), in: collapsed) == .tab(tabs[0].id))
+
+        let noTabs = AssistantAttachMenu.items(listed: [], matchCount: 0)
+        #expect(noTabs == [.upload])
+        #expect(AssistantAttachMenu.current(.viewMore, in: noTabs) == .upload)
+    }
+
     @Test func anUnconfiguredAgentHasAHumanReadableName() {
         #expect(AppCoordinator.displayAgentName(for: "none") == String(localized: "Assistant"))
         #expect(AppCoordinator.displayAgentName(for: "Claude") == "Claude")
