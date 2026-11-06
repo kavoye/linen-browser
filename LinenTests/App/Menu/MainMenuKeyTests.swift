@@ -41,6 +41,16 @@ struct MainMenuKeyTests {
         #expect(disabled.isEmpty)
     }
 
+    @Test func optionCommandLShowsTheDownloadsList() throws {
+        let coordinator = AppCoordinator()
+        MainMenu(coordinator: coordinator).install()
+        defer { NSApp.mainMenu = nil }
+        let root = try #require(NSApp.mainMenu)
+
+        #expect(pressed("l", modifiers: [.command, .option], in: root))
+        #expect(coordinator.browser.activeTab?.internalPage == .downloads)
+    }
+
     @Test func aHiddenAliasStillAnswersItsKey() throws {
         let coordinator = AppCoordinator()
         let menu = MainMenu(coordinator: coordinator)

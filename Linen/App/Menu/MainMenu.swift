@@ -120,8 +120,6 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(command("Open Location…", #selector(openLocation), key: "l"))
         menu.addItem(command("Search Everything…", #selector(openPalette), key: "k"))
         menu.addItem(.separator())
-        menu.addItem(command("Downloads", #selector(openDownloads), key: "l", modifiers: [.command, .option]))
-        menu.addItem(.separator())
         menu.addItem(command("Print…", #selector(printPage), key: "p"))
         return menu
     }
@@ -162,6 +160,15 @@ final class MainMenu: NSObject, NSMenuItemValidation {
 
     private func viewMenu() -> NSMenu {
         let menu = NSMenu()
+        menu.addItem(command("Hide Sidebar", #selector(toggleSidebar), key: "s", modifiers: [.command, .control]))
+        menu.addItem(command(
+            "Show Side Panel",
+            #selector(toggleSidePanel),
+            key: "s",
+            modifiers: [.command, .option]
+        ))
+        menu.addItem(command("Show Downloads", #selector(openDownloads), key: "l", modifiers: [.command, .option]))
+        menu.addItem(.separator())
         menu.addItem(command("Reload Page", #selector(reload), key: "r"))
         menu.addItem(command("Reload Page from Origin", #selector(hardReload), key: "r", modifiers: [.command, .shift]))
         menu.addItem(command("Stop", #selector(stopLoading), key: "."))
@@ -172,25 +179,9 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(command("Zoom Out", #selector(zoomOut), key: "-"))
         menu.addItem(.separator())
         menu.addItem(command("Show Reader", #selector(toggleReader), key: "r", modifiers: [.command, .option]))
-        menu.addItem(.separator())
         menu.addItem(command("Translate Page", #selector(toggleTranslation)))
         menu.addItem(.separator())
-        menu.addItem(chain(
-            "Enter Full Screen",
-            #selector(NSWindow.toggleFullScreen(_:)),
-            key: "f",
-            modifiers: [.command, .control]
-        ))
-        menu.addItem(.separator())
         menu.addItem(submenu(splitViewMenu(), titled: "Split View"))
-        menu.addItem(.separator())
-        menu.addItem(command("Hide Sidebar", #selector(toggleSidebar), key: "s", modifiers: [.command, .control]))
-        menu.addItem(command(
-            "Show Side Panel",
-            #selector(toggleSidePanel),
-            key: "s",
-            modifiers: [.command, .option]
-        ))
         menu.addItem(.separator())
         menu.addItem(command(
             "Use Minimal Window Style",
@@ -199,6 +190,13 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             modifiers: [.command, .shift]
         ))
         menu.addItem(command("Move Bar to Top", #selector(moveMinimalBar)))
+        menu.addItem(.separator())
+        menu.addItem(chain(
+            "Enter Full Screen",
+            #selector(NSWindow.toggleFullScreen(_:)),
+            key: "f",
+            modifiers: [.command, .control]
+        ))
         menu.addItem(.separator())
         let developer = NSMenu()
         developer.addItem(command(
@@ -295,7 +293,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     }
 
     @objc private func openDownloads() {
-        coordinator.openSettings(.downloads)
+        coordinator.showDownloads()
     }
     @objc private func newTab() {
         (application?.ensureActiveWindow() ?? coordinator).requestNewTab()
