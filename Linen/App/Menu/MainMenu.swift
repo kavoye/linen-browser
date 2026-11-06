@@ -38,7 +38,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         let window = windowMenu()
         root.addItem(submenu(window, titled: "Window"))
 
-        let help = NSMenu(title: "Help")
+        let help = helpMenu()
         root.addItem(submenu(help, titled: "Help"))
 
         NSApp.mainMenu = root
@@ -55,6 +55,13 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     }
 
     // MARK: - Menus
+
+    private func helpMenu() -> NSMenu {
+        let menu = NSMenu(title: "Help")
+        menu.addItem(command("Report a Problem…", #selector(reportProblem)))
+        menu.addItem(command("Linen on GitHub…", #selector(openGitHubRepository)))
+        return menu
+    }
 
     private func appMenu() -> NSMenu {
         let menu = NSMenu()
@@ -276,6 +283,16 @@ final class MainMenu: NSObject, NSMenuItemValidation {
     @objc private func showReleaseNotes() {
         coordinator.showReleaseNotes()
     }
+    @objc private func reportProblem() {
+        openHelpLink("https://github.com/kavoye/linen-browser/issues/new?template=bug_report.yml")
+    }
+    @objc private func openGitHubRepository() {
+        openHelpLink("https://github.com/kavoye/linen-browser")
+    }
+    private func openHelpLink(_ address: String) {
+        guard let url = URL(string: address) else { return }
+        coordinator.openInBrowser(url)
+    }
 
     @objc private func openDownloads() {
         coordinator.openSettings(.downloads)
@@ -483,6 +500,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         if let application, application.activeCoordinator == nil {
             return [#selector(newWindow), #selector(newTab), #selector(newPrivateWindow),
                     #selector(openSettings), #selector(checkForUpdates), #selector(reopenClosedTab),
+                    #selector(reportProblem), #selector(openGitHubRepository),
             ]
                 .contains(menuItem.action)
         }

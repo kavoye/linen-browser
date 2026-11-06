@@ -4,6 +4,12 @@
     "" : {
       "comment" : "Not shown to anyone: the empty branch of a conditional tooltip on the sidebar's New Tab and Settings rows, used when the sidebar is wide enough to show the row's own title. Leave the translation empty."
     },
+    "Linen on GitHub…" : {
+      "comment" : "The Help menu item that opens Linen’s GitHub repository in a new tab. “GitHub” is a product name."
+    },
+    "Report a Problem…" : {
+      "comment" : "The Help menu item that opens the bug report form on GitHub in a new tab."
+    },
     "“%@” is playing" : {
       "comment" : "Tooltip on the speaker glyph of a collapsed folder in the sidebar, saying which tab inside it is making sound. %@ is the tab's title, written by the website — never translated. Keep the curly quotation marks around it."
     },

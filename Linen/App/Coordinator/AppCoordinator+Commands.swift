@@ -215,6 +215,11 @@ extension AppCoordinator {
         browser.showReleaseNotes()
     }
 
+    func openInBrowser(_ url: URL) {
+        showBrowser()
+        openNewTab(url: url)
+    }
+
     func toggleSidePanel() {
         if !browserVisible {
             showBrowser()

@@ -29,6 +29,18 @@ struct MainMenuKeyTests {
         return menu.performKeyEquivalent(with: event)
     }
 
+    @Test func theHelpMenuOffersItsLinks() throws {
+        let coordinator = AppCoordinator()
+        MainMenu(coordinator: coordinator).install()
+        defer { NSApp.mainMenu = nil }
+        let help = try #require(NSApp.helpMenu)
+
+        help.update()
+        #expect(help.items.map(\.title) == ["Report a Problem…", "Linen on GitHub…"])
+        let disabled = help.items.filter { !$0.isEnabled }
+        #expect(disabled.isEmpty)
+    }
+
     @Test func aHiddenAliasStillAnswersItsKey() throws {
         let coordinator = AppCoordinator()
         let menu = MainMenu(coordinator: coordinator)
