@@ -4,6 +4,9 @@
     "" : {
       "comment" : "Not shown to anyone: the empty branch of a conditional tooltip on the sidebar's New Tab and Settings rows, used when the sidebar is wide enough to show the row's own title. Leave the translation empty."
     },
+    "Back to Pin" : {
+      "comment" : "Command that returns a tab to the page pinned in it: a File menu item and a tab context-menu item. Title Case."
+    },
     "Linen on GitHub…" : {
       "comment" : "The Help menu item that opens Linen’s GitHub repository in a new tab. “GitHub” is a product name."
     },
@@ -4091,7 +4094,7 @@
       "comment" : "Two surfaces share it: the small button in the extensions overflow popover that puts the extension’s button back on the toolbar, and the label in the gap a dragged sidebar row will drop into when the drop pins the tab. Imperative verb, in the sense of fixing something in place. Very tight space — a chip only a few characters wide."
     },
     "Pin Tab" : {
-      "comment" : "Item in the More menu of the Minimal mode floating bar. Pins the current tab. Title Case."
+      "comment" : "Pins the current tab: a File menu item, and an item in the More menu of the Minimal mode floating bar. Title Case."
     },
     "Pin This Page" : {
       "comment" : "Command that fixes the page to the tab, so the tab can always return to it and sits in the pinned rows at the top of the sidebar. Three surfaces share it: the context menu of a tab row in the sidebar, the search palette, and the File menu on ⌘D. Title Case. “Pin” is the browser's verb for that anchor; there is no separate bookmarks list."

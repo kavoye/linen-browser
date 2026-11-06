@@ -109,9 +109,9 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         ))
         menu.addItem(.separator())
         menu.addItem(command("Duplicate Tab", #selector(duplicateTab), key: "d", modifiers: [.command, .shift]))
-        menu.addItem(command("Pin This Page", #selector(pinPage), key: "d"))
+        menu.addItem(command("Pin Tab", #selector(pinPage), key: "d"))
         menu.addItem(command(
-            "Back to Pinned Page",
+            "Back to Pin",
             #selector(returnToPin),
             key: "h",
             modifiers: [.command, .shift]
@@ -540,6 +540,10 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             return coordinator.pageCommandTab != nil
         case #selector(closeTab), #selector(duplicateTab):
             return coordinator.browser.activeTab != nil
+        case #selector(pinPage):
+            return validatePinItem(menuItem)
+        case #selector(returnToPin):
+            return coordinator.browser.activeTab?.isAwayFromPin ?? false
         case #selector(stopLoading):
             return coordinator.pageCommandTab?.isLoading ?? false
         case #selector(splitRight), #selector(splitDown):
@@ -609,6 +613,14 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         default:
             return true
         }
+    }
+
+    private func validatePinItem(_ item: NSMenuItem) -> Bool {
+        let isShowingPin = coordinator.browser.activeTab?.isShowingPin == true
+        let title: LocalizedStringResource = isShowingPin ? "Unpin Tab" : "Pin Tab"
+        item.title = String(localized: title)
+        item.image = NSImage(systemSymbolName: isShowingPin ? "pin.slash" : "pin", accessibilityDescription: nil)
+        return coordinator.browser.activeTab != nil
     }
 
     // MARK: - Building blocks

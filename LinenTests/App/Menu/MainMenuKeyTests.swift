@@ -41,6 +41,32 @@ struct MainMenuKeyTests {
         #expect(disabled.isEmpty)
     }
 
+    @Test func thePinItemsFollowTheTab() throws {
+        let coordinator = AppCoordinator()
+        MainMenu(coordinator: coordinator).install()
+        defer { NSApp.mainMenu = nil }
+        let root = try #require(NSApp.mainMenu)
+        let file = try #require(root.item(at: 1)?.submenu)
+        let pin = try #require(file.items.first { $0.title == "Pin Tab" })
+        let back = try #require(file.items.first { $0.title == "Back to Pin" })
+        let tab = coordinator.browser.newTab()
+        tab.urlString = "https://example.com/"
+
+        file.update()
+        #expect(pin.title == "Pin Tab")
+        #expect(!back.isEnabled)
+
+        tab.pinnedURL = URL(string: tab.urlString)
+        file.update()
+        #expect(pin.title == "Unpin Tab")
+        #expect(!back.isEnabled)
+
+        tab.pinnedURL = URL(string: "https://example.com/pinned")
+        file.update()
+        #expect(pin.title == "Pin Tab")
+        #expect(back.isEnabled)
+    }
+
     @Test func optionCommandLShowsTheDownloadsList() throws {
         let coordinator = AppCoordinator()
         MainMenu(coordinator: coordinator).install()
@@ -119,7 +145,7 @@ struct MainMenuKeyTests {
         defer { NSApp.mainMenu = nil }
         let root = try #require(NSApp.mainMenu)
         let items = root.items.compactMap(\.submenu).flatMap(\.items)
-        let back = try #require(items.first { $0.title == String(localized: "Back to Pinned Page") })
+        let back = try #require(items.first { $0.title == String(localized: "Back to Pin") })
         coordinator.browser.newTab()
         let count = coordinator.browser.tabs.count
 
