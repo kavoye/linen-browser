@@ -338,6 +338,22 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  stop:
+    name: Stop after failed tests
+    needs: test
+    if: failure() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      actions: write
+
+    steps:
+      - name: Cancel the run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run cancel "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY"
+
   # A docs-only commit skips the tests but still publishes when it is a release.
   publish:
     name: Sign and publish

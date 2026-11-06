@@ -379,7 +379,8 @@ trigger or tag is needed. The workflow:
    the release itself.
 3. Runs the tests and builds an archive at the same time. The archive job has
    no signing secrets.
-4. Stops if the tests fail. No signing key is used.
+4. Cancels the run if the tests fail. This stops the archive job. No signing
+   key is used.
 5. Signs the app and sends it to Apple for notarization.
 6. Builds a zip file, and no disk image.
 7. Signs the app for Sparkle and writes `appcast-tip.xml`.
