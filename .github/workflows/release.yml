@@ -212,6 +212,7 @@ jobs:
             -IDEPackageEnablePrebuilts=NO \
             -disableAutomaticPackageResolution \
             -skipMacroValidation -skipPackagePluginValidation \
+            ARCHS=arm64 \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build }}" \
             CODE_SIGN_STYLE=Manual \
