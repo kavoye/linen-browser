@@ -469,7 +469,9 @@ struct NewTabRow: View {
                     Text("New Tab")
                         .font(Theme.Font.title)
                     Spacer(minLength: 0)
-                    KeyCaps(Self.shortcutHint)
+                    Text(verbatim: Self.shortcutHint)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(.tertiary)
                 }
             }
             .padding(.horizontal, SidebarMetrics.rowContentPadding(style: sidebarStyle))

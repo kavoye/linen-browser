@@ -104,8 +104,14 @@ struct PopoverMenuRow<Icon: View>: View {
                     .font(.system(size: 13))
                     .lineLimit(1)
                 Spacer(minLength: 8)
-                if let shortcut {
-                    KeyCaps(shortcut)
+                if let shortcut, let key = shortcut.last {
+                    HStack(spacing: 1) {
+                        Text(verbatim: String(shortcut.dropLast()))
+                        Text(verbatim: String(key))
+                            .frame(width: 12, alignment: .leading)
+                    }
+                    .font(.system(size: 13))
+                    .foregroundStyle(.tertiary)
                 }
                 if isChecked {
                     Image(systemName: "checkmark")

@@ -157,7 +157,9 @@ extension OnboardingUI {
                     Text("New Tab")
                         .font(Theme.Font.title)
                     Spacer(minLength: 0)
-                    KeyCaps("⌘T")
+                    Text(verbatim: "⌘T")
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(.tertiary)
                 }
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 9)
