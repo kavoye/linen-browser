@@ -1,6 +1,6 @@
 # Releasing Linen
 
-Linen uses [Sparkle 2.10.0](https://sparkle-project.org) for updates. The app
+Linen uses [Sparkle 2.10.1](https://sparkle-project.org) for updates. The app
 does not show the Sparkle windows. The update interface is only the banner in
 `Linen/App/Updates/UpdateBanner.swift`.
 
