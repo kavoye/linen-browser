@@ -22,6 +22,7 @@ struct SidebarLinkMenuItems: View {
                     Label("Copy Links", systemImage: "link")
                 }
             }
+            .keyboardShortcut(linkable.count == 1 ? KeyboardShortcut("c", modifiers: [.command, .shift]) : nil)
             Divider()
         }
     }
@@ -38,6 +39,7 @@ struct SidebarPinMenuItems: View {
             } label: {
                 Label(String(localized: "tab.menu.pin", defaultValue: "Pin"), systemImage: "pin")
             }
+            .keyboardShortcut("d")
             .disabled(tab.urlString.isEmpty)
         } else {
             if tab.isAwayFromPin {
@@ -46,6 +48,7 @@ struct SidebarPinMenuItems: View {
                 } label: {
                     Label("Back to Pin", systemImage: "arrow.uturn.backward")
                 }
+                .keyboardShortcut("h", modifiers: [.command, .shift])
             }
             Menu {
                 Button {

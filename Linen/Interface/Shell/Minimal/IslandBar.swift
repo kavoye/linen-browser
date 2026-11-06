@@ -266,6 +266,7 @@ private struct IslandAddressMenu: View {
         } label: {
             Label("Copy Link", systemImage: "link")
         }
+        .keyboardShortcut("c", modifiers: [.command, .shift])
         .disabled(!hasLink)
 
         if let pastedText {
@@ -297,6 +298,7 @@ private struct IslandAddressMenu: View {
         } label: {
             Label("Open Location…", systemImage: "magnifyingglass")
         }
+        .keyboardShortcut("l")
     }
 }
 

@@ -252,11 +252,15 @@ struct PeekRowBadge: View {
             }
             Divider()
             Button("Reload", systemImage: "arrow.clockwise") { tab.webView.reload() }
+                .keyboardShortcut("r")
             Button("Back", systemImage: "chevron.left") { tab.goBack() }
+                .keyboardShortcut("[")
                 .disabled(!tab.canGoBack)
             Button("Forward", systemImage: "chevron.right") { tab.goForward() }
+                .keyboardShortcut("]")
                 .disabled(!tab.canGoForward)
             Button("Copy Link", systemImage: "link") { coordinator.copyLink(for: tab) }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
                 .disabled(coordinator.linkURL(for: tab) == nil)
             Divider()
             Button("Keep as a Tab", systemImage: "arrow.up.left.and.arrow.down.right") {

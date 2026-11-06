@@ -325,6 +325,7 @@ private struct SidebarTabMenuItems: View {
         } label: {
             Label("Duplicate", systemImage: "plus.square.on.square")
         }
+        .keyboardShortcut("d", modifiers: [.command, .shift])
         if let anchor = browser.activeTab, anchor !== tab {
             Button {
                 coordinator.split(anchor, with: tab, axis: .sideBySide)
@@ -355,6 +356,7 @@ private struct SidebarTabMenuItems: View {
             } label: {
                 Label(String(localized: "tab.menu.close", defaultValue: "Close"), systemImage: "xmark")
             }
+            .keyboardShortcut("w")
             if browser.tabs.count > 1 {
                 Button(role: .destructive) {
                     let count = browser.tabs.count - 1

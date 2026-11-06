@@ -110,6 +110,7 @@ struct WorkspaceList<TopBar: View, BottomBar: View>: View {
         } label: {
             Label("New Tab", systemImage: "plus")
         }
+        .keyboardShortcut("t")
 
         Button {
             _ = browser.createFolder(containing: [] as [SidebarItem])

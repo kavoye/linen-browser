@@ -197,6 +197,7 @@ struct AskSurfaceAddressMenu: View {
             } label: {
                 Label("Copy Link", systemImage: "link")
             }
+            .keyboardShortcut("c", modifiers: [.command, .shift])
             .disabled(model.currentURL.isEmpty)
 
             if let pastedText {
