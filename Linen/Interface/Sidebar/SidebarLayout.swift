@@ -336,6 +336,7 @@ struct LoomColumnResizeHandle: View {
 
     @State private var isHovering = false
     @State private var revealsPill = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -365,7 +366,9 @@ struct LoomColumnResizeHandle: View {
             revealsPill = true
         }
         .gesture(drag)
-        .onTapGesture(count: 2) { onReset() }
+        .onTapGesture(count: 2) {
+            withAnimation(reduceMotion ? nil : Theme.Motion.drift) { onReset() }
+        }
         .animation(Theme.Motion.quick, value: revealsPill)
         .animation(Theme.Motion.quick, value: isDragging)
         .help("Drag to resize · double-click to reset")
