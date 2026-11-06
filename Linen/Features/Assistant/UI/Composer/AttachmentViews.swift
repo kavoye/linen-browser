@@ -72,32 +72,92 @@ private struct AttachmentLabel: View {
     }
 }
 
+enum AttachmentPreviewLayout {
+    static let document = CGSize(width: 620, height: 520)
+    static let header: CGFloat = 44
+
+    private static let maximum = CGSize(width: 900, height: 640)
+    private static let minimum = CGSize(width: 360, height: 200)
+
+    static func fitted(_ image: CGSize) -> CGSize {
+        guard image.width > 0, image.height > 0 else { return document }
+        let scale = min(maximum.width / image.width, maximum.height / image.height, 1)
+        return CGSize(
+            width: max((image.width * scale).rounded(), minimum.width),
+            height: max((image.height * scale).rounded(), minimum.height)
+        )
+    }
+}
+
 private struct AttachmentPreview: View {
     let file: AssistantAttachment
     @Environment(\.dismiss) private var dismiss
+    @State private var hoveringClose = false
+
+    private var picture: NSImage? {
+        guard !file.isPDF, let data = file.images.first?.data else { return nil }
+        return NSImage(data: data)
+    }
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text(verbatim: file.name).font(.headline).lineLimit(1).truncationMode(.middle)
-                Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
-            }
-            if file.isPDF {
-                AttachmentPDFPreview(data: file.data)
-            } else if let image = file.images.first, let native = NSImage(data: image.data) {
-                Image(nsImage: native).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    Text(verbatim: file.text)
-                        .font(.system(.body, design: .monospaced))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+        let picture = picture
+        let size = picture.map { AttachmentPreviewLayout.fitted($0.size) } ?? AttachmentPreviewLayout.document
+        VStack(spacing: 0) {
+            header
+            Divider()
+            content(picture)
+                .frame(width: size.width, height: size.height)
+        }
+    }
+
+    @ViewBuilder
+    private func content(_ picture: NSImage?) -> some View {
+        if let picture {
+            Image(nsImage: picture)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.black)
+                .accessibilityLabel(Text(verbatim: file.name))
+        } else if file.isPDF {
+            AttachmentPDFPreview(data: file.data)
+        } else {
+            ScrollView {
+                Text(verbatim: file.text)
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
             }
         }
-        .padding(16)
-        .frame(width: 620, height: 520)
+    }
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            Text(verbatim: file.name)
+                .font(.system(size: 13, weight: .medium))
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            Spacer(minLength: 0)
+
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(hoveringClose ? .primary : .secondary)
+                    .hoverLift(hoveringClose)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hoveringClose = $0 }
+            .keyboardShortcut(.cancelAction)
+            .accessibilityLabel("Close")
+            .help("Close")
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 8)
+        .frame(height: AttachmentPreviewLayout.header)
     }
 }
 

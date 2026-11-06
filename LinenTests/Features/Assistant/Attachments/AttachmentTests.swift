@@ -268,6 +268,14 @@ struct AttachmentTests {
         #expect(notes.file.text == "Hello")
     }
 
+    @Test func thePreviewTakesTheShapeOfTheImage() {
+        #expect(AttachmentPreviewLayout.fitted(CGSize(width: 1_600, height: 1_000)) == CGSize(width: 900, height: 563))
+        #expect(AttachmentPreviewLayout.fitted(CGSize(width: 800, height: 1_600)) == CGSize(width: 360, height: 640))
+        #expect(AttachmentPreviewLayout.fitted(CGSize(width: 500, height: 400)) == CGSize(width: 500, height: 400))
+        #expect(AttachmentPreviewLayout.fitted(CGSize(width: 100, height: 40)) == CGSize(width: 360, height: 200))
+        #expect(AttachmentPreviewLayout.fitted(.zero) == AttachmentPreviewLayout.document)
+    }
+
     private func image() throws -> Data {
         let image = NSImage(size: NSSize(width: 600, height: 160))
         image.lockFocus()
