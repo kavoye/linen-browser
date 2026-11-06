@@ -165,6 +165,7 @@ final class TabWebView: WKWebView {
         var linkIndex: Int?
         for (index, item) in menu.items.enumerated() {
             guard let identifier = item.identifier?.rawValue else { continue }
+            TabContextMenu.decorate(item, identifier: identifier)
 
             if identifier == Self.openLinkItem {
                 linkIndex = index

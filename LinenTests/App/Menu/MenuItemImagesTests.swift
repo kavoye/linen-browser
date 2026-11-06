@@ -65,4 +65,30 @@ struct MenuItemImagesTests {
         }
         #expect(missing.isEmpty, "No icon: \(missing)")
     }
+
+    @Test func aPageMenuItemGainsItsIconAndShortcut() {
+        let item = NSMenuItem(title: "Reload Page", action: nil, keyEquivalent: "")
+        TabContextMenu.decorate(item, identifier: "WKMenuItemIdentifierReload")
+        #expect(item.image != nil)
+        #expect(item.keyEquivalent == "r")
+        #expect(item.keyEquivalentModifierMask == .command)
+    }
+
+    @Test func theOpenLinkItemsReplaceTheIconsWebKitGaveThem() {
+        let original = NSImage(systemSymbolName: "safari", accessibilityDescription: nil)
+        for identifier in ["WKMenuItemIdentifierOpenLink", "WKMenuItemIdentifierOpenLinkInNewWindow", "WKMenuItemIdentifierCopyLink"] {
+            let item = NSMenuItem(title: "Link", action: nil, keyEquivalent: "")
+            item.image = original
+            TabContextMenu.decorate(item, identifier: identifier)
+            #expect(item.image !== original)
+        }
+    }
+
+    @Test func aPageMenuItemKeepsAnIconWebKitGaveIt() {
+        let image = NSImage(systemSymbolName: "pin", accessibilityDescription: nil)
+        let item = NSMenuItem(title: "Copy", action: nil, keyEquivalent: "")
+        item.image = image
+        TabContextMenu.decorate(item, identifier: "WKMenuItemIdentifierCopy")
+        #expect(item.image === image)
+    }
 }

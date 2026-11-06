@@ -30,6 +30,59 @@ enum TabContextMenu {
         return [window, privateWindow]
     }
 
+    private static let symbols = [
+        "WKMenuItemIdentifierCopy": "doc.on.doc",
+        "WKMenuItemIdentifierCopyImage": "doc.on.doc",
+        "WKMenuItemIdentifierCopyLinkWithHighlight": "doc.on.doc",
+        "WKMenuItemIdentifierCopyMediaLink": "doc.on.doc",
+        "WKMenuItemIdentifierCopySubject": "doc.on.doc",
+        "WKMenuItemIdentifierDownloadImage": "arrow.down",
+        "WKMenuItemIdentifierDownloadLinkedFile": "arrow.down",
+        "WKMenuItemIdentifierDownloadMedia": "arrow.down",
+        "WKMenuItemIdentifierGoBack": "chevron.left",
+        "WKMenuItemIdentifierGoForward": "chevron.right",
+        "WKMenuItemIdentifierInspectElement": "wrench.and.screwdriver",
+        "WKMenuItemIdentifierLookUp": "text.magnifyingglass",
+        "WKMenuItemIdentifierPaste": "doc.on.clipboard",
+        "WKMenuItemIdentifierReload": "arrow.clockwise",
+        "WKMenuItemIdentifierRevealImage": "photo.badge.magnifyingglass",
+        "WKMenuItemIdentifierSearchWeb": "magnifyingglass",
+        "WKMenuItemIdentifierShareMenu": "square.and.arrow.up",
+        "WKMenuItemIdentifierSpeechMenu": "speaker.wave.2",
+        "WKMenuItemIdentifierSpellingMenu": "textformat.abc.dottedunderline",
+        "WKMenuItemIdentifierSubstitutionsMenu": "textformat",
+        "WKMenuItemIdentifierToggleFullScreen": "arrow.up.left.and.arrow.down.right",
+        "WKMenuItemIdentifierTogglePictureInPicture": "pip.enter",
+        "WKMenuItemIdentifierTranslate": "translate",
+    ]
+
+    private static let replacedSymbols = [
+        "WKMenuItemIdentifierCopyLink": "link",
+        "WKMenuItemIdentifierOpenFrameInNewWindow": "plus.square",
+        "WKMenuItemIdentifierOpenImageInNewWindow": "plus.square",
+        "WKMenuItemIdentifierOpenLink": "arrow.up.right",
+        "WKMenuItemIdentifierOpenLinkInNewWindow": "plus.square",
+        "WKMenuItemIdentifierOpenMediaInNewWindow": "plus.square",
+    ]
+
+    private static let shortcuts = [
+        "WKMenuItemIdentifierCopy": "c",
+        "WKMenuItemIdentifierGoBack": "[",
+        "WKMenuItemIdentifierGoForward": "]",
+        "WKMenuItemIdentifierPaste": "v",
+        "WKMenuItemIdentifierReload": "r",
+    ]
+
+    static func decorate(_ item: NSMenuItem, identifier: String) {
+        if let symbol = replacedSymbols[identifier] ?? (item.image == nil ? symbols[identifier] : nil) {
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        }
+        if item.keyEquivalent.isEmpty, let key = shortcuts[identifier] {
+            item.keyEquivalent = key
+            item.keyEquivalentModifierMask = .command
+        }
+    }
+
     static let linkTail = [
         "WKMenuItemIdentifierCopyLink",
         "WKMenuItemIdentifierShareMenu",
