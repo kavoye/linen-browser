@@ -13,6 +13,9 @@
     "Show Downloads" : {
       "comment" : "Menu bar command under View, shortcut ⌥⌘L, which opens the list of downloads. Title Case."
     },
+    "Open as Split" : {
+      "comment" : "Shows a page next to the page already open, as two panes. Two surfaces share it: the context menu of a sidebar row, and the Peek button and menu, which also turn the peeked page into a tab. Title Case."
+    },
     "Report a Problem…" : {
       "comment" : "The Help menu item that opens the bug report form on GitHub in a new tab."
     },
@@ -1565,7 +1568,7 @@
     "Close a tab in the conversation." : {
       "comment" : "Caption for the Close Tabs tool in assistant settings."
     },
-    "Close Other Pages" : {
+    "Close Other Panes" : {
       "comment" : "Destructive command that closes every page shown alongside the one in focus, leaving that one. Title Case. A View menu item and a page context-menu item."
     },
     "Close Other Tabs" : {
@@ -2288,7 +2291,7 @@
     "Exit Picture in Picture" : {
       "comment" : "Tooltip on the same button while the video is already in Picture in Picture; pressing it returns the video to its tab. Title Case."
     },
-    "Exit Split" : {
+    "Exit Split View" : {
       "comment" : "Menu command that goes back to one page in the window. Neither page is closed: the one being read keeps the window and the other returns to being an ordinary sidebar row. Title Case."
     },
     "Expand Side Panel" : {
@@ -2854,9 +2857,6 @@
     },
     "Keep attachments under 40 MB in total." : {
 
-    },
-    "Keep Beside This Page" : {
-      "comment" : "Tooltip on the button beside a Peek that turns the peeked page into a tab and puts it in a split with the page the Peek was opened from. Title Case."
     },
     "Keep history for" : {
       "comment" : "Title of the row on the Privacy settings page whose pop-up menu holds A day, A week, A month, A year and Forever — the title and the chosen value read as one phrase, so leave room for the value to follow. Sentence case."
@@ -3799,9 +3799,6 @@
     "Open Assistant…" : {
       "comment" : "Button that opens the Assistant settings page."
     },
-    "Open Beside Current Page" : {
-      "comment" : "Context-menu command on a sidebar row that shows that tab next to the page already open, as two panes. Title Case. Current page means the one on screen now."
-    },
     "Open Comment on GitHub" : {
       "comment" : "GitHub pull request detail: tooltip on the button that opens one comment on GitHub."
     },
@@ -3952,8 +3949,8 @@
     "Other activity" : {
       "comment" : "GitHub inbox section header: notifications that do not need you, like watched repositories."
     },
-    "Other Pane" : {
-      "comment" : "Menu command that moves focus to the second of two pages shown at once, so the address bar and Find follow it. Title Case. A noun phrase naming where focus goes, not a verb."
+    "Show Other Pane" : {
+      "comment" : "Menu command that moves focus to the second of two pages shown at once, so the address bar and Find follow it. Title Case."
     },
     "Other websites" : {
       "comment" : "Label of the row that sets the answer for every website not listed individually below it, in the Websites permissions section. A noun phrase, not a heading."
@@ -4103,7 +4100,7 @@
       "comment" : "Tooltip and accessibility label for one swatch in the colour row of a sidebar folder's context menu, the way the Finder labels its tag colours. A colour name on its own, Title Case; the swatch is 18 points across, so keep it to one word."
     },
     "Place Side by Side" : {
-      "comment" : "Menu command that rearranges two stacked pages into two columns. Title Case. Its opposite is Stack Pages, and the menu shows whichever one is available."
+      "comment" : "Menu command that rearranges two stacked pages into two columns. Title Case. Its opposite is Stack Panes, and the menu shows whichever one is available."
     },
     "Plan a day out" : {
 
@@ -5515,7 +5512,7 @@
     "Split View" : {
       "comment" : "Title of the View menu's submenu for showing two pages at once. Title Case, as menu titles are. It names the feature, so use whatever your language's browsers call a two-pane window."
     },
-    "Stack Pages" : {
+    "Stack Panes" : {
       "comment" : "Menu command that rearranges two pages shown at once from side by side into one above the other. Title Case. Its opposite is Place Side by Side, and the menu shows whichever one is available."
     },
     "Stacked" : {

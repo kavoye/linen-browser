@@ -328,14 +328,14 @@ private struct SidebarTabMenuItems: View {
             Button {
                 coordinator.split(anchor, with: tab, axis: .sideBySide)
             } label: {
-                Label("Open Beside Current Page", systemImage: "rectangle.split.2x1")
+                Label("Open as Split", systemImage: "rectangle.split.2x1")
             }
         }
         if browser.splits.contains(tab.id) {
             Button {
                 browser.dissolveSplit(containing: tab)
             } label: {
-                Label("Exit Split", systemImage: "rectangle")
+                Label("Exit Split View", systemImage: "rectangle")
             }
         }
         Divider()

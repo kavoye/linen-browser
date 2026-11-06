@@ -99,7 +99,7 @@ struct PeekSurface: View {
             ) {
                 coordinator.keepPeek()
             }
-            PeekControl(symbol: "rectangle.split.2x1", help: "Keep Beside This Page") {
+            PeekControl(symbol: "rectangle.split.2x1", help: "Open as Split") {
                 coordinator.keepPeekBesideCurrentPage()
             }
         }
@@ -259,7 +259,7 @@ struct PeekRowBadge: View {
                 activateOwner()
                 coordinator.keepPeek()
             }
-            Button("Keep Beside This Page", systemImage: "rectangle.split.2x1") {
+            Button("Open as Split", systemImage: "rectangle.split.2x1") {
                 activateOwner()
                 coordinator.keepPeekBesideCurrentPage()
             }

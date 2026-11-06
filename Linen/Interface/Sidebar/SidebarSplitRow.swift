@@ -199,14 +199,14 @@ struct SidebarSplitRow: View {
                 if axis == .stacked {
                     Label("Place Side by Side", systemImage: "rectangle.split.2x1")
                 } else {
-                    Label("Stack Pages", systemImage: "rectangle.split.2x1")
+                    Label("Stack Panes", systemImage: "rectangle.split.2x1")
                 }
             }
         }
         Button {
             browser.dissolveSplit(containing: leading)
         } label: {
-            Label("Exit Split", systemImage: "rectangle")
+            Label("Exit Split View", systemImage: "rectangle")
         }
         Divider()
 

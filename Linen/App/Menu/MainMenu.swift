@@ -219,12 +219,12 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(command("Split Right", #selector(splitRight), key: rightArrow, modifiers: [.command, .control]))
         menu.addItem(command("Split Down", #selector(splitDown), key: downArrow, modifiers: [.command, .control]))
         menu.addItem(.separator())
-        menu.addItem(command("Other Pane", #selector(focusOtherPane), key: "]", modifiers: [.command, .option]))
+        menu.addItem(command("Show Other Pane", #selector(focusOtherPane), key: "]", modifiers: [.command, .option]))
         menu.addItem(command("Swap Panes", #selector(swapPanes)))
-        menu.addItem(command("Stack Pages", #selector(toggleSplitAxis)))
+        menu.addItem(command("Stack Panes", #selector(toggleSplitAxis)))
         menu.addItem(.separator())
-        menu.addItem(command("Exit Split", #selector(exitSplit)))
-        menu.addItem(command("Close Other Pages", #selector(closeOtherPanes)))
+        menu.addItem(command("Exit Split View", #selector(exitSplit)))
+        menu.addItem(command("Close Other Panes", #selector(closeOtherPanes)))
         return menu
     }
 
@@ -565,7 +565,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         case #selector(toggleSplitAxis):
             let axisTitle: LocalizedStringResource = coordinator.browser.activeSplit?.axis == .stacked
                 ? "Place Side by Side"
-                : "Stack Pages"
+                : "Stack Panes"
             menuItem.title = String(localized: axisTitle)
             return coordinator.browser.activeSplit?.axis != nil
         case #selector(reopenClosedTab):

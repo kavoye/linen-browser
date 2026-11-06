@@ -365,7 +365,7 @@ enum CommandPaletteCatalog {
         }
 
         var split: [CommandPaletteCommand] {
-            let axisTitle: LocalizedStringResource = context.isStacked ? "Place Side by Side" : "Stack Pages"
+            let axisTitle: LocalizedStringResource = context.isStacked ? "Place Side by Side" : "Stack Panes"
             return [
                 make(
                     .splitRight,
@@ -390,7 +390,7 @@ enum CommandPaletteCatalog {
                 make(
                     .otherPane,
                     group: .split,
-                    title: "Other Pane",
+                    title: "Show Other Pane",
                     symbol: "arrow.left.arrow.right",
                     shortcut: "⌥⌘]",
                     aliases: ["focus other page"],
@@ -414,7 +414,7 @@ enum CommandPaletteCatalog {
                 make(
                     .exitSplit,
                     group: .split,
-                    title: "Exit Split",
+                    title: "Exit Split View",
                     symbol: "rectangle",
                     aliases: ["one page", "unsplit"],
                     isAvailable: context.isSplit,
@@ -423,7 +423,7 @@ enum CommandPaletteCatalog {
                 make(
                     .closeOtherPanes,
                     group: .split,
-                    title: "Close Other Pages",
+                    title: "Close Other Panes",
                     symbol: "rectangle.badge.minus",
                     isAvailable: context.isSplit
                 ),

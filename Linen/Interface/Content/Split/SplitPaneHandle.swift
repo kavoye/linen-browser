@@ -178,7 +178,7 @@ struct PaneHandle: View {
             if axis == .stacked {
                 title = String(localized: "Place Side by Side")
             } else {
-                title = String(localized: "Stack Pages")
+                title = String(localized: "Stack Panes")
             }
             menu.addItem(menuItem(title, symbol: "rectangle.split.2x1") {
                 browser.setSplitAxis(axis == .stacked ? .sideBySide : .stacked, containing: tab)
@@ -188,7 +188,7 @@ struct PaneHandle: View {
         menu.addItem(menuItem(String(localized: "Remove This Page"), symbol: "rectangle.badge.minus") {
             browser.removeFromSplit(tab)
         })
-        menu.addItem(menuItem(String(localized: "Exit Split"), symbol: "rectangle") {
+        menu.addItem(menuItem(String(localized: "Exit Split View"), symbol: "rectangle") {
             browser.dissolveSplit(containing: tab)
         })
         menu.addItem(.separator())
@@ -222,7 +222,7 @@ struct PaneHandle: View {
                 if axis == .stacked {
                     Label("Place Side by Side", systemImage: "rectangle.split.2x1")
                 } else {
-                    Label("Stack Pages", systemImage: "rectangle.split.2x1")
+                    Label("Stack Panes", systemImage: "rectangle.split.2x1")
                 }
             }
         }
@@ -235,7 +235,7 @@ struct PaneHandle: View {
         Button {
             browser.dissolveSplit(containing: tab)
         } label: {
-            Label("Exit Split", systemImage: "rectangle")
+            Label("Exit Split View", systemImage: "rectangle")
         }
         Divider()
         Button(role: .destructive) {
