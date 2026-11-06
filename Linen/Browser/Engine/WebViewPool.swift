@@ -225,7 +225,7 @@ final class TabWebView: WKWebView {
             keyEquivalent: ""
         )
         peek.target = self
-        peek.image = NSImage(systemSymbolName: "rectangle.portrait.on.rectangle.portrait", accessibilityDescription: nil)
+        peek.image = NSImage(systemSymbolName: "eye", accessibilityDescription: nil)
 
         let summary = NSMenuItem(
             title: String(localized: "Summarize Link"),
@@ -233,7 +233,7 @@ final class TabWebView: WKWebView {
             keyEquivalent: ""
         )
         summary.target = self
-        summary.image = NSImage(systemSymbolName: "text.line.first.and.arrowtriangle.forward", accessibilityDescription: nil)
+        summary.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         return TabContextMenu.linkWindowItems(
             opensPrivately: profileContext?.profile.isPrivate == true,
             target: self, action: #selector(openContextLinkInNewWindow(_:))

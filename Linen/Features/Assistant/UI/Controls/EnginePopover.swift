@@ -211,7 +211,7 @@ struct EnginePopover: View {
         } else {
             PlainRow(
                 title: "Show all models",
-                symbol: "arrow.down.circle",
+                symbol: "chevron.down",
                 isBusy: isLoading
             ) {
                 Task { await load() }

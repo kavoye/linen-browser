@@ -307,7 +307,7 @@ private enum FolderContextMenu {
             let title: LocalizedStringResource = linkable.count == 1 ? "Copy Link" : "Copy Links"
             menu.addItem(actionItem(
                 title: String(localized: title),
-                symbol: "doc.on.doc",
+                symbol: "link",
                 action: { [weak coordinator] in coordinator?.copyLinks(for: linkable) }
             ))
             menu.addItem(.separator())

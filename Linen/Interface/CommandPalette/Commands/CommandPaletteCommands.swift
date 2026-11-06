@@ -237,7 +237,7 @@ enum CommandPaletteCatalog {
                     .stopLoading,
                     group: .page,
                     title: "Stop",
-                    symbol: "xmark.circle",
+                    symbol: "stop",
                     shortcut: "⌘.",
                     aliases: ["stop loading"],
                     isAvailable: context.isLoading
@@ -291,7 +291,7 @@ enum CommandPaletteCatalog {
                     .copyLink,
                     group: .page,
                     title: "Copy Link",
-                    symbol: "doc.on.doc",
+                    symbol: "link",
                     shortcut: "⇧⌘C",
                     aliases: ["copy address", "copy url", "share"],
                     isAvailable: context.hasActiveTab
@@ -579,7 +579,7 @@ enum CommandPaletteCatalog {
                     .checkForUpdates,
                     group: .library,
                     title: "Check for Updates…",
-                    symbol: "arrow.down.circle",
+                    symbol: "arrow.down",
                     aliases: ["new version", "upgrade"],
                     isAvailable: context.canCheckForUpdates
                 ),
@@ -594,7 +594,7 @@ enum CommandPaletteCatalog {
                     .aboutLinen,
                     group: .library,
                     title: "About Linen",
-                    symbol: "info.circle",
+                    symbol: "info",
                     aliases: ["app version", "credits"]
                 ),
                 make(

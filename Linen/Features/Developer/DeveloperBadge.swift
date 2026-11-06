@@ -99,7 +99,7 @@ enum DeveloperMenu {
         menu.addItem(title: String(localized: "Outline Elements"), image: symbol("square.dashed")) { [weak tab] in
             tab?.updateDeveloperTools { $0.outlinesElements.toggle() }
         }.state = tab.developerTools.outlinesElements ? .on : .off
-        menu.addItem(submenu(appearanceMenu(for: tab), title: String(localized: "Page Appearance"), image: symbol("circle.lefthalf.filled")))
+        menu.addItem(submenu(appearanceMenu(for: tab), title: String(localized: "Page Appearance"), image: symbol("sun.lefthalf.filled")))
 
         let browsers = otherBrowsers()
         if !browsers.isEmpty, let url = URL(string: tab.urlString) {

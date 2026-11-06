@@ -17,9 +17,9 @@ struct SidebarLinkMenuItems: View {
                 coordinator.copyLinks(for: linkable)
             } label: {
                 if linkable.count == 1 {
-                    Label("Copy Link", systemImage: "doc.on.doc")
+                    Label("Copy Link", systemImage: "link")
                 } else {
-                    Label("Copy Links", systemImage: "doc.on.doc")
+                    Label("Copy Links", systemImage: "link")
                 }
             }
             Divider()

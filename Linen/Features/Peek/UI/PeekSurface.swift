@@ -138,7 +138,7 @@ private struct PeekPageMenu: View {
             Button {
                 coordinator.copyLink(for: tab)
             } label: {
-                Label("Copy Link", systemImage: "doc.on.doc")
+                Label("Copy Link", systemImage: "link")
             }
             .disabled(coordinator.linkURL(for: tab) == nil)
         } label: {
@@ -256,7 +256,7 @@ struct PeekRowBadge: View {
                 .disabled(!tab.canGoBack)
             Button("Forward", systemImage: "chevron.right") { tab.goForward() }
                 .disabled(!tab.canGoForward)
-            Button("Copy Link", systemImage: "doc.on.doc") { coordinator.copyLink(for: tab) }
+            Button("Copy Link", systemImage: "link") { coordinator.copyLink(for: tab) }
                 .disabled(coordinator.linkURL(for: tab) == nil)
             Divider()
             Button("Keep as a Tab", systemImage: "arrow.up.left.and.arrow.down.right") {

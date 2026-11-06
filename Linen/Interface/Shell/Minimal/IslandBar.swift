@@ -264,7 +264,7 @@ private struct IslandAddressMenu: View {
         Button {
             coordinator.copyCurrentURL()
         } label: {
-            Label("Copy Link", systemImage: "doc.on.doc")
+            Label("Copy Link", systemImage: "link")
         }
         .disabled(!hasLink)
 

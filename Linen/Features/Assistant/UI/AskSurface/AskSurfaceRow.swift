@@ -195,7 +195,7 @@ struct AskSurfaceAddressMenu: View {
             Button {
                 model.coordinator.copyCurrentURL()
             } label: {
-                Label("Copy Link", systemImage: "doc.on.doc")
+                Label("Copy Link", systemImage: "link")
             }
             .disabled(model.currentURL.isEmpty)
 
