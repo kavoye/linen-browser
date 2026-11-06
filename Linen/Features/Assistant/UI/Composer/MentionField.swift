@@ -479,7 +479,6 @@ enum MentionFieldRendering {
             content: AskPageChip(
                 title: chip.title,
                 icon: icon,
-                isAttached: true,
                 isRasterised: true,
                 fontSize: AskPageChip.contextFontSize,
                 height: height

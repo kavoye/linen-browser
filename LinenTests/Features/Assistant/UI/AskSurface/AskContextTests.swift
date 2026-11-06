@@ -31,7 +31,6 @@ struct AskContextTests {
 
         #expect(pages.map(\.title) == ["Active"])
         #expect(pages.map(\.host) == ["example.com"])
-        #expect(pages.allSatisfy { !$0.isAttached })
     }
 
     @Test func bothPanesOfASplitAreReadableInPaneOrder() {
@@ -47,7 +46,7 @@ struct AskContextTests {
         #expect(pages.map(\.title) == ["Left", "Right"])
     }
 
-    @Test func attachedTabsFollowTheOnScreenOnesAndAreMarked() {
+    @Test func attachedTabsFollowTheOnScreenOnes() {
         let model = makeModel()
         let attached = model.newTab(url: URL(string: "https://other.example/b"))
         attached.title = "Attached"
@@ -58,7 +57,6 @@ struct AskContextTests {
         let pages = AskContext.pages(browser: model, mentionedTabIDs: [attached.id])
 
         #expect(pages.map(\.title) == ["Active", "Attached"])
-        #expect(pages.map(\.isAttached) == [false, true])
     }
 
     @Test func aPaneThatIsAlsoAttachedIsListedOnce() {
@@ -72,6 +70,5 @@ struct AskContextTests {
         let pages = AskContext.pages(browser: model, mentionedTabIDs: [right.id])
 
         #expect(pages.map(\.title) == ["Left", "Right"])
-        #expect(pages.allSatisfy { !$0.isAttached })
     }
 }
