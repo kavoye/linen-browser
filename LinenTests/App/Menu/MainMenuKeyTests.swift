@@ -211,7 +211,7 @@ struct MainMenuKeyTests {
             let item = try #require(items.first { $0.title == title })
             #expect(menu.validateMenuItem(item))
         }
-        let reopen = try #require(items.first { $0.title == String(localized: "Reopen Last Closed Window") })
+        let reopen = try #require(items.first { $0.title == String(localized: "Reopen Closed Window") })
         #expect(menu.validateMenuItem(reopen) == app.canReopenWindow)
         #expect(app.windows.isEmpty, "Validating a menu must not create a browser window")
     }

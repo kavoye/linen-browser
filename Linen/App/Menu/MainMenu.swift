@@ -97,8 +97,8 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(command("New Window", #selector(newWindow), key: "n"))
         menu.addItem(command("New Private Window", #selector(newPrivateWindow), key: "n", modifiers: [.command, .shift]))
         menu.addItem(.separator())
-        menu.addItem(command("Reopen Last Closed Tab", #selector(reopenClosedTab), key: "t", modifiers: [.command, .shift]))
-        menu.addItem(command("Reopen Last Closed Window", #selector(reopenClosedWindow)))
+        menu.addItem(command("Reopen Closed Tab", #selector(reopenClosedTab), key: "t", modifiers: [.command, .shift]))
+        menu.addItem(command("Reopen Closed Window", #selector(reopenClosedWindow)))
         menu.addItem(.separator())
         menu.addItem(command("Close Tab", #selector(closeTab), key: "w"))
         menu.addItem(chain(
@@ -207,7 +207,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         ))
         developer.addItem(command("Restart Page", #selector(restartPage)))
         developer.addItem(.separator())
-        developer.addItem(command("Developer Mode for This Website", #selector(toggleDeveloperMode)))
+        developer.addItem(command("Developer Mode", #selector(toggleDeveloperMode)))
         menu.addItem(submenu(developer, titled: "Developer"))
         return menu
     }
@@ -235,7 +235,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(hidden(command("Back", #selector(goBack), key: String(UnicodeScalar(NSLeftArrowFunctionKey)!))))
         menu.addItem(hidden(command("Forward", #selector(goForward), key: String(UnicodeScalar(NSRightArrowFunctionKey)!))))
         menu.addItem(.separator())
-        menu.addItem(command("Show All History", #selector(showHistory), key: "y"))
+        menu.addItem(command("Show History", #selector(showHistory), key: "y"))
         menu.addItem(command("Clear History…", #selector(clearHistory)))
         return menu
     }
@@ -245,11 +245,11 @@ final class MainMenu: NSObject, NSMenuItemValidation {
         menu.addItem(chain("Minimize", #selector(NSWindow.performMiniaturize(_:)), key: "m"))
         menu.addItem(chain("Zoom", #selector(NSWindow.performZoom(_:))))
         menu.addItem(.separator())
-        menu.addItem(command("Show Next Tab", #selector(nextTab), key: "]", modifiers: [.command, .shift]))
-        menu.addItem(command("Show Previous Tab", #selector(previousTab), key: "[", modifiers: [.command, .shift]))
-        menu.addItem(hidden(command("Show Next Tab", #selector(switchToNextTab), key: "\t", modifiers: [.control])))
+        menu.addItem(command("Next Tab", #selector(nextTab), key: "]", modifiers: [.command, .shift]))
+        menu.addItem(command("Previous Tab", #selector(previousTab), key: "[", modifiers: [.command, .shift]))
+        menu.addItem(hidden(command("Next Tab", #selector(switchToNextTab), key: "\t", modifiers: [.control])))
         menu.addItem(hidden(command(
-            "Show Previous Tab",
+            "Previous Tab",
             #selector(switchToPreviousTab),
             key: "\t",
             modifiers: [.control, .shift]
@@ -526,7 +526,7 @@ final class MainMenu: NSObject, NSMenuItemValidation {
             guard let tab = coordinator.pageCommandTab,
                   let host = DeveloperMode.host(of: URL(string: tab.urlString))
             else {
-                menuItem.title = String(localized: "Developer Mode for This Website")
+                menuItem.title = String(localized: "Developer Mode")
                 menuItem.state = .off
                 return false
             }

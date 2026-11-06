@@ -7,17 +7,35 @@
     "Back to Pin" : {
       "comment" : "Command that returns a tab to the page pinned in it: a File menu item and a tab context-menu item. Title Case."
     },
+    "Developer Mode" : {
+      "comment" : "Menu bar command under View, in the Developer submenu, shown when the page has no website to name. Title Case."
+    },
     "Linen on GitHub…" : {
       "comment" : "The Help menu item that opens Linen’s GitHub repository in a new tab. “GitHub” is a product name."
     },
     "Show Downloads" : {
       "comment" : "Menu bar command under View, shortcut ⌥⌘L, which opens the list of downloads. Title Case."
     },
+    "Next Tab" : {
+      "comment" : "Menu bar command under Window, shortcuts ⇧⌘] and ⌃Tab, which switches to the tab after the current one. Title Case."
+    },
     "Open as Split" : {
       "comment" : "Shows a page next to the page already open, as two panes. Two surfaces share it: the context menu of a sidebar row, and the Peek button and menu, which also turn the peeked page into a tab. Title Case."
     },
+    "Previous Tab" : {
+      "comment" : "Menu bar command under Window, shortcuts ⇧⌘[ and ⌃⇧Tab, which switches to the tab before the current one. Title Case."
+    },
+    "Reopen Closed Tab" : {
+      "comment" : "Menu bar command under File, shortcut ⇧⌘T. Title Case."
+    },
+    "Reopen Closed Window" : {
+      "comment" : "Menu bar command under File. Title Case."
+    },
     "Report a Problem…" : {
       "comment" : "The Help menu item that opens the bug report form on GitHub in a new tab."
+    },
+    "Show History" : {
+      "comment" : "Menu bar command under History, shortcut ⌘Y, which opens the full history list. Title Case."
     },
     "“%@” is playing" : {
       "comment" : "Tooltip on the speaker glyph of a collapsed folder in the sidebar, saying which tab inside it is making sound. %@ is the tab's title, written by the website — never translated. Keep the curly quotation marks around it."
@@ -1992,9 +2010,6 @@
 
     },
     "Developer Mode for “%@”" : {
-
-    },
-    "Developer Mode for This Website" : {
 
     },
     "Developer settings" : {
