@@ -204,7 +204,7 @@ struct IslandBar: View {
             ) {
                 isMoreOpen.toggle()
             }
-            .popover(isPresented: $isMoreOpen, arrowEdge: .bottom) {
+            .arrowlessPopover(isPresented: $isMoreOpen, alignment: .trailing(width: PopoverMenuRow<EmptyView>.width)) {
                 IslandMoreMenu(coordinator: coordinator, isPresented: $isMoreOpen)
             }
 

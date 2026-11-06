@@ -146,7 +146,7 @@ private struct AssistantAttachmentButton: View {
         .onHover { hovering = $0 }
         .accessibilityLabel("Add Attachments")
         .help("Add Attachments")
-        .arrowlessPopover(isPresented: $isPresenting, leadingWidth: AssistantAttachMenu.width) {
+        .arrowlessPopover(isPresented: $isPresenting, alignment: .leading(width: AssistantAttachMenu.width)) {
             AssistantAttachMenu(
                 tabs: browser.tabs,
                 activeTabID: browser.activeTab?.id,

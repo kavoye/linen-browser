@@ -231,7 +231,10 @@ struct SidebarMoreMenu: View {
         .onHover { hovering = $0 }
         .animation(Theme.Motion.quick, value: hovering)
         .help(String(localized: "More"))
-        .modifier(MoreMenuPopover(isOpen: $isOpen, isArrowless: includesSpacesAndDownloads) { menu })
+        .arrowlessPopover(
+            isPresented: $isOpen,
+            alignment: includesSpacesAndDownloads ? .center : .trailing(width: PopoverMenuRow<EmptyView>.width)
+        ) { menu }
     }
 
     private var menu: some View {
@@ -259,20 +262,6 @@ struct SidebarMoreMenu: View {
         .padding(PopoverMenuRow<EmptyView>.inset)
         .frame(width: PopoverMenuRow<EmptyView>.width)
         .chromePopoverAppearance()
-    }
-}
-
-private struct MoreMenuPopover<Menu: View>: ViewModifier {
-    @Binding var isOpen: Bool
-    let isArrowless: Bool
-    @ViewBuilder let menu: () -> Menu
-
-    func body(content: Content) -> some View {
-        if isArrowless {
-            content.arrowlessPopover(isPresented: $isOpen, content: menu)
-        } else {
-            content.popover(isPresented: $isOpen, arrowEdge: .top, content: menu)
-        }
     }
 }
 

@@ -4,19 +4,25 @@
 import AppKit
 import SwiftUI
 
+enum ArrowlessPopoverAlignment {
+    case center
+    case leading(width: CGFloat)
+    case trailing(width: CGFloat)
+}
+
 extension View {
     func arrowlessPopover<Content: View>(
         isPresented: Binding<Bool>,
-        leadingWidth: CGFloat? = nil,
+        alignment: ArrowlessPopoverAlignment = .center,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        background(ArrowlessPopoverAnchor(isPresented: isPresented, leadingWidth: leadingWidth, content: content))
+        background(ArrowlessPopoverAnchor(isPresented: isPresented, alignment: alignment, content: content))
     }
 }
 
 private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
     @Binding var isPresented: Bool
-    let leadingWidth: CGFloat?
+    let alignment: ArrowlessPopoverAlignment
     let content: () -> Content
 
     func makeCoordinator() -> Coordinator {
@@ -31,7 +37,7 @@ private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
         let coordinator = context.coordinator
         let environment = context.environment
         coordinator.dismiss = { if isPresented { isPresented = false } }
-        coordinator.growsFromLeadingCorner = leadingWidth != nil
+        coordinator.alignment = alignment
         coordinator.hosting.rootView = AnyView(
             content().transformEnvironment(\.self) { $0 = environment }
         )
@@ -46,9 +52,20 @@ private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
     }
 
     private func positioningView(in view: NSView, coordinator: Coordinator) -> NSView {
-        guard let leadingWidth else { return view }
-        let anchor = coordinator.leadingAnchor
-        anchor.frame = CGRect(x: 0, y: 0, width: leadingWidth, height: view.bounds.height)
+        let originX: CGFloat
+        let width: CGFloat
+        switch alignment {
+        case .center:
+            return view
+        case .leading(let menuWidth):
+            originX = 0
+            width = menuWidth
+        case .trailing(let menuWidth):
+            originX = view.bounds.maxX - menuWidth
+            width = menuWidth
+        }
+        let anchor = coordinator.alignedAnchor
+        anchor.frame = CGRect(x: originX, y: 0, width: width, height: view.bounds.height)
         if anchor.superview !== view {
             view.addSubview(anchor)
         }
@@ -62,9 +79,9 @@ private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
     final class Coordinator: NSObject, NSPopoverDelegate {
         let popover = NSPopover()
         let hosting = NSHostingController(rootView: AnyView(EmptyView()))
-        let leadingAnchor = NSView()
+        let alignedAnchor = NSView()
         var dismiss: () -> Void = {}
-        var growsFromLeadingCorner = false
+        var alignment = ArrowlessPopoverAlignment.center
 
         override init() {
             super.init()
@@ -79,24 +96,32 @@ private struct ArrowlessPopoverAnchor<Content: View>: NSViewRepresentable {
         }
 
         func popoverWillShow(_ notification: Notification) {
-            pinAnchorToLeadingCorner()
+            pinGrowOrigin()
         }
 
         func popoverWillClose(_ notification: Notification) {
-            pinAnchorToLeadingCorner()
+            pinGrowOrigin()
         }
 
         func popoverDidClose(_ notification: Notification) {
             dismiss()
         }
 
-        private func pinAnchorToLeadingCorner() {
-            guard growsFromLeadingCorner,
-                  let window = hosting.view.window,
+        private func pinGrowOrigin() {
+            guard let window = hosting.view.window,
                   window.responds(to: Selector(("setAnchorPoint:")))
             else { return }
-            let leading = hosting.view.convert(hosting.view.bounds, to: nil).minX
-            window.setValue(NSPoint(x: leading, y: 0), forKey: "anchorPoint")
+            let frame = hosting.view.convert(hosting.view.bounds, to: nil)
+            let originX: CGFloat
+            switch alignment {
+            case .center:
+                return
+            case .leading:
+                originX = frame.minX
+            case .trailing:
+                originX = frame.maxX
+            }
+            window.setValue(NSPoint(x: originX, y: 0), forKey: "anchorPoint")
         }
     }
 }
