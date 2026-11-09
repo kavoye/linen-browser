@@ -26,27 +26,41 @@ extension WKWebView {
     }
 }
 
+/// Resumes its caller once, with the first of the page's answer, the caller's cancellation or the
+/// ceiling.
 @MainActor
 final class PageReply<Value: Sendable> {
     private var continuation: CheckedContinuation<Value?, Never>?
+    private var ceiling: Task<Void, Never>?
+    private var isFinished = false
 
-    private init(_ continuation: CheckedContinuation<Value?, Never>) {
-        self.continuation = continuation
-    }
+    private init() {}
 
     func finish(_ value: Value?) {
+        guard !isFinished else { return }
+        isFinished = true
+        ceiling?.cancel()
         continuation?.resume(returning: value)
         continuation = nil
     }
 
     static func awaiting(within ceiling: Duration, _ start: (PageReply<Value>) -> Void) async -> Value? {
-        await withCheckedContinuation { continuation in
-            let gate = PageReply(continuation)
-            start(gate)
-            Task {
-                try? await Task.sleep(for: ceiling)
-                gate.finish(nil)
+        let gate = PageReply<Value>()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                gate.continuation = continuation
+                guard !Task.isCancelled else {
+                    gate.finish(nil)
+                    return
+                }
+                gate.ceiling = Task {
+                    try? await Task.sleep(for: ceiling)
+                    gate.finish(nil)
+                }
+                start(gate)
             }
+        } onCancel: {
+            Task { @MainActor in gate.finish(nil) }
         }
     }
 }
