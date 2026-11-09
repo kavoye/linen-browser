@@ -425,6 +425,7 @@ struct CommandPaletteLayer: View {
     let coordinator: AppCoordinator
 
     @State private var model: CommandPaletteModel?
+    @State private var draft: CommandPaletteDraft?
     @State private var isShown = false
     @State private var isLeaving = false
     @State private var isMoving = false
@@ -466,6 +467,8 @@ struct CommandPaletteLayer: View {
             }
             if let seed = coordinator.palette.seed {
                 opened.interaction.query = seed
+            } else if let draft, draft.isFresh() {
+                opened.restore(draft)
             }
             model = opened
             isLeaving = false
@@ -476,6 +479,7 @@ struct CommandPaletteLayer: View {
                 isMoving = false
             }
         } else if isShown {
+            draft = model?.draft
             withAnimation(.easeOut(duration: 0.16)) { isLeaving = true }
             pending = Task {
                 try? await Task.sleep(for: .milliseconds(170))

@@ -752,6 +752,65 @@ struct CommandPaletteModelTests {
         }
     }
 
+    @Test func dismissingKeepsTheTypedTextAsADraft() {
+        let coordinator = AppCoordinator()
+        defer { coordinator.closeWindow() }
+        var dismissed = false
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) { dismissed = true }
+        model.interaction.query = "linen release"
+
+        model.dismiss()
+
+        #expect(dismissed)
+        #expect(model.draft?.query == "linen release")
+    }
+
+    @Test func runningACommandDiscardsTheDraft() throws {
+        let coordinator = AppCoordinator()
+        let frameKey = "NSWindow Frame linen.browser.window.\(coordinator.windowID.uuidString)"
+        let savedFrame = UserDefaults.standard.object(forKey: frameKey)
+        defer {
+            coordinator.closeWindow()
+            UserDefaults.standard.set(savedFrame, forKey: frameKey)
+        }
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+        model.prepare()
+        model.interaction.query = "> start"
+
+        try #require(model.sections.flattened.first { $0.id == "action-openStartPage" }).run()
+
+        #expect(model.draft == nil)
+    }
+
+    @Test func restoringADraftBringsBackItsText() {
+        let coordinator = AppCoordinator()
+        defer { coordinator.closeWindow() }
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+
+        model.restore(CommandPaletteDraft(query: "linen release", mentionedTabIDs: []))
+
+        #expect(model.interaction.query == "linen release")
+    }
+
+    @Test func restoringADraftDropsMentionsOfClosedTabs() {
+        let coordinator = AppCoordinator()
+        defer { coordinator.closeWindow() }
+        let model = CommandPaletteModel(browser: coordinator.browser, coordinator: coordinator) {}
+
+        model.restore(CommandPaletteDraft(query: "compare \(MentionText.marker) ", mentionedTabIDs: [UUID()]))
+
+        #expect(model.interaction.query == "compare  ")
+        #expect(model.mentionedTabIDs.isEmpty)
+    }
+
+    @Test func draftExpiresAfterFiveMinutes() {
+        let saved = Date(timeIntervalSinceReferenceDate: 0)
+        let draft = CommandPaletteDraft(query: "linen", mentionedTabIDs: [], savedAt: saved)
+
+        #expect(draft.isFresh(at: saved.addingTimeInterval(4 * 60)))
+        #expect(!draft.isFresh(at: saved.addingTimeInterval(5 * 60)))
+    }
+
     private func noOpActions() -> CommandPaletteActions {
         CommandPaletteActions()
     }

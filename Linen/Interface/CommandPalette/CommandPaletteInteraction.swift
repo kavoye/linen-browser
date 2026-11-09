@@ -33,6 +33,18 @@ struct CommandPaletteInteraction: Equatable {
     }
 }
 
+struct CommandPaletteDraft: Equatable {
+    static let lifetime: TimeInterval = 5 * 60
+
+    let query: String
+    let mentionedTabIDs: [UUID]
+    var savedAt = Date()
+
+    func isFresh(at date: Date = Date()) -> Bool {
+        date.timeIntervalSince(savedAt) < Self.lifetime
+    }
+}
+
 struct CommandPaletteLayout: Equatable {
     static let fieldHeight: CGFloat = 62
     static let margin: CGFloat = 40

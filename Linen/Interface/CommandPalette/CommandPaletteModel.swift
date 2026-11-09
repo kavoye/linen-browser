@@ -11,7 +11,7 @@ import WebKit
 final class CommandPaletteModel {
     let browser: BrowserModel
     let coordinator: AppCoordinator
-    let dismiss: () -> Void
+    private let close: () -> Void
     let suggestions = SearchSuggestions()
     let gitHubSearch = GitHubPaletteSearch()
 
@@ -50,8 +50,34 @@ final class CommandPaletteModel {
     ) {
         self.browser = browser
         self.coordinator = coordinator
-        self.dismiss = dismiss
+        self.close = dismiss
         gitHubSearch.onChange = { [weak self] in self?.suggestionsDidChange() }
+    }
+
+    private(set) var isFinished = false
+
+    var draft: CommandPaletteDraft? {
+        guard !isFinished, !interaction.query.isEmpty else { return nil }
+        return CommandPaletteDraft(query: interaction.query, mentionedTabIDs: mentionedTabIDs)
+    }
+
+    func dismiss() {
+        close()
+    }
+
+    private func finish() {
+        isFinished = true
+        close()
+    }
+
+    func restore(_ draft: CommandPaletteDraft) {
+        let ids = draft.mentionedTabIDs
+        if ids.allSatisfy({ id in browser.tabs.contains { $0.id == id } }) {
+            mentionedTabIDs = ids
+            interaction.query = draft.query
+        } else {
+            interaction.query = draft.query.filter { $0 != MentionText.markerCharacter }
+        }
     }
 
     private var isGitHubMode: Bool {
@@ -272,12 +298,12 @@ final class CommandPaletteModel {
                     actions: GitHubPaletteActions(
                         open: { [weak self] url in
                             self?.coordinator.openGitHubLink(url)
-                            self?.dismiss()
+                            self?.finish()
                         },
                         openCurrent: { [weak self] url in self?.openCurrent(url) },
                         split: { [weak self] url, other in
                             self?.coordinator.openGitHubSplit(url, beside: other)
-                            self?.dismiss()
+                            self?.finish()
                         }
                     )
                 )
@@ -371,7 +397,7 @@ final class CommandPaletteModel {
 
     private func openCurrent(_ url: URL) {
         browser.ensureActiveTab().load(url)
-        dismiss()
+        finish()
     }
 
     private func ask(_ prompt: String) {
@@ -380,23 +406,23 @@ final class CommandPaletteModel {
         guard !prompt.isEmpty else { return }
         let mentions = mentionedTabIDs
         mentionedTabIDs = []
-        dismiss()
+        finish()
         Task { await coordinator.handleTypedUtterance(prompt, mentionedTabIDs: mentions) }
     }
 
     private func switchTo(_ tab: BrowserTab) {
         coordinator.openTab(tab)
-        dismiss()
+        finish()
     }
 
     private func restore(_ entry: TabArchive.Entry) {
         browser.restore(entry)
-        dismiss()
+        finish()
     }
 
     private func openNew(_ url: URL) {
         coordinator.openNewTab(url: url)
-        dismiss()
+        finish()
     }
 
     private func showArchive() {
@@ -417,7 +443,7 @@ final class CommandPaletteModel {
             interaction.query = coordinator.locationSeed ?? ""
             return
         }
-        dismiss()
+        finish()
         let tab = browser.activeTab
         let page = coordinator.pageCommandTab
         switch action {
