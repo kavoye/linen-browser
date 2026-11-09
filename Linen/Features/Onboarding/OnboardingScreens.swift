@@ -125,6 +125,10 @@ extension OnboardingUI {
         let model: OnboardingModel
         let clock: ShimmerClock
 
+        private var defaultBrowserButton: LocalizedStringResource {
+            model.isDefaultBrowser ? "Default" : "Set as Default"
+        }
+
         var body: some View {
             Screen(usesStage: true) {
                 Heading(
@@ -146,18 +150,23 @@ extension OnboardingUI {
                         caption: "Open links from other apps in Linen."
                     ) {
                         SettingsButton(
-                            title: "Set as Default",
+                            title: defaultBrowserButton,
                             minWidth: OnboardingUI.actionWidth
                         ) {
                             model.requestDefaultBrowser()
                         }
+                        .disabled(model.isDefaultBrowser)
                     }
                 }
                 .frame(width: OnboardingUI.columnWidth)
                 .multilineTextAlignment(.leading)
                 .padding(.top, 24)
+                .task { model.refreshDefaultBrowser() }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    model.refreshDefaultBrowser()
+                }
 
-                if model.handedOverToSystemSettings {
+                if model.handedOverToSystemSettings, !model.isDefaultBrowser {
                     Text("In System Settings, choose Linen as the default web browser.")
                         .font(Theme.Font.label)
                         .foregroundStyle(.secondary)

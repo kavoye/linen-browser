@@ -29,6 +29,8 @@ final class OnboardingModel {
 
     private(set) var handedOverToSystemSettings = false
 
+    private(set) var isDefaultBrowser = false
+
     private(set) var hasPlayedIntro = false
 
     private(set) var isWindowReady = false
@@ -98,6 +100,11 @@ final class OnboardingModel {
     func requestDefaultBrowser() {
         Task {
             handedOverToSystemSettings = await DefaultBrowser.request() == .handedOverToSystemSettings
+            refreshDefaultBrowser()
         }
+    }
+
+    func refreshDefaultBrowser() {
+        isDefaultBrowser = DefaultBrowser.isCurrent
     }
 }
