@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.9.6
+
+### Improved
+
+- **Menus.** Every menu item has an icon. Context menus, including the menu
+  you get when you Control-click a page, show keyboard shortcuts.
+- **Menu bar.** The File and View menus have a new order and shorter command
+  names. Show Downloads is in the View menu.
+- **Command palette.** If you close the command palette without choosing a
+  result, your text is still there when you open it again within 5 minutes.
+- **Assistant attachments.** The add button opens a menu where you can attach
+  a tab or choose files.
+
+### Fixed
+
+- **Pin Tab.** The File menu shows Unpin Tab when the current tab is pinned,
+  and Back to Pin only when you have left the pinned page.
+- **Extensions.** Extensions get updates when a tab’s address, title, or
+  loading state changes.
+- **Password filling.** Autofill settings shows the full name of your password
+  manager.
+
 ## 0.9.5
 
 ### Improved
