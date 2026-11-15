@@ -603,8 +603,12 @@ struct SidebarDownloadsButton: View {
         previewTask?.cancel()
         let inside = hovering || hoveringPreview
         guard inside != previewing, !inside || !downloads.items.isEmpty else { return }
+        if inside {
+            previewing = true
+            return
+        }
         previewTask = Task {
-            try? await Task.sleep(for: inside ? .milliseconds(450) : .milliseconds(250))
+            try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
             previewing = inside
         }
