@@ -21,13 +21,13 @@ struct HarnessAdapterTests {
         let model: any LanguageModel
         switch variant {
         case "anthropic":
-            model = AnthropicLanguageModel(baseURL: endpoint, apiKey: "fixture-key", model: "fixture", session: transport)
+            model = AnthropicLanguageModel(baseURL: endpoint, apiKey: "fixture-key", model: "fixture", transport: transport)
         case "gemini":
-            model = GeminiLanguageModel(baseURL: endpoint, apiKey: "fixture-key", model: "fixture", session: transport)
+            model = GeminiLanguageModel(baseURL: endpoint, apiKey: "fixture-key", model: "fixture", transport: transport)
         default:
             model = OpenAILanguageModel(
                 baseURL: endpoint, apiKey: "fixture-key", model: "fixture",
-                apiVariant: variant == "responses" ? .responses : .chatCompletions, session: transport
+                apiVariant: variant == "responses" ? .responses : .chatCompletions, transport: transport
             )
         }
         let log = ConversationLog(database: .temporary())
