@@ -87,7 +87,7 @@ struct SidebarRowControlTests {
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = host
         window.acceptsMouseMovedEvents = true
-        window.level = .floating
+        window.level = .screenSaver
         window.makeKeyAndOrderFront(nil)
         let stage = Stage(coordinator: coordinator, window: window, host: host, tabs: tabs)
         try await stage.settle()
