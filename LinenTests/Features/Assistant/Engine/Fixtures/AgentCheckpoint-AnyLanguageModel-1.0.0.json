@@ -1,0 +1,408 @@
+{
+  "progressUpdates" : [
+    {
+      "afterStepCount" : 1,
+      "id" : "7D2E1C1A-0000-4000-8000-000000000001",
+      "text" : "Filling the form"
+    }
+  ],
+  "request" : "Fill the fixture form",
+  "summary" : "The name field is filled.",
+  "transcript" : {
+    "entries" : [
+      {
+        "instructions" : {
+          "_0" : {
+            "id" : "instructions",
+            "segments" : [
+              {
+                "text" : {
+                  "_0" : {
+                    "content" : "You are Linen’s browser assistant.",
+                    "id" : "instructions-text"
+                  }
+                }
+              }
+            ],
+            "toolDefinitions" : [
+              {
+                "description" : "Fixture tool",
+                "name" : "fillField",
+                "parameters" : {
+                  "$defs" : {
+                    "LinenTests.HarnessTool.Arguments" : {
+                      "additionalProperties" : false,
+                      "description" : "Generated Arguments",
+                      "properties" : {
+                        "value" : {
+                          "type" : "string"
+                        }
+                      },
+                      "required" : [
+                        "value"
+                      ],
+                      "type" : "object"
+                    }
+                  },
+                  "$ref" : "#\/$defs\/LinenTests.HarnessTool.Arguments"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "prompt" : {
+          "_0" : {
+            "id" : "prompt",
+            "options" : {
+              "maximumResponseTokens" : 512,
+              "sampling" : {
+                "mode" : {
+                  "greedy" : {
+
+                  }
+                }
+              },
+              "temperature" : 0.2
+            },
+            "responseFormat" : {
+              "schema" : {
+                "$defs" : {
+                  "LinenTests.HarnessTool.Arguments" : {
+                    "additionalProperties" : false,
+                    "description" : "Generated Arguments",
+                    "properties" : {
+                      "value" : {
+                        "type" : "string"
+                      }
+                    },
+                    "required" : [
+                      "value"
+                    ],
+                    "type" : "object"
+                  }
+                },
+                "$ref" : "#\/$defs\/LinenTests.HarnessTool.Arguments"
+              }
+            },
+            "segments" : [
+              {
+                "text" : {
+                  "_0" : {
+                    "content" : "Fill the fixture form",
+                    "id" : "prompt-text"
+                  }
+                }
+              },
+              {
+                "image" : {
+                  "_0" : {
+                    "id" : "prompt-image-data",
+                    "source" : {
+                      "data" : "iVBORw0KGgo=",
+                      "kind" : "data",
+                      "mimeType" : "image\/png"
+                    }
+                  }
+                }
+              },
+              {
+                "image" : {
+                  "_0" : {
+                    "id" : "prompt-image-url",
+                    "source" : {
+                      "kind" : "url",
+                      "url" : "https:\/\/example.com\/screenshot.png"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "reasoning" : {
+          "_0" : {
+            "id" : "reasoning",
+            "metadata" : {
+              "provider" : {
+                "kind" : {
+                  "type" : "string",
+                  "value" : "fixture"
+                }
+              }
+            },
+            "segments" : [
+              {
+                "text" : {
+                  "_0" : {
+                    "content" : "The form has two fields.",
+                    "id" : "reasoning-text"
+                  }
+                }
+              }
+            ],
+            "signature" : "Zml4dHVyZS1zaWduYXR1cmU="
+          }
+        }
+      },
+      {
+        "toolCalls" : {
+          "_0" : {
+            "calls" : [
+              {
+                "arguments" : {
+                  "kind" : {
+                    "orderedKeys" : [
+                      "value",
+                      "count",
+                      "ratio",
+                      "flags",
+                      "nested"
+                    ],
+                    "properties" : {
+                      "count" : {
+                        "kind" : {
+                          "type" : "number",
+                          "value" : 3
+                        }
+                      },
+                      "flags" : {
+                        "kind" : {
+                          "type" : "array",
+                          "value" : [
+                            {
+                              "kind" : {
+                                "type" : "bool",
+                                "value" : true
+                              }
+                            },
+                            {
+                              "kind" : {
+                                "type" : "bool",
+                                "value" : false
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "nested" : {
+                        "kind" : {
+                          "orderedKeys" : [
+                            "note",
+                            "missing"
+                          ],
+                          "properties" : {
+                            "missing" : {
+                              "kind" : {
+                                "type" : "null"
+                              }
+                            },
+                            "note" : {
+                              "kind" : {
+                                "type" : "string",
+                                "value" : "optional"
+                              }
+                            }
+                          },
+                          "type" : "structure"
+                        }
+                      },
+                      "ratio" : {
+                        "kind" : {
+                          "type" : "number",
+                          "value" : 0.5
+                        }
+                      },
+                      "value" : {
+                        "kind" : {
+                          "type" : "string",
+                          "value" : "Ada Lovelace"
+                        }
+                      }
+                    },
+                    "type" : "structure"
+                  }
+                },
+                "id" : "call-1",
+                "toolName" : "fillField"
+              },
+              {
+                "arguments" : {
+                  "kind" : {
+                    "orderedKeys" : [
+
+                    ],
+                    "properties" : {
+
+                    },
+                    "type" : "structure"
+                  }
+                },
+                "id" : "call-2",
+                "providerMetadata" : {
+                  "thought_signature" : "fixture"
+                },
+                "toolName" : "readPage"
+              }
+            ],
+            "id" : "tool-calls"
+          }
+        }
+      },
+      {
+        "toolOutput" : {
+          "_0" : {
+            "id" : "call-1",
+            "segments" : [
+              {
+                "text" : {
+                  "_0" : {
+                    "content" : "Filled the name field.",
+                    "id" : "output-text"
+                  }
+                }
+              }
+            ],
+            "toolName" : "fillField"
+          }
+        }
+      },
+      {
+        "toolOutput" : {
+          "_0" : {
+            "id" : "call-2",
+            "segments" : [
+              {
+                "structure" : {
+                  "_0" : {
+                    "content" : {
+                      "kind" : {
+                        "orderedKeys" : [
+                          "title",
+                          "fields"
+                        ],
+                        "properties" : {
+                          "fields" : {
+                            "kind" : {
+                              "type" : "array",
+                              "value" : [
+                                {
+                                  "kind" : {
+                                    "type" : "string",
+                                    "value" : "name"
+                                  }
+                                },
+                                {
+                                  "kind" : {
+                                    "type" : "string",
+                                    "value" : "email"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "title" : {
+                            "kind" : {
+                              "type" : "string",
+                              "value" : "Fixture form"
+                            }
+                          }
+                        },
+                        "type" : "structure"
+                      }
+                    },
+                    "id" : "output-structure",
+                    "source" : "readPage"
+                  }
+                }
+              },
+              {
+                "image" : {
+                  "_0" : {
+                    "id" : "output-image",
+                    "source" : {
+                      "data" : "iVBORw0KGgo=",
+                      "kind" : "data",
+                      "mimeType" : "image\/png"
+                    }
+                  }
+                }
+              }
+            ],
+            "toolName" : "readPage"
+          }
+        }
+      },
+      {
+        "response" : {
+          "_0" : {
+            "assetIDs" : [
+              "asset-1"
+            ],
+            "id" : "response",
+            "segments" : [
+              {
+                "text" : {
+                  "_0" : {
+                    "content" : "Filled the form.",
+                    "id" : "response-text"
+                  }
+                }
+              },
+              {
+                "structure" : {
+                  "_0" : {
+                    "content" : {
+                      "kind" : {
+                        "orderedKeys" : [
+                          "title",
+                          "fields"
+                        ],
+                        "properties" : {
+                          "fields" : {
+                            "kind" : {
+                              "type" : "array",
+                              "value" : [
+                                {
+                                  "kind" : {
+                                    "type" : "string",
+                                    "value" : "name"
+                                  }
+                                },
+                                {
+                                  "kind" : {
+                                    "type" : "string",
+                                    "value" : "email"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "title" : {
+                            "kind" : {
+                              "type" : "string",
+                              "value" : "Fixture form"
+                            }
+                          }
+                        },
+                        "type" : "structure"
+                      }
+                    },
+                    "id" : "response-structure",
+                    "source" : "Answer"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "userAnswers" : [
+    "Use my work email"
+  ]
+}

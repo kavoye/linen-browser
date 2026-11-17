@@ -13,13 +13,17 @@ struct PageWatchJudgeTests {
         private let lock = NSLock()
         private let window: Int
         private let failure: any Error
+        private let json: String
         private var lengths: [Int] = []
 
-        init(window: Int, failure: any Error = LanguageModelSession.GenerationError.exceededContextWindowSize(
-            .init(debugDescription: "fixture")
-        )) {
+        init(
+            window: Int,
+            failure: any Error = LanguageModelSession.GenerationError.exceededContextWindowSize(.init(debugDescription: "fixture")),
+            json: String = #"{"state":"$42.99","met":true,"message":"The price dropped to $42.99."}"#
+        ) {
             self.window = window
             self.failure = failure
+            self.json = json
         }
 
         var promptLengths: [Int] {
@@ -33,7 +37,6 @@ struct PageWatchJudgeTests {
             let length = prompt.description.count
             lock.withLock { lengths.append(length) }
             guard length <= window else { throw failure }
-            let json = #"{"state":"$42.99","met":true,"message":"The price dropped to $42.99."}"#
             let raw = try GeneratedContent(json: json)
             return .init(content: try Content(raw), rawContent: raw, transcriptEntries: [][...])
         }
@@ -89,5 +92,21 @@ struct PageWatchJudgeTests {
 
         #expect(verdict == nil)
         #expect(model.promptLengths.count == 1)
+    }
+
+    @Test func aReplyWithoutMetIsNeverAMatch() async {
+        let model = SmallWindowModel(window: 100_000, json: #"{"state":"$42.99","message":"The price dropped to $42.99."}"#)
+
+        let verdict = await PageWatchJudge.judge(watch, reading: reading(characters: 1_000), model: model)
+
+        #expect(verdict?.met != true)
+    }
+
+    @Test func aChangeOfUnknownKindIsNeverAMatch() async {
+        let model = SmallWindowModel(window: 100_000, json: #"{"kind":"breakingNews","summary":"Something happened."}"#)
+
+        let verdict = await PageWatchJudge.classify(.init(removed: "$54.99", added: "$42.99"), model: model)
+
+        #expect(verdict?.met != true)
     }
 }

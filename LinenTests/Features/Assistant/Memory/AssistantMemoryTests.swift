@@ -171,6 +171,16 @@ struct AssistantMemoryTests {
         #expect(browser.memory.facts.isEmpty)
     }
 
+    @Test func aChangeWithoutAValueSavesNothing() async {
+        let browser = BrowserModel(database: .temporary())
+        let subject = toolkit(browser)
+
+        subject.beginRequest("I like cars")
+        await subject.writeMemory(using: NotesModel(#"{"changes":[{"subject":"interests","forget":false}]}"#))
+
+        #expect(browser.memory.facts.allSatisfy { !$0.value.isEmpty })
+    }
+
     @Test func savedNotesAreRecalledForEveryRequest() {
         let browser = BrowserModel(database: .temporary())
         let subject = toolkit(browser)
