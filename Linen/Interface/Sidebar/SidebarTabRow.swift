@@ -121,14 +121,11 @@ struct SidebarTabRow: View {
     private var trailingControls: some View {
         Group {
             if tab.pinnedURL == nil {
-                CloseButton {
+                SidebarRowControl(symbol: "xmark", help: String(localized: "Close Tab")) {
                     coordinator.closeAskingIfPinned(tab)
                 }
             } else {
-                ChromeIcon.rowControl(
-                    symbol: "minus",
-                    help: String(localized: "Unpin Tab")
-                ) {
+                SidebarRowControl(symbol: "minus", help: String(localized: "Unpin Tab")) {
                     browser.unpin(tab)
                 }
             }
@@ -376,6 +373,30 @@ private struct SidebarTabMenuItems: View {
                 }
             }
         }
+    }
+}
+
+private struct SidebarRowControl: View {
+    let symbol: String
+    let help: String
+    let action: () -> Void
+
+    @State private var hovering = false
+    @Environment(\.chromeIsLight) private var chromeIsLight
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight, enabled: true, hovering: hovering, subdued: true))
+            .chromeHover(hovering, side: SidebarMetrics.rowControlExtent)
+            .onTapGesture(perform: action)
+            .onHover { hovering = $0 }
+            .animation(Theme.Motion.quick, value: hovering)
+            .help(help)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: help))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { action() }
     }
 }
 
