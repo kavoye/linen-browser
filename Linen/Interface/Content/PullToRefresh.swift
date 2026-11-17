@@ -35,6 +35,25 @@ nonisolated struct PullStartProbe: Equatable, Codable {
     }
 }
 
+struct PullGestureOwnership {
+    private var answer: Bool?
+
+    static func tracks(_ phase: NSEvent.Phase) -> Bool {
+        phase == .began || phase == .changed || phase == .ended || phase == .cancelled
+    }
+
+    mutating func owns(_ phase: NSEvent.Phase, check: () -> Bool) -> Bool {
+        if phase == .began || answer == nil {
+            answer = check()
+        }
+        let owned = answer == true
+        if phase == .ended || phase == .cancelled {
+            answer = nil
+        }
+        return owned
+    }
+}
+
 @MainActor
 final class PullToRefreshMonitor {
     var onChange: ((PullState, Animation?) -> Void)?
@@ -48,6 +67,7 @@ final class PullToRefreshMonitor {
     private var wasArmed = false
     private var topCheck: Task<Void, Never>?
     private var reloadCheck: Task<Void, Never>?
+    private var ownership = PullGestureOwnership()
 
     private static let deadZone: CGFloat = 70
     private static let maxStretch: CGFloat = 150
@@ -157,15 +177,18 @@ final class PullToRefreshMonitor {
             }
             return
         }
-        guard let webView = webViewProvider?(),
+        guard event.momentumPhase == [],
+              PullGestureOwnership.tracks(event.phase),
+              let webView = webViewProvider?(),
               let window = webView.window,
               event.window === window,
-              webView.convert(webView.bounds, to: nil).contains(event.locationInWindow),
-              Self.pageOwnsScroll(
-                  hit: window.contentView?.hitTest(event.locationInWindow),
-                  page: webView
-              ),
-              event.momentumPhase == []
+              ownership.owns(event.phase, check: {
+                  webView.convert(webView.bounds, to: nil).contains(event.locationInWindow)
+                      && Self.pageOwnsScroll(
+                          hit: window.contentView?.hitTest(event.locationInWindow),
+                          page: webView
+                      )
+              })
         else { return }
 
         switch event.phase {

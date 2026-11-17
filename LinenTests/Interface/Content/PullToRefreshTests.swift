@@ -145,6 +145,53 @@ struct PullToRefreshOwnershipTests {
     }
 }
 
+struct PullGestureOwnershipTests {
+    private func answers(_ steps: [(NSEvent.Phase, Bool)]) -> (owned: [Bool], checks: Int) {
+        var ownership = PullGestureOwnership()
+        var checks = 0
+        var owned: [Bool] = []
+        for (phase, onPage) in steps {
+            owned.append(ownership.owns(phase) {
+                checks += 1
+                return onPage
+            })
+        }
+        return (owned, checks)
+    }
+
+    @Test func aGestureIsHitTestedOnceAtItsStart() {
+        let result = answers([(.began, true), (.changed, true), (.changed, true), (.ended, true)])
+        #expect(result.owned == [true, true, true, true])
+        #expect(result.checks == 1)
+    }
+
+    @Test func aGestureThatBeganOffThePageStaysOff() {
+        let result = answers([(.began, false), (.changed, true), (.ended, true)])
+        #expect(result.owned == [false, false, false])
+    }
+
+    @Test func theNextGestureAsksAgain() {
+        let result = answers([(.began, false), (.cancelled, true), (.began, true), (.ended, false)])
+        #expect(result.owned == [false, false, true, true])
+        #expect(result.checks == 2)
+    }
+
+    @Test func aGestureSeenMidwayIsHitTested() {
+        let result = answers([(.changed, true), (.changed, false)])
+        #expect(result.owned == [true, true])
+        #expect(result.checks == 1)
+    }
+
+    @Test func onlyTheFourGesturePhasesAreTracked() {
+        #expect(PullGestureOwnership.tracks(.began))
+        #expect(PullGestureOwnership.tracks(.changed))
+        #expect(PullGestureOwnership.tracks(.ended))
+        #expect(PullGestureOwnership.tracks(.cancelled))
+        #expect(!PullGestureOwnership.tracks(.mayBegin))
+        #expect(!PullGestureOwnership.tracks([]))
+    }
+}
+
 /// The probe's JavaScript against a real page, so the DOM walk the decision
 /// rests on is pinned too.
 @MainActor
