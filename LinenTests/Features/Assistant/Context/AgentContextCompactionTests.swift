@@ -10,7 +10,7 @@ import Testing
 @MainActor
 struct AgentContextCompactionTests {
     enum OverflowSource: CaseIterable, Sendable {
-        case session, openAI, openResponses
+        case session, openAI, openResponses, anthropic, gemini, chatCompletions, llamaServer
 
         var error: any Error {
             switch self {
@@ -20,8 +20,22 @@ struct AgentContextCompactionTests {
                 OpenAILanguageModelError.streamFailed(code: "context_length_exceeded", message: "fixture")
             case .openResponses:
                 OpenResponsesLanguageModelError.streamFailed(code: "context_length_exceeded", message: "fixture")
+            case .anthropic:
+                providerFailure(400, #"{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long: 210000 tokens > 200000 maximum"}}"#)
+            case .gemini:
+                providerFailure(400, #"{"error":{"code":400,"message":"The input token count (1200000) exceeds the maximum number of tokens allowed (1048576).","status":"INVALID_ARGUMENT"}}"#)
+            case .chatCompletions:
+                providerFailure(400, #"{"error":{"message":"This model's maximum context length is 8192 tokens.","type":"invalid_request_error","code":"context_length_exceeded"}}"#)
+            case .llamaServer:
+                providerFailure(400, #"{"error":{"code":400,"message":"the request exceeds the available context size, try increasing it","type":"exceed_context_size_error"}}"#)
             }
         }
+    }
+
+    @Test func otherProviderErrorsAreNotContextLimits() {
+        #expect(!AgentContextCompactor.isContextWindowError(providerFailure(400, #"{"error":{"message":"Invalid tool schema","type":"invalid_request_error"}}"#)))
+        #expect(!AgentContextCompactor.isContextWindowError(providerFailure(429)))
+        #expect(!AgentContextCompactor.isContextWindowError(providerFailure(500, "context length")))
     }
 
     @Test func continuationGuidanceIsSystemOnlyAndHiddenAfterReload() async throws {

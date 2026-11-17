@@ -86,7 +86,7 @@ extension AnyLanguageModelAgent {
         } catch {
             state.finalText = (error as? AttachmentFailure)?.errorDescription
                 ?? (error as? OpenAIMCPFailure)?.errorDescription ?? state.finalText
-            if (error as? OpenAIFailure)?.isRateLimited == true {
+            if AgentProviderRetry.isRateLimited(error) {
                 state.stop = .rateLimited
             } else {
                 state.stop = TranscriptMetrics.isContextWindowError(error) || error is AgentCompactionFailure ? .contextLimit : .providerError
@@ -201,7 +201,7 @@ extension AnyLanguageModelAgent {
                 state.nativeState = nativeStateBeforeRequest
                 state.submittedUtterance = wasSubmitted
                 state.providerRetries += 1
-                let retryMessage = (error as? OpenAIFailure)?.isRateLimited == true
+                let retryMessage = AgentProviderRetry.isRateLimited(error)
                     ? String(localized: "The model provider’s rate limit was reached. Waiting before retrying.")
                     : String(localized: "The model request failed temporarily. Retrying without repeating browser actions.")
                 callbacks.publishProgress(retryMessage)

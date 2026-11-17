@@ -157,6 +157,9 @@ struct AgentContextCompactor {
            case .streamFailed(let code, _) = error {
             return code == "context_length_exceeded"
         }
+        if ProviderHTTPFailure(error)?.isContextOverflow == true {
+            return true
+        }
         return SystemModelFailure.isContextOverflow(error)
     }
 }

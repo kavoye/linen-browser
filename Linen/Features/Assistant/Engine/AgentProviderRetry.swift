@@ -17,9 +17,19 @@ nonisolated enum AgentProviderRetry {
             }
         } else if let network = error as? URLError {
             guard [.cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .notConnectedToInternet].contains(network.code) else { return nil }
+        } else if let failure = ProviderHTTPFailure(error) {
+            guard failure.isTransient else { return nil }
+            if let delay = failure.retryAfter {
+                guard delay.isFinite, delay >= 0, delay <= 60 else { return nil }
+                return delay
+            }
         } else { return nil }
-        let base = (error as? OpenAIFailure)?.isRateLimited == true ? 2.0 : 1.0
+        let base = isRateLimited(error) ? 2.0 : 1.0
         return base * pow(2, Double(attempt)) + max(0, min(jitter, 0.25))
+    }
+
+    static func isRateLimited(_ error: any Error) -> Bool {
+        (error as? OpenAIFailure)?.isRateLimited == true || ProviderHTTPFailure(error)?.isRateLimited == true
     }
 
     static func retryAfter(_ value: String?, milliseconds: String? = nil, now: Date = Date()) -> Double? {
