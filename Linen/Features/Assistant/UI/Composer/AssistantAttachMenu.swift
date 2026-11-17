@@ -9,6 +9,7 @@ struct AssistantAttachMenu: View {
 
     private static let inset: CGFloat = 8
     private static let textInset: CGFloat = 6
+    private static let fieldInset: CGFloat = 10
     private static let rowHeight: CGFloat = 26
     private static let rowSpacing: CGFloat = 2
     private static let visibleRows = 8
@@ -77,7 +78,7 @@ struct AssistantAttachMenu: View {
         VStack(alignment: .leading, spacing: 0) {
             MentionField(
                 text: $query,
-                placeholder: String(localized: "Search tabs"),
+                placeholder: "",
                 fontSize: 13,
                 isFocused: true,
                 accessibilityLabel: String(localized: "Search tabs"),
@@ -86,7 +87,18 @@ struct AssistantAttachMenu: View {
                 onMove: move(by:jumping:)
             )
             .frame(height: 22)
-            .padding(.horizontal, Self.textInset)
+            .overlay(alignment: .leading) {
+                if query.isEmpty {
+                    Text("Search tabs")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 2)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .clipped()
+            .padding(.horizontal, Self.fieldInset)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: Self.plateRadius, style: .continuous)
