@@ -121,11 +121,11 @@ struct SidebarTabRow: View {
     private var trailingControls: some View {
         Group {
             if tab.pinnedURL == nil {
-                SidebarRowControl(symbol: "xmark", help: String(localized: "Close Tab")) {
+                ChromeTapIcon.rowControl(symbol: "xmark", help: String(localized: "Close Tab")) {
                     coordinator.closeAskingIfPinned(tab)
                 }
             } else {
-                SidebarRowControl(symbol: "minus", help: String(localized: "Unpin Tab")) {
+                ChromeTapIcon.rowControl(symbol: "minus", help: String(localized: "Unpin Tab")) {
                     browser.unpin(tab)
                 }
             }
@@ -376,30 +376,6 @@ private struct SidebarTabMenuItems: View {
     }
 }
 
-private struct SidebarRowControl: View {
-    let symbol: String
-    let help: String
-    let action: () -> Void
-
-    @State private var hovering = false
-    @Environment(\.chromeIsLight) private var chromeIsLight
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight, enabled: true, hovering: hovering, subdued: true))
-            .chromeHover(hovering, side: SidebarMetrics.rowControlExtent)
-            .onTapGesture(perform: action)
-            .onHover { hovering = $0 }
-            .animation(Theme.Motion.quick, value: hovering)
-            .help(help)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: help))
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { action() }
-    }
-}
-
 private struct PinReturnSegment: View {
     let tab: BrowserTab
     let help: String
@@ -415,23 +391,21 @@ private struct PinReturnSegment: View {
     }
 
     var body: some View {
-        Button(action: action) {
-            ZStack {
-                if let pinnedFavicon, !isSameSite {
-                    FaviconImage(image: pinnedFavicon)
-                        .frame(width: 14, height: 14)
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
-                        .opacity(hovering ? 0 : 1)
-                }
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .opacity(hovering || isSameSite || pinnedFavicon == nil ? 1 : 0)
+        ZStack {
+            if let pinnedFavicon, !isSameSite {
+                FaviconImage(image: pinnedFavicon)
+                    .frame(width: 14, height: 14)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.tight, style: .continuous))
+                    .opacity(hovering ? 0 : 1)
             }
-            .frame(width: 34, height: 32)
-            .contentShape(Rectangle())
+            Image(systemName: "arrow.uturn.backward")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .opacity(hovering || isSameSite || pinnedFavicon == nil ? 1 : 0)
         }
-        .buttonStyle(.plain)
+        .frame(width: 34, height: 32)
+        .contentShape(Rectangle())
+        .pressAction(Text(verbatim: help), perform: action)
         .sidebarHoverFill(
             isHovering: hovering,
             in: UnevenRoundedRectangle(
@@ -467,7 +441,7 @@ struct SidebarTabMuteButton: View {
     }
 
     var body: some View {
-        ChromeIcon(
+        ChromeTapIcon(
             symbol: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
             isSubdued: isMuted,
             help: String(localized: help),

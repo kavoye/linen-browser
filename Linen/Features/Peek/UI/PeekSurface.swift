@@ -219,30 +219,28 @@ struct PeekRowBadge: View {
     }
 
     var body: some View {
-        Button { coordinator.togglePeekVisibility() } label: {
-            ZStack {
-                TabIcon(tab: tab, size: 13)
-                    .scaleEffect(showsToggleIcon ? 0.15 : 1)
-                    .opacity(showsToggleIcon ? 0 : 1)
-                Image(systemName: toggleSymbol)
-                    .font(.system(size: 11, weight: .semibold))
-                    .contentTransition(.symbolEffect(.replace))
-                    .scaleEffect(showsToggleIcon ? 1 : 0.15)
-                    .opacity(showsToggleIcon ? 1 : 0)
-            }
-                .frame(width: Self.extent, height: Self.extent)
-                .background(
-                    Theme.accent.opacity(hovering ? 0.32 : 0.2),
-                    in: RoundedRectangle(cornerRadius: Theme.Radius.tight + 1, style: .continuous)
-                )
-                .contentShape(Rectangle())
+        ZStack {
+            TabIcon(tab: tab, size: 13)
+                .scaleEffect(showsToggleIcon ? 0.15 : 1)
+                .opacity(showsToggleIcon ? 0 : 1)
+            Image(systemName: toggleSymbol)
+                .font(.system(size: 11, weight: .semibold))
+                .contentTransition(.symbolEffect(.replace))
+                .scaleEffect(showsToggleIcon ? 1 : 0.15)
+                .opacity(showsToggleIcon ? 1 : 0)
         }
-        .buttonStyle(.plain)
+        .frame(width: Self.extent, height: Self.extent)
+        .background(
+            Theme.accent.opacity(hovering ? 0.32 : 0.2),
+            in: RoundedRectangle(cornerRadius: Theme.Radius.tight + 1, style: .continuous)
+        )
+        .contentShape(Rectangle())
+        .pressAction(Text(toggleLabel)) { coordinator.togglePeekVisibility() }
         .animation(Theme.Motion.quick, value: isCollapsed)
-        .animation(Theme.Motion.quick, value: hovering)
-        .onHover { hovering = $0 }
+        .onHover { over in
+            withAnimation(Theme.Motion.quick) { hovering = over }
+        }
         .help(Text(toggleLabel))
-        .accessibilityLabel(Text(toggleLabel))
         .accessibilityValue(Text(verbatim: tab.title))
         .contextMenu {
             Button {

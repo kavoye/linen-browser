@@ -303,6 +303,13 @@ struct ChromeIcon: View {
     }
 }
 
+enum ChromeRowControl {
+    static let size: CGFloat = 11
+    static let weight: Font.Weight = .semibold
+    static let isSubdued = true
+    static let extent: CGFloat = 20
+}
+
 extension ChromeIcon {
     static func rowControl(
         symbol: String,
@@ -311,13 +318,95 @@ extension ChromeIcon {
     ) -> ChromeIcon {
         ChromeIcon(
             symbol: symbol,
-            size: 11,
-            weight: .semibold,
-            isSubdued: true,
-            extent: 20,
+            size: ChromeRowControl.size,
+            weight: ChromeRowControl.weight,
+            isSubdued: ChromeRowControl.isSubdued,
+            extent: ChromeRowControl.extent,
             help: help,
             action: action
         )
+    }
+}
+
+struct ChromeTapIcon: View {
+    let symbol: String
+    var size: CGFloat = 10.5
+    var weight: Font.Weight = .medium
+    var isSubdued = false
+    var extent: CGFloat?
+    var help: String = ""
+    let action: () -> Void
+
+    @State private var hovering = false
+    @Environment(\.chromeIsLight) private var chromeIsLight
+    @Environment(\.chromeIconExtent) private var inheritedExtent
+
+    static func rowControl(
+        symbol: String,
+        help: String = "",
+        action: @escaping () -> Void
+    ) -> ChromeTapIcon {
+        ChromeTapIcon(
+            symbol: symbol,
+            size: ChromeRowControl.size,
+            weight: ChromeRowControl.weight,
+            isSubdued: ChromeRowControl.isSubdued,
+            extent: ChromeRowControl.extent,
+            help: help,
+            action: action
+        )
+    }
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size, weight: weight))
+            .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight, enabled: true, hovering: hovering, subdued: isSubdued))
+            .chromeHover(hovering, side: extent ?? inheritedExtent)
+            .pressAction(Text(verbatim: help), perform: action)
+            .onHover { over in
+                withAnimation(Theme.Motion.quick) { hovering = over }
+            }
+            .help(help)
+    }
+}
+
+private struct PressAction: ViewModifier {
+    static let pressedOpacity = 0.75
+
+    let label: Text
+    let action: () -> Void
+
+    @State private var isPressed = false
+    @State private var size: CGSize = .zero
+
+    private func contains(_ point: CGPoint) -> Bool {
+        CGRect(origin: .zero, size: size).contains(point)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isPressed ? Self.pressedOpacity : 1)
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { isPressed = contains($0.location) }
+                    .onEnded { value in
+                        isPressed = false
+                        if contains(value.location) {
+                            action()
+                        }
+                    }
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { action() }
+    }
+}
+
+extension View {
+    func pressAction(_ label: Text, perform action: @escaping () -> Void) -> some View {
+        modifier(PressAction(label: label, action: action))
     }
 }
 

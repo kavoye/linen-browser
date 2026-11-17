@@ -290,7 +290,7 @@ private struct SplitRowCell: View {
         }
         .overlay(alignment: .trailing) {
             if sidebarStyle == .full, answersAlone {
-                CloseButton { browser.close(tab) }
+                ChromeTapIcon.rowControl(symbol: "xmark", help: String(localized: "Close Tab")) { browser.close(tab) }
                     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
                         controlsWidth = min($0, 20)
                     }
@@ -333,15 +333,13 @@ private struct SplitRowPinReturn: View {
     @State private var hovering = false
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "arrow.uturn.backward")
-                .font(Theme.Font.badge)
-                .foregroundStyle(hovering ? Color.primary : Color.secondary)
-                .frame(width: SidebarMetrics.rowIconSize, height: SidebarMetrics.rowIconSize)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { over in
+        Image(systemName: "arrow.uturn.backward")
+            .font(Theme.Font.badge)
+            .foregroundStyle(hovering ? Color.primary : Color.secondary)
+            .frame(width: SidebarMetrics.rowIconSize, height: SidebarMetrics.rowIconSize)
+            .contentShape(Rectangle())
+            .pressAction(Text(verbatim: help), perform: action)
+            .onHover { over in
             withAnimation(Theme.Motion.quick) { hovering = over }
         }
         .sidebarHelp(Text(verbatim: help))
