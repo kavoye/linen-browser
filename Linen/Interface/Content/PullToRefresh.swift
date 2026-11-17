@@ -160,6 +160,7 @@ final class PullToRefreshMonitor {
         guard let webView = webViewProvider?(),
               let window = webView.window,
               event.window === window,
+              webView.convert(webView.bounds, to: nil).contains(event.locationInWindow),
               Self.pageOwnsScroll(
                   hit: window.contentView?.hitTest(event.locationInWindow),
                   page: webView
