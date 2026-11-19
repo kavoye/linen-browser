@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.9.7
+
+### Improved
+
+- **Downloads preview.** The preview opens as soon as you hold the pointer
+  over the Downloads button.
+- **Assistant with other providers.** When Anthropic, Gemini, or an
+  OpenAI-compatible server is busy or briefly unavailable, the assistant tries
+  again without repeating actions on the page. When a conversation gets too
+  long for the model, the assistant shortens it and continues.
+- **Scrolling.** Long sidebars and web pages scroll more smoothly.
+
+### Fixed
+
+- **Assistant attachments.** The search field in the add menu shows its
+  placeholder text and has more space at its edges.
+
 ## 0.9.6
 
 ### Improved
