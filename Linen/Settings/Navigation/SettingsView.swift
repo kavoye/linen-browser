@@ -371,10 +371,7 @@ private struct AboutSettings: View {
 
                 RowSeparator()
 
-                DrillInRow(
-                    title: "Acknowledgements",
-                    caption: "Open source packages used by Linen."
-                ) {
+                DrillInRow(title: "Acknowledgements") {
                     router.open(["acknowledgements"])
                 }
             }
