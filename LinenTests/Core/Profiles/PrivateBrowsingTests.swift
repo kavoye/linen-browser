@@ -561,6 +561,19 @@ struct PrivateFaviconTests {
         loader.persistsToDisk = false
         #expect(loader.cached(for: "ordinary.example") != nil)
     }
+
+    @Test func aPrivateTabShowsItsFavicon() async throws {
+        let context = BrowserProfileContext(profile: .privateBrowsing())
+        context.favicons.store(try iconData(), forHost: "secret.example")
+        let tab = BrowserTab(privately: true, context: context)
+
+        tab.webView.loadHTMLString(
+            "<html><body>page</body></html>",
+            baseURL: URL(string: "https://secret.example/")
+        )
+        #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
+        #expect(await waitUntil { tab.favicon != nil })
+    }
 }
 
 /// Profile switches queue. The dropped switch was the restore leak: ⇧⌘N

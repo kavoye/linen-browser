@@ -682,7 +682,7 @@ extension BrowserTab {
     }
 
     func declaredFaviconChanged() {
-        guard extensionBaseURL == nil, !isPrivate, !isShowingSystemPage else { return }
+        guard extensionBaseURL == nil, !isShowingSystemPage else { return }
         guard let host = webView.url?.host()?.lowercased() else { return }
         context.favicons.forget(host: host)
         refreshFavicon()
@@ -690,7 +690,7 @@ extension BrowserTab {
 
     func refreshFavicon() {
         guard extensionBaseURL == nil, isMaterialised else { return }
-        guard !isPrivate, !isShowingSystemPage, !isShowingError else { return }
+        guard !isShowingSystemPage, !isShowingError else { return }
         guard let host = webView.url?.host()?.lowercased() else { return }
         if host != faviconHost {
             faviconHost = host
