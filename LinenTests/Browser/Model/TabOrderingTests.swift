@@ -161,15 +161,27 @@ struct TabOrderingTests {
         #expect(model.canReopenClosedTab)
     }
 
-    @Test func aPrivateTabIsNeverRecordedForReopening() {
+    @Test func aPrivateTabCanBeReopenedPrivately() {
         let model = makeModel()
         model.opensPrivately = true
         let secret = model.newTab(url: URL(string: "https://example.com/secret")!)
 
         model.close(secret)
+        #expect(model.canReopenClosedTab)
+
+        model.reopenLastClosedTab()
+        #expect(model.activeTab?.isPrivate == true)
+        #expect(model.activeTab?.urlString == "https://example.com/secret")
+    }
+
+    @Test func closingEveryTabForgetsPrivateClosings() {
+        let model = makeModel()
+        model.opensPrivately = true
+        model.close(model.newTab(url: URL(string: "https://example.com/secret")!))
+
+        model.closeAllTabs(saving: false)
 
         #expect(!model.canReopenClosedTab)
-        #expect(model.closedTabs.isEmpty)
     }
 
     @Test func theReopenListRemembersTheLastTwentyClosings() {

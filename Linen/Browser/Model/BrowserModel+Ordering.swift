@@ -239,7 +239,7 @@ extension BrowserModel {
             AutofillSuggestions.shared.dismiss(in: tab.webView)
         }
         tab.autofillSave.clear()
-        if recordForReopening, !tab.isPrivate {
+        if recordForReopening {
             closedTabs.append(ClosedTab(
                 tabID: tab.id,
                 title: tab.title,
