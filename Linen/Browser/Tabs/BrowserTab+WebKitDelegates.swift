@@ -65,6 +65,24 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             onOpenInPeek(url, Self.pointer(in: webView))
             return
         }
+        if let tab, !isLoadingErrorPage,
+           navigationAction.targetFrame?.isMainFrame == true,
+           let url = navigationAction.request.url,
+           let warning = CertificateTrust.warning(
+               before: url,
+               skipsWarning: tab.context.settings.allowsCertificateExceptions,
+               accepted: tab.certificateExceptions
+           ) {
+            decisionHandler(.cancel)
+            tab.untrustedCertificates[warning.site] = warning
+            let error = NSError(
+                domain: NSURLErrorDomain,
+                code: NSURLErrorServerCertificateUntrusted,
+                userInfo: [NSURLErrorFailingURLErrorKey: url]
+            )
+            showError(error, in: webView)
+            return
+        }
         if let tab, navigationAction.targetFrame?.isMainFrame != false {
             pendingMainFrameURL = navigationAction.request.url
             tab.rememberScrollOffset()
@@ -410,6 +428,8 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         if let tab, !isLoadingErrorPage {
             tab.isShowingError = false
+            tab.certificateWarning = nil
+            tab.untrustedCertificates.removeAll()
         }
         tab?.noteNavigationStarted()
         tab?.provisionalNavigation = navigation
@@ -427,7 +447,7 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
 
     func webView(
         _ webView: WKWebView,
-        didReceive challenge: URLAuthenticationChallenge
+        respondTo challenge: URLAuthenticationChallenge
     ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
         let space = challenge.protectionSpace
         switch AuthChallenge.decision(
@@ -435,17 +455,19 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
             previousFailureCount: challenge.previousFailureCount
         ) {
         case .evaluateServerTrust:
+            guard let tab else { return (.performDefaultHandling, nil) }
             switch await CertificateTrust.decide(
                 for: challenge,
-                allowsExceptions: tab?.context.settings.allowsCertificateExceptions ?? false,
-                in: webView.window
+                skipsWarning: tab.context.settings.allowsCertificateExceptions,
+                accepted: tab.certificateExceptions
             ) {
             case .useDefaultHandling:
                 return (.performDefaultHandling, nil)
             case .proceed(let credential):
                 return (.useCredential, credential)
-            case .cancel:
-                return (.cancelAuthenticationChallenge, nil)
+            case .warn(let warning):
+                tab.untrustedCertificates[warning.site] = warning
+                return (.performDefaultHandling, nil)
             }
         case .useDefaultHandling:
             return (.performDefaultHandling, nil)
@@ -552,10 +574,15 @@ final class TabNavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate 
     private func showError(_ error: any Error, in webView: WKWebView) {
         guard let tab, !ErrorPage.isSilent(error) else { return }
         let fallback = URL(string: tab.urlString)
-        guard ErrorPage.failedURL(from: error, fallback: fallback) != nil else { return }
+        guard let failedURL = ErrorPage.failedURL(from: error, fallback: fallback) else { return }
         tab.isShowingError = true
+        if ErrorPage.isCertificateFailure(error),
+           let site = CertificateTrust.site(of: failedURL),
+           let warning = tab.untrustedCertificates[site] {
+            tab.certificateWarning = CertificateWarning(url: failedURL, warning: warning)
+        }
         isLoadingErrorPage = true
-        ErrorPage.show(error, in: webView, fallbackURL: fallback)
+        ErrorPage.show(error, in: webView, fallbackURL: fallback, coveredByWarning: tab.certificateWarning != nil)
     }
 }
 

@@ -15,6 +15,7 @@ struct SiteSettingsEntry: Identifiable, Equatable {
     var popups: PopupPolicy?
     var externalApps: [ExternalAppPermission] = []
     var assistantGrants: [SensitiveAction.Category] = []
+    var trustsCertificate = false
 
     var id: String {
         origin
@@ -34,6 +35,7 @@ struct SiteSettingsEntry: Identifiable, Equatable {
             && popups == nil
             && externalApps.isEmpty
             && assistantGrants.isEmpty
+            && !trustsCertificate
     }
 
     var summaryPhrases: [String] {
@@ -106,6 +108,10 @@ struct SiteSettingsEntry: Identifiable, Equatable {
             phrases.append(String(localized: "opens \(names) without asking"))
         }
 
+        if trustsCertificate {
+            phrases.append(String(localized: "untrusted certificate allowed"))
+        }
+
         return phrases
     }
 
@@ -123,7 +129,8 @@ enum SiteSettingsIndex {
     static func entries(
         permissions: SitePermissions,
         grantsByHost: [(host: String, categories: [SensitiveAction.Category])],
-        exemptHosts: Set<String>
+        exemptHosts: Set<String>,
+        trustedCertificates: [String: String] = [:]
     ) -> [SiteSettingsEntry] {
         var byOrigin: [String: SiteSettingsEntry] = [:]
 
@@ -172,6 +179,13 @@ enum SiteSettingsIndex {
         for origin in permissions.externalAppRecords.keys {
             var found = entry(for: origin)
             found.externalApps = permissions.externalApps(for: origin)
+            byOrigin[origin] = found
+        }
+
+        for site in trustedCertificates.keys {
+            guard let origin = CertificateTrust.origin(ofSite: site) else { continue }
+            var found = entry(for: origin)
+            found.trustsCertificate = true
             byOrigin[origin] = found
         }
 

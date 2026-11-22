@@ -263,9 +263,13 @@ final class BrowserSettings {
         didSet {
             guard allowsCertificateExceptions != oldValue else { return }
             write(allowsCertificateExceptions, forKey: Key.certificateExceptions)
-            if !allowsCertificateExceptions {
-                CertificateTrust.forgetAll()
-            }
+        }
+    }
+
+    var rememberedCertificates: [String: String] {
+        didSet {
+            guard rememberedCertificates != oldValue else { return }
+            write(rememberedCertificates, forKey: Key.rememberedCertificates)
         }
     }
 
@@ -577,6 +581,7 @@ final class BrowserSettings {
             .flatMap(HistoryRetention.init(rawValue:)) ?? .forever
         clearsDataOnQuit = store.bool(Key.clearOnQuit)
         allowsCertificateExceptions = store.bool(Key.certificateExceptions)
+        rememberedCertificates = store.object(Key.rememberedCertificates) as? [String: String] ?? [:]
 
         javaScriptEnabled = store.object(Key.javaScript) as? Bool ?? true
         blocksPopups = store.object(Key.blockPopups) as? Bool ?? true
@@ -625,6 +630,7 @@ final class BrowserSettings {
         historyRetention = store.string(Key.historyRetention).flatMap(HistoryRetention.init(rawValue:)) ?? .forever
         clearsDataOnQuit = store.bool(Key.clearOnQuit)
         allowsCertificateExceptions = store.bool(Key.certificateExceptions)
+        rememberedCertificates = store.object(Key.rememberedCertificates) as? [String: String] ?? [:]
 
         javaScriptEnabled = store.object(Key.javaScript) as? Bool ?? true
         blocksPopups = store.object(Key.blockPopups) as? Bool ?? true
@@ -671,6 +677,7 @@ final class BrowserSettings {
         historyRetention = .forever
         clearsDataOnQuit = false
         allowsCertificateExceptions = false
+        rememberedCertificates = [:]
         javaScriptEnabled = true
         blocksPopups = true
         blocksTrackers = true

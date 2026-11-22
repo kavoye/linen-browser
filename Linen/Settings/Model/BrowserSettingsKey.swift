@@ -21,6 +21,7 @@ enum BrowserSettingsKey {
     static let historyRetention = "privacy.historyRetention"
     static let clearOnQuit = "privacy.clearOnQuit"
     static let certificateExceptions = "privacy.certificateExceptions"
+    static let rememberedCertificates = "privacy.rememberedCertificates"
     static let javaScript = "content.javaScript"
     static let blockPopups = "content.blockPopups"
     static let blockTrackers = "content.blockTrackers"
@@ -57,7 +58,7 @@ enum BrowserSettingsKey {
     static let session: [String] = [
         searchEngine, customSearchName, customSearchTemplate,
         suggestions, agentOnlyInput,
-        historyRetention, clearOnQuit, certificateExceptions,
+        historyRetention, clearOnQuit, certificateExceptions, rememberedCertificates,
         paymentCardAutofill, contactAutofill, passwordAutofill, passwordExtension,
         javaScript, blockPopups, blockTrackers, autoplay,
         startPageOrder, startPageHidden, startPageHiddenSites,

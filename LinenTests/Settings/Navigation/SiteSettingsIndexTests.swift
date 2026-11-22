@@ -39,6 +39,23 @@ struct SiteSettingsIndexTests {
         #expect(found[0].keepsActive)
     }
 
+    @Test func aTrustedCertificateGetsARowAtItsOrigin() {
+        let permissions = store()
+        permissions.set(.allow, for: "https://example.com", .camera)
+
+        let found = SiteSettingsIndex.entries(
+            permissions: permissions, grantsByHost: [], exemptHosts: [],
+            trustedCertificates: ["192.168.15.74:8765": "AA", "example.com:443": "BB"]
+        )
+        #expect(found.map(\.origin) == ["https://example.com", "https://192.168.15.74:8765"])
+        #expect(found.allSatisfy { $0.trustsCertificate })
+        #expect(found[0].permissions[.camera] == .allow)
+        #expect(found[1].summary == "untrusted certificate allowed")
+        #expect(CertificateTrust.site(ofOrigin: "https://192.168.15.74:8765") == "192.168.15.74:8765")
+        #expect(CertificateTrust.site(ofOrigin: "https://example.com") == "example.com:443")
+        #expect(CertificateTrust.site(ofOrigin: "http://example.com") == nil)
+    }
+
     @Test func turningAutomaticPictureOffAloneStillGetsARow() {
         let permissions = store()
         permissions.setAllowsAutomaticPicture(false, for: "https://example.com")

@@ -27,6 +27,9 @@ final class BrowserTab: Identifiable {
     @ObservationIgnored var lastActiveAt = Date()
     var isLoading = false
     var isShowingError = false
+    var certificateWarning: CertificateWarning?
+    @ObservationIgnored var untrustedCertificates: [String: CertificateTrust.Warning] = [:]
+    @ObservationIgnored var acceptedCertificates: [String: String] = [:]
     var favicon: NSImage?
     private var faviconHost = ""
     var progress: Double = 0
@@ -391,6 +394,7 @@ final class BrowserTab: Identifiable {
         progress = 0
         cover.reset()
         isShowingError = false
+        certificateWarning = nil
         isPlayingAudio = false
         hasVideo = false
         isPictureOut = false
@@ -686,7 +690,7 @@ extension BrowserTab {
 
     func refreshFavicon() {
         guard extensionBaseURL == nil, isMaterialised else { return }
-        guard !isPrivate, !isShowingSystemPage else { return }
+        guard !isPrivate, !isShowingSystemPage, !isShowingError else { return }
         guard let host = webView.url?.host()?.lowercased() else { return }
         if host != faviconHost {
             faviconHost = host

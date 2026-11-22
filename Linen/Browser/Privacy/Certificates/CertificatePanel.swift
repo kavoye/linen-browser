@@ -18,11 +18,15 @@ enum CertificatePanel {
     }
 
     static func show(for tab: BrowserTab, in window: NSWindow? = nil) {
-        guard let trust = trust(of: tab),
-              let window = window ?? NSApp.keyWindow ?? NSApp.mainWindow
+        guard let trust = trust(of: tab) else { return }
+        show(trust, host: URL(string: tab.urlString)?.host(), in: window)
+    }
+
+    static func show(_ trust: SecTrust, host: String?, in window: NSWindow? = nil) {
+        guard let window = window ?? NSApp.keyWindow ?? NSApp.mainWindow,
+              let panel = SFCertificatePanel.shared()
         else { return }
-        guard let panel = SFCertificatePanel.shared() else { return }
-        if let host = URL(string: tab.urlString)?.host() {
+        if let host {
             panel.setPolicies(SecPolicyCreateSSL(true, host as CFString))
         }
         panel.beginSheet(

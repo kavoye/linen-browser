@@ -234,5 +234,10 @@ private struct ActiveWebSurface: View {
             .overlay {
                 LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id, ground: tab.canvasColor)
             }
+            .overlay {
+                if let pending = tab.certificateWarning {
+                    CertificateWarningPanel(tab: tab, pending: pending)
+                }
+            }
     }
 }

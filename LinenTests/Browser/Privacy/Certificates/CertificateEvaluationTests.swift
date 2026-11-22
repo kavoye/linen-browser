@@ -4,25 +4,113 @@
 import Foundation
 import Security
 import Testing
+import WebKit
 
 @testable import Linen
 
 @MainActor
+@Suite(.serialized)
 struct CertificateEvaluationTests {
-    @Test func disabledExceptionsLeaveValidationToWebKit() async {
-        let space = UnevaluatedProtectionSpace(
-            host: "example.com", port: 443, protocol: "https", realm: nil,
+    @Test func webKitCanSeeTheChallengeHandler() {
+        let selector = NSSelectorFromString("webView:didReceiveAuthenticationChallenge:completionHandler:")
+        #expect(TabNavigationDelegate.instancesRespond(to: selector))
+    }
+
+    @Test func trustedCertificateIsLeftToWebKit() async throws {
+        let decision = await CertificateTrust.decide(
+            for: try challenge(anchored: true), skipsWarning: false, accepted: [:]
+        )
+        guard case .useDefaultHandling = decision else {
+            Issue.record("A trusted certificate must not be overridden")
+            return
+        }
+    }
+
+    @Test func untrustedCertificateWarns() async throws {
+        let decision = await CertificateTrust.decide(
+            for: try challenge(), skipsWarning: false, accepted: [:]
+        )
+        guard case .warn(let warning) = decision else {
+            Issue.record("An untrusted certificate must warn")
+            return
+        }
+        #expect(warning.site == "linen-trust-test.invalid:8765")
+        #expect(CertificateTrust.site(of: URL(string: "https://Linen-Trust-Test.invalid:8765/x")!) == warning.site)
+    }
+
+    @Test func theSettingSkipsTheWarningButIsNotRemembered() async throws {
+        let decision = await CertificateTrust.decide(
+            for: try challenge(), skipsWarning: true, accepted: [:]
+        )
+        guard case .proceed = decision else {
+            Issue.record("The setting must open the website without a warning")
+            return
+        }
+        #expect(CertificateTrust.isUntrusted(URL(string: "https://linen-trust-test.invalid:8765/")))
+        #expect(!CertificateTrust.isUntrusted(URL(string: "https://linen-trust-test.invalid/")))
+
+        guard case .warn = await CertificateTrust.decide(
+            for: try challenge(), skipsWarning: false, accepted: [:]
+        ) else {
+            Issue.record("Turning the setting off must warn again")
+            return
+        }
+    }
+
+    @Test func aReusedConnectionStillWarnsBeforeTheLoad() async throws {
+        guard case .warn(let warning) = await CertificateTrust.decide(
+            for: try challenge(), skipsWarning: false, accepted: [:]
+        ) else {
+            Issue.record("An untrusted certificate must warn")
+            return
+        }
+        let url = try #require(URL(string: "https://linen-trust-test.invalid:8765/index.html"))
+        #expect(CertificateTrust.warning(before: url, skipsWarning: false, accepted: [:])?.site == warning.site)
+        #expect(CertificateTrust.warning(before: url, skipsWarning: true, accepted: [:]) == nil)
+        #expect(CertificateTrust.warning(
+            before: url, skipsWarning: false, accepted: [warning.site: warning.fingerprint]
+        ) == nil)
+        #expect(CertificateTrust.warning(
+            before: try #require(URL(string: "https://linen-trust-test.invalid:8766/")),
+            skipsWarning: false, accepted: [warning.site: warning.fingerprint]
+        ) == nil)
+        #expect(CertificateTrust.warning(
+            before: try #require(URL(string: "http://linen-trust-test.invalid:8765/")),
+            skipsWarning: false, accepted: [:]
+        ) == nil)
+    }
+
+    @Test func acceptedCertificateProceedsOnlyWhileItMatches() async throws {
+        guard case .warn(let warning) = await CertificateTrust.decide(
+            for: try challenge(), skipsWarning: false, accepted: [:]
+        ) else {
+            Issue.record("An untrusted certificate must warn")
+            return
+        }
+        guard case .proceed = await CertificateTrust.decide(
+            for: try challenge(), skipsWarning: false, accepted: [warning.site: warning.fingerprint]
+        ) else {
+            Issue.record("An accepted certificate must not warn")
+            return
+        }
+        guard case .warn = await CertificateTrust.decide(
+            for: try challenge(), skipsWarning: false, accepted: [warning.site: "00"]
+        ) else {
+            Issue.record("A changed certificate must warn again")
+            return
+        }
+    }
+
+    private func challenge(anchored: Bool = false, port: Int = 8765) throws -> URLAuthenticationChallenge {
+        let space = FixedTrustProtectionSpace(
+            host: "linen-trust-test.invalid", port: port, protocol: "https", realm: nil,
             authenticationMethod: NSURLAuthenticationMethodServerTrust
         )
-        let challenge = URLAuthenticationChallenge(
+        space.trust = try makeTrust(anchored: anchored)
+        return URLAuthenticationChallenge(
             protectionSpace: space, proposedCredential: nil, previousFailureCount: 0,
             failureResponse: nil, error: nil, sender: UnusedChallengeSender()
         )
-        let decision = await CertificateTrust.decide(for: challenge, allowsExceptions: false, in: nil)
-        guard case .useDefaultHandling = decision else {
-            Issue.record("WebKit must validate certificates when exceptions are disabled")
-            return
-        }
     }
 
     @Test(arguments: [true, false])
@@ -93,10 +181,11 @@ struct CertificateEvaluationTests {
         """.replacingOccurrences(of: "\n", with: "")
 }
 
-private nonisolated final class UnevaluatedProtectionSpace: URLProtectionSpace, @unchecked Sendable {
+private nonisolated final class FixedTrustProtectionSpace: URLProtectionSpace, @unchecked Sendable {
+    var trust: SecTrust?
+
     override var serverTrust: SecTrust? {
-        Issue.record("Disabled exceptions must not inspect or evaluate the server trust")
-        return nil
+        trust
     }
 }
 

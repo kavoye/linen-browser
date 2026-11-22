@@ -18,7 +18,9 @@ enum PageSecurity: Equatable {
         }
         switch scheme {
         case "https":
-            if view.isLoading {
+            if CertificateTrust.isUntrusted(view.url) {
+                self = .insecure
+            } else if view.isLoading {
                 self = .pending
             } else {
                 self = view.hasOnlySecureContent ? .secure : .mixed

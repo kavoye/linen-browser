@@ -16,6 +16,9 @@
     "Linen on GitHub…" : {
       "comment" : "The Help menu item that opens Linen’s GitHub repository in a new tab. “GitHub” is a product name."
     },
+    "Linen opens this website without a warning until its certificate changes." : {
+      "comment" : "Caption for the untrusted-certificate row on a website’s page in Websites settings."
+    },
     "Show Downloads" : {
       "comment" : "Menu bar command under View, shortcut ⌥⌘L, which opens the list of downloads. Title Case."
     },
@@ -1332,6 +1335,9 @@
     "Card number" : {
 
     },
+    "Certificate" : {
+      "comment" : "Section title on a website’s page in Websites settings."
+    },
     "Change the keyboard shortcut" : {
       "comment" : "Tooltip on the shortcut recorder in Settings > Voice while it is idle; pressing it starts listening for a new key combination."
     },
@@ -1815,9 +1821,6 @@
       }
     },
     "Continue" : {
-
-    },
-    "Continue only if you expected this — a development server, or a proxy your organization runs. The exception lasts until you quit." : {
 
     },
     "Continue to GitHub" : {
@@ -2915,9 +2918,6 @@
     "Involving me" : {
 
     },
-    "Issued to: %@" : {
-
-    },
     "Issues" : {
       "comment" : "Command palette GitHub mode: opens the repository’s issues page."
     },
@@ -3050,11 +3050,11 @@
     "Linen blocks third-party requests to known advertising, analytics, session-recording, social-pixel, and fingerprinting domains." : {
 
     },
-    "Linen can’t confirm that this certificate belongs to %@. Somebody may be impersonating the website." : {
-
-    },
     "Linen can’t read this page anymore, so it stopped watching it." : {
       "comment" : "Notification body when a watched page failed to load three times in a row and the watch ended."
+    },
+    "Linen can’t verify the certificate for %@. Someone may be impersonating this website." : {
+      "comment" : "Body of the warning shown over a page whose certificate isn’t trusted. %@ is the website’s address, e.g. 192.168.1.10:8443."
     },
     "Linen chooses these models unless you enter different IDs for your API setup." : {
 
@@ -3871,9 +3871,6 @@
     "Open a web address in the active tab." : {
 
     },
-    "Open a website even if its certificate isn’t trusted. Linen forgets your choice when you quit." : {
-      "comment" : "Caption under the Allow untrusted certificates row in Advanced settings, and its Settings search description. Full sentences."
-    },
     "Open Assistant…" : {
       "comment" : "Button that opens the Assistant settings page."
     },
@@ -3957,6 +3954,9 @@
     },
     "Open Websites" : {
       "comment" : "Tool name in assistant settings: opening a web address."
+    },
+    "Skip the warning when a certificate isn’t trusted." : {
+      "comment" : "Caption for the “Allow untrusted certificates” switch in Advanced settings."
     },
     "OpenAI" : {
 
@@ -4530,6 +4530,9 @@
     },
     "Remember" : {
 
+    },
+    "Always trust this certificate for %@" : {
+      "comment" : "Checkbox on the untrusted-certificate warning. Keeps the exception after Linen quits, until the certificate changes. %@ is the website’s address, e.g. 192.168.1.10:8443."
     },
     "Remember things about me" : {
 
@@ -5284,9 +5287,6 @@
     "Setup Options for %@" : {
       "comment" : "MCP client setup accessibility label. The placeholder is the client app name."
     },
-    "SHA-256: %@" : {
-
-    },
     "Shared" : {
 
     },
@@ -5967,6 +5967,9 @@
     "The website will ask again to use your camera, microphone, location, or notifications. The assistant will ask again before reading the website." : {
 
     },
+    "The website will ask again to use your camera, microphone, location, or notifications. The assistant will ask again before reading the website. Linen will warn again about its certificate." : {
+      "comment" : "Message of the confirmation for resetting a website’s settings, when Linen also trusts its certificate."
+    },
     "The website’s certificate couldn’t be verified, so Linen stopped before sending anything." : {
       "comment" : "Explanatory sentence on the certificate error page, under its headline. Curly apostrophes."
     },
@@ -6183,9 +6186,6 @@
     "This website took too long" : {
       "comment" : "Headline on the error page shown when a website timed out. A short sentence in sentence case, displayed large above a longer explanation."
     },
-    "This website’s identity can’t be verified" : {
-
-    },
     "Tint selected tab" : {
       "comment" : "Title of the Appearance settings switch that colors the selected sidebar tab using the website icon, and the same row in Settings search. Sentence case; tint is a verb."
     },
@@ -6338,6 +6338,12 @@
     },
     "Untitled" : {
       "comment" : "Name suggested in the save panel for a page that has no title and no address to name the file after. A noun."
+    },
+    "Untrusted certificate" : {
+      "comment" : "Row title on a website’s page in Websites settings. The website’s certificate isn’t trusted but Linen opens it anyway."
+    },
+    "untrusted certificate allowed" : {
+      "comment" : "Phrase in a website’s summary in Websites settings, joined with others by “·”."
     },
     "Up to date" : {
       "comment" : "Update status meaning no newer version exists, shown both in the Settings update section and on the sidebar update card. An adjective phrase describing the app."
@@ -6522,6 +6528,9 @@
     "View the installed version and check for updates." : {
       "comment" : "Caption describing the Software update section in the Settings search results. A sentence fragment naming what the section reports."
     },
+    "Visit Website" : {
+      "comment" : "Button on the untrusted-certificate warning that opens the website anyway."
+    },
     "Voice" : {
 
     },
@@ -6584,6 +6593,9 @@
     },
     "Waiting on a team" : {
       "comment" : "GitHub pull request checklist: a team was asked to review, and its name is hidden."
+    },
+    "Warn next time" : {
+      "comment" : "Button that removes the untrusted-certificate exception for a website, so Linen warns again."
     },
     "Watch every network request the browser makes" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Watch means observe. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."

@@ -375,6 +375,11 @@ private struct WebPane: View {
             .overlay {
                 LinkPeekOverlay(peek: coordinator.linkPeek, tabID: tab.id, ground: tab.canvasColor)
             }
+            .overlay {
+                if !showsStartPage, let pending = tab.certificateWarning {
+                    CertificateWarningPanel(tab: tab, pending: pending)
+                }
+            }
     }
 }
 

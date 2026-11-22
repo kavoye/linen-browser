@@ -270,7 +270,7 @@ enum SettingsIndex {
         SettingsEntry("advanced.features", .advanced, "Feature flags",
                       "Experimental WebKit features may break websites.",
                       ["webkit", "flags", "experimental", "features", "develop"]),
-        SettingsEntry("advanced.certificates", .advanced, "Allow untrusted certificates", "Open a website even if its certificate isn’t trusted. Linen forgets your choice when you quit.",
+        SettingsEntry("advanced.certificates", .advanced, "Allow untrusted certificates", "Skip the warning when a certificate isn’t trusted.",
                       ["certificate", "ssl", "tls", "https", "self-signed", "proxy", "untrusted",
                        "invalid certificate", "exception", "warning",
                        ]),

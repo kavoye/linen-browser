@@ -46,7 +46,7 @@ struct AdvancedSettings: View {
 
             DetailRow(
                 title: "Allow untrusted certificates",
-                caption: "Open a website even if its certificate isn’t trusted. Linen forgets your choice when you quit."
+                caption: "Skip the warning when a certificate isn’t trusted."
             ) {
                 SettingsToggle($settings.allowsCertificateExceptions)
             }

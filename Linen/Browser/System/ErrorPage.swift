@@ -21,6 +21,17 @@ nonisolated enum ErrorPage {
         return (error.userInfo[NSURLErrorFailingURLErrorKey] as? URL) ?? fallback
     }
 
+    static func isCertificateFailure(_ error: any Error) -> Bool {
+        let error = error as NSError
+        guard error.domain == NSURLErrorDomain else { return false }
+        return [
+            NSURLErrorServerCertificateHasBadDate,
+            NSURLErrorServerCertificateUntrusted,
+            NSURLErrorServerCertificateHasUnknownRoot,
+            NSURLErrorServerCertificateNotYetValid,
+        ].contains(error.code)
+    }
+
     private static func explain(_ error: any Error) -> (headline: LocalizedStringResource, detail: String) {
         let error = error as NSError
         guard error.domain == NSURLErrorDomain else {
@@ -70,14 +81,29 @@ nonisolated enum ErrorPage {
 
     @discardableResult
     @MainActor
-    static func show(_ error: any Error, in webView: WKWebView, fallbackURL: URL?) -> URL? {
+    static func show(_ error: any Error, in webView: WKWebView, fallbackURL: URL?, coveredByWarning: Bool = false) -> URL? {
         guard !isSilent(error), let url = failedURL(from: error, fallback: fallbackURL) else { return nil }
         let (headline, detail) = explain(error)
+        let title = String(localized: headline)
         webView.loadSimulatedRequest(
             URLRequest(url: url),
-            responseHTML: html(headline: String(localized: headline), detail: detail, url: url)
+            responseHTML: coveredByWarning ? blankHTML(title: title) : html(headline: title, detail: detail, url: url)
         )
         return url
+    }
+
+    static func blankHTML(title: String) -> String {
+        """
+        <!doctype html>
+        <html><head><meta charset="utf-8">
+        <meta name="color-scheme" content="light dark">
+        <title>\(escape(title))</title>
+        <style>
+          html { background: #fafafb; }
+          @media (prefers-color-scheme: dark) { html { background: #171719; } }
+        </style>
+        </head><body></body></html>
+        """
     }
 
     static func html(headline: String, detail: String, url: URL) -> String {

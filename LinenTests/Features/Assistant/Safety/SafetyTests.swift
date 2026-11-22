@@ -499,20 +499,4 @@ struct CertificateTrustTests {
         settings.resetToDefaults()
         #expect(!settings.allowsCertificateExceptions)
     }
-
-    /// An exception granted under the setting must not outlive it. Otherwise
-    /// turning the switch back off leaves the hosts already accepted
-    /// permanently trusted, which is the opposite of what it says.
-    @Test func turningTheSettingOffForgetsWhatWasAcceptedUnderIt() {
-        let settings = BrowserSettings.shared
-        let restore = settings.allowsCertificateExceptions
-        defer {
-            settings.allowsCertificateExceptions = restore
-            CertificateTrust.forgetAll()
-        }
-
-        settings.allowsCertificateExceptions = true
-        settings.allowsCertificateExceptions = false
-        #expect(CertificateTrust.acceptedHostCount == 0)
-    }
 }

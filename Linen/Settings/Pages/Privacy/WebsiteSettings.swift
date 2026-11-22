@@ -53,7 +53,8 @@ struct WebsiteSettings: View {
         SiteSettingsIndex.entries(
             permissions: permissions,
             grantsByHost: grants.grantsByHost,
-            exemptHosts: blocker.exemptHosts
+            exemptHosts: blocker.exemptHosts,
+            trustedCertificates: settings.rememberedCertificates
         )
     }
 
@@ -343,6 +344,23 @@ private struct SiteDetailPage: View {
         grants.grantsByHost.first { $0.host == host }?.categories ?? []
     }
 
+    private var certificateSite: String? {
+        guard let site = CertificateTrust.site(ofOrigin: origin),
+              settings.rememberedCertificates[site] != nil
+        else { return nil }
+        return site
+    }
+
+    private var resetMessage: LocalizedStringResource {
+        if certificateSite == nil {
+            return "The website will ask again to use your camera, microphone, location, or notifications. The assistant will ask again before reading the website."
+        }
+        return """
+            The website will ask again to use your camera, microphone, location, or notifications. \
+            The assistant will ask again before reading the website. Linen will warn again about its certificate.
+            """
+    }
+
     private var popupFallback: PopupPolicy {
         settings.blocksPopups ? .blockAndNotify : .allow
     }
@@ -362,7 +380,7 @@ private struct SiteDetailPage: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("The website will ask again to use your camera, microphone, location, or notifications. The assistant will ask again before reading the website.")
+                Text(resetMessage)
             }
         }
 
@@ -481,6 +499,19 @@ private struct SiteDetailPage: View {
 
         ExternalAppsSection(origin: origin, permissions: permissions)
 
+        if let certificateSite {
+            SettingsSection(title: "Certificate", symbol: "lock.trianglebadge.exclamationmark") {
+                DetailRow(
+                    title: "Untrusted certificate",
+                    caption: "Linen opens this website without a warning until its certificate changes."
+                ) {
+                    SettingsButton(title: "Warn next time") {
+                        settings.rememberedCertificates[certificateSite] = nil
+                    }
+                }
+            }
+        }
+
         SettingsSection(title: "Permissions", symbol: "hand.raised") {
             ForEach(Array(WebPermission.allCases.enumerated()), id: \.element) { index, permission in
                 if index > 0 {
@@ -522,6 +553,9 @@ private struct SiteDetailPage: View {
         permissions.setPopups(nil, for: origin)
         permissions.removeExternalApps(for: origin)
         blocker.setExempt(false, for: host)
+        if let certificateSite {
+            settings.rememberedCertificates[certificateSite] = nil
+        }
     }
 }
 
