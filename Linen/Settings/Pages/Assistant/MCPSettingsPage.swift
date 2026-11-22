@@ -15,7 +15,7 @@ struct MCPSettingsPage: View {
         SettingsCard {
             DetailRow(
                 title: "MCP server",
-                caption: "Let apps such as Claude Code use the assistant’s tools. Linen asks you once for each connection. Websites follow your Assistant Access settings."
+                caption: "Let apps such as Claude Code use the assistant’s tools."
             ) {
                 SettingsToggle(Binding(get: { server.isEnabled }, set: { server.setEnabled($0) }))
                     .disabled(server.isPaused)

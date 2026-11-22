@@ -186,7 +186,7 @@ private struct OpenAIPrivacySettings: View {
         Text("Linen saves chat history on this Mac. Your messages are still sent to OpenAI to generate replies.")
             .font(.callout).foregroundStyle(.secondary)
         SettingsCard {
-            DetailRow(title: "Keep replies in my OpenAI account", caption: "OpenAI keeps a copy that you can retrieve through its API. Linen’s chat history doesn’t need it.") {
+            DetailRow(title: "Keep replies in my OpenAI account", caption: "OpenAI keeps a copy you can retrieve through its API.") {
                 SettingsToggle($options.store)
             }
             .settingsAnchor("openai.privacy")

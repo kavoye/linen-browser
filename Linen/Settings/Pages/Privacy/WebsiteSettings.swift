@@ -291,7 +291,7 @@ private struct SiteDetailPage: View {
 
     private var trackerCaption: AttributedString {
         SettingsIndex.caption(
-            "Block known trackers is off, so trackers are allowed everywhere.",
+            "Block known trackers is off for all websites.",
             naming: "Block known trackers",
             at: "privacy.trackers"
         )
@@ -305,7 +305,7 @@ private struct SiteDetailPage: View {
 
     private var keepAwakeCaption: AttributedString {
         SettingsIndex.caption(
-            "Sleep inactive tabs is set to Never, so every website stays loaded.",
+            "Sleep inactive tabs is set to Never, so tabs stay loaded.",
             naming: "Sleep inactive tabs",
             at: "general.sleepTabs"
         )
@@ -320,7 +320,7 @@ private struct SiteDetailPage: View {
 
     private var automaticPictureCaption: AttributedString {
         SettingsIndex.caption(
-            "Automatic Picture in Picture is off, so video stays in its tab everywhere.",
+            "Automatic Picture in Picture is off for all websites.",
             naming: "Automatic Picture in Picture",
             at: "general.automaticPiP"
         )
@@ -466,7 +466,7 @@ private struct SiteDetailPage: View {
         SettingsSection(title: "Media and windows", symbol: "play.rectangle") {
             DetailRow(
                 title: "Autoplay",
-                caption: "Choose whether this website can play video and audio on its own."
+                caption: "Choose whether this website can autoplay video and audio."
             ) {
                 SettingsMenu(
                     options: AutoplayPolicy.allCases.map {
@@ -483,7 +483,7 @@ private struct SiteDetailPage: View {
 
             DetailRow(
                 title: "Pop-up windows",
-                caption: "Choose whether this website can open new windows on its own."
+                caption: "Choose whether this website can open new windows."
             ) {
                 SettingsMenu(
                     options: PopupPolicy.allCases.map {
@@ -503,7 +503,7 @@ private struct SiteDetailPage: View {
             SettingsSection(title: "Certificate", symbol: "lock.trianglebadge.exclamationmark") {
                 DetailRow(
                     title: "Untrusted certificate",
-                    caption: "Linen opens this website without a warning until its certificate changes."
+                    caption: "No warning for this website until its certificate changes."
                 ) {
                     SettingsButton(title: "Warn next time") {
                         settings.rememberedCertificates[certificateSite] = nil

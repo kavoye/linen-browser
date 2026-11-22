@@ -99,7 +99,7 @@ struct AdvancedSettings: View {
         SettingsCard {
             DetailRow(
                 title: "Reset settings",
-                caption: "Put appearance, search, privacy, websites, and downloads back to their defaults."
+                caption: "Put appearance, search, privacy, and more back to defaults."
             ) {
                 SettingsButton(title: "Reset…", isDestructive: true) {
                     confirmingReset = true

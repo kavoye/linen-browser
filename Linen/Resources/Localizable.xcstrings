@@ -4,8 +4,29 @@
     "" : {
       "comment" : "Not shown to anyone: the empty branch of a conditional tooltip on the sidebar's New Tab and Settings rows, used when the sidebar is wide enough to show the row's own title. Leave the translation empty."
     },
+    "Add an OpenAI API key in Assistant to use these voices." : {
+      "comment" : "Voice settings: caption shown when no OpenAI API key is set up. OpenAI voices work with any assistant once a key is added."
+    },
+    "Automatic Picture in Picture is off for all websites." : {
+      "comment" : "Caption on the per-website Automatic Picture in Picture row, shown when the setting is off for every website. “Automatic Picture in Picture” is a link to that row on the General page — spell it exactly as that title."
+    },
     "Back to Pin" : {
       "comment" : "Command that returns a tab to the page pinned in it: a File menu item and a tab context-menu item. Title Case."
+    },
+    "Block known trackers is off for all websites." : {
+
+    },
+    "Choose whether this website can autoplay video and audio." : {
+
+    },
+    "Choose whether this website can open new windows." : {
+
+    },
+    "Clear cookies, site data, and cache when you quit Linen." : {
+
+    },
+    "Clear history, cookies, and cached files from a time range." : {
+
     },
     "Developer Mode" : {
       "comment" : "Menu bar command under View, in the Developer submenu, shown when the page has no website to name. Title Case."
@@ -13,11 +34,32 @@
     "Duplicate" : {
       "comment" : "Item in the context menu of a tab row in the sidebar; it opens a second tab on the same page. Verb, Title Case."
     },
+    "Fill in forms. Never passwords or payment details." : {
+      "comment" : "Caption for the Type tool in assistant settings."
+    },
+    "Hold Shift over a link to see a summary before opening it." : {
+
+    },
+    "Import bookmarks from an HTML file." : {
+      "comment" : "Settings, General: caption for the bookmark import row."
+    },
+    "Inactive tabs unload to save memory until you open them." : {
+      "comment" : "Caption under the Sleep inactive tabs setting in General settings."
+    },
+    "Let OpenAI run shell commands. OpenAI may charge extra." : {
+      "comment" : "Settings, Assistant, OpenAI developer options: caption for the hosted shell switch."
+    },
     "Linen on GitHub…" : {
       "comment" : "The Help menu item that opens Linen’s GitHub repository in a new tab. “GitHub” is a product name."
     },
-    "Linen opens this website without a warning until its certificate changes." : {
+    "No warning for this website until its certificate changes." : {
       "comment" : "Caption for the untrusted-certificate row on a website’s page in Websites settings."
+    },
+    "OpenAI keeps a copy you can retrieve through its API." : {
+      "comment" : "Settings, Assistant, OpenAI data and privacy: caption for storing replies in the user’s OpenAI account."
+    },
+    "Put appearance, search, privacy, and more back to defaults." : {
+      "comment" : "Description of the Reset settings row, shown under the row on the Advanced page and in the Settings search results. The three nouns name Settings pages, so translate them the same way their page titles are translated. Imperative with a final full stop."
     },
     "Show Downloads" : {
       "comment" : "Menu bar command under View, shortcut ⌥⌘L, which opens the list of downloads. Title Case."
@@ -48,6 +90,9 @@
     },
     "Show History" : {
       "comment" : "Menu bar command under History, shortcut ⌘Y, which opens the full history list. Title Case."
+    },
+    "Sleep inactive tabs is set to Never, so tabs stay loaded." : {
+      "comment" : "Caption on a website settings page. \"Sleep inactive tabs\" links to that setting; \"Never\" is its menu choice."
     },
     "tab.menu.close" : {
       "comment" : "Item in the context menu of a tab row in the sidebar; it closes that tab. Verb, Title Case.",
@@ -108,6 +153,24 @@
           }
         }
       }
+    },
+    "Talk with the assistant. OpenAI charges for each minute." : {
+      "comment" : "Settings, Voice: caption for the Voice conversation switch."
+    },
+    "Unpinned tabs you haven’t used close. Find them with ⌘K." : {
+      "comment" : "Caption under “Archive tabs after” in General settings. ⌘K opens the command palette."
+    },
+    "Video plays in a floating window when you leave its tab." : {
+      "comment" : "Caption under the Automatic Picture in Picture row on the General settings page, and the caption of that same row in Settings search. One full sentence."
+    },
+    "What the assistant remembers about you. It never saves page content, passwords, or payment details." : {
+      "comment" : "Settings, Assistant, Memory: page description."
+    },
+    "When it’s hidden, point to the left edge to see your tabs." : {
+      "comment" : "Caption under the Show sidebar switch in Appearance settings, and its Settings search description."
+    },
+    "Zoom for all websites. You can also zoom a single tab." : {
+
     },
     "“%@” is playing" : {
       "comment" : "Tooltip on the speaker glyph of a collapsed folder in the sidebar, saying which tab inside it is making sound. %@ is the tab's title, written by the website — never translated. Keep the curly quotation marks around it."
@@ -763,9 +826,6 @@
     "Add an API key to use %@." : {
       "comment" : "Settings → Assistant → a provider page. %@ is the provider name, e.g. \"Anthropic\". Caption under the \"Needs a key\" status; the key is an API key."
     },
-    "Add an OpenAI API key in Assistant. The assistant can still use a different provider." : {
-      "comment" : "Voice settings: caption shown when no OpenAI API key is set up. OpenAI voices work with any assistant once a key is added."
-    },
     "Add an OpenAI API key in Settings to start a voice conversation." : {
 
     },
@@ -1167,9 +1227,6 @@
     "Automatic Picture in Picture is off while \"Show video in the player\" is on in Experiments." : {
 
     },
-    "Automatic Picture in Picture is off, so video stays in its tab everywhere." : {
-      "comment" : "Caption on the per-website Automatic Picture in Picture row, shown when the setting is off for every website. “Automatic Picture in Picture” is a link to that row on the General page — spell it exactly as that title."
-    },
     "Autoplay" : {
       "comment" : "Title of the row on the Websites settings page controlling whether video and sound may start on their own, and the title of that same row in Settings search. A noun; the browser term."
     },
@@ -1222,9 +1279,6 @@
       "comment" : "One line in the bulleted list of what an extension will be able to do, in the install confirmation sheet. It completes “It will also be able to:”."
     },
     "Block known trackers" : {
-
-    },
-    "Block known trackers is off, so trackers are allowed everywhere." : {
 
     },
     "Block pop-ups" : {
@@ -1443,9 +1497,6 @@
     "Choose a Tab for Lyrics" : {
       "comment" : "Tooltip on the lyrics panel title while more than one tab has media; the title opens a menu that lists those tabs so the user can pick which one the lyrics follow. Title Case. Twin of “Choose Which Tab to Control”, which is the same control on the media dock."
     },
-    "Choose a time range to clear history, cookies, and cached files." : {
-
-    },
     "Choose an exported HTML file." : {
 
     },
@@ -1521,12 +1572,6 @@
     "Choose what to clear and how far back to go. This can’t be undone." : {
       "comment" : "Message in that dialog, naming its two controls: the checkboxes for what, and the time-range menu for how far back. Do not list the kinds themselves here — they are the checkbox labels, and unticking one would make a list go stale. Curly apostrophe."
     },
-    "Choose whether this website can open new windows on its own." : {
-
-    },
-    "Choose whether this website can play video and audio on its own." : {
-
-    },
     "Choose whether you can retrieve replies through the OpenAI API." : {
 
     },
@@ -1559,9 +1604,6 @@
     },
     "Clear Context" : {
       "comment" : "Destructive button in the alert that resets what the assistant remembers in the current chat."
-    },
-    "Clear cookies, site data, and cached files when you quit Linen." : {
-
     },
     "Clear download list" : {
       "comment" : "Title of the Downloads settings row that chooses when finished downloads leave the list, and its Settings search entry. Only the list is cleared; the files stay on disk. Sentence case."
@@ -2411,9 +2453,6 @@
     "Explain this GitHub pull request and summarize any visible check failures or review requests. Say which details are unavailable." : {
 
     },
-    "Export your bookmarks as an HTML file from Safari, Chrome, Firefox, or Edge, then import it here." : {
-      "comment" : "Settings, General: caption for the bookmark import row. Browser names stay in English."
-    },
     "Extended reasoning for difficult tasks." : {
 
     },
@@ -2488,9 +2527,6 @@
     },
     "Fill form controls together without submitting." : {
 
-    },
-    "Fill in search boxes and forms. Never passwords or payment details." : {
-      "comment" : "Caption for the Type tool in assistant settings."
     },
     "Fill Multiple Fields" : {
 
@@ -2756,9 +2792,6 @@
     "Hold Shift over a link to see a summary." : {
       "comment" : "Second of three things to try, on the last onboarding screen. Pointing at a link with Shift held shows a summary of the page."
     },
-    "Hold Shift while pointing at a link to get a summary before opening it." : {
-
-    },
     "Hold the shortcut to speak, then release it to send." : {
 
     },
@@ -2854,9 +2887,6 @@
     },
     "In use, allowed until you leave" : {
       "comment" : "Caption under a permission's name in the site permission panel: the site is using it right now, and the grant lasts only for this visit. Keep the comma, sentence case, one line."
-    },
-    "Inactive tabs unload to save memory. They reload when you open them." : {
-      "comment" : "Caption under the Sleep inactive tabs setting in General settings."
     },
     "Inbox" : {
       "comment" : "GitHub panel: the default view that groups pull requests by what needs you."
@@ -3017,14 +3047,8 @@
     "Less transparent" : {
 
     },
-    "Let a shell at OpenAI run commands and create files. OpenAI may charge extra." : {
-      "comment" : "Settings, Assistant, OpenAI developer options: caption for the hosted shell switch."
-    },
     "Let apps such as Claude Code use the assistant’s tools." : {
       "comment" : "Settings, Assistant: caption for External connections, the MCP server page. Claude Code is an app name."
-    },
-    "Let apps such as Claude Code use the assistant’s tools. Linen asks you once for each connection. Websites follow your Assistant Access settings." : {
-      "comment" : "Settings, Assistant, External connections: caption for the MCP server switch. Assistant Access is the per-website setting name."
     },
     "Library" : {
       "comment" : "Heading of the commands in the ⌘K command palette that open one of the browser’s own pages or panels: history, downloads, settings, extensions. Title Case."
@@ -3964,9 +3988,6 @@
     "OpenAI compatible" : {
       "comment" : "Small tag beside a user-added endpoint in Settings, naming which API dialect the server speaks. OpenAI is a vendor name — leave as is; only the word compatible is translatable. Very tight space."
     },
-    "OpenAI keeps a copy that you can retrieve through its API. Linen’s chat history doesn’t need it." : {
-      "comment" : "Settings, Assistant, OpenAI data and privacy: caption for storing replies in the user’s OpenAI account."
-    },
     "OpenAI receives microphone audio during voice chat. The voice is generated by AI." : {
 
     },
@@ -4329,9 +4350,6 @@
     },
     "Push to talk" : {
       "comment" : "Title of the Voice settings row for the key held down while speaking, and the same wording in the Settings search index. The established name for hold-to-speak; sentence case."
-    },
-    "Put appearance, search, privacy, websites, and downloads back to their defaults." : {
-      "comment" : "Description of the Reset settings row, shown under the row on the Advanced page and in the Settings search results. The five nouns name Settings pages, so translate them the same way their page titles are translated. Imperative with a final full stop."
     },
     "Qualifier" : {
       "comment" : "Button in the GitHub filter editor that opens a menu of GitHub search terms to add. Use the term GitHub uses in its search documentation for your language."
@@ -5125,9 +5143,6 @@
     "Set how fast OpenAI reads answers aloud." : {
       "comment" : "Settings search result detail for the OpenAI reading speed."
     },
-    "Set the default zoom for websites. You can also zoom individual tabs." : {
-
-    },
     "Set Up…" : {
       "comment" : "Settings → Assistant. Button that opens the page of the chosen provider so its key or server can be fixed."
     },
@@ -5494,9 +5509,6 @@
     "Sleep inactive tabs" : {
       "comment" : "Title of the switch in Settings > General that lets Linen release the pages of background tabs when the Mac runs short of memory, and the same row in Settings search. Off by default. Sentence case; “Sleep” is a verb the browser does to the tabs."
     },
-    "Sleep inactive tabs is set to Never, so every website stays loaded." : {
-      "comment" : "Caption on a website settings page. \"Sleep inactive tabs\" links to that setting; \"Never\" is its menu choice."
-    },
     "Slower" : {
       "comment" : "Option in the Speed segmented control in Voice settings: 0.75 times normal reading speed."
     },
@@ -5752,9 +5764,6 @@
     },
     "Take this page’s place" : {
       "comment" : "Caption shown over a page while another is dragged onto it, when the window is already showing as many as it can. The page underneath goes back to being an ordinary sidebar row rather than being closed. Sentence case, no final period; curly apostrophe."
-    },
-    "Talk back and forth with the assistant. OpenAI charges for each minute a conversation is open." : {
-      "comment" : "Settings, Voice: caption for the Voice conversation switch."
     },
     "Talk to apps outside the browser" : {
       "comment" : "One bullet in the list of what a browser extension will be able to do, shown in the install confirmation dialog. Apps means other applications on the Mac. It follows the line It will also be able to:, so it is a bare verb phrase and takes no final full stop."
@@ -6327,9 +6336,6 @@
     "Unpin Tab" : {
       "comment" : "Command that takes the pin off a tab, which then drops out of the pinned rows. Four surfaces share it: the context menu of a pinned tab row, the minus button on that row, the toolbar button while the pinned page is on screen, and the search palette. Title Case."
     },
-    "Unpinned tabs you haven’t used close automatically. Find them again with ⌘K." : {
-      "comment" : "Caption under “Archive tabs after” in General settings. ⌘K opens the command palette."
-    },
     "Unread" : {
 
     },
@@ -6504,9 +6510,6 @@
     "Video from a tab you leave moves into the sidebar player." : {
       "comment" : "Caption under the Show video in the player row on the Experiments settings page, and the caption of that same row in Settings search. The video only moves while the user is on a different tab, and turning this row on turns the Automatic Picture in Picture row off. “Picture in Picture” is the macOS name of the floating video window — use the system’s own wording. Two full sentences."
     },
-    "Video keeps playing in a floating window when you leave its tab." : {
-      "comment" : "Caption under the Automatic Picture in Picture row on the General settings page, and the caption of that same row in Settings search. It names the two moments the video floats. One full sentence."
-    },
     "Video plays without sound until you click." : {
       "comment" : "Caption for the middle choice of the Autoplay setting: pictures may start on their own but sound may not."
     },
@@ -6672,9 +6675,6 @@
     "What the assistant may do in the browser." : {
       "comment" : "Settings search result detail for the Tools page."
     },
-    "What the assistant remembers about you. It saves your answers and what you ask it to remember. It never saves page content, passwords, or payment details." : {
-      "comment" : "Settings, Assistant, Memory: page description."
-    },
     "What’s New" : {
 
     },
@@ -6683,9 +6683,6 @@
     },
     "When Linen quits" : {
 
-    },
-    "When the sidebar is hidden, move the pointer to the left edge of the window to see your tabs." : {
-      "comment" : "Caption under the Show sidebar switch in Appearance settings, and its Settings search description."
     },
     "When this is off, the assistant can’t save or recall anything." : {
       "comment" : "Settings, Assistant, Memory: caption for the Remember things about me switch."

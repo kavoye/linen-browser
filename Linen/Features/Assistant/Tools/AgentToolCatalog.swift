@@ -175,7 +175,7 @@ nonisolated enum AgentToolCatalog {
         AgentToolDescriptor(
             id: "typeOnPage",
             title: "Type",
-            summary: "Fill in search boxes and forms. Never passwords or payment details.",
+            summary: "Fill in forms. Never passwords or payment details.",
             category: .page
         ),
         AgentToolDescriptor(

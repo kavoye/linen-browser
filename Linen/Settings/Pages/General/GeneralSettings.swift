@@ -48,7 +48,7 @@ struct GeneralSettings: View {
 
             BookmarkImportRow(
                 browser: coordinator.browser,
-                caption: "Export your bookmarks as an HTML file from Safari, Chrome, Firefox, or Edge, then import it here."
+                caption: "Import bookmarks from an HTML file."
             )
             .settingsAnchor("general.import")
         }
@@ -66,7 +66,7 @@ struct GeneralSettings: View {
         SettingsCard {
             DetailRow(
                 title: "Sleep inactive tabs",
-                caption: "Inactive tabs unload to save memory. They reload when you open them."
+                caption: "Inactive tabs unload to save memory until you open them."
             ) {
                 SettingsMenu(
                     options: TabSleep.allCases.map { .init(value: $0, label: String(localized: $0.label)) },
@@ -79,7 +79,7 @@ struct GeneralSettings: View {
 
             DetailRow(
                 title: "Archive tabs after",
-                caption: "Unpinned tabs you haven’t used close automatically. Find them again with ⌘K."
+                caption: "Unpinned tabs you haven’t used close. Find them with ⌘K."
             ) {
                 SettingsMenu(
                     options: TabArchiveDelay.allCases.map { .init(value: $0, label: String(localized: $0.label)) },
@@ -122,7 +122,7 @@ struct GeneralSettings: View {
 
             DetailRow(
                 title: "Automatic Picture in Picture",
-                caption: "Video keeps playing in a floating window when you leave its tab."
+                caption: "Video plays in a floating window when you leave its tab."
             ) {
                 SettingsToggle($settings.automaticPictureInPicture)
             }

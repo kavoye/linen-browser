@@ -42,7 +42,7 @@ struct OpenAIDeveloperSettings: View {
         Text("Change these options only if your API setup needs them. Chat and voice work with the defaults.")
             .font(.callout).foregroundStyle(.secondary)
         SettingsCard {
-            DetailRow(title: "Run commands at OpenAI", caption: "Let a shell at OpenAI run commands and create files. OpenAI may charge extra.") {
+            DetailRow(title: "Run commands at OpenAI", caption: "Let OpenAI run shell commands. OpenAI may charge extra.") {
                 SettingsToggle(Binding(get: { options.hostedTools.contains { $0["type"] == "shell" } }, set: { enabled in
                     var updated = options
                     updated.hostedTools.removeAll { $0["type"] == "shell" }

@@ -27,7 +27,7 @@ struct AppearanceSettings: View {
 
             DetailRow(
                 title: "Page zoom",
-                caption: "Set the default zoom for websites. You can also zoom individual tabs."
+                caption: "Zoom for all websites. You can also zoom a single tab."
             ) {
                 SettingsMenu(
                     options: Self.sizes.map {
@@ -187,7 +187,7 @@ private struct WindowStyleSettingsSection: View {
 
         DetailRow(
             title: "Show sidebar",
-            caption: "When the sidebar is hidden, move the pointer to the left edge of the window to see your tabs."
+            caption: "When it’s hidden, point to the left edge to see your tabs."
         ) {
             SettingsToggle(Binding(
                 get: { sidebar.isVisible },

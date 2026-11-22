@@ -32,7 +32,7 @@ struct AssistantMemoryPage: View {
 
         SettingsPageHeader(
             title: "Memory",
-            caption: "What the assistant remembers about you. It saves your answers and what you ask it to remember. It never saves page content, passwords, or payment details."
+            caption: "What the assistant remembers about you. It never saves page content, passwords, or payment details."
         )
 
         SettingsCard {

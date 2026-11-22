@@ -192,7 +192,7 @@ private struct BehaviourSection: View {
         SettingsCard {
             DetailRow(
                 title: "Summarize a link on hover",
-                caption: "Hold Shift while pointing at a link to get a summary before opening it."
+                caption: "Hold Shift over a link to see a summary before opening it."
             ) {
                 SettingsToggle($settings.peeksAtLinks)
             }

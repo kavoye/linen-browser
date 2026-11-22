@@ -125,7 +125,7 @@ struct VoiceSettings: View {
         SettingsCard {
             DetailRow(
                 title: "Voice conversation",
-                caption: "Talk back and forth with the assistant. OpenAI charges for each minute a conversation is open."
+                caption: "Talk with the assistant. OpenAI charges for each minute."
             ) {
                 SettingsToggle(Binding(
                     get: { conversationIsOn },
@@ -225,7 +225,7 @@ private struct OpenAIKeyNotice: View {
                 tint: Color(nsColor: .systemGray),
                 symbol: "key",
                 title: "OpenAI voices need an OpenAI API key",
-                caption: "Add an OpenAI API key in Assistant. The assistant can still use a different provider."
+                caption: "Add an OpenAI API key in Assistant to use these voices."
             ) {
                 SettingsButton(title: "Open Assistant…") { onOpenAssistant() }
             }
