@@ -430,14 +430,15 @@ extension BrowserModel {
         // Internal page hosts name app screens, not sites to fetch icons from.
         guard let pageURL = URL(string: tab.urlString), let scheme = pageURL.scheme?.lowercased(),
               scheme == "http" || scheme == "https" else { return }
+        let favicons = tab.context.favicons
         if tab.isPrivate {
-            if let icon = FaviconLoader.shared.cached(for: host) {
+            if let icon = favicons.cached(for: host) {
                 tab.favicon = icon
             }
             return
         }
         Task { [weak tab] in
-            let icon = await FaviconLoader.shared.load(forPageURL: pageURL)
+            let icon = await favicons.load(forPageURL: pageURL)
             guard let tab, let icon,
                   let scheme = URL(string: tab.urlString)?.scheme?.lowercased(),
                   scheme == "http" || scheme == "https",

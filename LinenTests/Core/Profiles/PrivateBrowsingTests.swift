@@ -574,6 +574,18 @@ struct PrivateFaviconTests {
         #expect(await PageSettle.untilIdle(tab.webView, timeout: .seconds(30)))
         #expect(await waitUntil { tab.favicon != nil })
     }
+
+    @Test func aPrivateRowIsDressedFromItsOwnSession() throws {
+        let context = BrowserProfileContext(profile: .privateBrowsing())
+        context.favicons.store(try iconData(), forHost: "row.example")
+        let model = BrowserModel(context: context, database: .temporary())
+        let tab = model.newTab()
+        tab.urlString = "https://row.example/page"
+
+        model.dressRow(tab, fromHost: "row.example")
+
+        #expect(tab.favicon != nil)
+    }
 }
 
 @MainActor
