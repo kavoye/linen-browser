@@ -576,6 +576,48 @@ struct PrivateFaviconTests {
     }
 }
 
+@MainActor
+struct PrivateZoomTests {
+    private func open(_ url: URL, in context: BrowserProfileContext) async -> BrowserTab {
+        let tab = BrowserTab(privately: true, context: context)
+        tab.webView.loadHTMLString("<html><body>page</body></html>", baseURL: url)
+        #expect(await waitUntil { tab.webView.url?.host() == url.host() })
+        return tab
+    }
+
+    @Test func aPrivateWindowRemembersASitesZoom() async {
+        let context = BrowserProfileContext(profile: .privateBrowsing())
+        let site = URL(string: "https://zoom.example/")!
+        let first = await open(site, in: context)
+        first.webView.pageZoom = 1.25
+        first.zoomDidChange()
+
+        let second = await open(site, in: context)
+
+        #expect(await waitUntil { second.webView.pageZoom == 1.25 })
+    }
+
+    @Test func endingThePrivateSessionForgetsZoom() async {
+        let context = BrowserProfileContext(profile: .privateBrowsing())
+        context.pageZoom.set(1.25, for: "zoom.example", defaultZoom: 1)
+
+        await context.endPrivateSession()
+
+        #expect(context.pageZoom.level(for: "zoom.example") == nil)
+    }
+
+    @Test func forgettingSessionLevelsLeavesAnOrdinaryStoreAlone() {
+        let store = PageZoomStore(
+            file: TestFiles.directory.appendingPathComponent("linen-zoom-\(UUID().uuidString).json")
+        )
+        store.set(1.25, for: "zoom.example", defaultZoom: 1)
+
+        store.forgetSessionLevels()
+
+        #expect(store.level(for: "zoom.example") == 1.25)
+    }
+}
+
 /// Profile switches queue. The dropped switch was the restore leak: ⇧⌘N
 /// during the close-window switch-back was ignored, and the ordinary
 /// session's restored tabs filled the window the user asked to be private.

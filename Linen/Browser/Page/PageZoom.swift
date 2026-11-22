@@ -35,6 +35,11 @@ final class PageZoomStore {
         Task { await JSONFileStore.shared.write(snapshot, to: file) }
     }
 
+    func forgetSessionLevels() {
+        guard !persists else { return }
+        levels.removeAll()
+    }
+
     private static var defaultFile: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Linen", isDirectory: true)

@@ -92,6 +92,7 @@ final class BrowserProfileContext {
         actionPolicy.revokeAll()
         await contentBlocker.endPrivateSession()
         favicons.forgetSessionOnlyIcons()
+        pageZoom.forgetSessionLevels()
         await dataStore.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast)
     }
 }

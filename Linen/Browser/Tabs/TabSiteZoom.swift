@@ -20,8 +20,8 @@ struct TabSiteZoom {
         changes &+= 1
     }
 
-    func record(from view: WKWebView, context: BrowserProfileContext, isPrivate: Bool) {
-        guard !isPrivate, !host.isEmpty else { return }
+    func record(from view: WKWebView, context: BrowserProfileContext) {
+        guard !host.isEmpty else { return }
         context.pageZoom.set(view.pageZoom, for: host, defaultZoom: context.settings.pageZoom)
     }
 }

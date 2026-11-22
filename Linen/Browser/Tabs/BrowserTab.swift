@@ -491,7 +491,7 @@ final class BrowserTab: Identifiable {
 
     func zoomDidChange() {
         siteZoom.noteChange()
-        siteZoom.record(from: webView, context: context, isPrivate: isPrivate)
+        siteZoom.record(from: webView, context: context)
     }
 
     private func applySiteZoom() {
