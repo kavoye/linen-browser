@@ -185,6 +185,19 @@ struct AskSurfaceInteractionTests {
         #expect(address?.accessibilityValue(fallback: "https://www.example.com/path") == "https://www.example.com/path")
     }
 
+    @Test func theAddressShowsAPortThatIsNotTheDefault() {
+        #expect(AskRestingContent.displayAddress(for: "https://192.168.15.74:8765/app") == "192.168.15.74:8765")
+        #expect(AskRestingContent.displayAddress(for: "http://localhost:3000") == "localhost:3000")
+        #expect(AskRestingContent.displayAddress(for: "https://www.example.com:443/") == "example.com")
+        #expect(AskRestingContent.displayAddress(for: "http://[::1]:8080/") == "[::1]:8080")
+
+        #expect(AskRestingContent.portSuffix(of: "192.168.15.74:8765")?.host == "192.168.15.74")
+        #expect(AskRestingContent.portSuffix(of: "192.168.15.74:8765")?.port == ":8765")
+        #expect(AskRestingContent.portSuffix(of: "[::1]:8080")?.port == ":8080")
+        #expect(AskRestingContent.portSuffix(of: "example.com") == nil)
+        #expect(AskRestingContent.portSuffix(of: "[::1]") == nil)
+    }
+
     @Test func aNoticeShowsOverTheAgentLine() {
         let resolved = AskRestingContent.resolve(
             isListening: false,

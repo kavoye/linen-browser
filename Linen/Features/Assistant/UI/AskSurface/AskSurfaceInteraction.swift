@@ -203,7 +203,32 @@ enum AskRestingContent: Equatable {
 
     static func displayAddress(for value: String) -> String {
         guard let url = URL(string: value), let host = url.host() else { return value }
-        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+        let bare = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+        let shown = bare.contains(":") ? "[\(bare)]" : bare
+        guard let port = url.port, port != defaultPort(for: url.scheme) else { return shown }
+        return "\(shown):\(port)"
+    }
+
+    static func portSuffix(of address: String) -> (host: String, port: String)? {
+        guard let colon = address.lastIndex(of: ":") else { return nil }
+        let host = address[..<colon]
+        let digits = address[address.index(after: colon)...]
+        guard !host.isEmpty, !digits.isEmpty,
+              digits.allSatisfy({ $0.isASCII && $0.isNumber }),
+              !host.contains(":") || host.hasSuffix("]")
+        else { return nil }
+        return (String(host), String(address[colon...]))
+    }
+
+    private static func defaultPort(for scheme: String?) -> Int? {
+        switch scheme?.lowercased() {
+        case "http", "ws":
+            80
+        case "https", "wss":
+            443
+        default:
+            nil
+        }
     }
 }
 

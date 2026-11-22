@@ -153,6 +153,14 @@ struct AskRestingLine: View {
 
     @Environment(\.chromeIsLight) private var chromeIsLight
 
+    private func addressText(_ address: String) -> Text {
+        guard let split = AskRestingContent.portSuffix(of: address) else { return Text(verbatim: address) }
+        var port = AttributedString(split.port)
+        port.foregroundColor = (chromeIsLight ? Color.black : .white)
+            .opacity(ChromeInk.glyphOpacity(onLight: chromeIsLight, subdued: true))
+        return Text(AttributedString(split.host) + port)
+    }
+
     private func noticeStyle(symbol: String?) -> AnyShapeStyle {
         if symbol != nil {
             return ChromeInk.glyph(onLight: chromeIsLight)
@@ -224,7 +232,7 @@ struct AskRestingLine: View {
                         .font(.system(size: 9.5, weight: .medium))
                         .foregroundStyle(security.tint)
                 }
-                Text(verbatim: host)
+                addressText(host)
                     .font(.system(size: placement.textSize))
                     .foregroundStyle(ChromeInk.glyph(onLight: chromeIsLight))
                     .lineLimit(1)
