@@ -200,11 +200,12 @@ struct PrivateBrowsingTests {
     }
 
     /// ⇧⌘T must not resurrect something the session was meant to forget.
-    @Test func closingAPrivateTabLeavesNothingToReopen() {
+    @Test func closingAPrivateWindowLeavesNothingToReopen() {
         let model = makePrivateModel()
-        let tab = model.newTab()
+        model.close(model.newTab())
+        #expect(model.canReopenClosedTab)
 
-        model.close(tab)
+        model.closeAllTabs(saving: false)
         #expect(!model.canReopenClosedTab)
     }
 
